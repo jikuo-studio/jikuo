@@ -177,6 +177,13 @@ Already created in `WORKTREE-05` or incubated from it:
 - `JIKUO-CORE-21`: policy template extraction / export MVP, implemented from NarrativeSystem approved policy seeds; import / bind / activate remains future guarded work
 - `JIKUO-CORE-22`: starter policy pack first-use initialization, implemented as a guarded bootstrap path that activates curated report-only starter policies in a project
 
+Current scenario-chain registrations:
+
+| Chain ID | User Scenario | Operation Chain | Registered Atoms | Evidence |
+|---|---|---|---|---|
+| `policy_template_seed_extraction` | A JIKUO maintainer turns proven approved policies from an incubating project into reusable package templates without activating them in another project | inspect approved source -> plan extraction -> guarded package-template export -> no-write target import preview -> report unresolved bindings | `CAP-POLICY-TEMPLATE-EXTRACT-01`; `CAP-POLICY-TEMPLATE-PORTABILITY-01`; `CAP-PROJECT-CONTEXT-BINDING-01`; `CAP-TRUST-PRIVACY-PROVENANCE-BASELINE-01` | `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-21_policy_template_extraction_import_mvp.md` section `Scenario-Chain-Atom Registration Evidence` |
+| `starter_policy_pack_first_use` | A new project starts using JIKUO and receives useful report-only starter policies without knowing NarrativeSystem paths or raw template extraction commands | desktop initialize request -> `agent_flow.py propose` starter card -> user reviews write set and non-effects -> `agent_flow.py apply --operation starter_policy_pack_init` after approval -> project state / policy store initialized -> future task-start proposals evaluate starter policies | `CAP-AGENT-FLOW-01`; `CAP-STARTER-POLICY-PACK-INIT-01`; `CAP-AGENT-FLOW-APPLY-STARTER-POLICY-PACK-01`; `CAP-PROJECT-STATE-WRITE-01`; `CAP-POLICY-STORE-STATUS-01`; `CAP-POLICY-TEMPLATE-EXTRACT-01` | `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-22_starter_policy_pack_first_use_initialization.md` section `Scenario-Chain-Atom Registration Evidence` |
+
 Current code / data artifacts:
 
 - `docs/jikuo/README.md`

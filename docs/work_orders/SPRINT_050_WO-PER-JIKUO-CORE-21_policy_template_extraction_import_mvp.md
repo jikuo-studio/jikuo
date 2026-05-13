@@ -33,7 +33,34 @@ Those records should not be copied into JIKUO as active local policies. They sho
 - Include exported templates in package data.
 - Preview template import against a target project without writing, including unresolved binding status.
 
-## 4. Out Of Scope
+## 4. Scenario-Chain-Atom Registration Evidence
+
+This slice belongs to the `policy_template_seed_extraction` scenario chain.
+
+User scenario:
+
+- A JIKUO maintainer has proven approved policies in an incubating project and wants reusable package templates without activating those policies in the target project.
+
+Operation chain:
+
+1. Inspect the source approved-policy directory.
+2. Build a no-write extraction plan for each candidate policy.
+3. Export a package template only after explicit confirmation and approval phrase.
+4. Preview import into a target project without writing.
+5. Report unresolved project-context bindings before any activation work.
+
+Registered atoms:
+
+- `CAP-POLICY-TEMPLATE-EXTRACT-01`: implemented extraction, guarded export, and no-write import planning.
+- `CAP-POLICY-TEMPLATE-PORTABILITY-01`: contract source for template / binding / resolved-policy portability.
+- `CAP-PROJECT-CONTEXT-BINDING-01`: future resolver needed before guarded import / bind / activate.
+- `CAP-TRUST-PRIVACY-PROVENANCE-BASELINE-01`: provenance and cross-project safety baseline for portable templates.
+
+Policy review evidence:
+
+- Satisfies `scenario_chain_atom_registration_evidence` for the template-extraction part of CORE-21/22 by registering the scenario chain and atom IDs in this work order and in the productization task map.
+
+## 5. Out Of Scope
 
 - Do not import templates into a project policy store.
 - Do not activate templates as approved policies.
@@ -41,7 +68,7 @@ Those records should not be copied into JIKUO as active local policies. They sho
 - Do not implement template signing, marketplace trust, MCP, Plugin, frontend UI, or gates.
 - Do not rewrite the NarrativeSystem policy store.
 
-## 5. Implemented CLI
+## 6. Implemented CLI
 
 ```powershell
 python -B -m jikuo.policy_templates inspect-source --source-dir "<approved policy dir>" --format json
@@ -50,7 +77,7 @@ python -B -m jikuo.policy_templates export-template --source-policy "<policy yam
 python -B -m jikuo.policy_templates plan-import --template "<policy template yaml>" --project-root "<target project>" --format json
 ```
 
-## 6. Verification
+## 7. Verification
 
 ```powershell
 python -B -m unittest tests.policy_templates_tests
@@ -64,7 +91,7 @@ Expected:
 - template export writes package templates but never creates `.jikuo/policies/`
 - template import planning reports missing project-context bindings without writing
 
-## 7. Follow-Up
+## 8. Follow-Up
 
 - implement project-context resolver for `role://`, `project://`, and `pkg://`
 - implement guarded template import / bind / resolve plan

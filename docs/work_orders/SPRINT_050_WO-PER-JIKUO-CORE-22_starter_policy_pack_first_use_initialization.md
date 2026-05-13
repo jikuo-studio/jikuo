@@ -40,7 +40,38 @@ These starter policies are report-only guidance. They help the user start work w
   - `.jikuo/policies/decisions/*.yaml`
   - `.jikuo/policies/manifest.yaml`
 
-## 4. Out Of Scope
+## 4. Scenario-Chain-Atom Registration Evidence
+
+This slice belongs to the `starter_policy_pack_first_use` scenario chain.
+
+User scenario:
+
+- A new project starts using JIKUO and needs useful report-only policies immediately, without knowing the NarrativeSystem source directory or running template extraction commands.
+
+Operation chain:
+
+1. User asks the desktop agent to initialize or enable JIKUO.
+2. `agent_flow.py propose --event initialize_jikuo` renders a no-write starter policy pack card.
+3. The card shows project-state status, policy-store status, starter policy list, write set, approval boundary, and non-effects.
+4. User explicitly approves the starter initialization effect.
+5. `agent_flow.py apply --operation starter_policy_pack_init` performs the guarded write.
+6. The starter writer creates missing project state / registry mounts only when needed, creates approved report-only starter policy records, updates the policy-store manifest, and verifies starter policies are active.
+7. Later task-start proposals can evaluate those starter policies as report-only guidance.
+
+Registered atoms:
+
+- `CAP-AGENT-FLOW-01`: desktop-agent no-write proposal runner.
+- `CAP-STARTER-POLICY-PACK-INIT-01`: starter pack manifest loading, no-write plan, and guarded initialization target.
+- `CAP-AGENT-FLOW-APPLY-STARTER-POLICY-PACK-01`: desktop-agent guarded apply route for starter initialization.
+- `CAP-PROJECT-STATE-WRITE-01`: project-state creation used only when the target project is missing state.
+- `CAP-POLICY-STORE-STATUS-01`: post-plan / post-write policy-store visibility.
+- `CAP-POLICY-TEMPLATE-EXTRACT-01`: upstream source of curated package templates.
+
+Policy review evidence:
+
+- Satisfies `scenario_chain_atom_registration_evidence` for CORE-22 by registering the user scenario, operation chain, and atom IDs here and in the productization task map.
+
+## 5. Out Of Scope
 
 - No gate or blocking enforcement.
 - No policy action execution.
@@ -49,7 +80,7 @@ These starter policies are report-only guidance. They help the user start work w
 - No MCP or frontend implementation.
 - No automatic overwrite of existing active policies.
 
-## 5. Implemented Surfaces
+## 6. Implemented Surfaces
 
 The user-facing path is the desktop-agent flow: proposal cards first, guarded apply only after explicit approval. The direct starter CLI remains an internal/dev verification surface.
 
@@ -60,7 +91,7 @@ python -B -m jikuo.starter_policies plan-init --project-root "<target project>" 
 python -B -m jikuo.starter_policies init --project-root "<target project>" --confirm-starter-init --approval-phrase "<exact user phrase as spoken>" --format json
 ```
 
-## 6. Verification
+## 7. Verification
 
 ```powershell
 python -B -m unittest tests.starter_policies_tests
@@ -75,7 +106,7 @@ Expected:
 - starter policies are active report-only after init
 - no gate or policy action is executed
 
-## 7. Follow-Up
+## 8. Follow-Up
 
 - Project-context resolver for template import / binding.
 - MCP wrapper only after the starter and resolver paths are stable.
