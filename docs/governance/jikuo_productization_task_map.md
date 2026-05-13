@@ -173,7 +173,7 @@ Already created in `WORKTREE-05` or incubated from it:
 - `JIKUO-CORE-20`: project context binding and policy template portability, draft contract ready for user review; separates reusable policy templates from project-specific document / directory bindings
 - `JIKUO-SEC-01`: trust, privacy, provenance, namespace, principal, telemetry, and timestamp baseline, draft contract ready for user review
 - `JIKUO-PKG-01`: minimal package extraction, initial local package created at `D:\personal_project\Jikuo` and ready for user review; now precedes resource-reference hygiene so `CORE-20B` happens inside the standalone package boundary
-- `JIKUO-CORE-20B`: resource-reference and `CONTRACT_REFS` hygiene, planned as a pre-MCP foundation after package extraction; removes or neutralizes NarrativeSystem hardcoded references in reusable tool code
+- `JIKUO-CORE-20B`: resource-reference and `CONTRACT_REFS` hygiene, implemented and ready for user review; package-owned refs now use `pkg://jikuo/...` and command previews use `python -B -m jikuo...`
 
 Current code / data artifacts:
 
@@ -371,7 +371,7 @@ Loop composition policy:
 | `CAP-POLICY-TEMPLATE-PORTABILITY-01` | Policy template / binding / resolved-policy portability | draft contract | `docs/jikuo/governance/jikuo_project_context_binding_and_policy_template_portability.md` | separates reusable policy intent from local project bindings so templates can travel across projects | none | review required before template approval |
 | `CAP-TRUST-PRIVACY-PROVENANCE-BASELINE-01` | Trust, privacy, provenance, namespace, principal, telemetry, and timestamp baseline | draft contract | `docs/jikuo/governance/jikuo_trust_privacy_provenance_baseline.md` | declares social trust and safety fields before templates or MCP responses cross project / user boundaries | none | user approval required for future telemetry or template import |
 | `CAP-PACKAGE-EXTRACTION-01` | Minimal package extraction | initial local package created | `D:\personal_project\Jikuo`; `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-PKG-01_minimal_package_extraction.md` | makes JIKUO installable as a tool package while keeping `.jikuo/` data inside the consuming project | package files only; user project data must not move | user review required before cleanup or MCP |
-| `CAP-CONTRACT-REF-HYGIENE-01` | Resource-reference and `CONTRACT_REFS` hygiene | planned pre-MCP foundation after extraction | future extracted package references planned for cleanup | removes NarrativeSystem hardcoded document references from reusable tool code | none unless package resources are moved | N/A |
+| `CAP-CONTRACT-REF-HYGIENE-01` | Resource-reference and `CONTRACT_REFS` hygiene | implemented package-safe refs | `src/jikuo/*.py`; `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-20B_resource_reference_hygiene.md` | removes NarrativeSystem hardcoded command/resource references from reusable tool code by using `pkg://jikuo/...` refs and `python -B -m jikuo...` command previews | none | tests enforce no `tools/jikuo` command previews |
 | `CAP-MCP-AGENT-FLOW-WRAPPER-01` | MCP wrapper around stable JIKUO atoms | planned by `JIKUO-MCP-01` | `tools/jikuo/mcp_server.py` / `tools/jikuo/mcp_adapter.py` planned | exposes scoped status / proposal / guarded apply operations to MCP clients while preserving the Desktop App Primary Operating Loop | only the same guarded writes as underlying atoms | same approval phrase, technical confirmation, and proposal-ref binding as underlying atoms |
 | `CAP-POLICY-EVIDENCE-CHECK-01` | Policy evidence checker MVP | implemented no-write | `python -B tools/jikuo/policy_store.py evaluate --event ... --produced-evidence-json ...`; `--produced-evidence-type ...` | matches policy required evidence against inline produced evidence and reports missing evidence; consumed by `agent_flow.py propose` for runner-rendered cards | none | N/A |
 | `CAP-POLICY-EVIDENCE-PERSIST-PROPOSE-01` | Policy evidence persistence proposal bridge | implemented no-write proposal | `python -B tools/jikuo/agent_flow.py propose --event policy_evidence_record ...` | converts explicit policy evidence refs into a guarded task-session evidence append command proposal | none in propose; future guarded command writes one task-session file | approval required for generated command |
@@ -387,7 +387,7 @@ Known missing atoms:
 - `CAP-PROJECT-CONTEXT-BINDING-01`: draft contract ready for review; future implementation still planned before MCP implementation
 - `CAP-POLICY-TEMPLATE-PORTABILITY-01`: draft contract ready for review; future implementation still planned before MCP implementation
 - `CAP-TRUST-PRIVACY-PROVENANCE-BASELINE-01`: draft contract ready for review; future implementation still planned before MCP implementation
-- `CAP-CONTRACT-REF-HYGIENE-01`: planned after package extraction and before MCP implementation
+- `CAP-CONTRACT-REF-HYGIENE-01`: implemented package-owned `pkg://` refs and module command previews; full resolver remains future work
 - `CAP-MCP-AGENT-FLOW-WRAPPER-01`: MCP wrapper around stable `agent_flow.py` / `policy_store.py` atoms, scoped by `JIKUO-MCP-01` but blocked by pre-MCP foundations
 - `CAP-CODEX-PLUGIN-01`: Codex Plugin packaging, planned after MCP / runner semantics are stable
 - broader policy conditions such as mounted documents, work-order metadata, checker results, approval events, or compound predicates
@@ -2513,8 +2513,8 @@ Latest todo map:
 
 1. Review / accept `JIKUO-SEC-01` trust / privacy / provenance / namespace / principal / telemetry / timestamp baseline.
 2. Review / accept `JIKUO-PKG-01` initial local package extraction at `D:\personal_project\Jikuo`.
-3. Implement `JIKUO-CORE-20B` resource-reference and `CONTRACT_REFS` hygiene inside the extracted package boundary.
-4. Return to `JIKUO-MCP-01` implementation only after the above foundations are accepted or explicitly deferred.
+3. Review / accept `JIKUO-CORE-20B` resource-reference and `CONTRACT_REFS` hygiene inside the extracted package boundary.
+4. Return to `JIKUO-MCP-01` implementation or implement the project-context resolver after the above foundations are accepted or explicitly deferred.
 5. Defer rollback, broader conditions, UI, Plugin, and gates unless explicitly promoted by user approval.
 
 MCP MVP scope freeze:

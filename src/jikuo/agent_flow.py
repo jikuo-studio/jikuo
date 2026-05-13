@@ -291,7 +291,7 @@ def produced_policy_evidence_for(
                 },
                 "producer": {
                     "actor": "agent",
-                    "tool": "tools/jikuo/agent_flow.py",
+                    "tool": "python -B -m jikuo.agent_flow",
                 },
                 "status": "ok",
                 "summary": "agent_flow rendered the task-start proposal card in chat",
@@ -942,7 +942,8 @@ def build_policy_write_plan_cards(
     command_parts = [
         "python",
         "-B",
-        "tools/jikuo/policy_store.py",
+        "-m",
+        "jikuo.policy_store",
         "write-policy",
         "--project-root",
         command_arg(str(project_root or ".")),
@@ -1084,7 +1085,8 @@ def build_policy_evolution_plan_cards(
         command_parts = [
             "python",
             "-B",
-            "tools/jikuo/policy_store.py",
+            "-m",
+            "jikuo.policy_store",
             "write-evolution",
             "--project-root",
             command_arg(str(project_root or ".")),

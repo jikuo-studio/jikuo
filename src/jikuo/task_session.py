@@ -49,23 +49,23 @@ DEFAULT_SCENARIO_CHAIN_ID = "engineering_governance.task_session_start"
 LATEST_TASK_SESSION_REFS_FIELD = "latest_task_session_refs"
 DEFAULT_MAX_INDEX_REFS = 20
 TASKSESSION_01_REF = (
-    "docs/jikuo/work_orders/"
+    "pkg://jikuo/work_orders/"
     "SPRINT_050_WO-PER-JIKUO-TASKSESSION-01_task_session_sidecar_persistence_proposal.md"
 )
 TASKSESSION_02_REF = (
-    "docs/jikuo/work_orders/"
+    "pkg://jikuo/work_orders/"
     "SPRINT_050_WO-PER-JIKUO-TASKSESSION-02_task_session_write_mode_proposal.md"
 )
 TASKSESSION_03_REF = (
-    "docs/jikuo/work_orders/"
+    "pkg://jikuo/work_orders/"
     "SPRINT_050_WO-PER-JIKUO-TASKSESSION-03_project_state_task_session_index_update.md"
 )
 TASKSESSION_04_REF = (
-    "docs/jikuo/work_orders/"
+    "pkg://jikuo/work_orders/"
     "SPRINT_050_WO-PER-JIKUO-TASKSESSION-04_lifecycle_evidence_completion_handoff.md"
 )
 TASK_SESSION_SCHEMA_REF = (
-    "docs/jikuo/schemas/task_session.schema.md"
+    "pkg://jikuo/schemas/task_session.schema.md"
 )
 TASK_SESSION_APPROVAL_TARGET = "JIKUO task-session file creation"
 TASK_SESSION_APPROVAL_EFFECT = "create one compact task-session sidecar record"

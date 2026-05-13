@@ -23,11 +23,11 @@ REGISTRY_REF = "docs/scenarios/interactive_novel/governance/rule_registry.yaml"
 APPROVAL_TARGET = "JIKUO project-state initialization"
 APPROVAL_EFFECT = "create .jikuo/project_state.yaml"
 CONTRACT_REFS = [
-    "docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-04_project_local_state_and_sidecar_storage_contract.md",
-    "docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-03_task_session_and_evidence_model.md",
-    "docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-AGENT-01_desktop_agent_card_projection_contract.md",
-    "docs/jikuo/schemas/task_session.schema.md",
-    REGISTRY_REF,
+    "pkg://jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-04_project_local_state_and_sidecar_storage_contract.md",
+    "pkg://jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-03_task_session_and_evidence_model.md",
+    "pkg://jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-AGENT-01_desktop_agent_card_projection_contract.md",
+    "pkg://jikuo/schemas/task_session.schema.md",
+    f"project://{REGISTRY_REF}",
 ]
 
 

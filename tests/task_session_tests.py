@@ -121,6 +121,7 @@ class TaskSessionHelperTests(unittest.TestCase):
         self.assertTrue(plan["report_only"])
         self.assertTrue(plan["can_start"])
         self.assertFalse(plan["write_allowed_by_command"])
+        self.assertIn("pkg://jikuo/schemas/task_session.schema.md", plan["source_refs"])
         self.assertEqual(plan["would_create"]["schema"], "jikuo.task_session.v0")
         self.assertEqual(
             plan["would_create"]["capture_policy"]["raw_chat_transcript"],

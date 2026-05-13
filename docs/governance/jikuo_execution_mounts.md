@@ -476,7 +476,7 @@ Acceptance target for `JIKUO-SEC-01`:
 If accepted:
 
 - review / accept `JIKUO-PKG-01` initial local package extraction next.
-- after `PKG-01`, implement `JIKUO-CORE-20B` resource-reference and `CONTRACT_REFS` hygiene inside the extracted package boundary.
+- after `PKG-01`, review `JIKUO-CORE-20B` resource-reference and `CONTRACT_REFS` hygiene inside the extracted package boundary.
 
 If revised:
 

@@ -117,6 +117,13 @@ class PolicyStoreStatusTests(unittest.TestCase):
         self.assertEqual(active_ref["version"], 1)
         self.assertEqual(active_ref["title"], "Three-phase task audit")
         self.assertEqual(active_ref["schema_version"], "jikuo.configurable_rule_policy.v0")
+        self.assertIn(
+            "pkg://jikuo/governance/jikuo_policy_store_configuration_flow.md",
+            report["source_refs"],
+        )
+        self.assertTrue(
+            all(not ref.startswith("docs/jikuo/") for ref in report["source_refs"])
+        )
 
     def test_stale_policy_store_reports_missing_active_ref(self):
         completed = run_status(STALE_PROJECT)

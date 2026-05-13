@@ -53,6 +53,9 @@ class TaskSessionCardProjectionTests(unittest.TestCase):
             card["approval_request"]["exact_user_phrase"],
             "<exact user phrase as spoken>",
         )
+        command = card["command_proposal"]["command_preview"]
+        self.assertIn("python -B -m jikuo.task_session", command)
+        self.assertNotIn("tools/jikuo", command)
         self.assertIn("--confirm-create-task-session", card["command_proposal"]["required_flags"])
         self.assertFalse((READY_PROJECT / ".jikuo" / "task_sessions").exists())
 
@@ -163,6 +166,8 @@ class TaskSessionCardProjectionTests(unittest.TestCase):
         self.assertEqual(card_completed.returncode, 0, card_completed.stderr)
         self.assertIn("Task-session start preview", card_completed.stdout)
         self.assertIn("Command Proposal", card_completed.stdout)
+        self.assertIn("python -B -m jikuo.task_session", card_completed.stdout)
+        self.assertNotIn("tools/jikuo", card_completed.stdout)
         self.assertIn("<exact user phrase as spoken>", card_completed.stdout)
 
 

@@ -25,6 +25,7 @@ CARD_SCHEMA = "jikuo.desktop_task_session_workflow_card.v0"
 COMMAND_PROPOSAL_SCHEMA = "jikuo.desktop_command_proposal.v0"
 APPROVAL_CAPTURE_SCHEMA = "jikuo.desktop_approval_capture.v0"
 APPROVAL_PHRASE_PLACEHOLDER = '"<exact user phrase as spoken>"'
+TASK_SESSION_COMMAND = "python -B -m jikuo.task_session"
 
 
 def stable_card_id(card_kind: str, seed: str) -> str:
@@ -107,7 +108,7 @@ def start_plan_card(plan: dict[str, Any]) -> dict[str, Any]:
     would_create = plan.get("would_create") or {}
     session = would_create.get("session") or {}
     command = (
-        "python -B tools/jikuo/task_session.py start --write "
+        f"{TASK_SESSION_COMMAND} start --write "
         f"--task-title {quote_arg(session.get('task_title'))} "
         f"--owner-agent {quote_arg(session.get('owner_agent'))} "
         f"--project-root {quote_arg(plan.get('project_root'))} "
@@ -188,7 +189,7 @@ def index_plan_card(plan: dict[str, Any]) -> dict[str, Any]:
         "do not judge product output quality",
     ]
     command = (
-        "python -B tools/jikuo/task_session.py index --refresh "
+        f"{TASK_SESSION_COMMAND} index --refresh "
         f"--project-root {quote_arg(plan.get('project_root'))} "
         "--confirm-update-project-state-index "
         "--approval-phrase \"<exact user phrase as spoken>\" "
@@ -363,7 +364,7 @@ def update_command_preview(plan: dict[str, Any]) -> str:
     patch_kind = plan.get("patch_kind")
     if patch_kind == "evidence":
         return (
-            "python -B tools/jikuo/task_session.py update --append-evidence "
+            f"{TASK_SESSION_COMMAND} update --append-evidence "
             f"--session-id {session_id} "
             f"--project-root {project_root} "
             f"--evidence-kind {quote_arg(patch.get('evidence_kind'))} "
@@ -374,7 +375,7 @@ def update_command_preview(plan: dict[str, Any]) -> str:
         )
     if patch_kind == "verification":
         return (
-            "python -B tools/jikuo/task_session.py update --append-verification "
+            f"{TASK_SESSION_COMMAND} update --append-verification "
             f"--session-id {session_id} "
             f"--project-root {project_root} "
             f"--command-name {quote_arg(patch.get('command'))} "
@@ -384,7 +385,7 @@ def update_command_preview(plan: dict[str, Any]) -> str:
         )
     if patch_kind == "completion":
         return (
-            "python -B tools/jikuo/task_session.py complete "
+            f"{TASK_SESSION_COMMAND} complete "
             f"--session-id {session_id} "
             f"--project-root {project_root} "
             f"--status {quote_arg(patch.get('completion_status'))} "
@@ -393,7 +394,7 @@ def update_command_preview(plan: dict[str, Any]) -> str:
             f"{phrase} --format json"
         )
     return (
-        "python -B tools/jikuo/task_session.py handoff "
+        f"{TASK_SESSION_COMMAND} handoff "
         f"--session-id {session_id} "
         f"--project-root {project_root} "
         f"--summary {quote_arg(patch.get('summary'))} "

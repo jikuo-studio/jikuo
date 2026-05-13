@@ -61,10 +61,10 @@ POLICY_FEEDBACK_TYPES = {
     "needs_scope_narrowing",
 }
 CONTRACT_REFS = [
-    "docs/jikuo/governance/jikuo_policy_store_configuration_flow.md",
-    "docs/jikuo/governance/jikuo_configurable_rule_trigger_policy.md",
-    "docs/jikuo/governance/jikuo_rule_action_evidence_model.md",
-    "docs/jikuo/governance/jikuo_policy_aware_agent_flow_contract.md",
+    "pkg://jikuo/governance/jikuo_policy_store_configuration_flow.md",
+    "pkg://jikuo/governance/jikuo_configurable_rule_trigger_policy.md",
+    "pkg://jikuo/governance/jikuo_rule_action_evidence_model.md",
+    "pkg://jikuo/governance/jikuo_policy_aware_agent_flow_contract.md",
 ]
 
 
@@ -2680,7 +2680,7 @@ def persisted_evidence_from_session(
                 },
                 "producer": {
                     "actor": item.get("recorded_by"),
-                    "tool": "tools/jikuo/task_session.py",
+                    "tool": "python -B -m jikuo.task_session",
                 },
                 "status": item.get("status") or "ok",
                 "summary": item.get("summary"),

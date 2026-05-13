@@ -271,6 +271,8 @@ class AgentFlowProposalTests(unittest.TestCase):
         self.assertIn("CAP-TASK-UPDATE-DRYRUN-01", atom_ids)
         self.assertEqual(proposal["cards"][0]["card_kind"], "task_session_evidence_append")
         command = proposal["cards"][0]["command_proposal"]["command_preview"]
+        self.assertIn("python -B -m jikuo.task_session", command)
+        self.assertNotIn("tools/jikuo", command)
         self.assertIn("--append-evidence", command)
         self.assertIn("--confirm-update-task-session", command)
         self.assertIn("--approval-phrase", command)
@@ -324,6 +326,8 @@ class AgentFlowProposalTests(unittest.TestCase):
         self.assertIn("CAP-TASK-UPDATE-DRYRUN-01", atom_ids)
         self.assertEqual(proposal["cards"][0]["card_kind"], "task_session_evidence_append")
         command = proposal["cards"][0]["command_proposal"]["command_preview"]
+        self.assertIn("python -B -m jikuo.task_session", command)
+        self.assertNotIn("tools/jikuo", command)
         self.assertIn("--append-evidence", command)
         self.assertIn("policy_feedback:not_applicable", command)
         self.assertIn("policy_ref=POLICY-real-test-data-and-chain", command)
@@ -1133,6 +1137,8 @@ class AgentFlowProposalTests(unittest.TestCase):
         command = proposal["cards"][0]["command_proposal"]
         self.assertTrue(command["approval_required"])
         self.assertTrue(command["technical_confirmation_required"])
+        self.assertIn("python -B -m jikuo.policy_store", command["command_preview"])
+        self.assertNotIn("tools/jikuo", command["command_preview"])
         self.assertIn("write-policy", command["command_preview"])
         self.assertIn("--confirm-write-policy", command["command_preview"])
         self.assertIn("--approval-phrase", command["command_preview"])
@@ -1230,6 +1236,8 @@ class AgentFlowProposalTests(unittest.TestCase):
         command = card["command_proposal"]
         self.assertTrue(command["approval_required"])
         self.assertTrue(command["technical_confirmation_required"])
+        self.assertIn("python -B -m jikuo.policy_store", command["command_preview"])
+        self.assertNotIn("tools/jikuo", command["command_preview"])
         self.assertIn("write-evolution", command["command_preview"])
         self.assertIn("--confirm-write-evolution", command["command_preview"])
         self.assertIn(".jikuo/policies/manifest.yaml", command["writes_if_approved"])
@@ -1290,6 +1298,8 @@ class AgentFlowProposalTests(unittest.TestCase):
         command = card["command_proposal"]
         self.assertTrue(command["approval_required"])
         self.assertTrue(command["technical_confirmation_required"])
+        self.assertIn("python -B -m jikuo.policy_store", command["command_preview"])
+        self.assertNotIn("tools/jikuo", command["command_preview"])
         self.assertIn("write-evolution", command["command_preview"])
         self.assertIn("--operation \"supersede_policy\"", command["command_preview"])
         self.assertIn("--replacement-policy-id \"POLICY-three-phase-audit-v2\"", command["command_preview"])

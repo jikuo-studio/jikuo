@@ -216,7 +216,9 @@ Current tool code has JIKUO contract references that are hardcoded as project-lo
 
 This contract classifies that as a portability smell.
 
-Future cleanup belongs to `JIKUO-CORE-20B` after `JIKUO-PKG-01` establishes the standalone package boundary.
+The first cleanup pass belongs to `JIKUO-CORE-20B` after `JIKUO-PKG-01` establishes the standalone package boundary.
+
+`CORE-20B` removes package-owned hardcoded `tools/jikuo` and `docs/jikuo` output references, but it does not yet implement `pkg://` dereferencing or full `project_context.yaml` role resolution.
 
 Preferred replacement:
 
