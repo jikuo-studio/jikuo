@@ -1,0 +1,5 @@
+schema_version: "jikuo.rule_registry.v0"
+registry:
+  id: "jikuo_self_governance"
+  title: "JIKUO self-governance registry"
+rules: []

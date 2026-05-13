@@ -1,0 +1,78 @@
+schema_version: "jikuo.policy_template.v0"
+template_id: "POLICYTEMPLATE-local-policy-task-scope-control-before-packaging"
+namespace: "local"
+version: 1
+title: "Task scope control before packaging"
+source:
+  type: "local_project_policy"
+  ref: "D:\\personal_project\\NarrativeSystem\\.jikuo\\policies\\approved\\POLICY-task-scope-control-before-packaging.yaml"
+  source_project_ref: "NarrativeSystem"
+  source_policy_id: "POLICY-task-scope-control-before-packaging"
+  source_sha256: "da88d8cd89801c89cdff5a43d156832198427db2fb31b5a483f231184d17fdf0"
+portability:
+  status: "portable"
+  detected_project_refs:
+    []
+  warnings:
+    []
+required_bindings:
+  - binding_id: "BIND-latest-todo-map"
+    role_ref: "role://document/latest_todo_map"
+    required: true
+    summary: "Resolve the current project todo map before applying this template."
+  - binding_id: "BIND-previous-todo-map"
+    role_ref: "role://document/previous_todo_map"
+    required: true
+    summary: "Resolve the previous project todo map when scope-delta evidence is required."
+template_policy:
+  schema_version: "jikuo.configurable_rule_policy.v0"
+  policy_id: "POLICY-task-scope-control-before-packaging"
+  version: 1
+  status: "active_report_only"
+  title: "Task scope control before packaging"
+  scenario_package: "engineering_governance"
+  source_refs:
+    - type: "policy_template"
+      ref: "POLICYTEMPLATE-local-policy-task-scope-control-before-packaging"
+    - type: "origin_policy"
+      ref: "D:\\personal_project\\NarrativeSystem\\.jikuo\\policies\\approved\\POLICY-task-scope-control-before-packaging.yaml"
+    - type: "user_natural_language"
+      ref: "嗯，你需要增加这个关于任务范围控制的policy（包括控制发生的节点、方法）到我们的规则里"
+  scope_control:
+    purpose: "prevent self-bootstrapping governance work from expanding indefinitely before the next productization slice"
+    control_nodes:
+      - node: "task_start"
+        method: "declare current scope, latest todo map ref, previous todo map ref, and delta before implementation begins"
+      - node: "scope_change_detected"
+        method: "classify newly discovered work as blocker, defer, split-out, or explicit user-approved insertion"
+      - node: "pre_packaging_slice"
+        method: "freeze MCP / Skill / Plugin MVP scope before starting packaging work"
+      - node: "pre_delivery"
+        method: "confirm delivered work stayed inside accepted scope or name approved deviations"
+    required_method:
+      - "mount latest todo map and previous todo map, or state why one is unavailable"
+      - "state the MVP boundary for the current slice"
+      - "list explicit non-goals and deferred tasks"
+      - "do not add newly discovered non-blocking work to the active slice without explicit user approval"
+      - "record task_scope_control_evidence before proceeding"
+  triggers:
+    - trigger_id: "TRG-task-start"
+      type: "task_lifecycle_event"
+      event: "task_start"
+  conditions:
+    - condition_id: "COND-policy-task-scope-control-before-packaging-task-type"
+      type: "task_type_is"
+      value: "work_order_delivery"
+    - condition_id: "COND-policy-task-scope-control-before-packaging-jikuo-layer"
+      type: "jikuo_layer_is"
+      value: "implementation_governance"
+  required_actions:
+    - action_id: "ACT-declare-task-scope-freeze-and-todo-delta"
+      type: "declare_task_scope_freeze_and_todo_delta"
+  required_evidence:
+    - evidence_id: "EVD-task-scope-control-evidence"
+      type: "task_scope_control_evidence"
+      satisfies_action: "ACT-declare-task-scope-freeze-and-todo-delta"
+  enforcement:
+    phase: "report_only"
+    level: "review_required"

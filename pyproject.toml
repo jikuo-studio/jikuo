@@ -14,7 +14,9 @@ authors = [{ name = "JIKUO contributors" }]
 [project.scripts]
 jikuo-agent-flow = "jikuo.agent_flow:main"
 jikuo-policy-store = "jikuo.policy_store:main"
+jikuo-policy-templates = "jikuo.policy_templates:main"
 jikuo-project-state = "jikuo.project_state:main"
+jikuo-starter-policies = "jikuo.starter_policies:main"
 jikuo-task-session = "jikuo.task_session:main"
 jikuo-task-session-cards = "jikuo.task_session_cards:main"
 
@@ -22,4 +24,4 @@ jikuo-task-session-cards = "jikuo.task_session_cards:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-jikuo = ["fixtures/**"]
+jikuo = ["fixtures/**", "policy_templates/**", "starter_policy_packs/**"]

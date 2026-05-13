@@ -1,0 +1,67 @@
+schema_version: "jikuo.policy_template.v0"
+template_id: "POLICYTEMPLATE-local-policy-pre-delivery-unit-integration-smoke-tests"
+namespace: "local"
+version: 1
+title: "Pre-delivery unit integration smoke tests"
+source:
+  type: "local_project_policy"
+  ref: "D:\\personal_project\\NarrativeSystem\\.jikuo\\policies\\approved\\POLICY-pre-delivery-unit-integration-smoke-tests.yaml"
+  source_project_ref: "NarrativeSystem"
+  source_policy_id: "POLICY-pre-delivery-unit-integration-smoke-tests"
+  source_sha256: "9070c66b0935eb69e8c9425589b48e6b5662659fa6c1eb1962d7c2114277b3de"
+portability:
+  status: "portable"
+  detected_project_refs:
+    []
+  warnings:
+    []
+required_bindings:
+  []
+template_policy:
+  schema_version: "jikuo.configurable_rule_policy.v0"
+  policy_id: "POLICY-pre-delivery-unit-integration-smoke-tests"
+  version: 1
+  status: "active_report_only"
+  title: "Pre-delivery unit integration smoke tests"
+  scenario_package: "engineering_governance"
+  source_refs:
+    - type: "policy_template"
+      ref: "POLICYTEMPLATE-local-policy-pre-delivery-unit-integration-smoke-tests"
+    - type: "origin_policy"
+      ref: "D:\\personal_project\\NarrativeSystem\\.jikuo\\policies\\approved\\POLICY-pre-delivery-unit-integration-smoke-tests.yaml"
+    - type: "user_natural_language"
+      ref: "我希望把Unit Tests、Integration Tests、Smoke Tests加到你交付结果之前，三层测试通过后方可交付，请你撰写相关的policy并增加policy"
+  triggers:
+    - trigger_id: "TRG-pre-delivery"
+      type: "task_lifecycle_event"
+      event: "pre_delivery"
+    - trigger_id: "TRG-completion-review"
+      type: "task_lifecycle_event"
+      event: "completion_review"
+  conditions:
+    - condition_id: "COND-policy-pre-delivery-unit-integration-smoke-tests-task-type"
+      type: "task_type_is"
+      value: "work_order_delivery"
+    - condition_id: "COND-policy-pre-delivery-unit-integration-smoke-tests-jikuo-layer"
+      type: "jikuo_layer_is"
+      value: "implementation_governance"
+  required_actions:
+    - action_id: "ACT-run-unit-tests-before-delivery"
+      type: "run_unit_tests_before_delivery"
+    - action_id: "ACT-run-integration-tests-before-delivery"
+      type: "run_integration_tests_before_delivery"
+    - action_id: "ACT-run-smoke-tests-before-delivery"
+      type: "run_smoke_tests_before_delivery"
+  required_evidence:
+    - evidence_id: "EVD-unit-test-pass-evidence"
+      type: "unit_test_pass_evidence"
+      satisfies_action: "ACT-run-unit-tests-before-delivery"
+    - evidence_id: "EVD-integration-test-pass-evidence"
+      type: "integration_test_pass_evidence"
+      satisfies_action: "ACT-run-integration-tests-before-delivery"
+    - evidence_id: "EVD-smoke-test-pass-evidence"
+      type: "smoke_test_pass_evidence"
+      satisfies_action: "ACT-run-smoke-tests-before-delivery"
+  enforcement:
+    phase: "report_only"
+    level: "review_required"

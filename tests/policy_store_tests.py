@@ -47,7 +47,7 @@ def create_policy_write_ready_project(root: Path) -> Path:
                 '  - "engineering_governance"',
                 "accepted_contract_refs:",
                 '  - "docs/jikuo/governance/jikuo_policy_store_configuration_flow.md"',
-                'registry_ref: "docs/scenarios/interactive_novel/governance/rule_registry.yaml"',
+                'registry_ref: "docs/governance/rule_registry.yaml"',
                 "latest_task_session_refs: []",
                 "latest_rule_proposal_refs: []",
                 "latest_handoff_ref: null",

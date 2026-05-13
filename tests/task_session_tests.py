@@ -30,7 +30,7 @@ def temp_project_dir():
 
 def create_ready_project(temp_dir: str, project_root_value: str | None = None) -> Path:
     root = Path(temp_dir)
-    registry = root / "docs" / "scenarios" / "interactive_novel" / "governance"
+    registry = root / "docs" / "governance"
     registry.mkdir(parents=True)
     (registry / "rule_registry.yaml").write_text("rules: []\n", encoding="utf-8")
     state_root = root / ".jikuo"
@@ -47,7 +47,7 @@ def create_ready_project(temp_dir: str, project_root_value: str | None = None) -
                 '  - "engineering_governance"',
                 "accepted_contract_refs:",
                 '  - "docs/jikuo/schemas/task_session.schema.md"',
-                'registry_ref: "docs/scenarios/interactive_novel/governance/rule_registry.yaml"',
+                'registry_ref: "docs/governance/rule_registry.yaml"',
                 "latest_task_session_refs: []",
                 "latest_rule_proposal_refs: []",
                 "latest_handoff_ref: null",

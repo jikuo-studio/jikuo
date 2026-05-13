@@ -130,8 +130,23 @@ For future MCP / plugin work, also mount:
 - `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-20_project_context_binding_and_policy_template_portability.md`
 - `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-SEC-01_trust_privacy_provenance_baseline.md`
 - `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-PKG-01_minimal_package_extraction.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-21_policy_template_extraction_import_mvp.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-22_starter_policy_pack_first_use_initialization.md`
 - `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-MCP-01_mcp_wrapper_mvp.md`
 - any generated MCP / skill / plugin contract documents
+
+For future policy template extraction / import work, also mount:
+
+- `docs/governance/jikuo_project_context_binding_and_policy_template_portability.md`
+- `docs/governance/jikuo_trust_privacy_provenance_baseline.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-21_policy_template_extraction_import_mvp.md`
+- the source approved-policy directory when extracting local seeds, such as `D:\personal_project\NarrativeSystem\.jikuo\policies\approved`
+
+For future starter policy pack / first-use initialization work, also mount:
+
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-22_starter_policy_pack_first_use_initialization.md`
+- `src/jikuo/starter_policy_packs/engineering_governance/manifest.yaml`
+- `src/jikuo/policy_templates/engineering_governance/*.yaml`
 
 ---
 
@@ -207,12 +222,12 @@ python -B tools/jikuo/agent_flow.py apply --operation policy_evolution_write --p
 Current boundary:
 
 - proposal mode remains no-write
-- guarded apply is limited to `task_session_evidence_update` and `policy_evolution_write`
+- guarded apply is limited to `task_session_evidence_update`, `policy_evolution_write`, and `starter_policy_pack_init`
 - `policy_evolution_write` guarded apply requires a proposal ref that matches the deterministic plan before any write
 - no arbitrary command execution
 - emits loop step id and atom id trace
-- emits `jikuo.agent_flow_proposal.v1` with read-only policy-store status, exact trigger evaluation, report-only condition evaluation, report-only evidence matching, guarded evidence persistence proposal, explicit task-session evidence ingestion, policy write-plan cards, and no-write policy evolution-plan cards where requested
-- emits `jikuo.agent_flow_apply_result.v0` for narrow approved task-session evidence and policy evolution apply paths
+- emits `jikuo.agent_flow_proposal.v1` with read-only policy-store status, exact trigger evaluation, report-only condition evaluation, report-only evidence matching, guarded evidence persistence proposal, explicit task-session evidence ingestion, policy write-plan cards, no-write policy evolution-plan cards, and starter policy pack initialization cards where requested
+- emits `jikuo.agent_flow_apply_result.v0` for narrow approved task-session evidence, policy evolution, and starter policy pack initialization apply paths
 
 ### Step 3: Lightweight Codex Skill / Agent Instruction
 

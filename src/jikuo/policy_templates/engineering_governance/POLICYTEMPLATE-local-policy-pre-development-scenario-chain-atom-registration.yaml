@@ -1,0 +1,54 @@
+schema_version: "jikuo.policy_template.v0"
+template_id: "POLICYTEMPLATE-local-policy-pre-development-scenario-chain-atom-registration"
+namespace: "local"
+version: 1
+title: "Pre-development scenario chain and atom registration"
+source:
+  type: "local_project_policy"
+  ref: "D:\\personal_project\\NarrativeSystem\\.jikuo\\policies\\approved\\POLICY-pre-development-scenario-chain-atom-registration.yaml"
+  source_project_ref: "NarrativeSystem"
+  source_policy_id: "POLICY-pre-development-scenario-chain-atom-registration"
+  source_sha256: "371235d78e84ae63ddb013705889018472721c64411b02c2ed1427f7244d2c77"
+portability:
+  status: "portable"
+  detected_project_refs:
+    []
+  warnings:
+    []
+required_bindings:
+  []
+template_policy:
+  schema_version: "jikuo.configurable_rule_policy.v0"
+  policy_id: "POLICY-pre-development-scenario-chain-atom-registration"
+  version: 1
+  status: "active_report_only"
+  title: "Pre-development scenario chain and atom registration"
+  scenario_package: "engineering_governance"
+  source_refs:
+    - type: "policy_template"
+      ref: "POLICYTEMPLATE-local-policy-pre-development-scenario-chain-atom-registration"
+    - type: "origin_policy"
+      ref: "D:\\personal_project\\NarrativeSystem\\.jikuo\\policies\\approved\\POLICY-pre-development-scenario-chain-atom-registration.yaml"
+    - type: "user_natural_language"
+      ref: "请你新增一条规则，开发前，尤其是新增功能，或者修改功能的时候需要拆解”用户场景--操作链路--原子化操作“，如果确实有变动，需要在开发地图的相应表进行注册或者变更。我批准写入规则。"
+  triggers:
+    - trigger_id: "TRG-task-start"
+      type: "task_lifecycle_event"
+      event: "task_start"
+  conditions:
+    - condition_id: "COND-policy-pre-development-scenario-chain-atom-registration-task-type"
+      type: "task_type_is"
+      value: "code_change"
+    - condition_id: "COND-policy-pre-development-scenario-chain-atom-registration-jikuo-layer"
+      type: "jikuo_layer_is"
+      value: "implementation_governance"
+  required_actions:
+    - action_id: "ACT-verify-scenario-chain-and-atom-registration"
+      type: "verify_scenario_chain_and_atom_registration"
+  required_evidence:
+    - evidence_id: "EVD-scenario-chain-atom-registration-evidence"
+      type: "scenario_chain_atom_registration_evidence"
+      satisfies_action: "ACT-verify-scenario-chain-and-atom-registration"
+  enforcement:
+    phase: "report_only"
+    level: "review_required"

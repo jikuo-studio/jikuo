@@ -1,0 +1,54 @@
+schema_version: "jikuo.policy_template.v0"
+template_id: "POLICYTEMPLATE-local-policy-desktop-workflow-acceptance-card-and-summary"
+namespace: "local"
+version: 1
+title: "Desktop workflow acceptance card and summary"
+source:
+  type: "local_project_policy"
+  ref: "D:\\personal_project\\NarrativeSystem\\.jikuo\\policies\\approved\\POLICY-desktop-workflow-acceptance-card-and-summary.yaml"
+  source_project_ref: "NarrativeSystem"
+  source_policy_id: "POLICY-desktop-workflow-acceptance-card-and-summary"
+  source_sha256: "32505c4a330844485cb9906743114fa0d200bde22286b1d78c4a1f512b3fe753"
+portability:
+  status: "portable"
+  detected_project_refs:
+    []
+  warnings:
+    []
+required_bindings:
+  []
+template_policy:
+  schema_version: "jikuo.configurable_rule_policy.v0"
+  policy_id: "POLICY-desktop-workflow-acceptance-card-and-summary"
+  version: 1
+  status: "active_report_only"
+  title: "Desktop workflow acceptance card and summary"
+  scenario_package: "engineering_governance"
+  source_refs:
+    - type: "policy_template"
+      ref: "POLICYTEMPLATE-local-policy-desktop-workflow-acceptance-card-and-summary"
+    - type: "origin_policy"
+      ref: "D:\\personal_project\\NarrativeSystem\\.jikuo\\policies\\approved\\POLICY-desktop-workflow-acceptance-card-and-summary.yaml"
+    - type: "user_natural_language"
+      ref: "“桌面 Agent 工作流验收”默认贴 proposal/card 原文，同时给摘要。`这一条也可以增加进policy里，我批准。"
+  triggers:
+    - trigger_id: "TRG-task-start"
+      type: "task_lifecycle_event"
+      event: "task_start"
+  conditions:
+    - condition_id: "COND-policy-desktop-workflow-acceptance-card-and-summary-task-type"
+      type: "task_type_is"
+      value: "workflow_acceptance"
+    - condition_id: "COND-policy-desktop-workflow-acceptance-card-and-summary-jikuo-layer"
+      type: "jikuo_layer_is"
+      value: "desktop_agent_governance"
+  required_actions:
+    - action_id: "ACT-render-original-proposal-card-and-summary"
+      type: "render_original_proposal_card_and_summary"
+  required_evidence:
+    - evidence_id: "EVD-original-proposal-card-and-summary-evidence"
+      type: "original_proposal_card_and_summary_evidence"
+      satisfies_action: "ACT-render-original-proposal-card-and-summary"
+  enforcement:
+    phase: "report_only"
+    level: "review_required"

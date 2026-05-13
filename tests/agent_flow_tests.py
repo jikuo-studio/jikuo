@@ -483,6 +483,86 @@ class AgentFlowProposalTests(unittest.TestCase):
                 updated,
             )
 
+    def test_apply_starter_policy_pack_init_refuses_without_approval(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "starter_project"
+            project_root.mkdir()
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "apply",
+                    "--operation",
+                    "starter_policy_pack_init",
+                    "--project-root",
+                    str(project_root),
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 2, completed.stderr)
+            report = json.loads(completed.stdout)
+            self.assertEqual(report["schema"], "jikuo.agent_flow_apply_result.v0")
+            self.assertEqual(report["operation"], "starter_policy_pack_init")
+            self.assertEqual(report["status"], "refused")
+            self.assertFalse(report["write_performed"])
+            self.assertIn("missing_confirmation_flag", report["refusal_reasons"])
+            self.assertIn("approval_evidence_missing", report["refusal_reasons"])
+            self.assertFalse((project_root / ".jikuo").exists())
+
+    def test_apply_starter_policy_pack_init_writes_after_approval(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "starter_project"
+            project_root.mkdir()
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "apply",
+                    "--operation",
+                    "starter_policy_pack_init",
+                    "--project-root",
+                    str(project_root),
+                    "--confirm-apply",
+                    "--approval-phrase",
+                    "I approve starter policy initialization through agent_flow.",
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            report = json.loads(completed.stdout)
+            self.assertEqual(report["schema"], "jikuo.agent_flow_apply_result.v0")
+            self.assertEqual(report["operation"], "starter_policy_pack_init")
+            self.assertEqual(report["status"], "applied")
+            self.assertTrue(report["write_performed"])
+            self.assertEqual(
+                report["target_result_schema"],
+                "jikuo.starter_policy_pack_init_result.v0",
+            )
+            self.assertTrue((project_root / ".jikuo" / "project_state.yaml").is_file())
+            approved = project_root / ".jikuo" / "policies" / "approved"
+            self.assertEqual(len(list(approved.glob("POLICY-*.yaml"))), 4)
+            self.assertTrue(
+                report["target_result"]["post_write_verification"]["starter_policies_active"]
+            )
+            atom_ids = {trace["atom_id"] for trace in report["atom_trace"]}
+            self.assertIn("CAP-AGENT-FLOW-APPLY-STARTER-POLICY-PACK-01", atom_ids)
+
     def test_apply_policy_evolution_write_refuses_without_approval(self):
         with tempfile.TemporaryDirectory() as tmp:
             project_copy = Path(tmp) / "policy_store_active_project"
@@ -1145,6 +1225,52 @@ class AgentFlowProposalTests(unittest.TestCase):
         atom_ids = {trace["atom_id"] for trace in proposal["atom_trace"]}
         self.assertIn("CAP-POLICY-STORE-WRITE-PROPOSE-01", atom_ids)
         self.assertFalse((READY_PROJECT / ".jikuo" / "policies").exists())
+
+    def test_starter_policy_pack_init_projects_agent_flow_apply_without_write(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "starter_project"
+            project_root.mkdir()
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "propose",
+                    "--event",
+                    "initialize_jikuo",
+                    "--project-root",
+                    str(project_root),
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            proposal = json.loads(completed.stdout)
+            self.assertFalse(proposal["write_effect"]["writes_performed"])
+            self.assertTrue(proposal["approval_boundary"]["guarded_apply_available"])
+            self.assertEqual(
+                proposal["trigger_decision"]["invocation_scenario"],
+                "starter_policy_pack_init",
+            )
+            card = proposal["cards"][0]
+            self.assertEqual(card["card_kind"], "starter_policy_pack_init_plan")
+            plan = card["starter_policy_pack_init_plan"]
+            self.assertEqual(plan["schema"], "jikuo.starter_policy_pack_init_plan.v0")
+            self.assertTrue(plan["would_create_project_state"])
+            self.assertEqual(len(plan["starter_policies"]), 4)
+            command = card["command_proposal"]["command_preview"]
+            self.assertIn("python -B -m jikuo.agent_flow", command)
+            self.assertIn("apply", command)
+            self.assertIn("--operation \"starter_policy_pack_init\"", command)
+            self.assertIn("--confirm-apply", command)
+            self.assertNotIn("tools/jikuo", command)
+            self.assertFalse((project_root / ".jikuo").exists())
 
     def test_policy_evolution_plan_projects_refinement_without_write(self):
         completed = subprocess.run(

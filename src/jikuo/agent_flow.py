@@ -14,11 +14,12 @@ from pathlib import Path
 from typing import Any
 
 if __package__:
-    from . import project_state, policy_store, task_session, task_session_cards
+    from . import project_state, policy_store, starter_policies, task_session, task_session_cards
 else:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     import project_state
     import policy_store
+    import starter_policies
     import task_session
     import task_session_cards
 
@@ -34,7 +35,11 @@ POLICY_EVAL_STATUS_NOT_EVALUATED = "not_evaluated"
 POLICY_CONDITION_EVAL_STATUS_NOT_EVALUATED = "not_evaluated"
 POLICY_FEEDBACK_OPTIONS_SCHEMA = "jikuo.policy_feedback_options.v0"
 POLICY_FEEDBACK_TYPES = {"not_applicable", "defer", "needs_scope_narrowing"}
-APPLY_OPERATIONS = {"policy_evolution_write", "task_session_evidence_update"}
+APPLY_OPERATIONS = {
+    "policy_evolution_write",
+    "starter_policy_pack_init",
+    "task_session_evidence_update",
+}
 
 EVENT_ALIASES = {
     "status": "project_status",
@@ -58,6 +63,9 @@ EVENT_ALIASES = {
     "policy_evolution_plan": "policy_evolution_plan",
     "policy_refinement_plan": "policy_evolution_plan",
     "refine_policy": "policy_evolution_plan",
+    "starter_policy_pack_init": "starter_policy_pack_init",
+    "starter_init": "starter_policy_pack_init",
+    "initialize_jikuo": "starter_policy_pack_init",
     "verification": "verification_review",
     "verification_review": "verification_review",
     "completion": "completion_review",
@@ -86,6 +94,7 @@ NO_WRITE_ATOMS = {
     "CAP-POLICY-EVIDENCE-INGEST-01",
     "CAP-POLICY-STORE-WRITE-PROPOSE-01",
     "CAP-POLICY-EVOLUTION-PLAN-PROPOSE-01",
+    "CAP-STARTER-POLICY-PACK-INIT-01",
 }
 
 
@@ -1147,6 +1156,90 @@ def build_policy_evolution_plan_cards(
     return [card], [trace], list(plan["refusal_reasons"])
 
 
+def build_starter_policy_pack_init_cards(
+    *,
+    project_root: Path | None,
+    starter_pack_id: str,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]:
+    plan = starter_policies.build_starter_init_plan(
+        project_root=project_root,
+        pack_id=starter_pack_id,
+    )
+    outputs = [
+        f"plan_id: {plan['plan_id']}",
+        f"pack_id: {plan['pack_id']}",
+        f"project_state_status: {plan['project_state_status']}",
+        f"policy_store_status: {plan['policy_store_status']}",
+        f"starter_policy_count: {len(plan['starter_policies'])}",
+        f"would_create_registry: {plan['would_create_registry']}",
+        f"would_create_project_state: {plan['would_create_project_state']}",
+    ]
+    outputs.extend(
+        f"starter_policy: {item['policy_id']} ({item['title']})"
+        for item in plan["starter_policies"]
+    )
+    outputs.extend(
+        f"would_write: {item['path']} ({item['effect']})"
+        for item in plan["write_set"]
+    )
+    command_parts = [
+        "python",
+        "-B",
+        "-m",
+        "jikuo.agent_flow",
+        "apply",
+        "--operation",
+        command_arg("starter_policy_pack_init"),
+        "--project-root",
+        command_arg(str(project_root or ".")),
+        "--starter-pack-id",
+        command_arg(starter_pack_id),
+        "--confirm-apply",
+        "--approval-phrase",
+        command_arg(APPROVAL_PHRASE_PLACEHOLDER),
+        "--format",
+        "json",
+    ]
+    card = generic_card(
+        card_kind="starter_policy_pack_init_plan",
+        status=plan["status"],
+        title="Starter policy pack initialization plan",
+        summary=(
+            "A starter policy pack can initialize this project with report-only policies after approval."
+            if plan["status"] != "refused"
+            else "Starter policy pack initialization could not be prepared safely."
+        ),
+        shown_inputs=[
+            f"project_root: {project_root or '.'}",
+            f"starter_pack_id: {starter_pack_id}",
+        ],
+        shown_outputs=outputs,
+        refusal_reasons=plan["refusal_reasons"],
+        next_actions=plan["next_actions"],
+    )
+    card["starter_policy_pack_init_plan"] = plan
+    card["command_proposal"] = {
+        "command_preview": " ".join(command_parts),
+        "approval_required": True,
+        "technical_confirmation_required": True,
+        "writes_if_approved": [item["path"] for item in plan["write_set"]],
+        "non_effects": plan["non_effects"],
+    }
+    card["write_effect"] = {
+        "target": "JIKUO first-use starter policy initialization",
+        "effect": "renders a starter policy pack initialization plan only; no durable write is performed",
+        "non_effects": plan["non_effects"],
+    }
+    trace = atom_trace(
+        loop_step_id="DPL-05",
+        atom_id="CAP-STARTER-POLICY-PACK-INIT-01",
+        mode="no-write",
+        status=plan["status"],
+        summary="built starter policy pack initialization plan without writing project files",
+    )
+    return [card], [trace], list(plan["refusal_reasons"])
+
+
 def build_audit_cards() -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]:
     card = generic_card(
         card_kind="audit_report_not_configured",
@@ -1206,6 +1299,7 @@ def build_proposal(
     replacement_added_path_pattern: str | None = None,
     replacement_action_type: str = "render_pre_task_review",
     replacement_evidence_type: str = "card_rendered",
+    starter_pack_id: str = starter_policies.DEFAULT_PACK_ID,
     action_ref: str | None = None,
     requirement_ref: str | None = None,
     command_name: str | None = None,
@@ -1296,6 +1390,11 @@ def build_proposal(
             replacement_action_type=replacement_action_type,
             replacement_evidence_type=replacement_evidence_type,
         )
+    elif event == "starter_policy_pack_init":
+        cards, traces, refusals = build_starter_policy_pack_init_cards(
+            project_root=project_root,
+            starter_pack_id=starter_pack_id,
+        )
     elif event == "policy_evidence_record":
         cards, traces, refusals = build_policy_evidence_record_cards(
             project_root=project_root,
@@ -1367,6 +1466,12 @@ def build_proposal(
     status = "refused" if "refused" in statuses else "review" if "review" in statuses else "ok"
     atom_ids = [trace["atom_id"] for trace in traces]
     unsafe_atoms = sorted(set(atom_ids) - NO_WRITE_ATOMS - {"CAP-AGENT-FLOW-01"})
+    guarded_apply_available = event in {
+        "policy_evolution_plan",
+        "policy_evidence_record",
+        "policy_feedback_record",
+        "starter_policy_pack_init",
+    }
 
     return {
         "schema": PROPOSAL_SCHEMA,
@@ -1396,7 +1501,7 @@ def build_proposal(
         "cards": cards,
         "approval_boundary": {
             "durable_write_approved": False,
-            "guarded_apply_available": False,
+            "guarded_apply_available": guarded_apply_available,
             "exact_user_phrase_placeholder": APPROVAL_PHRASE_PLACEHOLDER,
         },
         "write_effect": {
@@ -1455,6 +1560,7 @@ def build_apply_result(
     replacement_added_path_pattern: str | None = None,
     replacement_action_type: str = "render_pre_task_review",
     replacement_evidence_type: str = "card_rendered",
+    starter_pack_id: str = starter_policies.DEFAULT_PACK_ID,
     confirmed: bool = False,
     approval_phrase: str | None = None,
 ) -> tuple[dict[str, Any], int]:
@@ -1525,6 +1631,31 @@ def build_apply_result(
             "does not write policy files",
             "does not execute policy actions",
             "does not judge product output quality",
+        ]
+    elif operation == "starter_policy_pack_init":
+        target_result, exit_code = starter_policies.initialize_starter_pack(
+            project_root=project_root,
+            pack_id=starter_pack_id,
+            confirmed=confirmed,
+            approval_phrase=approval_phrase,
+        )
+        write_performed = bool(target_result.get("write_performed"))
+        traces.append(
+            atom_trace(
+                loop_step_id="DPL-07",
+                atom_id="CAP-AGENT-FLOW-APPLY-STARTER-POLICY-PACK-01",
+                mode="guarded-write",
+                status=target_result.get("status", "unknown"),
+                summary="applied guarded starter policy pack initialization through agent_flow.py",
+            )
+        )
+        approval_target = "JIKUO starter policy pack initialization"
+        approval_effect = f"initialize starter policy pack {starter_pack_id}"
+        approval_non_effects = [
+            "does not execute starter policy actions",
+            "does not promote gates or blocking enforcement",
+            "does not upload telemetry",
+            "does not modify source template files",
         ]
     else:
         binding_plan = policy_store.build_policy_evolution_plan(
@@ -1767,7 +1898,8 @@ def render_markdown(proposal: dict[str, Any]) -> str:
         f"- Proposal id: `{proposal['proposal_id']}`",
         f"- Runner mode: `{proposal['runner_mode']}`",
         "- Writes performed: `false`",
-        "- Guarded apply available: `false`",
+        "- Guarded apply available: "
+        f"`{str(proposal.get('approval_boundary', {}).get('guarded_apply_available', False)).lower()}`",
         "",
         "## Trigger Decision",
         "",
@@ -1928,6 +2060,7 @@ def build_parser() -> argparse.ArgumentParser:
     propose.add_argument("--replacement-added-path-pattern", default=None)
     propose.add_argument("--replacement-action-type", default="render_pre_task_review")
     propose.add_argument("--replacement-evidence-type", default="card_rendered")
+    propose.add_argument("--starter-pack-id", default=starter_policies.DEFAULT_PACK_ID)
     propose.add_argument(
         "--produced-evidence-json",
         default=None,
@@ -1986,6 +2119,7 @@ def build_parser() -> argparse.ArgumentParser:
     apply.add_argument("--replacement-added-path-pattern", default=None)
     apply.add_argument("--replacement-action-type", default="render_pre_task_review")
     apply.add_argument("--replacement-evidence-type", default="card_rendered")
+    apply.add_argument("--starter-pack-id", default=starter_policies.DEFAULT_PACK_ID)
     apply.add_argument("--project-root", type=Path, default=None)
     apply.add_argument("--confirm-apply", action="store_true")
     apply.add_argument("--approval-phrase", default=None)
@@ -2019,6 +2153,7 @@ def main(argv: list[str] | None = None) -> int:
             replacement_added_path_pattern=args.replacement_added_path_pattern,
             replacement_action_type=args.replacement_action_type,
             replacement_evidence_type=args.replacement_evidence_type,
+            starter_pack_id=args.starter_pack_id,
             confirmed=args.confirm_apply,
             approval_phrase=args.approval_phrase,
         )
@@ -2091,6 +2226,7 @@ def main(argv: list[str] | None = None) -> int:
         replacement_added_path_pattern=args.replacement_added_path_pattern,
         replacement_action_type=args.replacement_action_type,
         replacement_evidence_type=args.replacement_evidence_type,
+        starter_pack_id=args.starter_pack_id,
         action_ref=args.action_ref,
         requirement_ref=args.requirement_ref,
         command_name=args.command_name,
