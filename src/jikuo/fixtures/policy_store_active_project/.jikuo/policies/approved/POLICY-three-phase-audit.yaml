@@ -1,0 +1,25 @@
+schema_version: "jikuo.configurable_rule_policy.v0"
+policy_id: "POLICY-three-phase-audit"
+version: 1
+status: "active_report_only"
+title: "Three-phase task audit"
+scenario_package: "engineering_governance"
+source_refs:
+  - type: "user_natural_language"
+    ref: "<exact user phrase as spoken>"
+scope:
+  project_id: "policy_store_active_project"
+triggers:
+  - trigger_id: "TRG-task-start"
+    type: "task_lifecycle_event"
+    event: "task_start"
+required_actions:
+  - action_id: "ACT-render-pre-task-review"
+    type: "render_pre_task_review"
+required_evidence:
+  - evidence_id: "EVD-card-rendered"
+    type: "card_rendered"
+    satisfies_action: "ACT-render-pre-task-review"
+enforcement:
+  phase: "report_only"
+  level: "review_required"

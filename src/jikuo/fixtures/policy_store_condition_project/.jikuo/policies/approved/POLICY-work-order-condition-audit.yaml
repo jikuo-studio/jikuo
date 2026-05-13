@@ -1,0 +1,35 @@
+schema_version: "jikuo.configurable_rule_policy.v0"
+policy_id: "POLICY-work-order-condition-audit"
+version: 1
+status: "active_report_only"
+title: "Conditioned work-order audit"
+scenario_package: "engineering_governance"
+source_refs:
+  - type: "user_natural_language"
+    ref: "<exact user phrase as spoken>"
+scope:
+  project_id: "policy_store_condition_project"
+triggers:
+  - trigger_id: "TRG-task-start"
+    type: "task_lifecycle_event"
+    event: "task_start"
+conditions:
+  - condition_id: "COND-task-type"
+    type: "task_type_is"
+    value: "work_order_delivery"
+  - condition_id: "COND-jikuo-layer"
+    type: "jikuo_layer_is"
+    value: "configurable_rule_kernel"
+  - condition_id: "COND-docs-path"
+    type: "changed_path_matches"
+    pattern: "docs/jikuo/**"
+required_actions:
+  - action_id: "ACT-render-conditioned-review"
+    type: "render_pre_task_review"
+required_evidence:
+  - evidence_id: "EVD-conditioned-card-rendered"
+    type: "card_rendered"
+    satisfies_action: "ACT-render-conditioned-review"
+enforcement:
+  phase: "report_only"
+  level: "review_required"

@@ -1,0 +1,15 @@
+schema: "jikuo.project_local_state.v0"
+project_id: "policy_evidence_session_project"
+project_root: "fixture"
+jikuo_state_root: "fixture/.jikuo"
+active_scenario_packages:
+  - "engineering_governance"
+accepted_contract_refs:
+  - "docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-04_project_local_state_and_sidecar_storage_contract.md"
+registry_ref: "docs/scenarios/interactive_novel/governance/rule_registry.yaml"
+latest_task_session_refs: []
+latest_rule_proposal_refs: []
+latest_handoff_ref: null
+compatibility:
+  unknown_fields: "preserve"
+  writer: "fixture"

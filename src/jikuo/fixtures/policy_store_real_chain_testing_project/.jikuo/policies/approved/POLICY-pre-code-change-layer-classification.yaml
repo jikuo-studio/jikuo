@@ -1,0 +1,35 @@
+schema_version: "jikuo.configurable_rule_policy.v0"
+policy_id: "POLICY-pre-code-change-layer-classification"
+version: 1
+status: "active_report_only"
+title: "Pre-code-change governance versus implementation classification"
+scenario_package: "engineering_governance"
+source_refs:
+  - type: "user_natural_language"
+    ref: "还需要增加一条前馈的规则，那就是在改代码的时候，需要先判断这是一个工程管理方法问题（加规则），还是设计实现问题（改代码），你需要提炼这条规则到policy里"
+scope:
+  project_id: "policy_store_real_chain_testing_project"
+triggers:
+  - trigger_id: "TRG-task-start"
+    type: "task_lifecycle_event"
+    event: "task_start"
+conditions:
+  - condition_id: "COND-pre-code-change-task-type"
+    type: "task_type_is"
+    value: "code_change"
+  - condition_id: "COND-pre-code-change-layer"
+    type: "jikuo_layer_is"
+    value: "implementation_governance"
+  - condition_id: "COND-pre-code-change-path"
+    type: "changed_path_matches"
+    pattern: "tools/jikuo/**"
+required_actions:
+  - action_id: "ACT-classify-governance-vs-implementation"
+    type: "classify_governance_vs_implementation_before_code_change"
+required_evidence:
+  - evidence_id: "EVD-governance-vs-implementation-classification"
+    type: "governance_vs_implementation_classification_evidence"
+    satisfies_action: "ACT-classify-governance-vs-implementation"
+enforcement:
+  phase: "report_only"
+  level: "review_required"

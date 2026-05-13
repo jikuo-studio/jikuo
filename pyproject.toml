@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jikuo"
+version = "0.1.0"
+description = "AI-primary process governance kernel"
+requires-python = ">=3.10"
+readme = "README.md"
+license = { text = "Proprietary" }
+authors = [{ name = "JIKUO contributors" }]
+
+[project.scripts]
+jikuo-agent-flow = "jikuo.agent_flow:main"
+jikuo-policy-store = "jikuo.policy_store:main"
+jikuo-project-state = "jikuo.project_state:main"
+jikuo-task-session = "jikuo.task_session:main"
+jikuo-task-session-cards = "jikuo.task_session_cards:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+jikuo = ["fixtures/**"]

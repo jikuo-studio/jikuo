@@ -1,0 +1,5 @@
+schema_version: "jikuo.configurable_rule_policy.v0"
+policy_id: "POLICY-duplicate"
+version: 1
+status: "active_report_only"
+title: "Duplicate policy B"

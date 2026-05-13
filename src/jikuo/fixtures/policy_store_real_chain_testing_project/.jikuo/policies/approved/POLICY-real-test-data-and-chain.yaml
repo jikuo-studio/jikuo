@@ -1,0 +1,35 @@
+schema_version: "jikuo.configurable_rule_policy.v0"
+policy_id: "POLICY-real-test-data-and-chain"
+version: 1
+status: "active_report_only"
+title: "Real test data and real chain acceptance"
+scenario_package: "engineering_governance"
+source_refs:
+  - type: "user_natural_language"
+    ref: "其实不是应该该代码，而是改规则，也就是新增规则，测试需要用真实测试数据，测试真实链路，避免抄预览模板的假验收，你应该提炼出这样的规则加到规则库里被加载"
+scope:
+  project_id: "policy_store_real_chain_testing_project"
+triggers:
+  - trigger_id: "TRG-task-start"
+    type: "task_lifecycle_event"
+    event: "task_start"
+conditions:
+  - condition_id: "COND-real-chain-task-type"
+    type: "task_type_is"
+    value: "work_order_delivery"
+  - condition_id: "COND-real-chain-layer"
+    type: "jikuo_layer_is"
+    value: "testing_governance"
+  - condition_id: "COND-real-chain-path"
+    type: "changed_path_matches"
+    pattern: "tools/jikuo/**"
+required_actions:
+  - action_id: "ACT-verify-real-test-data-and-chain"
+    type: "verify_real_test_data_and_real_chain"
+required_evidence:
+  - evidence_id: "EVD-real-test-data-and-chain"
+    type: "real_test_data_and_chain_evidence"
+    satisfies_action: "ACT-verify-real-test-data-and-chain"
+enforcement:
+  phase: "report_only"
+  level: "review_required"

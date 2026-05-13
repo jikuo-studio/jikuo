@@ -1,0 +1,36 @@
+schema: "jikuo.task_session.v0"
+session:
+  session_id: "task_policy_evidence_probe"
+  task_title: "Policy Evidence Probe"
+  owner_agent: "codex"
+  created_at: "2026-05-12T00:00:00Z"
+  updated_at: "2026-05-12T00:10:00Z"
+  lifecycle_status: "draft"
+scenario:
+  scenario_chain_id: "JIKUO-SCENARIO-CHAIN-01"
+  scenario_package: "engineering_governance"
+changed_surfaces: []
+rule_results: []
+document_mounts: []
+evidence_snapshots:
+  - evidence_id: "EVD-persisted-card"
+    evidence_kind: "policy_evidence:card_rendered"
+    source_ref: "policy_ref=POLICY-three-phase-audit;action_ref=ACT-render-pre-task-review;requirement_ref=EVD-card-rendered;evidence_ref=EVD-card-rendered"
+    summary: "Persisted policy evidence card_rendered satisfies EVD-card-rendered."
+    status: "ok"
+    recorded_at: "2026-05-12T00:10:00Z"
+    recorded_by: "codex"
+verification: []
+user_decisions: []
+completion:
+  status: "not_started"
+handoff:
+  summary: null
+audit_trail: []
+supersession:
+  supersedes: []
+  superseded_by: null
+capture_policy:
+  raw_chat_transcript: "disallowed"
+  exact_user_phrase: "decision_only_with_target_and_effect"
+  product_output_quality_judgement: "out_of_scope"

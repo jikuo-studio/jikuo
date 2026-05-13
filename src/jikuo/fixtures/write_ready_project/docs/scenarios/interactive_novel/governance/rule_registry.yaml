@@ -1,0 +1,4 @@
+schema_version: "fixture"
+registry:
+  id: "write_ready_project"
+rules: []

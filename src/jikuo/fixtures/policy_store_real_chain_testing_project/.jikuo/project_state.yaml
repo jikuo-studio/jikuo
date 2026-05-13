@@ -1,0 +1,16 @@
+schema: "jikuo.project_local_state.v0"
+project_id: "policy_store_real_chain_testing_project"
+project_root: "tools/jikuo/fixtures/policy_store_real_chain_testing_project"
+jikuo_state_root: "tools/jikuo/fixtures/policy_store_real_chain_testing_project/.jikuo"
+active_scenario_packages:
+  - "engineering_governance"
+accepted_contract_refs:
+  - "docs/jikuo/governance/jikuo_policy_store_configuration_flow.md"
+  - "docs/jikuo/governance/jikuo_configurable_rule_trigger_policy.md"
+registry_ref: "docs/scenarios/interactive_novel/governance/rule_registry.yaml"
+latest_task_session_refs: []
+latest_rule_proposal_refs: []
+latest_handoff_ref: null
+compatibility:
+  unknown_fields: "preserve"
+  writer: "test_fixture"
