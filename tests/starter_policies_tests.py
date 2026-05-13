@@ -168,6 +168,10 @@ class StarterPolicyPackTests(unittest.TestCase):
                 / "POLICY-desktop-workflow-acceptance-card-and-summary.yaml"
             ).read_text(encoding="utf-8")
             self.assertIn("pkg://jikuo/policy_templates/engineering_governance/", policy_text)
+            self.assertNotIn("NarrativeSystem", policy_text)
+            self.assertNotIn("D:\\", policy_text)
+            self.assertNotIn("origin_policy", policy_text)
+            self.assertNotIn("user_natural_language", policy_text)
             self.assertNotIn("src\\\\jikuo\\\\policy_templates", policy_text)
             self.assertNotIn("src/jikuo/policy_templates", policy_text)
 

@@ -5,10 +5,14 @@ version: 1
 title: "Pre-development scenario chain and atom registration"
 source:
   type: "local_project_policy"
-  ref: "D:\\personal_project\\NarrativeSystem\\.jikuo\\policies\\approved\\POLICY-pre-development-scenario-chain-atom-registration.yaml"
-  source_project_ref: "NarrativeSystem"
+  ref: "redacted://local_project_policy/POLICY-pre-development-scenario-chain-atom-registration"
+  source_project_ref: "redacted"
   source_policy_id: "POLICY-pre-development-scenario-chain-atom-registration"
   source_sha256: "371235d78e84ae63ddb013705889018472721c64411b02c2ed1427f7244d2c77"
+  privacy:
+    local_path: "redacted"
+    project_identity: "redacted"
+    source_refs: "redacted"
 portability:
   status: "portable"
   detected_project_refs:
@@ -27,10 +31,6 @@ template_policy:
   source_refs:
     - type: "policy_template"
       ref: "POLICYTEMPLATE-local-policy-pre-development-scenario-chain-atom-registration"
-    - type: "origin_policy"
-      ref: "D:\\personal_project\\NarrativeSystem\\.jikuo\\policies\\approved\\POLICY-pre-development-scenario-chain-atom-registration.yaml"
-    - type: "user_natural_language"
-      ref: "请你新增一条规则，开发前，尤其是新增功能，或者修改功能的时候需要拆解”用户场景--操作链路--原子化操作“，如果确实有变动，需要在开发地图的相应表进行注册或者变更。我批准写入规则。"
   triggers:
     - trigger_id: "TRG-task-start"
       type: "task_lifecycle_event"

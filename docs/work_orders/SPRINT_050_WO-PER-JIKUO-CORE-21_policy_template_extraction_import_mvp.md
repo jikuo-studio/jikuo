@@ -6,7 +6,7 @@
 
 ## 1. Why This Slice Exists
 
-NarrativeSystem contains approved JIKUO policies that are useful beyond that project:
+An incubating project contains approved JIKUO policies that are useful beyond that project:
 
 - desktop workflow acceptance card and summary
 - pre-delivery unit / integration / smoke tests
@@ -20,13 +20,13 @@ Those records should not be copied into JIKUO as active local policies. They sho
 - `docs/governance/jikuo_project_context_binding_and_policy_template_portability.md`
 - `docs/governance/jikuo_trust_privacy_provenance_baseline.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-20B_resource_reference_hygiene.md`
-- `D:\personal_project\NarrativeSystem\.jikuo\policies\approved\*.yaml`
+- source approved-policy directory supplied by the maintainer during extraction
 
 ## 3. In Scope
 
 - Inspect an approved-policy source directory.
 - Build a no-write template extraction plan from one approved policy.
-- Preserve source policy provenance and SHA-256.
+- Preserve source policy ID and SHA-256 provenance without exposing the incubating project name, local path, or original user utterance in exported package templates.
 - Preserve nested policy fields used by current approved policies.
 - Infer basic required bindings such as `role://document/latest_todo_map` and `role://document/previous_todo_map`.
 - Export a template into the package template directory only with `--confirm-export-template` and an approval phrase.
@@ -66,14 +66,15 @@ Policy review evidence:
 - Do not activate templates as approved policies.
 - Do not write `.jikuo/project_context.yaml`.
 - Do not implement template signing, marketplace trust, MCP, Plugin, frontend UI, or gates.
-- Do not rewrite the NarrativeSystem policy store.
+- Do not rewrite the incubating project's policy store.
+- Do not expose incubating-project local paths, project identity, or raw source policy `source_refs` in package templates.
 
 ## 6. Implemented CLI
 
 ```powershell
 python -B -m jikuo.policy_templates inspect-source --source-dir "<approved policy dir>" --format json
-python -B -m jikuo.policy_templates plan-extract --source-policy "<policy yaml>" --source-project-ref NarrativeSystem --format json
-python -B -m jikuo.policy_templates export-template --source-policy "<policy yaml>" --source-project-ref NarrativeSystem --confirm-export-template --approval-phrase "<exact user phrase as spoken>" --format json
+python -B -m jikuo.policy_templates plan-extract --source-policy "<policy yaml>" --source-project-ref "<private source project ref>" --format json
+python -B -m jikuo.policy_templates export-template --source-policy "<policy yaml>" --source-project-ref "<private source project ref>" --confirm-export-template --approval-phrase "<exact user phrase as spoken>" --format json
 python -B -m jikuo.policy_templates plan-import --template "<policy template yaml>" --project-root "<target project>" --format json
 ```
 
@@ -88,6 +89,7 @@ Expected:
 
 - template extraction plans are no-write
 - template export refuses missing confirmation / approval
+- exported package templates redact source project identity, local paths, and original source refs
 - template export writes package templates but never creates `.jikuo/policies/`
 - template import planning reports missing project-context bindings without writing
 

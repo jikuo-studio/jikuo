@@ -5,10 +5,14 @@ version: 1
 title: "Desktop workflow acceptance card and summary"
 source:
   type: "local_project_policy"
-  ref: "D:\\personal_project\\NarrativeSystem\\.jikuo\\policies\\approved\\POLICY-desktop-workflow-acceptance-card-and-summary.yaml"
-  source_project_ref: "NarrativeSystem"
+  ref: "redacted://local_project_policy/POLICY-desktop-workflow-acceptance-card-and-summary"
+  source_project_ref: "redacted"
   source_policy_id: "POLICY-desktop-workflow-acceptance-card-and-summary"
   source_sha256: "32505c4a330844485cb9906743114fa0d200bde22286b1d78c4a1f512b3fe753"
+  privacy:
+    local_path: "redacted"
+    project_identity: "redacted"
+    source_refs: "redacted"
 portability:
   status: "portable"
   detected_project_refs:
@@ -27,10 +31,6 @@ template_policy:
   source_refs:
     - type: "policy_template"
       ref: "POLICYTEMPLATE-local-policy-desktop-workflow-acceptance-card-and-summary"
-    - type: "origin_policy"
-      ref: "D:\\personal_project\\NarrativeSystem\\.jikuo\\policies\\approved\\POLICY-desktop-workflow-acceptance-card-and-summary.yaml"
-    - type: "user_natural_language"
-      ref: "“桌面 Agent 工作流验收”默认贴 proposal/card 原文，同时给摘要。`这一条也可以增加进policy里，我批准。"
   triggers:
     - trigger_id: "TRG-task-start"
       type: "task_lifecycle_event"

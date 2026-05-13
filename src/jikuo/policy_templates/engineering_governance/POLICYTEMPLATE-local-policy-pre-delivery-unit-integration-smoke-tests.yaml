@@ -5,10 +5,14 @@ version: 1
 title: "Pre-delivery unit integration smoke tests"
 source:
   type: "local_project_policy"
-  ref: "D:\\personal_project\\NarrativeSystem\\.jikuo\\policies\\approved\\POLICY-pre-delivery-unit-integration-smoke-tests.yaml"
-  source_project_ref: "NarrativeSystem"
+  ref: "redacted://local_project_policy/POLICY-pre-delivery-unit-integration-smoke-tests"
+  source_project_ref: "redacted"
   source_policy_id: "POLICY-pre-delivery-unit-integration-smoke-tests"
   source_sha256: "9070c66b0935eb69e8c9425589b48e6b5662659fa6c1eb1962d7c2114277b3de"
+  privacy:
+    local_path: "redacted"
+    project_identity: "redacted"
+    source_refs: "redacted"
 portability:
   status: "portable"
   detected_project_refs:
@@ -27,10 +31,6 @@ template_policy:
   source_refs:
     - type: "policy_template"
       ref: "POLICYTEMPLATE-local-policy-pre-delivery-unit-integration-smoke-tests"
-    - type: "origin_policy"
-      ref: "D:\\personal_project\\NarrativeSystem\\.jikuo\\policies\\approved\\POLICY-pre-delivery-unit-integration-smoke-tests.yaml"
-    - type: "user_natural_language"
-      ref: "我希望把Unit Tests、Integration Tests、Smoke Tests加到你交付结果之前，三层测试通过后方可交付，请你撰写相关的policy并增加policy"
   triggers:
     - trigger_id: "TRG-pre-delivery"
       type: "task_lifecycle_event"

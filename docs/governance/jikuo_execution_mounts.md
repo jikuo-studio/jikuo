@@ -140,7 +140,7 @@ For future policy template extraction / import work, also mount:
 - `docs/governance/jikuo_project_context_binding_and_policy_template_portability.md`
 - `docs/governance/jikuo_trust_privacy_provenance_baseline.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-21_policy_template_extraction_import_mvp.md`
-- the source approved-policy directory when extracting local seeds, such as `D:\personal_project\NarrativeSystem\.jikuo\policies\approved`
+- the source approved-policy directory when extracting local seeds; exported package templates must redact local source paths and source project identity
 
 For future starter policy pack / first-use initialization work, also mount:
 

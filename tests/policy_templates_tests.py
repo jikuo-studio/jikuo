@@ -67,6 +67,18 @@ def write_policy(path: Path) -> None:
 
 
 class PolicyTemplateTests(unittest.TestCase):
+    def test_packaged_starter_templates_do_not_expose_private_source_refs(self):
+        template_root = ROOT / "src" / "jikuo" / "policy_templates" / "engineering_governance"
+        for template_path in template_root.glob("*.yaml"):
+            with self.subTest(template=template_path.name):
+                text = template_path.read_text(encoding="utf-8")
+                self.assertNotIn("NarrativeSystem", text)
+                self.assertNotIn("D:\\", text)
+                self.assertNotIn("origin_policy", text)
+                self.assertNotIn("user_natural_language", text)
+                self.assertIn('source_project_ref: "redacted"', text)
+                self.assertIn('local_path: "redacted"', text)
+
     def test_inspect_source_lists_approved_policy_candidates(self):
         with temp_project_dir() as root:
             source_dir = root / "approved"
@@ -113,7 +125,7 @@ class PolicyTemplateTests(unittest.TestCase):
                     "--source-policy",
                     str(source_policy),
                     "--source-project-ref",
-                    "NarrativeSystem",
+                    "IncubatingPrivateProject",
                     "--format",
                     "json",
                 ],
@@ -129,7 +141,15 @@ class PolicyTemplateTests(unittest.TestCase):
             self.assertFalse(report["writes_performed"])
             template = report["proposed_template"]
             self.assertEqual(template["schema_version"], "jikuo.policy_template.v0")
-            self.assertEqual(template["source"]["source_project_ref"], "NarrativeSystem")
+            serialized_template = json.dumps(template, ensure_ascii=False)
+            self.assertEqual(template["source"]["source_project_ref"], "redacted")
+            self.assertEqual(template["source"]["privacy"]["local_path"], "redacted")
+            self.assertEqual(template["source"]["privacy"]["project_identity"], "redacted")
+            self.assertNotIn("NarrativeSystem", serialized_template)
+            self.assertNotIn("IncubatingPrivateProject", serialized_template)
+            self.assertNotIn(str(source_policy), serialized_template)
+            self.assertNotIn("origin_policy", serialized_template)
+            self.assertNotIn("user_natural_language", serialized_template)
             role_refs = {item["role_ref"] for item in template["required_bindings"]}
             self.assertIn("role://document/latest_todo_map", role_refs)
             self.assertIn("role://document/previous_todo_map", role_refs)
@@ -209,6 +229,10 @@ class PolicyTemplateTests(unittest.TestCase):
                 report["post_write_verification"]["template_schema"],
                 "jikuo.policy_template.v0",
             )
+            written_text = written_path.read_text(encoding="utf-8")
+            self.assertNotIn(str(source_policy), written_text)
+            self.assertNotIn("origin_policy", written_text)
+            self.assertNotIn("user_natural_language", written_text)
 
     def test_plan_import_reports_missing_project_context_bindings(self):
         with temp_project_dir() as root:

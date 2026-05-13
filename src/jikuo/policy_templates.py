@@ -31,6 +31,7 @@ POLICY_TEMPLATE_EXPORT_RESULT_SCHEMA = "jikuo.policy_template_export_result.v0"
 POLICY_TEMPLATE_SOURCE_INSPECTION_SCHEMA = "jikuo.policy_template_source_inspection.v0"
 DEFAULT_NAMESPACE = "local"
 DEFAULT_TEMPLATE_SUBDIR = Path("src") / "jikuo" / "policy_templates" / "engineering_governance"
+REDACTED_SOURCE_PROJECT_REF = "redacted"
 CONTRACT_REFS = [
     "pkg://jikuo/governance/jikuo_project_context_binding_and_policy_template_portability.md",
     "pkg://jikuo/governance/jikuo_trust_privacy_provenance_baseline.md",
@@ -258,21 +259,17 @@ def infer_required_bindings(policy: dict[str, Any]) -> list[dict[str, Any]]:
     return list(bindings.values())
 
 
-def normalize_template_policy(policy: dict[str, Any], template_id: str, source_ref: str) -> dict[str, Any]:
+def public_source_ref(policy_id: str) -> str:
+    return f"redacted://local_project_policy/{slug_token(policy_id)}"
+
+
+def normalize_template_policy(policy: dict[str, Any], template_id: str) -> dict[str, Any]:
     template_policy = deepcopy(policy)
-    source_refs = template_policy.get("source_refs")
-    if not isinstance(source_refs, list):
-        source_refs = []
     template_policy["source_refs"] = [
         {
             "type": "policy_template",
             "ref": template_id,
         },
-        {
-            "type": "origin_policy",
-            "ref": source_ref,
-        },
-        *source_refs,
     ]
     return template_policy
 
@@ -305,7 +302,6 @@ def build_template_record(
         title = policy_id
 
     template_id = template_id_for_policy(policy_id, namespace)
-    source_ref = str(source_policy_path)
     project_refs = detect_project_refs(policy)
     required_bindings = infer_required_bindings(policy)
     portability_status = "portable"
@@ -323,10 +319,15 @@ def build_template_record(
         "title": title,
         "source": {
             "type": "local_project_policy",
-            "ref": source_ref,
-            "source_project_ref": source_project_ref,
+            "ref": public_source_ref(policy_id),
+            "source_project_ref": REDACTED_SOURCE_PROJECT_REF,
             "source_policy_id": policy_id,
             "source_sha256": file_sha256(source_policy_path),
+            "privacy": {
+                "local_path": "redacted",
+                "project_identity": "redacted",
+                "source_refs": "redacted",
+            },
         },
         "portability": {
             "status": portability_status,
@@ -337,7 +338,6 @@ def build_template_record(
         "template_policy": normalize_template_policy(
             policy,
             template_id,
-            source_ref,
         ),
     }
     return template, warnings

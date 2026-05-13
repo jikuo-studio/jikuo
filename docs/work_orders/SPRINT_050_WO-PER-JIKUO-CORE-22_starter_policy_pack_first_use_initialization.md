@@ -6,9 +6,9 @@
 
 ## 1. Why This Slice Exists
 
-`CORE-21` made NarrativeSystem-approved policies reusable as package templates.
+`CORE-21` made incubating-project approved policies reusable as redacted package templates.
 
-The product path for ordinary users should not require them to know the NarrativeSystem source directory or run template extraction commands. First use should offer a curated starter pack:
+The product path for ordinary users should not require them to know any source project directory or run template extraction commands. First use should offer a curated starter pack:
 
 - desktop workflow acceptance card and summary
 - pre-delivery unit / integration / smoke tests
@@ -46,7 +46,7 @@ This slice belongs to the `starter_policy_pack_first_use` scenario chain.
 
 User scenario:
 
-- A new project starts using JIKUO and needs useful report-only policies immediately, without knowing the NarrativeSystem source directory or running template extraction commands.
+- A new project starts using JIKUO and needs useful report-only policies immediately, without knowing the incubating source project or running template extraction commands.
 
 Operation chain:
 
