@@ -132,6 +132,7 @@ For future MCP / plugin work, also mount:
 - `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-PKG-01_minimal_package_extraction.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-21_policy_template_extraction_import_mvp.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-22_starter_policy_pack_first_use_initialization.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-10_policy_runtime_status_card.md`
 - `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-MCP-01_mcp_wrapper_mvp.md`
 - any generated MCP / skill / plugin contract documents
 
@@ -226,7 +227,7 @@ Current boundary:
 - `policy_evolution_write` guarded apply requires a proposal ref that matches the deterministic plan before any write
 - no arbitrary command execution
 - emits loop step id and atom id trace
-- emits `jikuo.agent_flow_proposal.v1` with read-only policy-store status, exact trigger evaluation, report-only condition evaluation, report-only evidence matching, guarded evidence persistence proposal, explicit task-session evidence ingestion, policy write-plan cards, no-write policy evolution-plan cards, and starter policy pack initialization cards where requested
+- emits `jikuo.agent_flow_proposal.v1` with read-only policy-store status, exact trigger evaluation, report-only condition evaluation, report-only evidence matching, visible policy runtime status cards, guarded evidence persistence proposal, explicit task-session evidence ingestion, policy write-plan cards, no-write policy evolution-plan cards, and starter policy pack initialization cards where requested
 - emits `jikuo.agent_flow_apply_result.v0` for narrow approved task-session evidence, policy evolution, and starter policy pack initialization apply paths
 
 ### Step 3: Lightweight Codex Skill / Agent Instruction

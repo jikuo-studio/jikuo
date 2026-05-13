@@ -205,6 +205,25 @@ class AgentFlowProposalTests(unittest.TestCase):
             "card_rendered",
         )
         self.assertEqual(proposal["missing_evidence_reports"], [])
+        runtime_cards = [
+            card
+            for card in proposal["cards"]
+            if card["card_kind"] == "policy_runtime_status"
+        ]
+        self.assertEqual(len(runtime_cards), 1)
+        runtime_status = runtime_cards[0]["policy_runtime_status"]
+        self.assertEqual(
+            runtime_status["schema"],
+            "jikuo.policy_runtime_status.v0",
+        )
+        self.assertEqual(runtime_status["active_policy_count"], 1)
+        self.assertEqual(runtime_status["triggered_policy_count"], 1)
+        self.assertEqual(runtime_status["not_triggered_policy_count"], 0)
+        self.assertEqual(runtime_status["missing_evidence_count"], 0)
+        self.assertEqual(
+            runtime_status["triggered_policies"][0]["policy_ref"],
+            "POLICY-three-phase-audit",
+        )
         self.assertEqual(
             {item["feedback_type"] for item in proposal["policy_feedback_options"]},
             {"not_applicable", "defer", "needs_scope_narrowing"},
@@ -1264,6 +1283,16 @@ class AgentFlowProposalTests(unittest.TestCase):
             self.assertEqual(plan["schema"], "jikuo.starter_policy_pack_init_plan.v0")
             self.assertTrue(plan["would_create_project_state"])
             self.assertEqual(len(plan["starter_policies"]), 4)
+            runtime_cards = [
+                item
+                for item in proposal["cards"]
+                if item["card_kind"] == "policy_runtime_status"
+            ]
+            self.assertEqual(len(runtime_cards), 1)
+            runtime_status = runtime_cards[0]["policy_runtime_status"]
+            self.assertEqual(runtime_status["policy_store_status"], "missing")
+            self.assertEqual(runtime_status["active_policy_count"], 0)
+            self.assertEqual(runtime_status["triggered_policy_count"], 0)
             command = card["command_proposal"]["command_preview"]
             self.assertIn("python -B -m jikuo.agent_flow", command)
             self.assertIn("apply", command)

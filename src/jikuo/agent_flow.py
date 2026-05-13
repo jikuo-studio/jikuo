@@ -34,6 +34,7 @@ POLICY_STORE_STATUS_UNAVAILABLE = "unavailable"
 POLICY_EVAL_STATUS_NOT_EVALUATED = "not_evaluated"
 POLICY_CONDITION_EVAL_STATUS_NOT_EVALUATED = "not_evaluated"
 POLICY_FEEDBACK_OPTIONS_SCHEMA = "jikuo.policy_feedback_options.v0"
+POLICY_RUNTIME_STATUS_SCHEMA = "jikuo.policy_runtime_status.v0"
 POLICY_FEEDBACK_TYPES = {"not_applicable", "defer", "needs_scope_narrowing"}
 APPLY_OPERATIONS = {
     "policy_evolution_write",
@@ -94,6 +95,7 @@ NO_WRITE_ATOMS = {
     "CAP-POLICY-EVIDENCE-INGEST-01",
     "CAP-POLICY-STORE-WRITE-PROPOSE-01",
     "CAP-POLICY-EVOLUTION-PLAN-PROPOSE-01",
+    "CAP-POLICY-RUNTIME-STATUS-CARD-01",
     "CAP-STARTER-POLICY-PACK-INIT-01",
 }
 
@@ -306,6 +308,32 @@ def produced_policy_evidence_for(
                 "summary": "agent_flow rendered the task-start proposal card in chat",
             }
         )
+    evidence.append(
+        {
+            "evidence_id": stable_id(
+                "evidence",
+                "|".join(
+                    [
+                        event,
+                        "policy_runtime_status",
+                        "render_policy_runtime_status_card_for_governed_flow",
+                    ]
+                ),
+            ),
+            "evidence_type": "policy_runtime_status_visibility_evidence",
+            "action_type": "render_policy_runtime_status_card_for_governed_flow",
+            "source": {
+                "kind": "agent_flow_card_kind",
+                "ref": "policy_runtime_status",
+            },
+            "producer": {
+                "actor": "agent",
+                "tool": "python -B -m jikuo.agent_flow",
+            },
+            "status": "ok",
+            "summary": "agent_flow renders policy runtime status as a visible proposal card",
+        }
+    )
     return evidence
 
 
@@ -375,6 +403,196 @@ def build_policy_feedback_options(
             ),
         },
     ]
+
+
+def summarize_not_triggered_policies(
+    *,
+    active_policy_refs: list[dict[str, Any]],
+    triggered_policies: list[dict[str, Any]],
+    condition_reports: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    triggered_refs = {
+        str(item.get("policy_ref"))
+        for item in triggered_policies
+        if item.get("policy_ref")
+    }
+    reports_by_policy: dict[str, list[dict[str, Any]]] = {}
+    for report in condition_reports:
+        policy_ref = str(report.get("policy_ref") or "")
+        if policy_ref:
+            reports_by_policy.setdefault(policy_ref, []).append(report)
+
+    summaries: list[dict[str, Any]] = []
+    for policy in active_policy_refs:
+        policy_ref = str(policy.get("policy_id") or "")
+        if not policy_ref or policy_ref in triggered_refs:
+            continue
+        reports = reports_by_policy.get(policy_ref, [])
+        blockers = [
+            report
+            for report in reports
+            if str(report.get("status") or "") != "matched"
+        ]
+        if blockers:
+            reason = str(
+                blockers[0].get("summary") or "policy conditions did not match"
+            )
+            reason_ref = blockers[0].get("condition_ref")
+        elif reports:
+            reason = "policy conditions were checked but no trigger was produced"
+            reason_ref = reports[0].get("condition_ref")
+        else:
+            reason = "no matching trigger or condition report for this event"
+            reason_ref = None
+        summaries.append(
+            {
+                "policy_ref": policy_ref,
+                "policy_title": policy.get("title"),
+                "status": "not_triggered",
+                "reason": reason,
+                "reason_ref": reason_ref,
+            }
+        )
+    return summaries
+
+
+def summarize_missing_evidence(
+    missing_evidence_reports: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    missing_items: list[dict[str, Any]] = []
+    for report in missing_evidence_reports:
+        for item in report.get("missing", []):
+            missing_items.append(
+                {
+                    "policy_ref": report.get("policy_ref"),
+                    "report_id": report.get("report_id"),
+                    "requirement_ref": item.get("requirement_ref"),
+                    "action_ref": item.get("action_ref"),
+                    "required_type": item.get("required_type"),
+                    "reason": item.get("reason"),
+                }
+            )
+    return missing_items
+
+
+def build_policy_runtime_status_card(
+    *,
+    policy_context: dict[str, Any],
+    triggered_policies: list[dict[str, Any]],
+    required_actions: list[dict[str, Any]],
+    condition_reports: list[dict[str, Any]],
+    evidence_status: list[dict[str, Any]],
+    missing_evidence_reports: list[dict[str, Any]],
+    policy_feedback_options: list[dict[str, Any]],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    active_policy_refs = list(policy_context.get("active_policy_refs", []))
+    not_triggered = summarize_not_triggered_policies(
+        active_policy_refs=active_policy_refs,
+        triggered_policies=triggered_policies,
+        condition_reports=condition_reports,
+    )
+    missing_evidence = summarize_missing_evidence(missing_evidence_reports)
+    evidence_counts: dict[str, int] = {}
+    for item in evidence_status:
+        status = str(item.get("current_status") or "unknown")
+        evidence_counts[status] = evidence_counts.get(status, 0) + 1
+
+    active_count = len(active_policy_refs)
+    triggered_count = len(triggered_policies)
+    missing_count = len(missing_evidence)
+    store_status = str(policy_context.get("policy_store_status") or "unavailable")
+    card_status = (
+        "review"
+        if missing_count > 0 or store_status in {"stale", "conflict"}
+        else "ok"
+    )
+    summary = (
+        f"Policy runtime checked {active_count} active polic"
+        f"{'y' if active_count == 1 else 'ies'}; "
+        f"{triggered_count} triggered and {missing_count} evidence item"
+        f"{'' if missing_count == 1 else 's'} are missing."
+    )
+
+    shown_inputs = [
+        f"policy_store_status: {store_status}",
+        f"policy_eval_status: {policy_context.get('policy_eval_status')}",
+        f"condition_eval_status: {policy_context.get('policy_condition_eval_status')}",
+        f"evidence_check_status: {policy_context.get('policy_evidence_check_status')}",
+    ]
+    shown_outputs = [
+        f"active_policy_count: {active_count}",
+        f"triggered_policy_count: {triggered_count}",
+        f"not_triggered_policy_count: {len(not_triggered)}",
+        f"required_action_count: {len(required_actions)}",
+        f"evidence_status_count: {len(evidence_status)}",
+        f"missing_evidence_count: {missing_count}",
+        f"policy_feedback_option_count: {len(policy_feedback_options)}",
+    ]
+    for item in triggered_policies:
+        title = item.get("policy_title") or item.get("policy_ref")
+        shown_outputs.append(f"triggered_policy: {item.get('policy_ref')} ({title})")
+    for item in not_triggered:
+        title = item.get("policy_title") or item.get("policy_ref")
+        shown_outputs.append(
+            f"not_triggered_policy: {item.get('policy_ref')} ({title}) - {item.get('reason')}"
+        )
+    for item in missing_evidence:
+        shown_outputs.append(
+            f"missing_evidence: {item.get('required_type')} for {item.get('policy_ref')}"
+        )
+
+    if missing_evidence:
+        next_actions = [
+            "supply the missing policy evidence, defer it explicitly, or mark the policy not applicable",
+        ]
+    elif triggered_policies:
+        next_actions = ["continue with triggered policy actions visible in this proposal"]
+    elif store_status == "active":
+        next_actions = ["continue; no active policy triggered for this event"]
+    else:
+        next_actions = list(policy_context.get("next_actions", []))
+
+    card = generic_card(
+        card_kind="policy_runtime_status",
+        status=card_status,
+        title="Policy runtime status",
+        summary=summary,
+        shown_inputs=shown_inputs,
+        shown_outputs=shown_outputs,
+        next_actions=next_actions,
+    )
+    card["policy_runtime_status"] = {
+        "schema": POLICY_RUNTIME_STATUS_SCHEMA,
+        "policy_store_status": store_status,
+        "policy_eval_status": policy_context.get("policy_eval_status"),
+        "policy_condition_eval_status": policy_context.get(
+            "policy_condition_eval_status"
+        ),
+        "policy_evidence_check_status": policy_context.get(
+            "policy_evidence_check_status"
+        ),
+        "active_policy_count": active_count,
+        "triggered_policy_count": triggered_count,
+        "not_triggered_policy_count": len(not_triggered),
+        "required_action_count": len(required_actions),
+        "evidence_status_count": len(evidence_status),
+        "evidence_status_counts": evidence_counts,
+        "missing_evidence_count": missing_count,
+        "policy_feedback_option_count": len(policy_feedback_options),
+        "triggered_policies": triggered_policies,
+        "not_triggered_policies": not_triggered,
+        "required_actions": required_actions,
+        "missing_evidence": missing_evidence,
+        "policy_feedback_options": policy_feedback_options,
+    }
+    trace = atom_trace(
+        loop_step_id="DPL-06",
+        atom_id="CAP-POLICY-RUNTIME-STATUS-CARD-01",
+        mode="no-write",
+        status=card_status,
+        summary="projected policy runtime trigger and evidence status into a visible card",
+    )
+    return card, trace
 
 
 def trigger_decision_for(
@@ -1461,6 +1679,18 @@ def build_proposal(
         triggered_policies=policy_sections["triggered_policies"],
         missing_evidence_reports=policy_sections["missing_evidence_reports"],
     )
+    if event is not None:
+        policy_runtime_card, policy_runtime_trace = build_policy_runtime_status_card(
+            policy_context=policy_context,
+            triggered_policies=policy_sections["triggered_policies"],
+            required_actions=policy_sections["required_actions"],
+            condition_reports=policy_sections["condition_reports"],
+            evidence_status=policy_sections["evidence_status"],
+            missing_evidence_reports=policy_sections["missing_evidence_reports"],
+            policy_feedback_options=policy_feedback_options,
+        )
+        cards.append(policy_runtime_card)
+        traces.append(policy_runtime_trace)
 
     statuses = {str(card.get("status", "review")) for card in cards}
     status = "refused" if "refused" in statuses else "review" if "review" in statuses else "ok"
