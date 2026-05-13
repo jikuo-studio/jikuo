@@ -1,11 +1,25 @@
-# SPRINT 050 WO-PER-JIKUO-CORE-19: Pre-Code-Change Layer Classification Policy
+# SPRINT 050 WO-PER-JIKUO-CORE-19: Pre-Code-Change Governance Classification Policy
 
-> **Kernel compatibility**: adds a report-only policy that requires a layer classification before code-change work, so the agent first decides whether the issue is a governance-method problem that should add/change policy, or a design/implementation problem that should change code.
-> **Current slice**: a loadable approved policy fixture and regression tests only; no production root `.jikuo/` write, no automatic desktop invocation, no gate, and no code-level blocker.
+> **Product meaning**: this is a development-governance principle, not a feature. Before making implementation edits, the agent must classify whether the request first needs a policy / governance-method change or a code / design-implementation change.
+> **Kernel compatibility**: represents that principle as a report-only policy requiring classification evidence before code-change work.
+> **Current slice**: a loadable approved policy fixture and regression tests that carry the principle through the policy evaluator; no production root `.jikuo/` write, no automatic desktop invocation, no gate, and no code-level blocker.
 > **User scenario**: A Codex / Claude desktop APP user catches that an agent started changing code when the better first move was to add or refine a governance rule.
 > **Runtime chain**: task_start -> policy-store evaluate -> code-change metadata/path conditions match -> required classification action projected -> missing classification evidence reported -> supplied classification evidence satisfies the rule.
 > **Canonical source**: `tools/jikuo/fixtures/policy_store_real_chain_testing_project/.jikuo/policies/approved/POLICY-pre-code-change-layer-classification.yaml`.
 > **Bridge object**: approved `jikuo.configurable_rule_policy.v0`; `jikuo.policy_trigger_eval_report.v0`; `jikuo.missing_evidence_report.v0`.
+
+## Semantic Correction
+
+This work order was previously easy to read as "a pre-code-change classification feature." That reading is wrong.
+
+The durable product idea is the principle:
+
+- implementation work should not begin until the agent names whether the request is primarily `governance_method`, `design_implementation`, or `mixed_or_unclear`
+- if the answer is `governance_method`, the safer first move is to add, revise, or mount policy before editing code
+- if the answer is `design_implementation`, code changes may proceed under the already-known policy
+- if the answer is `mixed_or_unclear`, the ambiguity should be surfaced before durable edits
+
+The policy evaluator, action id, and evidence id are only the execution carrier for that principle.
 
 ## Product Semantics
 
@@ -15,19 +29,20 @@ Before changing code, the agent must classify the problem layer:
 - `design_implementation`: the policy/rule already exists and the implementation is wrong or incomplete; changing code is appropriate.
 - `mixed_or_unclear`: the agent should surface the ambiguity before making durable implementation changes.
 
-This rule is deliberately upstream of code edits. It does not decide product quality; it decides which engineering response path is safer.
+This rule is deliberately upstream of code edits. It does not decide product quality, and it is not a standalone user-facing feature. It decides which engineering response path is safer.
 
 ## Scope
 
 In scope:
 
-- add a report-only approved policy fixture
+- express the pre-code-change classification principle as a report-only approved policy fixture
 - require `classify_governance_vs_implementation_before_code_change`
 - require `governance_vs_implementation_classification_evidence`
 - prove missing-evidence and satisfied-evidence paths through `policy_store.py evaluate`
 
 Out of scope:
 
+- treating this principle as a separate product feature
 - blocking code edits automatically
 - deciding the classification with an LLM inside the policy evaluator
 - production project-root policy writes
@@ -79,3 +94,5 @@ Observed:
 ## Residual Risk
 
 This policy is report-only. It makes the required pre-code-change decision visible when the evaluator is invoked, but it does not yet guarantee that every desktop-app task invokes the evaluator before edits. That belongs to later desktop invocation / guarded apply / gate work.
+
+Because the principle is carried by a concrete policy fixture, future summaries must avoid calling CORE-19 a generic feature. The correct shorthand is: "pre-code-change governance classification principle, implemented through report-only policy evidence."

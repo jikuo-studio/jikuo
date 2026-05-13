@@ -56,7 +56,7 @@ The policy system should support:
 - policy evolution through revision, supersession, deprecation, rollback, or scope narrowing
 - tests that prove a policy is loaded, triggered, and evidence-checked in a real evaluator path
 
-CORE-18 and CORE-19 are concrete examples of this capability. Their rule contents are not universal policy-management principles; they are project-approved policies derived from real JIKUO self-development corrections.
+CORE-18 and CORE-19 are concrete examples of this capability. Their rule contents are not universal policy-management mechanics; they are project-approved governance policies derived from real JIKUO self-development corrections. In particular, CORE-19 is a pre-code-change governance classification principle carried by report-only policy evidence, not a standalone implementation feature.
 
 ---
 
