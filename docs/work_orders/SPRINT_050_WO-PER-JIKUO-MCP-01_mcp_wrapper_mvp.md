@@ -21,7 +21,7 @@ Implementation is intentionally blocked until these pre-MCP foundations are acce
 - `JIKUO-CORE-20B`: resource-reference and `CONTRACT_REFS` hygiene inside the extracted package boundary
 - `JIKUO-CORE-23`: project-context resolver and guarded template activation, or an explicit decision to keep template activation outside the first MCP wrapper
 - `JIKUO-CORE-24`: desktop `agent_flow.py` bridge for template import planning and guarded activation, or an explicit decision to keep template activation outside the first MCP wrapper
-- `JIKUO-LIVE-12`: out-of-band runtime visibility files and `jikuo show` CLI, or an explicit user decision to accept chat-only MCP risk
+- `JIKUO-LIVE-12`: out-of-band runtime visibility files, `jikuo show` CLI, and `client_display_links` accepted on 2026-05-14
 - `JIKUO-INTG-01`: universal instruction file distribution, or an explicit user decision to defer cross-client instruction sync
 - starter policy provenance backfill / fallback rule before starter policies are exposed through MCP
 - `.jikuo/project_context.yaml` previous-todo binding must not pretend to provide a real previous snapshot unless snapshot rotation exists

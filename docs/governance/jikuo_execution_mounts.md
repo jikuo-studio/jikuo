@@ -288,7 +288,7 @@ Goal:
 Current status:
 
 - `JIKUO-MCP-01` work order is drafted but blocked by pre-MCP portability / security / package / visibility foundation.
-- `JIKUO-LIVE-12` Phase 1 is implemented and ready for review; `JIKUO-INTG-01` remains drafted as the cross-client instruction foundation to review before MCP implementation.
+- `JIKUO-LIVE-12` Phase 1 is accepted as the out-of-band runtime visibility baseline; `JIKUO-INTG-01` remains drafted as the cross-client instruction foundation to review before MCP implementation.
 - implementation has not started.
 - this step is packaging-only: wrap stable `agent_flow.py` / `policy_store.py` atoms without adding new governance capability.
 
@@ -505,15 +505,15 @@ Plugin:
 
 Current next task:
 
-- review / accept implemented `JIKUO-LIVE-12` Phase 1 out-of-band runtime visibility
-- then review / accept revised `JIKUO-MCP-01` card-only tool and display-directive scope
-- then review / accept `JIKUO-INTG-01` universal instruction distribution
+- accepted `JIKUO-LIVE-12` Phase 1 out-of-band runtime visibility
+- next review / accept revised `JIKUO-MCP-01` card-only tool and display-directive scope
+- next review / accept `JIKUO-INTG-01` universal instruction distribution
 
 Task goal:
 
 - make JIKUO visibility universal rather than dependent on one desktop client: every critical card should have a chat-ready channel and a user-accessible out-of-band channel.
 
-Acceptance target for the current pre-MCP visibility review:
+Accepted target for the current pre-MCP visibility review:
 
 - `JIKUO-LIVE-12` writes `.jikuo/runtime/last_card.md`, `.jikuo/runtime/state_summary.json`, runtime history, exposes `jikuo show`, and returns `client_display_links` for direct desktop click targets
 - `JIKUO-MCP-01` includes `jikuo.get_runtime_status`, `jikuo.get_runtime_status_card`, `jikuo.get_display_card`, display directives, and runtime snapshot refs
@@ -521,10 +521,10 @@ Acceptance target for the current pre-MCP visibility review:
 - `JIKUO-MCP-01` remains blocked until visibility, provenance, package boundary, project-context binding, privacy return boundaries, and resource-reference hygiene are accepted or explicitly deferred
 - dashboard, OS notifications, per-client hook packs, rollback, broader conditions, UI, Plugin, and gates remain deferred
 
-If accepted:
+Accepted result:
 
-- if accepted, keep `JIKUO-LIVE-12` Phase 1 as the baseline runtime visibility foundation for MCP implementation.
-- then implement the revised MCP wrapper scope.
+- keep `JIKUO-LIVE-12` Phase 1 as the baseline runtime visibility foundation for MCP implementation.
+- continue with revised MCP wrapper scope review and `JIKUO-INTG-01` review before MCP implementation.
 
 If revised:
 

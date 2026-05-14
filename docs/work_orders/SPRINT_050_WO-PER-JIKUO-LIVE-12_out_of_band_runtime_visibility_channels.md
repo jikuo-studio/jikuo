@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-LIVE-12: Out-of-band Runtime Visibility Channels
 
-> **Status**: Phase 1 implemented, ready for review
+> **Status**: Phase 1 accepted on 2026-05-14
 > **Product meaning**: make JIKUO runtime status independently visible even when a desktop Agent fails to paste a card into chat.
 > **Scope rule**: add user-accessible runtime visibility channels; do not implement MCP, dashboard UI, OS notifications, gates, or broad action execution in Phase 1.
 
@@ -71,3 +71,20 @@ These are useful but do not block the first out-of-band visibility foundation.
 - `jikuo show --last-card` returns the same card content that the Agent should have displayed.
 - Tests prove runtime visibility writes are confined to `.jikuo/runtime/`.
 - Existing guarded-write approval requirements remain unchanged.
+
+## 7. Acceptance Record
+
+Accepted on 2026-05-14 after verifying the Phase 1 scope:
+
+- `.jikuo/runtime/last_card.md`
+- `.jikuo/runtime/state_summary.json`
+- `.jikuo/runtime/history/<timestamp>.md`
+- `jikuo show`
+- `jikuo show --last-card`
+- `client_display_links`
+
+Verification evidence:
+
+- `python -B -m unittest discover -s tests -p "*_tests.py"`: 115 tests passed.
+- `python -B -m jikuo show`: rendered runtime status with `JIKUO Runtime Links`.
+- Implementation commit: `87a3ec6 jikuo: surface runtime card links`.
