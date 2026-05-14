@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-INTG-01: Universal Instruction File Distribution
 
-> **Status**: Draft, pre-MCP companion for cross-client behavior
+> **Status**: Implemented and accepted on 2026-05-14, pre-MCP companion for cross-client behavior
 > **Product meaning**: distribute the JIKUO harness display contract through project-level instruction files used by multiple desktop Agent clients.
 > **Scope rule**: provide generic instruction-file generation and sync; do not depend on a single client hook or plugin.
 
@@ -57,3 +57,21 @@ The canonical instruction file must include:
 - Client-specific sync is explicit and reviewable.
 - The generated instructions name both chat-ready cards and out-of-band runtime verification.
 - No client-specific integration becomes a prerequisite for baseline JIKUO visibility.
+
+## 7. Implemented Result
+
+Implemented on 2026-05-14.
+
+Implementation:
+
+- `src/jikuo/integrations/instruction_files.py` provides the integration-layer planner and guarded writer.
+- `jikuo install` exposes the flow through the top-level CLI.
+- default mode is review-only and writes nothing.
+- write mode requires `--write`, `--confirm-install`, and `--approval-phrase`.
+- generated files use managed blocks bounded by `# BEGIN JIKUO MANAGED INSTRUCTIONS` and `# END JIKUO MANAGED INSTRUCTIONS`, preserving unrelated existing content.
+- `--all` detects existing supported client instruction files and always includes canonical `JIKUO.md`.
+
+Verification:
+
+- `tests/instruction_files_tests.py` covers no-write planning, guarded write refusal, content-preserving sync, `--all` detection, and top-level CLI JSON output.
+- This slice does not implement MCP, client hooks, plugins, dashboard UI, or Agent SDK runners.

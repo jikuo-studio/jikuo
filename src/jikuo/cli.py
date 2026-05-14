@@ -8,9 +8,11 @@ from pathlib import Path
 
 if __package__:
     from . import runtime_visibility
+    from .integrations import instruction_files
 else:
-    sys.path.insert(0, str(Path(__file__).resolve().parent))
-    import runtime_visibility
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from jikuo import runtime_visibility
+    from jikuo.integrations import instruction_files
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -21,6 +23,22 @@ def build_parser() -> argparse.ArgumentParser:
     show.add_argument("--project-root", type=Path, default=None)
     show.add_argument("--last-card", action="store_true")
     show.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    install = subparsers.add_parser(
+        "install",
+        help="Install JIKUO project instruction files.",
+    )
+    install.add_argument("--project-root", type=Path, default=None)
+    install.add_argument(
+        "--client",
+        choices=instruction_files.SYNC_CLIENTS,
+        action="append",
+        default=[],
+    )
+    install.add_argument("--all", action="store_true")
+    install.add_argument("--write", action="store_true")
+    install.add_argument("--confirm-install", action="store_true")
+    install.add_argument("--approval-phrase", default=None)
+    install.add_argument("--format", choices=("markdown", "json"), default="markdown")
     return parser
 
 
@@ -35,6 +53,22 @@ def main(argv: list[str] | None = None) -> int:
             runtime_args.append("--last-card")
         runtime_args.extend(["--format", args.format])
         return runtime_visibility.main(runtime_args)
+    if args.command == "install":
+        install_args = []
+        if args.project_root is not None:
+            install_args.extend(["--project-root", str(args.project_root)])
+        for client in args.client:
+            install_args.extend(["--client", client])
+        if args.all:
+            install_args.append("--all")
+        if args.write:
+            install_args.append("--write")
+        if args.confirm_install:
+            install_args.append("--confirm-install")
+        if args.approval_phrase:
+            install_args.extend(["--approval-phrase", args.approval_phrase])
+        install_args.extend(["--format", args.format])
+        return instruction_files.main(install_args)
     parser.error(f"unsupported command: {args.command}")
     return 2
 

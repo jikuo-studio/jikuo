@@ -43,6 +43,14 @@ document_roles:
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-ARCH-02_integration_neutrality_and_integrations_layout.md"
     required: true
     note: "Immediate pre-MCP contract for integration-neutral core APIs and src/jikuo/integrations/ layout."
+  agent_sdk_adapter_work_order:
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-SDK-01_agent_sdk_adapter_exploration.md"
+    required: true
+    note: "Pre-MCP posture for optional Agent SDK and agentic platform adapters."
+  universal_instruction_distribution_work_order:
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-INTG-01_universal_instruction_file_distribution.md"
+    required: true
+    note: "Pre-MCP cross-client instruction file distribution contract and implementation record."
   desktop_operating_loop_work_order:
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-FLOW-02_desktop_app_primary_operating_loop.md"
     required: true
@@ -97,10 +105,10 @@ directory_roles:
   source_package:
     path: "src/jikuo"
     required: true
-  planned_integrations_package:
+  integrations_package:
     path: "src/jikuo/integrations"
-    required: false
-    note: "Planned adapter root for MCP, Agent SDK, client, IDE, and platform integrations; created by future implementation slices."
+    required: true
+    note: "Adapter root for integration-specific code; created by INTG-01 and reserved for MCP, Agent SDK, client, IDE, and platform integrations."
   package_policy_templates:
     path: "src/jikuo/policy_templates/engineering_governance"
     required: true

@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-ARCH-02: Integration Neutrality And Integrations Layout
 
-> **Status**: Draft, immediate pre-MCP architecture contract
+> **Status**: Accepted on 2026-05-14, immediate pre-MCP architecture contract
 > **Product meaning**: keep JIKUO's governance kernel independent from any one client, protocol, Agent SDK, IDE, or platform integration.
 > **Scope rule**: define boundaries and planned layout only; do not implement MCP, Agent SDK plugins, hooks, or client packs in this slice.
 
@@ -120,3 +120,23 @@ This slice must not implement:
 - MCP implementation is blocked until this contract is accepted or explicitly deferred.
 - Agent SDK / platform plugins remain future work after MCP is stable.
 - No source package dependencies, imports, or runtime behavior change in this slice.
+
+## 9. Accepted Result
+
+Accepted on 2026-05-14 as a pre-MCP architecture baseline.
+
+Accepted decisions:
+
+- JIKUO core remains integration-neutral.
+- Integration-specific code belongs under `src/jikuo/integrations/`.
+- `JIKUO-MCP-01` implementation is anchored under `src/jikuo/integrations/mcp/`.
+- MCP, Agent SDKs, IDE platforms, client hooks, and instruction packs are adapters over core APIs, not the governance kernel.
+- Hooks, callbacks, guardrails, traces, checkpoints, and platform artifacts are enhancement / review surfaces until a later approved policy imports them as evidence.
+
+API-neutrality precheck:
+
+- `agent_flow.build_proposal` and `agent_flow.build_apply_result` already return structured dictionaries and can be called without CLI stdout scraping.
+- `policy_store.evaluate_policy_triggers`, `build_policy_write_plan`, and `build_policy_evolution_plan` already expose structured core behavior.
+- `runtime_visibility.prepare_agent_flow_snapshot`, `persist_prepared_agent_flow_snapshot`, `load_state_summary`, and `load_last_card` provide reusable local visibility helpers.
+- Future MCP / SDK adapters should call these core functions or a small facade over them, not CLI `main()` functions.
+- A fuller MCP pre-implementation API neutrality review remains a task before code implementation.

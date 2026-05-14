@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-SDK-01: Agent SDK And Agentic Platform Adapter Exploration
 
-> **Status**: Draft, pre-MCP architecture exploration
+> **Status**: Accepted on 2026-05-14, pre-MCP architecture exploration
 > **Product meaning**: explore how Agent SDKs and agentic development platforms can help JIKUO grow into orchestrated development workflows without replacing the JIKUO kernel, MCP wrapper, policy store, or runtime visibility authority.
 > **Scope rule**: leave extension points before MCP implementation; do not introduce a required dependency on any single vendor SDK or platform in this slice.
 
@@ -122,3 +122,16 @@ Potential future backlog placeholders after MCP stabilizes:
 - `JIKUO-INTG-GOOGLE-ADK-01`
 - `JIKUO-INTG-VERCEL-AI-SDK-01`
 - `JIKUO-INTG-ANTIGRAVITY-01`
+
+## 8. Accepted Result
+
+Accepted on 2026-05-14 as a pre-MCP ecosystem posture.
+
+Accepted posture:
+
+- JIKUO should preserve optional adapter paths for OpenAI Agents SDK, Claude Agent SDK, Google ADK, Vercel AI SDK, and Google Antigravity-style environments.
+- MCP remains the preferred first shared tool surface for future SDK adapters to consume.
+- SDK hooks, callbacks, guardrails, permissions, middleware, traces, checkpoints, and platform artifacts are adapter-specific enhancement mechanisms, not universal guarantees and not replacements for JIKUO evidence.
+- JIKUO's local policy store, approval records, task-session evidence, and `.jikuo/runtime/` snapshots remain authoritative unless a later approved policy imports external artifacts as evidence.
+- No required runtime dependency on any SDK or platform is introduced before MCP stabilizes.
+- Vendor SDK / platform integrations remain post-MCP placeholders.
