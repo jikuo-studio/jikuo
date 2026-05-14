@@ -37,7 +37,8 @@ Phase 1 may define, but should not implement, HTML rendering and dashboard hosti
 Implemented package artifacts:
 
 - `src/jikuo/runtime_visibility.py`: writes `last_card.md`, `state_summary.json`, and timestamped history cards under `.jikuo/runtime/`.
-- `src/jikuo/agent_flow.py`: attaches runtime visibility reports to proposal JSON / Markdown output and labels runtime projection as a side effect distinct from governance writes.
+- `src/jikuo/runtime_visibility.py`: builds `client_display_links` with absolute Markdown targets for the latest card, state summary, and history card.
+- `src/jikuo/agent_flow.py`: attaches runtime visibility reports and client display links to proposal JSON / Markdown output, and labels runtime projection as a side effect distinct from governance writes.
 - `src/jikuo/cli.py` and `src/jikuo/__main__.py`: expose `jikuo show` and `python -B -m jikuo show`.
 - `pyproject.toml`: adds the `jikuo` console script entry point.
 - `.gitignore`: ignores local `.jikuo/runtime/` projection files.
@@ -65,6 +66,7 @@ These are useful but do not block the first out-of-band visibility foundation.
 ## 6. Acceptance Criteria
 
 - Every `agent_flow.py propose` path that returns a card can also persist the latest runtime card snapshot.
+- Every card-producing `agent_flow.py propose` JSON / Markdown response exposes a `client_display_links` block so desktop clients can show direct local links to the latest runtime card.
 - The latest policy runtime summary is queryable without relying on the Agent chat response.
 - `jikuo show --last-card` returns the same card content that the Agent should have displayed.
 - Tests prove runtime visibility writes are confined to `.jikuo/runtime/`.

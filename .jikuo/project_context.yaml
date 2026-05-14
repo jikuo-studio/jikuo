@@ -89,7 +89,7 @@ directory_roles:
   runtime_visibility:
     path: ".jikuo/runtime"
     required: false
-    note: "Planned out-of-band runtime visibility channel root for JIKUO-LIVE-12."
+    note: "Out-of-band runtime visibility channel root for JIKUO-LIVE-12; ignored local projection files are surfaced through jikuo show and client_display_links."
   source_package:
     path: "src/jikuo"
     required: true

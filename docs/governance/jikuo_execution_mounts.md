@@ -515,7 +515,7 @@ Task goal:
 
 Acceptance target for the current pre-MCP visibility review:
 
-- `JIKUO-LIVE-12` writes `.jikuo/runtime/last_card.md`, `.jikuo/runtime/state_summary.json`, runtime history, and exposes `jikuo show`
+- `JIKUO-LIVE-12` writes `.jikuo/runtime/last_card.md`, `.jikuo/runtime/state_summary.json`, runtime history, exposes `jikuo show`, and returns `client_display_links` for direct desktop click targets
 - `JIKUO-MCP-01` includes `jikuo.get_runtime_status`, `jikuo.get_runtime_status_card`, `jikuo.get_display_card`, display directives, and runtime snapshot refs
 - `JIKUO-INTG-01` defines canonical `JIKUO.md` and client instruction sync without making client hooks mandatory
 - `JIKUO-MCP-01` remains blocked until visibility, provenance, package boundary, project-context binding, privacy return boundaries, and resource-reference hygiene are accepted or explicitly deferred

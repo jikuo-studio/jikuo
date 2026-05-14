@@ -354,6 +354,32 @@ def produced_policy_evidence_for(
             "summary": "agent_flow renders policy runtime status as a visible proposal card",
         }
     )
+    evidence.append(
+        {
+            "evidence_id": stable_id(
+                "evidence",
+                "|".join(
+                    [
+                        event,
+                        "client_runtime_links",
+                        "surface_runtime_card_links_to_client",
+                    ]
+                ),
+            ),
+            "evidence_type": "client_runtime_card_link_surfacing_evidence",
+            "action_type": "surface_runtime_card_links_to_client",
+            "source": {
+                "kind": "agent_flow_client_display_links",
+                "ref": "client_display_links",
+            },
+            "producer": {
+                "actor": "agent",
+                "tool": "python -B -m jikuo.agent_flow",
+            },
+            "status": "ok",
+            "summary": "agent_flow returns clickable runtime card links in chat-ready output",
+        }
+    )
     return evidence
 
 
@@ -2349,12 +2375,14 @@ def add_runtime_visibility_projection(
             )
         )
     output["runtime_visibility"] = report
+    output["client_display_links"] = runtime_visibility.build_client_display_links(report)
     output["write_effect"]["runtime_visibility_side_effect"] = {
         "write_performed": bool(report.get("write_performed")),
         "target": report.get("runtime_root_ref"),
         "last_card_ref": report.get("last_card_ref"),
         "state_summary_ref": report.get("state_summary_ref"),
         "history_ref": report.get("history_ref"),
+        "client_display_links_status": output["client_display_links"].get("status"),
         "reason": report.get("reason"),
     }
     if prepared.get("status") != "skipped":
@@ -2429,6 +2457,21 @@ def render_card(card: dict[str, Any]) -> str:
     return render_generic_card(card)
 
 
+def render_client_display_links(display_links: dict[str, Any]) -> list[str]:
+    lines = ["## JIKUO Runtime Links", ""]
+    links = display_links.get("links") or {}
+    for key in ("last_card", "state_summary", "history_card"):
+        item = links.get(key)
+        if item:
+            lines.append(f"- {item['label']}: {item['markdown']}")
+    if not links:
+        lines.append(f"- Status: `{display_links.get('status', 'unavailable')}`")
+        if display_links.get("reason"):
+            lines.append(f"- Reason: {display_links['reason']}")
+    lines.append("")
+    return lines
+
+
 def render_markdown(proposal: dict[str, Any]) -> str:
     policy_context = proposal["policy_context"]
     lines = [
@@ -2459,6 +2502,10 @@ def render_markdown(proposal: dict[str, Any]) -> str:
             lines.append(f"- History card: `{runtime_report.get('history_ref')}`")
         if runtime_report.get("reason"):
             lines.append(f"- Reason: {runtime_report.get('reason')}")
+    display_links = proposal.get("client_display_links")
+    if display_links:
+        lines.extend([""])
+        lines.extend(render_client_display_links(display_links))
     lines.extend(
         [
             "",

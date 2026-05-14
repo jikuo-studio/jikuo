@@ -46,12 +46,24 @@ class RuntimeVisibilityTests(unittest.TestCase):
             self.assertEqual(completed.returncode, 0, completed.stderr)
             proposal = json.loads(completed.stdout)
             runtime_report = proposal["runtime_visibility"]
+            display_links = proposal["client_display_links"]
             self.assertEqual(runtime_report["status"], "ok")
             self.assertTrue(runtime_report["write_performed"])
             self.assertEqual(runtime_report["last_card_ref"], ".jikuo/runtime/last_card.md")
             self.assertEqual(
                 runtime_report["state_summary_ref"],
                 ".jikuo/runtime/state_summary.json",
+            )
+            self.assertEqual(display_links["schema"], "jikuo.client_display_links.v0")
+            self.assertEqual(display_links["status"], "available")
+            self.assertEqual(
+                display_links["links"]["last_card"]["ref"],
+                ".jikuo/runtime/last_card.md",
+            )
+            self.assertIn("## JIKUO Runtime Links", proposal["chat_ready_markdown"])
+            self.assertIn(
+                display_links["links"]["last_card"]["markdown"],
+                proposal["chat_ready_markdown"],
             )
             self.assertIn("CAP-RUNTIME-VISIBILITY-CHANNEL-01", {
                 trace["atom_id"] for trace in proposal["atom_trace"]
@@ -67,8 +79,16 @@ class RuntimeVisibilityTests(unittest.TestCase):
                 last_card_path.read_text(encoding="utf-8"),
                 proposal["chat_ready_markdown"],
             )
+            self.assertIn(
+                last_card_path.resolve().as_posix(),
+                display_links["links"]["last_card"]["markdown_target"],
+            )
             state_summary = json.loads(state_summary_path.read_text(encoding="utf-8"))
             self.assertEqual(state_summary["schema"], "jikuo.runtime_state_summary.v0")
+            self.assertEqual(
+                state_summary["client_display_links"]["links"]["last_card"]["ref"],
+                ".jikuo/runtime/last_card.md",
+            )
             self.assertEqual(state_summary["counts"]["card_count"], len(proposal["cards"]))
             self.assertTrue(state_summary["write_boundary"]["runtime_visibility_write_performed"])
             self.assertFalse((project_root / ".jikuo" / "policies").exists())
@@ -98,6 +118,10 @@ class RuntimeVisibilityTests(unittest.TestCase):
             self.assertEqual(
                 show_report["runtime_visibility"]["last_card_ref"],
                 ".jikuo/runtime/last_card.md",
+            )
+            self.assertEqual(
+                show_report["client_display_links"]["links"]["last_card"]["markdown"],
+                display_links["links"]["last_card"]["markdown"],
             )
 
             show_card = subprocess.run(
@@ -151,6 +175,8 @@ class RuntimeVisibilityTests(unittest.TestCase):
             runtime_report["reason"],
             "package_fixture_project_is_read_only",
         )
+        self.assertEqual(proposal["client_display_links"]["status"], "unavailable")
+        self.assertEqual(proposal["client_display_links"]["links"], {})
         self.assertFalse((READY_PROJECT / ".jikuo" / "runtime").exists())
 
     def test_runtime_history_ref_is_confined_under_runtime_directory(self):

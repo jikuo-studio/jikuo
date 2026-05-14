@@ -19,6 +19,7 @@ else:
 
 RUNTIME_VISIBILITY_REPORT_SCHEMA = "jikuo.runtime_visibility_report.v0"
 RUNTIME_STATE_SUMMARY_SCHEMA = "jikuo.runtime_state_summary.v0"
+CLIENT_DISPLAY_LINKS_SCHEMA = "jikuo.client_display_links.v0"
 RUNTIME_DIR_REF = ".jikuo/runtime"
 LAST_CARD_REF = ".jikuo/runtime/last_card.md"
 STATE_SUMMARY_REF = ".jikuo/runtime/state_summary.json"
@@ -127,6 +128,7 @@ def build_state_summary(
             "state_summary_ref": runtime_report.get("state_summary_ref"),
             "history_ref": runtime_report.get("history_ref"),
         },
+        "client_display_links": build_client_display_links(runtime_report),
         "policy_runtime_status": policy_runtime_status,
         "counts": {
             "card_count": len(proposal.get("cards", [])),
@@ -152,6 +154,87 @@ def rel_ref(path: Path, *, project_root: Path) -> str:
         return path.relative_to(project_root).as_posix()
     except ValueError:
         return str(path)
+
+
+def local_markdown_target(path: Path) -> str:
+    return path.resolve().as_posix()
+
+
+def runtime_link_item(
+    *,
+    project_root: Path,
+    key: str,
+    label: str,
+    ref: str | None,
+) -> dict[str, str] | None:
+    if not ref:
+        return None
+    resolved = (project_root / ref).resolve()
+    runtime_root = runtime_root_for(project_root)
+    if not is_relative_to(resolved, runtime_root):
+        raise ValueError(f"runtime display link escaped runtime root: {key}")
+    target = local_markdown_target(resolved)
+    return {
+        "key": key,
+        "label": label,
+        "ref": ref,
+        "path": str(resolved),
+        "markdown_target": target,
+        "markdown": f"[{Path(ref).name}]({target})",
+    }
+
+
+def build_client_display_links(runtime_report: dict[str, Any]) -> dict[str, Any]:
+    project_root_value = runtime_report.get("project_root")
+    if not project_root_value:
+        return {
+            "schema": CLIENT_DISPLAY_LINKS_SCHEMA,
+            "status": "unavailable",
+            "reason": "runtime report has no project_root",
+            "links": {},
+        }
+    if not runtime_report.get("write_performed"):
+        return {
+            "schema": CLIENT_DISPLAY_LINKS_SCHEMA,
+            "status": "unavailable",
+            "display_contract": (
+                "Surface these local markdown links to the user whenever returning "
+                "governed JIKUO runtime output."
+            ),
+            "links": {},
+            "reason": runtime_report.get("reason"),
+        }
+    project_root = Path(str(project_root_value)).resolve()
+    links = {
+        "last_card": runtime_link_item(
+            project_root=project_root,
+            key="last_card",
+            label="Latest card",
+            ref=runtime_report.get("last_card_ref"),
+        ),
+        "state_summary": runtime_link_item(
+            project_root=project_root,
+            key="state_summary",
+            label="State summary",
+            ref=runtime_report.get("state_summary_ref"),
+        ),
+        "history_card": runtime_link_item(
+            project_root=project_root,
+            key="history_card",
+            label="History card",
+            ref=runtime_report.get("history_ref"),
+        ),
+    }
+    return {
+        "schema": CLIENT_DISPLAY_LINKS_SCHEMA,
+        "status": "available",
+        "display_contract": (
+            "Surface these local markdown links to the user whenever returning "
+            "governed JIKUO runtime output."
+        ),
+        "links": {key: value for key, value in links.items() if value is not None},
+        "reason": runtime_report.get("reason"),
+    }
 
 
 def skipped_report(*, project_root: Path, reason: str) -> dict[str, Any]:
@@ -313,6 +396,18 @@ def format_state_summary(summary: dict[str, Any]) -> str:
             f"- State summary: `{state_ref}`",
         ]
     )
+    display_links = summary.get("client_display_links") or {}
+    if display_links:
+        lines.extend(["", "## JIKUO Runtime Links", ""])
+        links = display_links.get("links") or {}
+        for key in ("last_card", "state_summary", "history_card"):
+            item = links.get(key)
+            if item:
+                lines.append(f"- {item['label']}: {item['markdown']}")
+        if not links:
+            lines.append(f"- Status: `{display_links.get('status', 'unavailable')}`")
+            if display_links.get("reason"):
+                lines.append(f"- Reason: {display_links['reason']}")
     counts = summary.get("counts") or {}
     if counts:
         lines.extend(
