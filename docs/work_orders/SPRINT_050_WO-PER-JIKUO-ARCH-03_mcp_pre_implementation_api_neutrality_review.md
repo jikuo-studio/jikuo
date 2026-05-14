@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-ARCH-03: MCP Pre-Implementation API Neutrality Review
 
-> **Status**: Ready for user review on 2026-05-15, pre-MCP review complete
+> **Status**: Accepted on 2026-05-15, pre-MCP review complete
 > **Product meaning**: verify that the first MCP wrapper can consume stable JIKUO core APIs without making MCP, any Agent SDK, or any desktop client part of the governance kernel.
 > **Scope rule**: review and document the API boundary only; do not implement the MCP adapter, MCP server, Agent SDK plugin, hook, dashboard, or new governance capability in this slice.
 
@@ -92,3 +92,13 @@ Still blocking MCP implementation unless accepted or explicitly deferred:
 - The review explicitly says the MCP adapter must not call CLI `main()` as its normal path.
 - Remaining blockers are visible before MCP implementation starts.
 - No MCP adapter, server, SDK plugin, client hook, dashboard, or new governance capability is implemented in this slice.
+
+## 8. Accepted Result
+
+Accepted by the user on 2026-05-15.
+
+Accepted decisions:
+
+- MCP must remain an adapter over structured JIKUO core APIs.
+- The first MCP adapter must not call CLI `main()` functions or scrape stdout as its normal integration path.
+- Remaining pre-MCP blockers stay visible until accepted, implemented, or explicitly deferred.

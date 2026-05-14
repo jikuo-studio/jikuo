@@ -46,7 +46,23 @@ POLICY_EVAL_STATUS_NOT_EVALUATED = "not_evaluated"
 POLICY_CONDITION_EVAL_STATUS_NOT_EVALUATED = "not_evaluated"
 POLICY_FEEDBACK_OPTIONS_SCHEMA = "jikuo.policy_feedback_options.v0"
 POLICY_RUNTIME_STATUS_SCHEMA = "jikuo.policy_runtime_status.v0"
+DISPLAY_DIRECTIVES_SCHEMA = "jikuo.display_directives.v0"
 POLICY_FEEDBACK_TYPES = {"not_applicable", "defer", "needs_scope_narrowing"}
+CARD_PRIORITY_ORDER = [
+    "policy_runtime_status",
+    "task_session_completion_acceptance",
+    "task_session_start_preview",
+    "task_session_binding",
+    "task_session_lifecycle_unavailable",
+    "task_continue_refusal",
+    "task_continue_status",
+    "task_session_evidence_append",
+    "policy_evidence_check",
+    "policy_write_plan",
+    "policy_evolution_plan",
+    "policy_template_import_plan",
+    "starter_policy_pack_init_plan",
+]
 APPLY_OPERATIONS = {
     "policy_evolution_write",
     "policy_template_activation",
@@ -2804,7 +2820,13 @@ def proposal_with_chat_ready_markdown(
     *,
     project_root: Path | None = None,
 ) -> dict[str, Any]:
-    output = add_runtime_visibility_projection(proposal, project_root=project_root)
+    proposal_with_display = dict(proposal)
+    proposal_with_display["display"] = build_display_directives()
+    output = add_runtime_visibility_projection(
+        proposal_with_display,
+        project_root=project_root,
+    )
+    output["display"] = build_display_directives()
     output["chat_ready_markdown_schema"] = CHAT_READY_MARKDOWN_SCHEMA
     output["chat_ready_markdown"] = render_markdown(output)
     return output
@@ -2877,6 +2899,41 @@ def render_client_display_links(display_links: dict[str, Any]) -> list[str]:
     return lines
 
 
+def build_display_directives() -> dict[str, Any]:
+    return {
+        "schema": DISPLAY_DIRECTIVES_SCHEMA,
+        "must_show_verbatim": ["chat_ready_markdown"],
+        "card_priority_order": list(CARD_PRIORITY_ORDER),
+        "may_summarize": ["structured_data"],
+        "do_not_show": ["debug_trace"],
+        "priority": "first_in_response",
+        "reason": "policy_runtime_status is first-screen governance context when present",
+    }
+
+
+def cards_for_display(cards: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    priority = {card_kind: index for index, card_kind in enumerate(CARD_PRIORITY_ORDER)}
+    fallback = len(CARD_PRIORITY_ORDER)
+    return [
+        card
+        for _, card in sorted(
+            enumerate(cards),
+            key=lambda item: (
+                priority.get(str(item[1].get("card_kind")), fallback),
+                item[0],
+            ),
+        )
+    ]
+
+
+def render_cards(cards: list[dict[str, Any]]) -> list[str]:
+    lines = ["## Cards", ""]
+    for card in cards_for_display(cards):
+        lines.append(render_card(card).rstrip())
+        lines.append("")
+    return lines
+
+
 def render_work_routing(work_routing: dict[str, Any]) -> list[str]:
     lines = [
         "## Work Routing Evidence",
@@ -2938,6 +2995,7 @@ def render_markdown(proposal: dict[str, Any]) -> str:
     work_routing = proposal.get("work_routing")
     if work_routing:
         lines.extend(render_work_routing(work_routing))
+    lines.extend(render_cards(proposal["cards"]))
     lines.extend(
         [
             "",
@@ -3047,11 +3105,6 @@ def render_markdown(proposal: dict[str, Any]) -> str:
                 f"- `{item['feedback_type']}` / `{item['status']}` / "
                 f"persistence=`{item['persistence']}`: {item['effect']}"
             )
-        lines.append("")
-    lines.append("## Cards")
-    lines.append("")
-    for card in proposal["cards"]:
-        lines.append(render_card(card).rstrip())
         lines.append("")
     lines.append("## Next Actions")
     lines.append("")

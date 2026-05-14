@@ -46,6 +46,7 @@ The following remain outside this repository's active documentation mount unless
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-INTG-01_universal_instruction_file_distribution.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-14_completion_review_policy_only_surfacing.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-15_self_bootstrap_task_session_binding.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-16_policy_runtime_card_priority.md`
 
 ---
 

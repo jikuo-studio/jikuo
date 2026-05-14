@@ -63,6 +63,10 @@ document_roles:
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-15_self_bootstrap_task_session_binding.md"
     required: true
     note: "Pre-MCP follow-up requiring each governed JIKUO development slice to bind, create, or explicitly defer a task-session."
+  policy_runtime_card_priority_work_order:
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-16_policy_runtime_card_priority.md"
+    required: true
+    note: "Pre-MCP follow-up making policy_runtime_status the first visible governance card in chat-ready and runtime output."
   desktop_operating_loop_work_order:
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-FLOW-02_desktop_app_primary_operating_loop.md"
     required: true

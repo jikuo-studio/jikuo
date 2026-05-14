@@ -503,6 +503,26 @@ class AgentFlowProposalTests(unittest.TestCase):
         self.assertIn("## Policy runtime status", proposal["chat_ready_markdown"])
         self.assertIn("POLICY-three-phase-audit", proposal["chat_ready_markdown"])
         self.assertEqual(
+            proposal["display"]["schema"],
+            "jikuo.display_directives.v0",
+        )
+        self.assertEqual(
+            proposal["display"]["card_priority_order"][0],
+            "policy_runtime_status",
+        )
+        cards_index = proposal["chat_ready_markdown"].index("## Cards")
+        policy_card_index = proposal["chat_ready_markdown"].index(
+            "## Policy runtime status",
+            cards_index,
+        )
+        task_card_index = proposal["chat_ready_markdown"].index(
+            "## Task-session start preview",
+            cards_index,
+        )
+        trigger_index = proposal["chat_ready_markdown"].index("## Trigger Decision")
+        self.assertLess(policy_card_index, task_card_index)
+        self.assertLess(policy_card_index, trigger_index)
+        self.assertEqual(
             {item["feedback_type"] for item in proposal["policy_feedback_options"]},
             {"not_applicable", "defer", "needs_scope_narrowing"},
         )

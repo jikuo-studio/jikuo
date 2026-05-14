@@ -91,6 +91,11 @@ Display response contract for card-returning tools:
 {
   "display": {
     "must_show_verbatim": ["card_markdown"],
+    "card_priority_order": [
+      "policy_runtime_status",
+      "task_session_completion_acceptance",
+      "task_session_start_preview"
+    ],
     "may_summarize": ["data_details"],
     "do_not_show": ["debug_trace"],
     "priority": "first_in_response"
@@ -138,7 +143,7 @@ Recommended implementation slices:
 0. Confirm `PKG-00`, `CORE-20`, `SEC-01`, `PKG-01`, `CORE-20B`, `CORE-23`, `CORE-24`, `LIVE-12` Phase 1, `INTG-01`, `ARCH-02`, `ARCH-03`, `SDK-01`, starter provenance handling, and any approved minimal package extraction prerequisites are complete or explicitly deferred with user approval.
 1. Create a testable MCP adapter boundary under `src/jikuo/integrations/mcp/` that maps tool names and arguments to package-safe `agent_flow.py` / `policy_store.py` behavior.
 2. Add card-only and runtime-status-card tool adapters before broader proposal tools.
-3. Add display directives and out-of-band runtime snapshot refs to card-producing tool responses.
+3. Add display directives, `card_priority_order`, and out-of-band runtime snapshot refs to card-producing tool responses.
 4. Add an MCP server wrapper using the official Python SDK when available; if the SDK is not available locally, stop at the adapter boundary and record the dependency decision rather than hand-rolling a non-compliant server.
 5. Add unit tests for tool schema / argument validation / approval refusal / privacy field classification / display contract shape.
 6. Add integration tests against temporary fixture copies for no-write proposals, resolved project context, runtime visibility snapshots, and guarded apply paths.
@@ -160,6 +165,7 @@ Integration tests:
 - `jikuo.propose_task_start` against `policy_store_active_project`
 - `jikuo.get_runtime_status_card` returns card markdown only plus display directives
 - `jikuo.get_display_card` returns the last runtime card from `.jikuo/runtime/`
+- card-producing proposal tools return display directives where `card_priority_order[0]` is `policy_runtime_status`
 - `jikuo.propose_policy_write_plan` returns a no-write card
 - `jikuo.propose_policy_evolution_plan` returns a proposal ref
 - `jikuo.apply_policy_evolution_write` succeeds only in a copied temporary fixture with matching proposal ref
@@ -170,6 +176,7 @@ Smoke tests:
 - one no-write MCP call returns `chat_ready_markdown` plus structured result
 - one card-only MCP call returns a compact Markdown card that should be shown verbatim
 - `jikuo.propose_task_start` returns `cards[]` containing `policy_runtime_status` when the wrapped runner produced one
+- card-producing tools render `policy_runtime_status` before task-session / lifecycle cards when the wrapped runner produced one
 - no root `.jikuo/policies/` or `.jikuo/task_sessions/` is created during no-write smoke
 - card-producing no-write tools update only the `.jikuo/runtime/` visibility channel when runtime visibility is enabled
 
@@ -177,6 +184,7 @@ Human semantic review:
 
 - confirm the desktop chat result is understandable to a non-CLI user
 - confirm the Agent did not summarize away the returned `chat_ready_markdown`
+- confirm `policy_runtime_status` appears in the first visible card position before lifecycle, task-session, or write-plan cards
 - confirm approval boundaries are visible
 - confirm this slice feels like packaging stable atoms, not expanding the governance kernel
 
@@ -185,7 +193,7 @@ Human semantic review:
 - The work order, task map, and execution mounts all identify `JIKUO-MCP-01` as the scoped MCP implementation slice, blocked until pre-MCP foundations are accepted.
 - The planned implementation path is `src/jikuo/integrations/mcp/`, not root-level `src/jikuo/mcp_server.py` or `src/jikuo/mcp_adapter.py`.
 - The MCP MVP tool list is frozen before code implementation starts.
-- No-write proposal tools return chat-ready text plus structured fields, and policy runtime status remains visible when present.
+- No-write proposal tools return chat-ready text plus structured fields, and policy runtime status remains first-screen visible when present.
 - Card-only tools return compact card Markdown and display directives.
 - Card-producing tools also update the out-of-band runtime visibility channel or explicitly report why runtime visibility is disabled.
 - No new governance capability is introduced by this work order.
