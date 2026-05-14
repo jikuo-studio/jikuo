@@ -289,7 +289,7 @@ Current status:
 
 - `JIKUO-MCP-01` work order is drafted but blocked by pre-MCP portability / security / package / visibility foundation.
 - `JIKUO-LIVE-12` Phase 1 is accepted as the out-of-band runtime visibility baseline; `JIKUO-INTG-01` remains drafted as the cross-client instruction foundation to review before MCP implementation.
-- `JIKUO-LIVE-13` is implemented and ready for review as the current self-bootstrap evidence-quality slice.
+- `JIKUO-LIVE-13` is accepted as the current self-bootstrap evidence-quality slice; normal task-start proposals now satisfy the taskmap / insight / follow-up distinction evidence requirement.
 - implementation has not started.
 - this step is packaging-only: wrap stable `agent_flow.py` / `policy_store.py` atoms without adding new governance capability.
 

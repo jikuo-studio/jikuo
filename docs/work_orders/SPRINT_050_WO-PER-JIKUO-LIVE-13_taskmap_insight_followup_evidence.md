@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-LIVE-13: Taskmap Insight Follow-up Evidence
 
-> **Status**: Implemented, ready for review
+> **Status**: Accepted on 2026-05-14
 > **Product meaning**: make the taskmap / insight / follow-up distinction auditable as structured JIKUO evidence instead of relying only on final assistant wording.
 > **Scope rule**: add report-only work-routing evidence to the local runner; do not implement MCP, persistent task-session evidence writes, UI, dashboard, or gates in this slice.
 
@@ -41,3 +41,12 @@ Before this slice, `agent_flow.py propose --event task_start` could trigger that
 - Missing evidence for `POLICY-jikuo-taskmap-insight-followup-distinction` disappears in a representative task-start run.
 - The chat-ready card shows the classification visibly.
 - Existing no-write boundaries remain unchanged.
+
+## 6. Acceptance Record
+
+Accepted on 2026-05-14 after verifying the self-bootstrap runtime evidence gap:
+
+- `python -B -m unittest discover -s tests -p "*_tests.py"`: 116 tests passed.
+- `python -B -m jikuo.agent_flow propose --event task_start ...`: `POLICY-jikuo-taskmap-insight-followup-distinction` evidence became `ok`.
+- `python -B -m jikuo show`: runtime status reported `Missing evidence: 0`.
+- Implementation commit: `27e21aa jikuo: record work routing evidence`.

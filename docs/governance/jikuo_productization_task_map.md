@@ -178,7 +178,7 @@ Already created in `WORKTREE-05` or incubated from it:
 - `JIKUO-LIVE-10`: policy runtime status card, implemented and ready for user review; appends a visible `policy_runtime_status` card so triggered / non-triggered policies, required actions, and missing evidence are not hidden in structured proposal fields
 - `JIKUO-LIVE-11`: deterministic harness chat return contract, implemented and ready for user review; adds `chat_ready_markdown` to JSON runner output and requires desktop / future MCP callers to surface tool-rendered cards rather than probabilistically summarize them away
 - `JIKUO-LIVE-12`: out-of-band runtime visibility channels, Phase 1 accepted on 2026-05-14 as a pre-MCP visibility foundation; pairs chat-ready cards with `.jikuo/runtime/` snapshots, `jikuo show`, and client-display links so users can open the latest runtime card without relying on any single desktop Agent
-- `JIKUO-LIVE-13`: taskmap / insight / follow-up evidence, implemented and ready for user review; `agent_flow.py propose --event task_start` now emits structured `work_routing` and `taskmap_insight_followup_distinction_evidence` so the self-bootstrap summary-distinction policy can be audited by the evidence checker
+- `JIKUO-LIVE-13`: taskmap / insight / follow-up evidence, accepted on 2026-05-14; `agent_flow.py propose --event task_start` now emits structured `work_routing` and `taskmap_insight_followup_distinction_evidence` so the self-bootstrap summary-distinction policy can be audited by the evidence checker
 - `JIKUO-INTG-01`: universal instruction file distribution, drafted and ready for review as a pre-MCP companion; plans canonical `JIKUO.md` plus client instruction sync without making client-specific hooks a baseline dependency
 - `JIKUO-MCP-01`: MCP wrapper MVP work order, drafted and ready for user review; formally shifts the next slice from more kernel expansion to wrapping stable `agent_flow.py` / `policy_store.py` atoms for cross-client desktop Agent invocation
 - `JIKUO-PKG-00`: package boundary and extraction plan, drafted and ready for user review; separates JIKUO tool-owned package assets from user-project-local `.jikuo/` state before CORE-20 or MCP implementation
@@ -2590,19 +2590,19 @@ Latest todo map:
 Accepted precondition:
 
 - `JIKUO-LIVE-12` Phase 1 out-of-band runtime visibility accepted on 2026-05-14: `.jikuo/runtime/last_card.md`, `.jikuo/runtime/state_summary.json`, runtime history, `jikuo show`, `jikuo show --last-card`, and `client_display_links`.
+- `JIKUO-LIVE-13` taskmap / insight / follow-up evidence accepted on 2026-05-14: `work_routing`, `taskmap_insight_followup_distinction_evidence`, and zero missing evidence for the self-bootstrap summary-distinction policy in normal task-start proposals.
 
 Open items:
 
-1. Review / accept `JIKUO-LIVE-13` taskmap / insight / follow-up evidence so current self-bootstrap summary-distinction evidence is no longer missing in normal task-start proposals.
-2. Review / accept revised `JIKUO-MCP-01` visibility scope: structured tools, card-only tools, `jikuo.get_runtime_status`, `jikuo.get_runtime_status_card`, `jikuo.get_display_card`, display directives, and runtime snapshot refs.
-3. Review / accept `JIKUO-INTG-01` universal instruction distribution: canonical `JIKUO.md` and opt-in sync to `AGENTS.md`, `CLAUDE.md`, `.cursorrules`, and `.continuerules`.
-4. Decide whether `.jikuo/project_context.yaml` previous/latest todo comparison remains disabled for now or gets a future snapshot rotation work order.
-5. Review / implement starter policy provenance backfill or an explicit missing-provenance fallback before starter policies are exposed through MCP.
-6. Review / accept the updated SEC-01 visibility baseline: critical JIKUO runtime state must have both chat-ready output and user-accessible out-of-band output.
-7. Review release-readiness follow-ups before external users: product-facing root README, license decision, minimal CI, pytest/dev extras.
-8. Return to `JIKUO-MCP-01` implementation only after the above pre-MCP items are accepted or explicitly deferred.
-9. Keep the decision about whether new self-bootstrap policies enter built-in starter templates suspended until explicit user approval.
-10. Defer dashboard, OS notifications, per-client hooks/packs, rollback, broader conditions, UI, Plugin, and gates unless explicitly promoted by user approval.
+1. Review / accept revised `JIKUO-MCP-01` visibility scope: structured tools, card-only tools, `jikuo.get_runtime_status`, `jikuo.get_runtime_status_card`, `jikuo.get_display_card`, display directives, and runtime snapshot refs.
+2. Review / accept `JIKUO-INTG-01` universal instruction distribution: canonical `JIKUO.md` and opt-in sync to `AGENTS.md`, `CLAUDE.md`, `.cursorrules`, and `.continuerules`.
+3. Decide whether `.jikuo/project_context.yaml` previous/latest todo comparison remains disabled for now or gets a future snapshot rotation work order.
+4. Review / implement starter policy provenance backfill or an explicit missing-provenance fallback before starter policies are exposed through MCP.
+5. Review / accept the updated SEC-01 visibility baseline: critical JIKUO runtime state must have both chat-ready output and user-accessible out-of-band output.
+6. Review release-readiness follow-ups before external users: product-facing root README, license decision, minimal CI, pytest/dev extras.
+7. Return to `JIKUO-MCP-01` implementation only after the above pre-MCP items are accepted or explicitly deferred.
+8. Keep the decision about whether new self-bootstrap policies enter built-in starter templates suspended until explicit user approval.
+9. Defer dashboard, OS notifications, per-client hooks/packs, rollback, broader conditions, UI, Plugin, and gates unless explicitly promoted by user approval.
 
 MCP MVP scope freeze:
 
