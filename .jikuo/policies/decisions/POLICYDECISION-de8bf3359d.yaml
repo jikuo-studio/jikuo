@@ -1,0 +1,17 @@
+schema_version: "jikuo.policy_decision.v0"
+decision_id: "POLICYDECISION-de8bf3359d"
+proposal_ref: ".jikuo/policies/proposals/POLICYPROPOSAL-81482f58e8.yaml"
+policy_ref: "POLICY-jikuo-taskmap-insight-followup-distinction"
+decision: "approve_write"
+target:
+  kind: "approved_policy"
+  ref: "POLICY-jikuo-taskmap-insight-followup-distinction"
+effect: "append_policy POLICY-jikuo-taskmap-insight-followup-distinction and update policy-store manifest active refs"
+non_effect: "does not execute policy actions, persist evidence, or promote gates"
+approval_phrase: "user_requested_policy_add_taskmap_insight_followup_distinction"
+created_at: "2026-05-14T05:44:31Z"
+source_plan_ref: "POLICYWRITEPLAN-6a416a0e9b"
+source_plan_schema: "jikuo.policy_write_plan.v0"
+storage:
+  path: ".jikuo/policies/decisions/POLICYDECISION-de8bf3359d.yaml"
+  policy_store_ref: ".jikuo/policies"
