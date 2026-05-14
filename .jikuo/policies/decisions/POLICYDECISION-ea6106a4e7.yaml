@@ -1,0 +1,17 @@
+schema_version: "jikuo.policy_decision.v0"
+decision_id: "POLICYDECISION-ea6106a4e7"
+proposal_ref: ".jikuo/policies/proposals/POLICYPROPOSAL-5bc90d6b85.yaml"
+policy_ref: "POLICY-jikuo-main-doc-mount-maintenance"
+decision: "approve_write"
+target:
+  kind: "approved_policy"
+  ref: "POLICY-jikuo-main-doc-mount-maintenance"
+effect: "append_policy POLICY-jikuo-main-doc-mount-maintenance and update policy-store manifest active refs"
+non_effect: "does not execute policy actions, persist evidence, or promote gates"
+approval_phrase: "统一独立仓库的主文档挂载路径，并明确哪些主文档必须在每个切片结束前检查更新。经用户批准后回持续自动更新并汇报进度，用户可以选择缩减、扩张或者变更持续更新的主文档范围。"
+created_at: "2026-05-14T06:35:20Z"
+source_plan_ref: "POLICYWRITEPLAN-b6e3c0e052"
+source_plan_schema: "jikuo.policy_write_plan.v0"
+storage:
+  path: ".jikuo/policies/decisions/POLICYDECISION-ea6106a4e7.yaml"
+  policy_store_ref: ".jikuo/policies"

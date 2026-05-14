@@ -1,0 +1,25 @@
+schema_version: "jikuo.configurable_rule_policy.v0"
+policy_id: "POLICY-jikuo-main-doc-mount-maintenance"
+version: 1
+status: "active_report_only"
+title: "Main development document mount maintenance before slice completion"
+scenario_package: "engineering_governance"
+source_refs:
+  - type: "user_natural_language"
+    ref: "user_policy:maintain_main_doc_mount_paths_and_update_scope_before_completion"
+triggers:
+  - trigger_id: "TRG-completion"
+    type: "task_lifecycle_event"
+    event: "completion_review"
+conditions:
+  []
+required_actions:
+  - action_id: "ACT-maintain-main-doc-mounts-before-completion"
+    type: "maintain_main_document_mounts_and_update_scope_before_completion"
+required_evidence:
+  - evidence_id: "EVD-main-document-mount-maintenance-evidence"
+    type: "main_document_mount_maintenance_evidence"
+    satisfies_action: "ACT-maintain-main-doc-mounts-before-completion"
+enforcement:
+  phase: "report_only"
+  level: "review_required"

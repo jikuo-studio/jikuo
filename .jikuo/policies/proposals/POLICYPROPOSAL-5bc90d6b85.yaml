@@ -1,0 +1,82 @@
+schema: "jikuo.policy_write_plan.v0"
+schema_version: "jikuo.policy_write_plan.v0"
+report_only: true
+plan_id: "POLICYWRITEPLAN-b6e3c0e052"
+operation: "append_policy"
+status: "review"
+proposal_ref: ".jikuo/policies/proposals/POLICYPROPOSAL-5bc90d6b85.yaml"
+policy_ref: "POLICY-jikuo-main-doc-mount-maintenance"
+project_root: "D:\\personal_project\\Jikuo"
+policy_store_status: "active"
+policy_store_root: "D:\\personal_project\\Jikuo\\.jikuo\\policies"
+preflight:
+  project_state_initialized: true
+  store_exists: true
+  target_collision: false
+  decision_record_collision: false
+  proposal_snapshot_collision: false
+  manifest_stale: false
+  approval_present: false
+write_set:
+  - path: ".jikuo/policies/approved/POLICY-jikuo-main-doc-mount-maintenance.yaml"
+    effect: "create approved policy file"
+    operation: "create"
+  - path: ".jikuo/policies/decisions/POLICYDECISION-ea6106a4e7.yaml"
+    effect: "create policy decision record"
+    operation: "create"
+  - path: ".jikuo/policies/manifest.yaml"
+    effect: "create or update policy-store manifest active_policy_refs"
+    operation: "create_or_update"
+  - path: ".jikuo/policies/proposals/POLICYPROPOSAL-5bc90d6b85.yaml"
+    effect: "create policy write proposal snapshot"
+    operation: "create"
+non_effects:
+  - "does not create .jikuo/policies/"
+  - "does not write approved policy files"
+  - "does not update manifest.yaml"
+  - "does not execute policy actions"
+  - "does not create task-session evidence"
+  - "does not promote gates"
+approval_required: true
+write_allowed_by_command: false
+writes_performed: false
+guarded_apply_available: false
+proposed_policy:
+  schema_version: "jikuo.configurable_rule_policy.v0"
+  policy_id: "POLICY-jikuo-main-doc-mount-maintenance"
+  version: 1
+  status: "active_report_only"
+  title: "Main development document mount maintenance before slice completion"
+  scenario_package: "engineering_governance"
+  source_refs:
+    - type: "user_natural_language"
+      ref: "user_policy:maintain_main_doc_mount_paths_and_update_scope_before_completion"
+  triggers:
+    - trigger_id: "TRG-completion"
+      type: "task_lifecycle_event"
+      event: "completion_review"
+  conditions:
+    []
+  required_actions:
+    - action_id: "ACT-maintain-main-doc-mounts-before-completion"
+      type: "maintain_main_document_mounts_and_update_scope_before_completion"
+  required_evidence:
+    - evidence_id: "EVD-main-document-mount-maintenance-evidence"
+      type: "main_document_mount_maintenance_evidence"
+      satisfies_action: "ACT-maintain-main-doc-mounts-before-completion"
+  enforcement:
+    phase: "report_only"
+    level: "review_required"
+refusal_reasons:
+  []
+warnings:
+  []
+source_refs:
+  - "pkg://jikuo/governance/jikuo_policy_store_configuration_flow.md"
+  - "pkg://jikuo/governance/jikuo_configurable_rule_trigger_policy.md"
+  - "pkg://jikuo/governance/jikuo_rule_action_evidence_model.md"
+  - "pkg://jikuo/governance/jikuo_policy_aware_agent_flow_contract.md"
+status_reason: "policy write plan is ready for desktop review; no durable write was performed"
+next_actions:
+  - "review the proposed policy, write targets, and non-effects in chat"
+  - "approve a future guarded policy writer only after the plan is correct"
