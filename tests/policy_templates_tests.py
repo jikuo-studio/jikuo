@@ -66,6 +66,34 @@ def write_policy(path: Path) -> None:
     )
 
 
+def write_project_context(root: Path, *, latest_path: str, previous_path: str) -> None:
+    context_path = root / ".jikuo" / "project_context.yaml"
+    context_path.parent.mkdir(parents=True, exist_ok=True)
+    context_path.write_text(
+        "\n".join(
+            [
+                'schema_version: "jikuo.project_context.v0"',
+                "project:",
+                '  project_id: "template_import_fixture"',
+                '  project_type: "test"',
+                '  project_root_policy: "bindings_must_resolve_inside_project_root"',
+                "document_roles:",
+                "  latest_todo_map:",
+                f'    path: "{latest_path}"',
+                "    required: true",
+                "  previous_todo_map:",
+                f'    path: "{previous_path}"',
+                "    required: true",
+                "directory_roles:",
+                "  work_orders:",
+                '    path: "docs/work_orders"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+
 class PolicyTemplateTests(unittest.TestCase):
     def test_packaged_starter_templates_do_not_expose_private_source_refs(self):
         template_root = ROOT / "src" / "jikuo" / "policy_templates" / "engineering_governance"
@@ -292,6 +320,302 @@ class PolicyTemplateTests(unittest.TestCase):
             self.assertFalse(report["writes_performed"])
             self.assertTrue(report["binding_status"])
             self.assertFalse((root / ".jikuo" / "policies").exists())
+
+    def test_plan_import_resolves_project_context_bindings_without_write(self):
+        with temp_project_dir() as root:
+            source_policy = root / "POLICY-task-scope-control-before-packaging.yaml"
+            target_dir = root / "templates"
+            docs_dir = root / "docs"
+            docs_dir.mkdir()
+            (docs_dir / "latest.md").write_text("latest", encoding="utf-8")
+            (docs_dir / "previous.md").write_text("previous", encoding="utf-8")
+            write_project_context(
+                root,
+                latest_path="docs/latest.md",
+                previous_path="docs/previous.md",
+            )
+            write_policy(source_policy)
+            export_completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "export-template",
+                    "--source-policy",
+                    str(source_policy),
+                    "--target-dir",
+                    str(target_dir),
+                    "--confirm-export-template",
+                    "--approval-phrase",
+                    "<exact user phrase as spoken>",
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertEqual(export_completed.returncode, 0, export_completed.stderr)
+            template_path = json.loads(export_completed.stdout)["written_paths"][0]
+
+            import_completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "plan-import",
+                    "--template",
+                    template_path,
+                    "--project-root",
+                    str(root),
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(import_completed.returncode, 0, import_completed.stderr)
+            report = json.loads(import_completed.stdout)
+            self.assertEqual(report["status"], "review")
+            self.assertEqual(report["project_context_status"], "present")
+            self.assertFalse(report["writes_performed"])
+            self.assertEqual(
+                {item["status"] for item in report["binding_status"]},
+                {"resolved"},
+            )
+            self.assertEqual(
+                report["resolved_policy"]["schema"],
+                "jikuo.resolved_policy.v0",
+            )
+            preview = report["resolved_policy_preview"]
+            self.assertEqual(
+                preview["template_ref"],
+                "POLICYTEMPLATE-local-policy-task-scope-control-before-packaging",
+            )
+            self.assertEqual(preview["project_context_ref"], ".jikuo/project_context.yaml")
+            self.assertFalse((root / ".jikuo" / "policies").exists())
+
+    def test_plan_import_reports_unsafe_project_context_path(self):
+        with temp_project_dir() as root:
+            source_policy = root / "POLICY-task-scope-control-before-packaging.yaml"
+            target_dir = root / "templates"
+            write_project_context(
+                root,
+                latest_path="../outside.md",
+                previous_path="docs/previous.md",
+            )
+            (root / "docs").mkdir()
+            (root / "docs" / "previous.md").write_text("previous", encoding="utf-8")
+            write_policy(source_policy)
+            export_completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "export-template",
+                    "--source-policy",
+                    str(source_policy),
+                    "--target-dir",
+                    str(target_dir),
+                    "--confirm-export-template",
+                    "--approval-phrase",
+                    "<exact user phrase as spoken>",
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertEqual(export_completed.returncode, 0, export_completed.stderr)
+            template_path = json.loads(export_completed.stdout)["written_paths"][0]
+
+            import_completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "plan-import",
+                    "--template",
+                    template_path,
+                    "--project-root",
+                    str(root),
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(import_completed.returncode, 0, import_completed.stderr)
+            report = json.loads(import_completed.stdout)
+            self.assertEqual(report["status"], "missing_binding")
+            statuses = {
+                item["role_ref"]: item["status"]
+                for item in report["binding_status"]
+            }
+            self.assertEqual(
+                statuses["role://document/latest_todo_map"],
+                "unsafe_binding",
+            )
+            self.assertFalse((root / ".jikuo" / "policies").exists())
+
+    def test_activate_template_requires_confirmation_and_approval(self):
+        with temp_project_dir() as root:
+            source_policy = root / "POLICY-task-scope-control-before-packaging.yaml"
+            target_dir = root / "templates"
+            docs_dir = root / "docs"
+            docs_dir.mkdir()
+            (docs_dir / "latest.md").write_text("latest", encoding="utf-8")
+            (docs_dir / "previous.md").write_text("previous", encoding="utf-8")
+            write_project_context(
+                root,
+                latest_path="docs/latest.md",
+                previous_path="docs/previous.md",
+            )
+            write_policy(source_policy)
+            export_completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "export-template",
+                    "--source-policy",
+                    str(source_policy),
+                    "--target-dir",
+                    str(target_dir),
+                    "--confirm-export-template",
+                    "--approval-phrase",
+                    "<exact user phrase as spoken>",
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertEqual(export_completed.returncode, 0, export_completed.stderr)
+            template_path = json.loads(export_completed.stdout)["written_paths"][0]
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "activate-template",
+                    "--template",
+                    template_path,
+                    "--project-root",
+                    str(root),
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 2, completed.stderr)
+            report = json.loads(completed.stdout)
+            self.assertFalse(report["write_performed"])
+            self.assertIn("missing_confirmation_flag", report["refusal_reasons"])
+            self.assertIn("approval_evidence_missing", report["refusal_reasons"])
+            self.assertFalse((root / ".jikuo" / "policies").exists())
+
+    def test_activate_template_writes_resolved_policy_after_approval(self):
+        with temp_project_dir() as root:
+            source_policy = root / "POLICY-task-scope-control-before-packaging.yaml"
+            target_dir = root / "templates"
+            docs_dir = root / "docs"
+            docs_dir.mkdir()
+            (docs_dir / "latest.md").write_text("latest", encoding="utf-8")
+            (docs_dir / "previous.md").write_text("previous", encoding="utf-8")
+            write_project_context(
+                root,
+                latest_path="docs/latest.md",
+                previous_path="docs/previous.md",
+            )
+            write_policy(source_policy)
+            export_completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "export-template",
+                    "--source-policy",
+                    str(source_policy),
+                    "--target-dir",
+                    str(target_dir),
+                    "--confirm-export-template",
+                    "--approval-phrase",
+                    "<exact user phrase as spoken>",
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertEqual(export_completed.returncode, 0, export_completed.stderr)
+            template_path = json.loads(export_completed.stdout)["written_paths"][0]
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "activate-template",
+                    "--template",
+                    template_path,
+                    "--project-root",
+                    str(root),
+                    "--confirm-activate-template",
+                    "--approval-phrase",
+                    "<exact user phrase as spoken>",
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            report = json.loads(completed.stdout)
+            self.assertTrue(report["write_performed"])
+            self.assertEqual(report["policy_ref"], "POLICY-task-scope-control-before-packaging")
+            self.assertTrue(report["post_write_verification"]["policy_active"])
+            approved_path = (
+                root
+                / ".jikuo"
+                / "policies"
+                / "approved"
+                / "POLICY-task-scope-control-before-packaging.yaml"
+            )
+            self.assertTrue(approved_path.is_file())
+            approved_text = approved_path.read_text(encoding="utf-8")
+            self.assertIn('template_ref: "POLICYTEMPLATE-local-policy-task-scope-control-before-packaging"', approved_text)
+            self.assertIn("resolved_bindings:", approved_text)
+            self.assertTrue((root / ".jikuo" / "policies" / "manifest.yaml").is_file())
 
 
 if __name__ == "__main__":

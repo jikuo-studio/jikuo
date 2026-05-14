@@ -101,6 +101,13 @@ Product interaction posture:
 - CLI is an auxiliary bridge / fallback for agents or terminal-preferring users
 - standalone frontend is a configuration, control, and audit surface, not the only operating surface
 
+Harness principle:
+
+- JIKUO is a tool-backed harness after activation, not a probabilistic prompt preference.
+- Trigger discovery may be explicit or agent-suggested, but covered flows must call the runner / future MCP tool.
+- Critical flow state must remain visible, traceable, and auditable in the same desktop chat.
+- A governed response that hides policy runtime status, evidence state, write effects, approval boundaries, or atom trace is incomplete.
+
 The first incubating use case is NarrativeSystem Sprint 050 governance hardening, but the product concept should remain broader than this repository and broader than engineering alone.
 
 ---
@@ -169,14 +176,17 @@ Already created in `WORKTREE-05` or incubated from it:
 - `JIKUO-LIVE-08`: agent flow guarded policy evolution apply MVP, implemented and ready for user review; lets a desktop agent apply one explicitly approved policy deprecation / supersession through `agent_flow.py apply`
 - `JIKUO-LIVE-09`: proposal-to-apply binding MVP, implemented and ready for user review; requires `agent_flow.py apply --operation policy_evolution_write` to include the proposal ref that the user reviewed, and refuses mismatched refs before any durable write
 - `JIKUO-LIVE-10`: policy runtime status card, implemented and ready for user review; appends a visible `policy_runtime_status` card so triggered / non-triggered policies, required actions, and missing evidence are not hidden in structured proposal fields
+- `JIKUO-LIVE-11`: deterministic harness chat return contract, implemented and ready for user review; adds `chat_ready_markdown` to JSON runner output and requires desktop / future MCP callers to surface tool-rendered cards rather than probabilistically summarize them away
 - `JIKUO-MCP-01`: MCP wrapper MVP work order, drafted and ready for user review; formally shifts the next slice from more kernel expansion to wrapping stable `agent_flow.py` / `policy_store.py` atoms for cross-client desktop Agent invocation
 - `JIKUO-PKG-00`: package boundary and extraction plan, drafted and ready for user review; separates JIKUO tool-owned package assets from user-project-local `.jikuo/` state before CORE-20 or MCP implementation
 - `JIKUO-CORE-20`: project context binding and policy template portability, draft contract ready for user review; separates reusable policy templates from project-specific document / directory bindings
 - `JIKUO-SEC-01`: trust, privacy, provenance, namespace, principal, telemetry, and timestamp baseline, draft contract ready for user review
 - `JIKUO-PKG-01`: minimal package extraction, initial local package created at `D:\personal_project\Jikuo` and ready for user review; now precedes resource-reference hygiene so `CORE-20B` happens inside the standalone package boundary
 - `JIKUO-CORE-20B`: resource-reference and `CONTRACT_REFS` hygiene, implemented and ready for user review; package-owned refs now use `pkg://jikuo/...` and command previews use `python -B -m jikuo...`
-- `JIKUO-CORE-21`: policy template extraction / export MVP, implemented from redacted incubating-project approved policy seeds; import / bind / activate remains future guarded work
+- `JIKUO-CORE-21`: policy template extraction / export MVP, implemented from redacted incubating-project approved policy seeds; `JIKUO-CORE-23` extends the flow with project-context resolution and guarded activation
 - `JIKUO-CORE-22`: starter policy pack first-use initialization, implemented as a guarded bootstrap path that activates curated report-only starter policies in a project
+- `JIKUO-CORE-23`: project context template activation, implemented and ready for user review; `policy_templates.py` now resolves project-context bindings, rejects unsafe paths, previews `jikuo.resolved_policy.v0`, and guardedly activates one resolved template as an approved project policy
+- `JIKUO-CORE-24`: agent flow template activation bridge, implemented and ready for user review; `agent_flow.py` now renders template import planning as a visible card and applies one approved template activation through `--operation policy_template_activation`
 
 Current scenario-chain registrations:
 
@@ -185,6 +195,9 @@ Current scenario-chain registrations:
 | `policy_template_seed_extraction` | A JIKUO maintainer turns proven approved policies from an incubating project into reusable package templates without activating them in another project | inspect approved source -> plan extraction -> guarded package-template export -> no-write target import preview -> report unresolved bindings | `CAP-POLICY-TEMPLATE-EXTRACT-01`; `CAP-POLICY-TEMPLATE-PORTABILITY-01`; `CAP-PROJECT-CONTEXT-BINDING-01`; `CAP-TRUST-PRIVACY-PROVENANCE-BASELINE-01` | `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-21_policy_template_extraction_import_mvp.md` section `Scenario-Chain-Atom Registration Evidence` |
 | `starter_policy_pack_first_use` | A new project starts using JIKUO and receives useful report-only starter policies without knowing source-project paths or raw template extraction commands | desktop initialize request -> `agent_flow.py propose` starter card -> user reviews write set and non-effects -> `agent_flow.py apply --operation starter_policy_pack_init` after approval -> project state / policy store initialized -> future task-start proposals evaluate starter policies | `CAP-AGENT-FLOW-01`; `CAP-STARTER-POLICY-PACK-INIT-01`; `CAP-AGENT-FLOW-APPLY-STARTER-POLICY-PACK-01`; `CAP-PROJECT-STATE-WRITE-01`; `CAP-POLICY-STORE-STATUS-01`; `CAP-POLICY-TEMPLATE-EXTRACT-01` | `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-22_starter_policy_pack_first_use_initialization.md` section `Scenario-Chain-Atom Registration Evidence` |
 | `policy_runtime_visibility` | A desktop Agent user wants to see whether JIKUO rules actually triggered during governed work | agent invokes `agent_flow.py propose` -> policy store is inspected -> active policies are evaluated -> policy runtime card is appended -> user sees triggered and non-triggered policy state in chat | `CAP-LIVE-DESKTOP-POLICY-EVAL-01`; `CAP-POLICY-STORE-STATUS-01`; `CAP-POLICY-TRIGGER-EVALUATE-01`; `CAP-POLICY-CONDITION-EVALUATOR-01`; `CAP-POLICY-EVIDENCE-CHECK-01`; `CAP-POLICY-RUNTIME-STATUS-CARD-01` | `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-10_policy_runtime_status_card.md` section `Scenario-Chain-Atom Registration Evidence` |
+| `desktop_chat_harness_surfacing` | A desktop Agent user needs JIKUO output to behave like a strict harness result rather than an optional summary | agent invokes runner / future MCP tool -> tool returns structured result plus `chat_ready_markdown` -> agent posts the chat-ready markdown -> user sees policy runtime status, write boundaries, evidence state, and atom trace in chat | `CAP-DESKTOP-CHAT-HARNESS-SURFACE-01`; `CAP-POLICY-RUNTIME-STATUS-CARD-01`; `CAP-AGENT-FLOW-01`; `CAP-MCP-AGENT-FLOW-WRAPPER-01` | `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-11_deterministic_harness_chat_return_contract.md` section `Scenario-Chain-Atom Registration Evidence` |
+| `policy_template_import_bind_activate` | A project adopts a reusable JIKUO policy template without copying private paths or activating unsafe bindings | template import plan -> project context read -> role bindings resolved -> unsafe / missing bindings reported -> resolved policy preview rendered -> guarded activation after approval -> active policy appears in policy-store status | `CAP-PROJECT-CONTEXT-RESOLVER-01`; `CAP-POLICY-TEMPLATE-IMPORT-PLAN-01`; `CAP-POLICY-TEMPLATE-ACTIVATE-01`; `CAP-POLICY-STORE-STATUS-01` | `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-23_project_context_template_activation.md` section `Scenario-Chain-Atom Registration Evidence` |
+| `policy_template_desktop_activation_bridge` | A desktop Agent user adopts a reusable JIKUO policy template and sees bindings, write effects, and activation result in chat | template selected -> `agent_flow.py propose --event policy_template_import_plan` -> project context / bindings resolved -> import card with guarded command rendered -> `agent_flow.py apply --operation policy_template_activation` after approval -> policy-store activation result returned with `chat_ready_markdown` | `CAP-AGENT-FLOW-POLICY-TEMPLATE-IMPORT-PLAN-01`; `CAP-PROJECT-CONTEXT-RESOLVER-01`; `CAP-POLICY-TEMPLATE-IMPORT-PLAN-01`; `CAP-POLICY-TEMPLATE-ACTIVATE-01`; `CAP-AGENT-FLOW-APPLY-POLICY-TEMPLATE-ACTIVATION-01` | `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-24_agent_flow_template_activation_bridge.md` section `Scenario-Chain-Atom Registration Evidence` |
 
 Current code / data artifacts:
 
@@ -245,6 +258,8 @@ Current code / data artifacts:
 - `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-07_guarded_policy_supersession_writer_mvp.md`
 - `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-08_agent_flow_guarded_policy_evolution_apply_mvp.md`
 - `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-09_proposal_to_apply_binding_mvp.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-10_policy_runtime_status_card.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-11_deterministic_harness_chat_return_contract.md`
 - `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-MCP-01_mcp_wrapper_mvp.md`
 - `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-PKG-00_package_boundary_and_extraction_plan.md`
 - `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-PKG-01_minimal_package_extraction.md`
@@ -374,20 +389,26 @@ Loop composition policy:
 | `CAP-POLICY-PRE-CODE-CLASSIFICATION-01` | Pre-code-change governance classification principle | implemented report-only policy carrier | `python -B tools/jikuo/policy_store.py evaluate --event task_start --task-type code_change --jikuo-layer implementation_governance --changed-path tools/jikuo/policy_store.py ...` | makes the "policy/governance first, code/implementation first, or mixed/unclear" decision explicit before implementation edits; this is a governance principle, not a standalone feature | none | evidence required: `governance_vs_implementation_classification_evidence` |
 | `CAP-LIVE-DESKTOP-POLICY-EVAL-01` | Policy evaluation in desktop chat | implemented no-write proposal | `python -B tools/jikuo/agent_flow.py propose ...` | makes active policy evaluation visible in the same desktop proposal card, including triggered policies, missing evidence, inline evidence status, and lightweight feedback options | none | no persistence; feedback is report-only |
 | `CAP-POLICY-RUNTIME-STATUS-CARD-01` | Policy runtime status card | implemented no-write card projection | `python -B -m jikuo.agent_flow propose ...` | appends a visible `policy_runtime_status` card so active, triggered, non-triggered, required-action, and missing-evidence status is not hidden in structured fields | none | no persistence; card projection only |
+| `CAP-DESKTOP-CHAT-HARNESS-SURFACE-01` | Deterministic harness chat return | implemented chat-ready projection | `python -B -m jikuo.agent_flow propose ... --format json`; `python -B -m jikuo.agent_flow apply ... --format json` | returns `chat_ready_markdown` alongside structured proposal / apply results so desktop agents and future MCP callers can surface tool-rendered cards instead of summarizing them away | none | no persistence; same-chat surfacing required |
 | `CAP-POLICY-FEEDBACK-PERSIST-PROPOSE-01` | Policy feedback persistence proposal bridge | implemented no-write proposal | `python -B tools/jikuo/agent_flow.py propose --event policy_feedback_record ...` | converts explicit user feedback on a triggered policy into a guarded task-session evidence append command proposal | none in propose; future guarded command writes one task-session file | approval required for generated command |
 | `CAP-AGENT-FLOW-APPLY-TASK-EVIDENCE-01` | Agent flow guarded task-session evidence apply | implemented guarded apply | `python -B tools/jikuo/agent_flow.py apply --operation task_session_evidence_update ... --confirm-apply --approval-phrase ...` | lets the desktop agent apply one explicitly approved task-session evidence append without exposing users to raw helper orchestration | explicit task-session file | approval phrase and technical confirmation required |
 | `CAP-POLICY-EVOLUTION-APPLY-BINDING-01` | Proposal-to-apply binding check | implemented guarded preflight | `python -B tools/jikuo/agent_flow.py apply --operation policy_evolution_write --proposal-ref <proposal-ref> ...` | refuses policy evolution apply when the proposal ref supplied at approval time does not match the deterministic policy evolution plan that will be written | none | proposal ref, approval phrase, and technical confirmation required |
 | `CAP-AGENT-FLOW-APPLY-POLICY-EVOLUTION-01` | Agent flow guarded policy evolution apply | implemented guarded apply | `python -B tools/jikuo/agent_flow.py apply --operation policy_evolution_write --proposal-ref <proposal-ref> ... --confirm-apply --approval-phrase ...` | lets the desktop agent apply one explicitly approved policy deprecation / supersession without switching to the raw policy-store helper | policy proposal snapshot; decision record; approved replacement policy when superseding; manifest lifecycle refs | proposal ref, approval phrase, and technical confirmation required |
 | `CAP-PACKAGE-BOUNDARY-PLAN-01` | Package boundary and extraction plan | planned by `JIKUO-PKG-00` | `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-PKG-00_package_boundary_and_extraction_plan.md` | separates tool-owned package assets from user-project-local `.jikuo/` state before portability and MCP implementation | none | N/A |
-| `CAP-PROJECT-CONTEXT-BINDING-01` | Project context binding and role resolution | draft contract | `docs/jikuo/governance/jikuo_project_context_binding_and_policy_template_portability.md` | lets reusable policy templates bind to project-specific document / directory roles without hardcoded paths | none for contract; future resolver writes none; future guarded binding writes require approval | approval required for future binding writes |
+| `CAP-PROJECT-CONTEXT-BINDING-01` | Project context binding and role resolution | contract plus no-write resolver | `docs/jikuo/governance/jikuo_project_context_binding_and_policy_template_portability.md`; `src/jikuo/policy_templates.py` | lets reusable policy templates bind to project-specific document / directory roles without hardcoded paths | resolver writes none; future guarded project-context binding writer remains separate | approval required for future binding writes |
 | `CAP-POLICY-TEMPLATE-PORTABILITY-01` | Policy template / binding / resolved-policy portability | draft contract | `docs/jikuo/governance/jikuo_project_context_binding_and_policy_template_portability.md` | separates reusable policy intent from local project bindings so templates can travel across projects | none | review required before template approval |
 | `CAP-TRUST-PRIVACY-PROVENANCE-BASELINE-01` | Trust, privacy, provenance, namespace, principal, telemetry, and timestamp baseline | draft contract | `docs/jikuo/governance/jikuo_trust_privacy_provenance_baseline.md` | declares social trust and safety fields before templates or MCP responses cross project / user boundaries | none | user approval required for future telemetry or template import |
 | `CAP-PACKAGE-EXTRACTION-01` | Minimal package extraction | initial local package created | `D:\personal_project\Jikuo`; `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-PKG-01_minimal_package_extraction.md` | makes JIKUO installable as a tool package while keeping `.jikuo/` data inside the consuming project | package files only; user project data must not move | user review required before cleanup or MCP |
 | `CAP-CONTRACT-REF-HYGIENE-01` | Resource-reference and `CONTRACT_REFS` hygiene | implemented package-safe refs | `src/jikuo/*.py`; `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-20B_resource_reference_hygiene.md` | removes NarrativeSystem hardcoded command/resource references from reusable tool code by using `pkg://jikuo/...` refs and `python -B -m jikuo...` command previews | none | tests enforce no `tools/jikuo` command previews |
 | `CAP-POLICY-TEMPLATE-EXTRACT-01` | Policy template extraction, export, and no-write import planning MVP | implemented guarded package-template export plus no-write import preview | `src/jikuo/policy_templates.py`; `src/jikuo/policy_templates/engineering_governance/*.yaml` | converts approved project-local policies into reusable package templates with source policy ID / SHA-256 provenance, redacted source identity, and binding hints, then previews target-project import without activation | package template file only when export is confirmed; import planning writes nothing | approval phrase and technical confirmation required for export |
+| `CAP-PROJECT-CONTEXT-RESOLVER-01` | Project context role resolver | implemented no-write resolver | `src/jikuo/policy_templates.py plan-import` | reads `.jikuo/project_context.yaml`, resolves `role://document/*`, `role://directory/*`, `project://...`, and `pkg://jikuo/...`, and reports missing / unsafe bindings before activation | none | unsafe or unresolved required bindings block activation |
+| `CAP-POLICY-TEMPLATE-IMPORT-PLAN-01` | Policy template import and resolved-policy preview | implemented no-write plan | `python -B -m jikuo.policy_templates plan-import ...` | builds `jikuo.resolved_policy.v0` and `resolved_policy_preview` from a reusable template plus project-context bindings without writing policy-store files | none | activation requires separate guarded command |
+| `CAP-POLICY-TEMPLATE-ACTIVATE-01` | Guarded policy template activation | implemented guarded write | `python -B -m jikuo.policy_templates activate-template ... --confirm-activate-template --approval-phrase ...` | activates one resolved template as an approved report-only project policy after bindings are visible and safe | `.jikuo/policies/proposals/*.yaml`; `.jikuo/policies/approved/*.yaml`; `.jikuo/policies/decisions/*.yaml`; `.jikuo/policies/manifest.yaml` | approval phrase and technical confirmation required |
+| `CAP-AGENT-FLOW-POLICY-TEMPLATE-IMPORT-PLAN-01` | Agent flow policy-template import card bridge | implemented no-write proposal | `python -B -m jikuo.agent_flow propose --event policy_template_import_plan --template ...` | exposes template import planning, binding status, resolved-policy refs, write targets, and non-effects as a desktop-visible card with `chat_ready_markdown` | none | activation requires separate guarded `agent_flow.py apply` command |
+| `CAP-AGENT-FLOW-APPLY-POLICY-TEMPLATE-ACTIVATION-01` | Agent flow guarded policy-template activation apply | implemented guarded apply | `python -B -m jikuo.agent_flow apply --operation policy_template_activation --template ... --confirm-apply --approval-phrase ...` | lets the desktop agent apply one explicitly approved template activation without exposing users to the lower-level template helper | `.jikuo/policies/proposals/*.yaml`; `.jikuo/policies/approved/*.yaml`; `.jikuo/policies/decisions/*.yaml`; `.jikuo/policies/manifest.yaml` | approval phrase and technical confirmation required |
 | `CAP-STARTER-POLICY-PACK-INIT-01` | Starter policy pack first-use initialization | implemented guarded bootstrap | `src/jikuo/starter_policies.py`; `src/jikuo/starter_policy_packs/engineering_governance/manifest.yaml`; `python -B -m jikuo.agent_flow propose --event initialize_jikuo ...` | initializes a new project with curated report-only policies so first use is guided rather than empty | none in propose; guarded apply may create project registry mount, `.jikuo/project_state.yaml`, and `.jikuo/policies/**` starter policy records | approval phrase and technical confirmation required |
 | `CAP-AGENT-FLOW-APPLY-STARTER-POLICY-PACK-01` | Agent flow guarded starter policy pack apply | implemented guarded apply | `python -B -m jikuo.agent_flow apply --operation starter_policy_pack_init --confirm-apply --approval-phrase ...` | lets the desktop agent apply one explicitly approved starter pack initialization without exposing users to raw template extraction or starter CLI orchestration | project registry mount, `.jikuo/project_state.yaml`, `.jikuo/policies/**` starter policy records | approval phrase and technical confirmation required |
-| `CAP-MCP-AGENT-FLOW-WRAPPER-01` | MCP wrapper around stable JIKUO atoms | planned by `JIKUO-MCP-01` | `tools/jikuo/mcp_server.py` / `tools/jikuo/mcp_adapter.py` planned | exposes scoped status / proposal / guarded apply operations to MCP clients while preserving the Desktop App Primary Operating Loop | only the same guarded writes as underlying atoms | same approval phrase, technical confirmation, and proposal-ref binding as underlying atoms |
+| `CAP-MCP-AGENT-FLOW-WRAPPER-01` | MCP wrapper around stable JIKUO atoms | planned by `JIKUO-MCP-01` | `src/jikuo/mcp_server.py` / `src/jikuo/mcp_adapter.py` planned | exposes scoped status / proposal / guarded apply operations to MCP clients while preserving the Desktop App Primary Operating Loop and returning `chat_ready_markdown` | only the same guarded writes as underlying atoms | same approval phrase, technical confirmation, and proposal-ref binding as underlying atoms |
 | `CAP-POLICY-EVIDENCE-CHECK-01` | Policy evidence checker MVP | implemented no-write | `python -B tools/jikuo/policy_store.py evaluate --event ... --produced-evidence-json ...`; `--produced-evidence-type ...` | matches policy required evidence against inline produced evidence and reports missing evidence; consumed by `agent_flow.py propose` for runner-rendered cards | none | N/A |
 | `CAP-POLICY-EVIDENCE-PERSIST-PROPOSE-01` | Policy evidence persistence proposal bridge | implemented no-write proposal | `python -B tools/jikuo/agent_flow.py propose --event policy_evidence_record ...` | converts explicit policy evidence refs into a guarded task-session evidence append command proposal | none in propose; future guarded command writes one task-session file | approval required for generated command |
 | `CAP-POLICY-EVIDENCE-INGEST-01` | Policy evidence ingestion MVP | implemented no-write | `python -B tools/jikuo/policy_store.py evaluate --event ... --task-session-id ...`; `python -B tools/jikuo/agent_flow.py propose --event policy_evidence_check --policy-event ... --session-id ...` | reads persisted task-session `policy_evidence:*` snapshots and feeds them into report-only evidence matching | none | N/A |
@@ -399,10 +420,9 @@ Known missing atoms:
 
 - `CAP-CODEX-SKILL-01`: installable Codex Skill packaging, planned after project-local instruction pack review
 - `CAP-PACKAGE-EXTRACTION-01`: initial local package created and ready for review, scoped by `JIKUO-PKG-01`
-- `CAP-PROJECT-CONTEXT-BINDING-01`: draft contract ready for review; future implementation still planned before MCP implementation
-- `CAP-POLICY-TEMPLATE-PORTABILITY-01`: draft contract ready for review; extraction/export MVP exists, while import / bind / resolved-policy activation remains future work
+- `CAP-POLICY-TEMPLATE-PORTABILITY-01`: draft contract ready for review; extraction/export, no-write import planning, and guarded resolved-policy activation exist; broader trust / marketplace portability remains future work
 - `CAP-TRUST-PRIVACY-PROVENANCE-BASELINE-01`: draft contract ready for review; future implementation still planned before MCP implementation
-- `CAP-CONTRACT-REF-HYGIENE-01`: implemented package-owned `pkg://` refs and module command previews; full resolver remains future work
+- `CAP-CONTRACT-REF-HYGIENE-01`: implemented package-owned `pkg://` refs and module command previews; general-purpose package resource dereferencing remains future work
 - `CAP-MCP-AGENT-FLOW-WRAPPER-01`: MCP wrapper around stable `agent_flow.py` / `policy_store.py` atoms, scoped by `JIKUO-MCP-01` but blocked by pre-MCP foundations
 - `CAP-CODEX-PLUGIN-01`: Codex Plugin packaging, planned after MCP / runner semantics are stable
 - broader policy conditions such as mounted documents, work-order metadata, checker results, approval events, or compound predicates
@@ -2391,18 +2411,20 @@ Recommended next sequence:
 51. Review `JIKUO-LIVE-07`, where active policies can be superseded by explicitly approved replacement policies.
 52. Review `JIKUO-LIVE-08`, where approved policy evolution writes can be applied through `agent_flow.py apply`.
 53. Review `JIKUO-LIVE-09`, where policy evolution apply must bind to the proposal ref reviewed by the user.
-54. Review `JIKUO-PKG-00`, where the package boundary separates tool-owned assets from user-project-local `.jikuo/` state.
-55. Review `JIKUO-CORE-20`, where project context binding and policy template portability are made explicit.
-56. Review `JIKUO-SEC-01`, where trust, privacy, provenance, namespace, principal, telemetry, and timestamp baseline fields are declared before MCP.
-57. Review / execute `JIKUO-PKG-01` minimal package extraction after boundary, portability, and trust baseline foundations are accepted.
-58. Implement `JIKUO-CORE-20B`, where hardcoded resource references such as `CONTRACT_REFS` are removed or neutralized inside the extracted package boundary.
-59. Return to `JIKUO-MCP-01`, where the MCP wrapper MVP freezes a packaging-only scope around stable atoms.
-60. Implement the MCP adapter / wrapper when the pre-MCP foundations are accepted, prioritizing Claude / cross-client consistency.
-61. Consider Codex Plugin after runner / MCP semantics are stable.
-62. Build `JIKUO-UI-01` rule configuration console after the desktop invocation line and policy configuration boundary are stable enough to preserve primary-surface continuity.
-63. Build `JIKUO-UI-02` run control console after the desktop primary loop and configuration boundary are accepted.
-64. Add `JIKUO-AUDIT-01` evolution dashboard.
-65. Consider `JIKUO-GATE-01` only after report-only false positives are low.
+54. Review `JIKUO-LIVE-10`, where policy runtime status becomes a visible card instead of hidden structured fields.
+55. Review `JIKUO-LIVE-11`, where runner JSON gains `chat_ready_markdown` and desktop / future MCP callers must surface tool-rendered cards as harness evidence.
+56. Review `JIKUO-PKG-00`, where the package boundary separates tool-owned assets from user-project-local `.jikuo/` state.
+57. Review `JIKUO-CORE-20`, where project context binding and policy template portability are made explicit.
+58. Review `JIKUO-SEC-01`, where trust, privacy, provenance, namespace, principal, telemetry, and timestamp baseline fields are declared before MCP.
+59. Review / execute `JIKUO-PKG-01` minimal package extraction after boundary, portability, and trust baseline foundations are accepted.
+60. Implement `JIKUO-CORE-20B`, where hardcoded resource references such as `CONTRACT_REFS` are removed or neutralized inside the extracted package boundary.
+61. Return to `JIKUO-MCP-01`, where the MCP wrapper MVP freezes a packaging-only scope around stable atoms.
+62. Implement the MCP adapter / wrapper when the pre-MCP foundations are accepted, prioritizing Claude / cross-client consistency.
+63. Consider Codex Plugin after runner / MCP semantics are stable.
+64. Build `JIKUO-UI-01` rule configuration console after the desktop invocation line and policy configuration boundary are stable enough to preserve primary-surface continuity.
+65. Build `JIKUO-UI-02` run control console after the desktop primary loop and configuration boundary are accepted.
+66. Add `JIKUO-AUDIT-01` evolution dashboard.
+67. Consider `JIKUO-GATE-01` only after report-only false positives are low.
 
 Parallel option:
 
@@ -2523,6 +2545,9 @@ Completed in this snapshot:
 - define `JIKUO-SEC-01` trust / privacy / provenance baseline contract
 - draft `JIKUO-PKG-01` minimal package extraction work order and make it the next pre-MCP slice after SEC-01 review
 - execute initial `JIKUO-PKG-01` local package extraction at `D:\personal_project\Jikuo`
+- implement `JIKUO-LIVE-11` deterministic harness chat return contract so JSON runner output carries `chat_ready_markdown`
+- implement `JIKUO-CORE-23` project-context resolver and guarded template activation in `policy_templates.py`
+- implement `JIKUO-CORE-24` desktop `agent_flow.py` bridge for template import planning and guarded activation
 
 Latest todo map:
 
@@ -2531,8 +2556,12 @@ Latest todo map:
 3. Review / accept `JIKUO-CORE-20B` resource-reference and `CONTRACT_REFS` hygiene inside the extracted package boundary.
 4. Review / accept `JIKUO-CORE-21` policy template extraction / export MVP and the first redacted source-project-derived package templates.
 5. Review / accept `JIKUO-CORE-22` starter policy pack first-use initialization, including desktop-agent card projection and guarded apply.
-6. Implement project-context resolver and guarded template import / bind / activate flow before returning to `JIKUO-MCP-01`.
-7. Defer rollback, broader conditions, UI, Plugin, and gates unless explicitly promoted by user approval.
+6. Review / accept `JIKUO-LIVE-11` deterministic harness chat return contract, especially the visible `chat_ready_markdown` requirement for desktop and future MCP callers.
+7. Review / accept `JIKUO-CORE-23` project-context template activation, including resolver safety and guarded activation writes.
+8. Review / accept `JIKUO-CORE-24` desktop `agent_flow.py` template activation bridge.
+9. Return to `JIKUO-MCP-01` after acceptance or explicit deferral of remaining pre-MCP review items.
+10. Keep the decision about whether new self-bootstrap policies enter built-in starter templates suspended until explicit user approval.
+11. Defer rollback, broader conditions, UI, Plugin, and gates unless explicitly promoted by user approval.
 
 MCP MVP scope freeze:
 
@@ -2540,11 +2569,14 @@ MCP MVP scope freeze:
 - include: task-start proposal rendering
 - include: policy-write-plan proposal rendering
 - include: policy-evolution-plan proposal rendering
+- include: policy-template import-plan proposal rendering
 - include: guarded task-session evidence apply
 - include: guarded policy evolution apply with proposal-ref binding
+- include: guarded policy-template activation apply
 - require: no-write proposal mode remains no-write
 - require: guarded apply still requires explicit approval phrase and technical confirmation
 - require: all MCP calls return structured results suitable for desktop chat rendering
+- require: no-write MCP proposal calls return `chat_ready_markdown` and preserve `policy_runtime_status` when present
 
 MCP MVP non-goals:
 

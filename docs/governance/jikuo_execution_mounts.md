@@ -133,6 +133,7 @@ For future MCP / plugin work, also mount:
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-21_policy_template_extraction_import_mvp.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-22_starter_policy_pack_first_use_initialization.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-10_policy_runtime_status_card.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-11_deterministic_harness_chat_return_contract.md`
 - `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-MCP-01_mcp_wrapper_mvp.md`
 - any generated MCP / skill / plugin contract documents
 
@@ -142,6 +143,8 @@ For future policy template extraction / import work, also mount:
 - `docs/governance/jikuo_trust_privacy_provenance_baseline.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-21_policy_template_extraction_import_mvp.md`
 - the source approved-policy directory when extracting local seeds; exported package templates must redact local source paths and source project identity
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-23_project_context_template_activation.md` for template import planning, resolver, and guarded activation work
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-24_agent_flow_template_activation_bridge.md` for desktop-visible template import planning and guarded `agent_flow.py apply`
 
 For future starter policy pack / first-use initialization work, also mount:
 
@@ -209,6 +212,7 @@ Role:
 
 - compose existing atoms
 - return chat-ready cards / summaries
+- return `chat_ready_markdown` in JSON output so desktop agents and future MCP wrappers can surface the same card text without reinterpretation
 - validate approval target and effect
 - refuse unsafe or ambiguous actions
 
@@ -227,6 +231,7 @@ Current boundary:
 - `policy_evolution_write` guarded apply requires a proposal ref that matches the deterministic plan before any write
 - no arbitrary command execution
 - emits loop step id and atom id trace
+- emits `chat_ready_markdown_schema: jikuo.chat_ready_markdown.v0` and `chat_ready_markdown` in JSON output for proposals and apply results
 - emits `jikuo.agent_flow_proposal.v1` with read-only policy-store status, exact trigger evaluation, report-only condition evaluation, report-only evidence matching, visible policy runtime status cards, guarded evidence persistence proposal, explicit task-session evidence ingestion, policy write-plan cards, no-write policy evolution-plan cards, and starter policy pack initialization cards where requested
 - emits `jikuo.agent_flow_apply_result.v0` for narrow approved task-session evidence, policy evolution, and starter policy pack initialization apply paths
 
@@ -247,11 +252,13 @@ Role:
 - instruction layer
 - trigger phrase convention
 - no-code or low-code adoption layer
+- harness surfacing instruction: once JIKUO is activated, the agent must call the runner / MCP tool and return its `chat_ready_markdown` or Markdown cards in the same chat
 
 Boundary:
 
 - improves compliance but does not provide deterministic execution by itself
 - must call `agent_flow.py` or later MCP/tool layer for actual process logic
+- must not summarize away `policy_runtime_status`, write effects, approval boundaries, evidence state, or atom trace after tool execution
 - current pack authorizes no-write `agent_flow.py propose` only
 - installable Skill packaging remains a later decision
 
@@ -282,12 +289,13 @@ Role:
 - reliable cross-client tool layer
 - future Claude Desktop primary integration path
 - shared API over the same local deterministic flow
-- same-chat proposal / apply card rendering for desktop Agents
+- same-chat proposal / apply card rendering for desktop Agents through `chat_ready_markdown`
 
 Boundary:
 
 - no-write proposal paths remain no-write
 - guarded apply paths preserve confirmation, approval phrase, and proposal-ref binding requirements
+- proposal tools must return structured results plus `chat_ready_markdown`; `policy_runtime_status` must remain visible when present
 - no rollback, in-place revision, gate, frontend, Skill, Plugin, or broad action executor
 - no MCP implementation before package boundary, project-context binding, privacy return boundaries, and hardcoded resource-reference hygiene are accepted or explicitly deferred
 
@@ -387,7 +395,7 @@ Role:
 
 ## 4. Trigger Model
 
-JIKUO should use a dual-trigger model.
+JIKUO should use a dual-trigger model for activation discovery, followed by deterministic harness execution.
 
 Explicit user trigger:
 
@@ -420,6 +428,8 @@ Rule:
 
 - critical JIKUO actions should not depend only on the agent remembering long-form instructions
 - explicit trigger phrase and tool-backed invocation should be available for every critical loop
+- once a flow is inside JIKUO coverage, card return is a harness obligation rather than a style choice
+- governed execution is incomplete if triggered policies, non-triggered policies, missing evidence, approval boundaries, write effects, or atom trace are hidden from the same-chat result
 
 ---
 

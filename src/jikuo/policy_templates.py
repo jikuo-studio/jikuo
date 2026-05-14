@@ -28,7 +28,11 @@ POLICY_TEMPLATE_SCHEMA = "jikuo.policy_template.v0"
 POLICY_TEMPLATE_EXTRACT_PLAN_SCHEMA = "jikuo.policy_template_extract_plan.v0"
 POLICY_TEMPLATE_IMPORT_PLAN_SCHEMA = "jikuo.policy_template_import_plan.v0"
 POLICY_TEMPLATE_EXPORT_RESULT_SCHEMA = "jikuo.policy_template_export_result.v0"
+POLICY_TEMPLATE_ACTIVATION_RESULT_SCHEMA = "jikuo.policy_template_activation_result.v0"
 POLICY_TEMPLATE_SOURCE_INSPECTION_SCHEMA = "jikuo.policy_template_source_inspection.v0"
+PROJECT_CONTEXT_SCHEMA = "jikuo.project_context.v0"
+RESOLVED_POLICY_SCHEMA = "jikuo.resolved_policy.v0"
+PROJECT_CONTEXT_REF = ".jikuo/project_context.yaml"
 DEFAULT_NAMESPACE = "local"
 DEFAULT_TEMPLATE_SUBDIR = Path("src") / "jikuo" / "policy_templates" / "engineering_governance"
 REDACTED_SOURCE_PROJECT_REF = "redacted"
@@ -545,7 +549,13 @@ def build_import_plan(
     schema = template.get("schema_version") or template.get("schema")
     if template and schema != POLICY_TEMPLATE_SCHEMA:
         refusals.append(f"unsupported template schema: {schema}")
-    project_context_path = resolved_project_root / ".jikuo" / "project_context.yaml"
+    context, project_context_status, context_warnings = load_project_context(
+        resolved_project_root
+    )
+    warnings.extend(context_warnings)
+    if project_context_status == "refused":
+        refusals.append("project_context_not_readable")
+
     required_bindings = template.get("required_bindings")
     if not isinstance(required_bindings, list):
         required_bindings = []
@@ -557,17 +567,11 @@ def build_import_plan(
         if not isinstance(binding, dict):
             continue
         binding_status.append(
-            {
-                "binding_id": binding.get("binding_id"),
-                "role_ref": binding.get("role_ref"),
-                "required": bool(binding.get("required", True)),
-                "status": "unresolved",
-                "reason": (
-                    "project_context resolver is not implemented in this MVP"
-                    if project_context_path.exists()
-                    else "project_context_missing"
-                ),
-            }
+            resolve_binding(
+                binding=binding,
+                context=context,
+                project_root=resolved_project_root,
+            )
         )
 
     template_policy = template.get("template_policy")
@@ -576,18 +580,38 @@ def build_import_plan(
         if template:
             refusals.append("template_policy_missing")
 
-    resolved_policy_preview = deepcopy(template_policy)
-    if resolved_policy_preview:
-        resolved_policy_preview["source_refs"] = [
-            {
-                "type": "policy_template",
-                "ref": template.get("template_id"),
-            },
-            {
-                "type": "policy_template_file",
-                "ref": str(resolved_template),
-            },
-        ]
+    resolved_policy_preview = build_resolved_policy_preview(
+        template=template,
+        template_path=resolved_template,
+        project_root=resolved_project_root,
+        binding_status=binding_status,
+    )
+    policy_id = resolved_policy_preview.get("policy_id")
+    if not isinstance(policy_id, str) or not policy_id:
+        if template:
+            refusals.append("resolved_policy_id_missing")
+        policy_id = "POLICY-unresolved"
+
+    policy_report = policy_store.inspect_policy_store(project_root=resolved_project_root)
+    warnings.extend(policy_report.get("warnings", []))
+    if policy_report["policy_store_status"] not in {"missing", "initialized", "active"}:
+        refusals.append("policy_store_status_not_supported_for_template_activation")
+    active_ids = {
+        str(item.get("policy_id"))
+        for item in policy_report.get("active_policy_refs", [])
+        if item.get("policy_id") is not None
+    }
+    policy_path_ref = policy_file_ref(policy_id)
+    policy_path = resolved_project_root / policy_path_ref
+    template_id = str(template.get("template_id") or "POLICYTEMPLATE-unresolved")
+    proposal_ref = activation_proposal_ref(template_id, policy_id)
+    decision_ref = activation_decision_ref(template_id, policy_id)
+    artifact_refs = [policy_path_ref, proposal_ref, decision_ref]
+    if policy_id in active_ids or policy_path.exists():
+        refusals.append("resolved_policy_already_active_or_present")
+    for ref in artifact_refs[1:]:
+        if (resolved_project_root / ref).exists():
+            refusals.append(f"template_activation_artifact_already_present:{ref}")
 
     missing_required_bindings = [
         item
@@ -595,22 +619,71 @@ def build_import_plan(
         if item.get("required") and item.get("status") != "resolved"
     ]
     status = "refused" if refusals else ("missing_binding" if missing_required_bindings else "review")
+    resolved_policy = {
+        "schema": RESOLVED_POLICY_SCHEMA,
+        "schema_version": RESOLVED_POLICY_SCHEMA,
+        "template_ref": template.get("template_id"),
+        "project_context_ref": PROJECT_CONTEXT_REF,
+        "status": "resolved" if status == "review" else status,
+        "resolved_bindings": binding_status,
+        "resolution_trace": {
+            "project_root": str(resolved_project_root),
+            "rejected_refs": [
+                item
+                for item in binding_status
+                if item.get("status") in {"unsafe_binding", "unsupported_ref"}
+            ],
+            "warnings": warnings,
+        },
+        "resolved_policy": resolved_policy_preview,
+    }
+    write_set = [
+        {
+            "path": proposal_ref,
+            "operation": "create",
+            "effect": "create template activation proposal snapshot",
+        },
+        {
+            "path": policy_path_ref,
+            "operation": "create",
+            "effect": "create approved policy resolved from template",
+        },
+        {
+            "path": decision_ref,
+            "operation": "create",
+            "effect": "record template activation approval decision",
+        },
+        {
+            "path": f"{policy_store.POLICY_STORE_ROOT}/{policy_store.MANIFEST_NAME}",
+            "operation": "create_or_update",
+            "effect": "activate resolved policy ref in manifest",
+        },
+    ]
     return {
         "schema": POLICY_TEMPLATE_IMPORT_PLAN_SCHEMA,
         "schema_version": POLICY_TEMPLATE_IMPORT_PLAN_SCHEMA,
+        "plan_id": stable_id(
+            "POLICYTEMPLATEIMPORT",
+            f"{resolved_template}|{resolved_project_root}|{template.get('template_id')}",
+        ),
         "report_only": True,
         "status": status,
         "template_path": str(resolved_template),
         "template_ref": template.get("template_id"),
         "project_root": str(resolved_project_root),
-        "project_context_ref": ".jikuo/project_context.yaml",
-        "project_context_status": "present" if project_context_path.is_file() else "missing",
+        "project_context_ref": PROJECT_CONTEXT_REF,
+        "project_context_status": project_context_status,
+        "policy_store_status": policy_report["policy_store_status"],
         "binding_status": binding_status,
+        "resolved_policy": resolved_policy,
         "resolved_policy_preview": resolved_policy_preview,
+        "proposal_ref": proposal_ref,
+        "decision_record_ref": decision_ref,
+        "write_set": write_set,
         "approval_required_for_activation": True,
         "write_allowed_by_command": False,
         "writes_performed": False,
-        "refusal_reasons": refusals,
+        "refusal_reasons": sorted(set(refusals)),
         "warnings": warnings,
         "source_refs": CONTRACT_REFS,
         "non_effects": [
@@ -626,6 +699,7 @@ def build_import_plan(
         if status == "missing_binding"
         else [
             "review the resolved policy preview before any guarded policy-store write",
+            "run guarded template activation only after explicit approval",
         ],
     }
 
@@ -687,6 +761,498 @@ def inspect_source_dir(source_dir: Path) -> dict[str, Any]:
     }
 
 
+def project_context_path(project_root: Path) -> Path:
+    return project_root / PROJECT_CONTEXT_REF
+
+
+def load_project_context(project_root: Path) -> tuple[dict[str, Any] | None, str, list[str]]:
+    path = project_context_path(project_root)
+    if not path.exists():
+        return None, "missing", []
+    if not path.is_file():
+        return None, "refused", ["project_context_path_is_not_a_file"]
+    context = read_yaml_subset(path)
+    schema = context.get("schema_version") or context.get("schema")
+    warnings: list[str] = []
+    if schema != PROJECT_CONTEXT_SCHEMA:
+        warnings.append(f"unsupported project_context schema: {schema}")
+        return context, "refused", warnings
+    return context, "present", warnings
+
+
+def template_file_ref(template_path: Path, project_root: Path) -> str:
+    resolved_template = template_path.resolve()
+    try:
+        package_relative = resolved_template.relative_to(Path(__file__).resolve().parent)
+        return f"pkg://jikuo/{package_relative.as_posix()}"
+    except ValueError:
+        pass
+    try:
+        project_relative = resolved_template.relative_to(project_root.resolve())
+        return f"project://{project_relative.as_posix()}"
+    except ValueError:
+        return f"redacted://local_template_file/{file_sha256(resolved_template)}"
+
+
+def role_section_and_name(role_ref: str) -> tuple[str | None, str | None]:
+    if role_ref.startswith("role://document/"):
+        return "document_roles", role_ref[len("role://document/") :]
+    if role_ref.startswith("role://directory/"):
+        return "directory_roles", role_ref[len("role://directory/") :]
+    return None, None
+
+
+def resolve_bound_project_path(
+    *,
+    project_root: Path,
+    raw_path: str,
+    expected_kind: str | None = None,
+) -> dict[str, Any]:
+    if Path(raw_path).is_absolute():
+        return {
+            "status": "unsafe_binding",
+            "resolved_ref": None,
+            "target_exists": False,
+            "reason": "absolute paths are not allowed in project_context bindings",
+        }
+    resolved_path, path_error = policy_store.resolve_project_path(project_root, raw_path)
+    if path_error or resolved_path is None:
+        return {
+            "status": "unsafe_binding",
+            "resolved_ref": None,
+            "target_exists": False,
+            "reason": path_error or "path could not be resolved",
+        }
+    target_exists = resolved_path.exists()
+    resolved_ref = display_project_ref(resolved_path, project_root)
+    if expected_kind == "document_roles" and not resolved_path.is_file():
+        return {
+            "status": "missing_target",
+            "resolved_ref": resolved_ref,
+            "target_exists": target_exists,
+            "reason": "document role target is not an existing file",
+        }
+    if expected_kind == "directory_roles" and not resolved_path.is_dir():
+        return {
+            "status": "missing_target",
+            "resolved_ref": resolved_ref,
+            "target_exists": target_exists,
+            "reason": "directory role target is not an existing directory",
+        }
+    return {
+        "status": "resolved",
+        "resolved_ref": resolved_ref,
+        "target_exists": target_exists,
+        "reason": "binding resolved inside project root",
+    }
+
+
+def display_project_ref(path: Path, project_root: Path) -> str:
+    return policy_store.display_path(path, project_root)
+
+
+def resolve_pkg_ref(ref: str) -> dict[str, Any]:
+    if not ref.startswith("pkg://jikuo/"):
+        return {
+            "status": "unsupported_ref",
+            "resolved_ref": None,
+            "target_exists": False,
+            "reason": "unsupported package ref",
+        }
+    relative = ref[len("pkg://jikuo/") :]
+    package_path = Path(__file__).resolve().parent / relative
+    return {
+        "status": "resolved" if package_path.exists() else "missing_target",
+        "resolved_ref": ref,
+        "target_exists": package_path.exists(),
+        "reason": (
+            "package ref resolved inside JIKUO package"
+            if package_path.exists()
+            else "package ref target is missing"
+        ),
+    }
+
+
+def resolve_binding(
+    *,
+    binding: dict[str, Any],
+    context: dict[str, Any] | None,
+    project_root: Path,
+) -> dict[str, Any]:
+    role_ref = binding.get("role_ref")
+    required = bool(binding.get("required", True))
+    base = {
+        "binding_id": binding.get("binding_id"),
+        "role_ref": role_ref,
+        "required": required,
+        "summary": binding.get("summary"),
+        "resolved_ref": None,
+        "target_exists": False,
+    }
+    if not isinstance(role_ref, str) or not role_ref:
+        return {**base, "status": "missing_binding", "reason": "binding has no role_ref"}
+    if role_ref.startswith("pkg://"):
+        return {**base, **resolve_pkg_ref(role_ref)}
+    if role_ref.startswith("project://"):
+        resolution = resolve_bound_project_path(
+            project_root=project_root,
+            raw_path=role_ref[len("project://") :],
+        )
+        return {**base, **resolution}
+
+    section, role_name = role_section_and_name(role_ref)
+    if section is None or role_name is None:
+        return {**base, "status": "unsupported_ref", "reason": "unsupported role ref"}
+    if context is None:
+        return {**base, "status": "missing_binding", "reason": "project_context_missing"}
+    role_map = context.get(section)
+    if not isinstance(role_map, dict):
+        return {
+            **base,
+            "status": "missing_binding",
+            "reason": f"project_context has no {section}",
+        }
+    entry = role_map.get(role_name)
+    if isinstance(entry, dict):
+        raw_path = entry.get("path")
+    else:
+        raw_path = entry
+    if not isinstance(raw_path, str) or not raw_path:
+        return {
+            **base,
+            "status": "missing_binding",
+            "reason": f"project_context has no path for {role_ref}",
+        }
+    resolution = resolve_bound_project_path(
+        project_root=project_root,
+        raw_path=raw_path,
+        expected_kind=section,
+    )
+    return {**base, **resolution}
+
+
+def replace_exact_refs(value: Any, resolution_map: dict[str, str]) -> Any:
+    if isinstance(value, str):
+        return resolution_map.get(value, value)
+    if isinstance(value, list):
+        return [replace_exact_refs(item, resolution_map) for item in value]
+    if isinstance(value, dict):
+        return {
+            key: replace_exact_refs(item, resolution_map)
+            for key, item in value.items()
+        }
+    return value
+
+
+def build_resolved_policy_preview(
+    *,
+    template: dict[str, Any],
+    template_path: Path,
+    project_root: Path,
+    binding_status: list[dict[str, Any]],
+) -> dict[str, Any]:
+    template_policy = template.get("template_policy")
+    if not isinstance(template_policy, dict):
+        return {}
+    resolution_map = {
+        str(item["role_ref"]): str(item["resolved_ref"])
+        for item in binding_status
+        if item.get("status") == "resolved"
+        and item.get("role_ref")
+        and item.get("resolved_ref")
+    }
+    policy = replace_exact_refs(deepcopy(template_policy), resolution_map)
+    source_refs = policy.get("source_refs")
+    if not isinstance(source_refs, list):
+        source_refs = []
+    template_ref = template.get("template_id")
+    policy["source_refs"] = [
+        {
+            "type": "policy_template",
+            "ref": template_ref,
+        },
+        {
+            "type": "policy_template_file",
+            "ref": template_file_ref(template_path, project_root),
+        },
+        {
+            "type": "project_context",
+            "ref": PROJECT_CONTEXT_REF,
+        },
+        *source_refs,
+    ]
+    policy["template_ref"] = template_ref
+    policy["project_context_ref"] = PROJECT_CONTEXT_REF
+    policy["resolved_bindings"] = [
+        {
+            "role_ref": item.get("role_ref"),
+            "resolved_ref": item.get("resolved_ref"),
+            "resolution_status": item.get("status"),
+        }
+        for item in binding_status
+    ]
+    return policy
+
+
+def policy_file_ref(policy_id: str) -> str:
+    return f"{policy_store.POLICY_STORE_ROOT}/approved/{policy_id}.yaml"
+
+
+def activation_proposal_ref(template_id: str, policy_id: str) -> str:
+    proposal_id = stable_id("POLICYPROPOSAL", f"template-activation|{template_id}|{policy_id}")
+    return f"{policy_store.POLICY_STORE_ROOT}/proposals/{proposal_id}.yaml"
+
+
+def activation_decision_ref(template_id: str, policy_id: str) -> str:
+    decision_id = stable_id("POLICYDECISION", f"template-activation|{template_id}|{policy_id}")
+    return f"{policy_store.POLICY_STORE_ROOT}/{policy_store.DECISIONS_DIR_NAME}/{decision_id}.yaml"
+
+
+def build_activation_decision_record(
+    *,
+    template_id: str,
+    policy_id: str,
+    proposal_ref: str,
+    decision_ref: str,
+    approval_phrase: str,
+    plan_id: str,
+) -> dict[str, Any]:
+    return {
+        "schema_version": policy_store.POLICY_DECISION_SCHEMA,
+        "decision_id": Path(decision_ref).stem,
+        "proposal_ref": proposal_ref,
+        "policy_ref": policy_id,
+        "decision": "approve_policy_template_activation",
+        "target": {
+            "kind": "policy_template_activation",
+            "template_ref": template_id,
+            "ref": policy_id,
+        },
+        "effect": f"activate template {template_id} as approved policy {policy_id}",
+        "non_effect": "does not execute policy actions, persist evidence, promote gates, or modify package templates",
+        "approval_phrase": approval_phrase,
+        "created_at": policy_store.utc_now_iso(),
+        "source_plan_ref": plan_id,
+        "source_plan_schema": POLICY_TEMPLATE_IMPORT_PLAN_SCHEMA,
+        "storage": {
+            "path": decision_ref,
+            "policy_store_ref": policy_store.POLICY_STORE_ROOT,
+        },
+    }
+
+
+def write_file_exclusive(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+    with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
+        handle.write(text)
+        handle.flush()
+        os.fsync(handle.fileno())
+
+
+def build_activation_refusal_result(
+    *,
+    plan: dict[str, Any],
+    approval_phrase: str | None,
+    confirmed: bool,
+    refusals: list[str],
+    error: str | None = None,
+) -> dict[str, Any]:
+    return {
+        "schema": POLICY_TEMPLATE_ACTIVATION_RESULT_SCHEMA,
+        "schema_version": POLICY_TEMPLATE_ACTIVATION_RESULT_SCHEMA,
+        "status": "refused",
+        "write_performed": False,
+        "plan_id": plan.get("plan_id"),
+        "template_ref": plan.get("template_ref"),
+        "policy_ref": (plan.get("resolved_policy_preview") or {}).get("policy_id"),
+        "project_root": plan.get("project_root"),
+        "written_paths": [],
+        "created_paths": [],
+        "refusal_reasons": sorted(set(refusals)),
+        "warnings": plan.get("warnings", []),
+        "approval_record": {
+            "phrase": approval_phrase,
+            "decision_target": "JIKUO policy template activation",
+            "decision_effect": "activate one resolved template as an approved report-only project policy",
+            "decision_noneffect": "does not execute policy actions, promote gates, or modify package templates",
+            "source_plan_ref": plan.get("plan_id"),
+            "source_plan_schema": POLICY_TEMPLATE_IMPORT_PLAN_SCHEMA,
+            "command_confirmed": confirmed,
+        }
+        if approval_phrase
+        else None,
+        "error": error,
+        "next_actions": ["review refusal reasons before retrying template activation"],
+    }
+
+
+def activate_template_from_plan(
+    *,
+    template_path: Path,
+    project_root: Path | None = None,
+    confirmed: bool = False,
+    approval_phrase: str | None = None,
+) -> tuple[dict[str, Any], int]:
+    plan = build_import_plan(template_path=template_path, project_root=project_root)
+    refusals = list(plan["refusal_reasons"])
+    if plan["status"] != "review":
+        refusals.append("template_import_plan_not_resolved")
+    if not confirmed:
+        refusals.append("missing_confirmation_flag")
+    if not approval_phrase:
+        refusals.append("approval_evidence_missing")
+    if refusals:
+        return (
+            build_activation_refusal_result(
+                plan=plan,
+                approval_phrase=approval_phrase,
+                confirmed=confirmed,
+                refusals=refusals,
+            ),
+            2,
+        )
+
+    resolved_root = Path(plan["project_root"])
+    resolved_policy = plan["resolved_policy_preview"]
+    policy_id = str(resolved_policy["policy_id"])
+    template_id = str(plan["template_ref"])
+    proposal_ref = str(plan["proposal_ref"])
+    decision_ref = str(plan["decision_record_ref"])
+    policy_ref = policy_file_ref(policy_id)
+    manifest_ref = f"{policy_store.POLICY_STORE_ROOT}/{policy_store.MANIFEST_NAME}"
+    written_paths: list[str] = []
+    created_paths: list[str] = []
+
+    try:
+        store_root = resolved_root / policy_store.POLICY_STORE_ROOT
+        for directory_ref in (
+            policy_store.POLICY_STORE_ROOT,
+            f"{policy_store.POLICY_STORE_ROOT}/approved",
+            f"{policy_store.POLICY_STORE_ROOT}/{policy_store.PROPOSALS_DIR_NAME}",
+            f"{policy_store.POLICY_STORE_ROOT}/{policy_store.DECISIONS_DIR_NAME}",
+        ):
+            directory = resolved_root / directory_ref
+            if not directory.exists():
+                directory.mkdir(parents=True)
+                created_paths.append(f"{directory_ref}/")
+
+        proposal_snapshot = {
+            "schema_version": POLICY_TEMPLATE_IMPORT_PLAN_SCHEMA,
+            "plan_id": plan["plan_id"],
+            "template_ref": template_id,
+            "policy_ref": policy_id,
+            "project_context_ref": PROJECT_CONTEXT_REF,
+            "status": "approved_for_template_activation",
+            "resolved_bindings": plan["binding_status"],
+            "non_effects": plan["non_effects"],
+        }
+        write_file_exclusive(
+            resolved_root / proposal_ref,
+            render_yaml_document(proposal_snapshot),
+        )
+        written_paths.append(proposal_ref)
+        write_file_exclusive(
+            resolved_root / policy_ref,
+            render_yaml_document(resolved_policy),
+        )
+        written_paths.append(policy_ref)
+        write_file_exclusive(
+            resolved_root / decision_ref,
+            render_yaml_document(
+                build_activation_decision_record(
+                    template_id=template_id,
+                    policy_id=policy_id,
+                    proposal_ref=proposal_ref,
+                    decision_ref=decision_ref,
+                    approval_phrase=approval_phrase,
+                    plan_id=plan["plan_id"],
+                )
+            ),
+        )
+        written_paths.append(decision_ref)
+
+        manifest_path = resolved_root / manifest_ref
+        if manifest_path.exists():
+            manifest_text = policy_store.append_active_policy_ref_to_manifest_text(
+                text=manifest_path.read_text(encoding="utf-8"),
+                policy_id=policy_id,
+                policy_path_ref=policy_ref,
+            )
+            manifest_text = policy_store.append_proposal_ref_to_manifest_text(
+                text=manifest_text,
+                policy_id=policy_id,
+                proposal_ref=proposal_ref,
+            )
+        else:
+            manifest_text = render_yaml_document(
+                policy_store.build_policy_manifest_record(
+                    project_root=resolved_root,
+                    policy_id=policy_id,
+                    policy_path_ref=policy_ref,
+                    proposal_ref=proposal_ref,
+                )
+            )
+        manifest_path.write_text(manifest_text, encoding="utf-8", newline="\n")
+        written_paths.append(manifest_ref)
+    except Exception as exc:
+        return (
+            build_activation_refusal_result(
+                plan=plan,
+                approval_phrase=approval_phrase,
+                confirmed=confirmed,
+                refusals=["template_activation_failed"],
+                error=str(exc),
+            ),
+            2,
+        )
+
+    status_after = policy_store.inspect_policy_store(project_root=resolved_root)
+    active_ids = {
+        str(item.get("policy_id"))
+        for item in status_after.get("active_policy_refs", [])
+        if item.get("policy_id") is not None
+    }
+    return (
+        {
+            "schema": POLICY_TEMPLATE_ACTIVATION_RESULT_SCHEMA,
+            "schema_version": POLICY_TEMPLATE_ACTIVATION_RESULT_SCHEMA,
+            "status": "written",
+            "write_performed": True,
+            "plan_id": plan["plan_id"],
+            "template_ref": template_id,
+            "policy_ref": policy_id,
+            "project_root": str(resolved_root),
+            "proposal_ref": proposal_ref,
+            "decision_record_ref": decision_ref,
+            "written_paths": written_paths,
+            "created_paths": created_paths,
+            "refusal_reasons": [],
+            "warnings": plan["warnings"],
+            "approval_record": {
+                "phrase": approval_phrase,
+                "decision_target": "JIKUO policy template activation",
+                "decision_effect": "activate one resolved template as an approved report-only project policy",
+                "decision_noneffect": "does not execute policy actions, promote gates, or modify package templates",
+                "source_plan_ref": plan["plan_id"],
+                "source_plan_schema": POLICY_TEMPLATE_IMPORT_PLAN_SCHEMA,
+                "command_confirmed": confirmed,
+            },
+            "post_write_verification": {
+                "policy_store_status": status_after.get("policy_store_status"),
+                "policy_active": policy_id in active_ids,
+                "proposal_snapshot_written": (resolved_root / proposal_ref).is_file(),
+                "decision_record_written": (resolved_root / decision_ref).is_file(),
+            },
+            "next_actions": [
+                "run policy-store status to confirm the activated template policy is active",
+                "use task-start proposals to inspect the activated policy trigger behavior",
+            ],
+        },
+        0,
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="command")
@@ -715,6 +1281,13 @@ def build_parser() -> argparse.ArgumentParser:
     plan_import.add_argument("--template", type=Path, required=True)
     plan_import.add_argument("--project-root", type=Path, default=None)
     plan_import.add_argument("--format", choices=("text", "json"), default="text")
+
+    activate_template = subparsers.add_parser("activate-template")
+    activate_template.add_argument("--template", type=Path, required=True)
+    activate_template.add_argument("--project-root", type=Path, default=None)
+    activate_template.add_argument("--confirm-activate-template", action="store_true")
+    activate_template.add_argument("--approval-phrase", default=None)
+    activate_template.add_argument("--format", choices=("text", "json"), default="text")
     return parser
 
 
@@ -776,6 +1349,13 @@ def main(argv: list[str] | None = None) -> int:
             project_root=args.project_root,
         )
         exit_code = 0 if report["status"] != "refused" else 2
+    elif args.command == "activate-template":
+        report, exit_code = activate_template_from_plan(
+            template_path=args.template,
+            project_root=args.project_root,
+            confirmed=args.confirm_activate_template,
+            approval_phrase=args.approval_phrase,
+        )
     else:
         parser.print_help()
         return 2

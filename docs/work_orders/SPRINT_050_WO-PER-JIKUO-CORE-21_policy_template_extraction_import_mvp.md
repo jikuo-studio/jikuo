@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-CORE-21: Policy Template Extraction And Import MVP
 
-> **Status**: Implemented for extract/export and no-write import planning MVP, import activation remains guarded follow-up
+> **Status**: Implemented for extract/export and no-write import planning MVP; `JIKUO-CORE-23` now implements project-context resolution and guarded template activation.
 > **Product meaning**: turn proven project-local approved policies into reusable JIKUO policy templates without directly activating them in another project.
 > **Scope rule**: no marketplace, no signature verification, no telemetry, no MCP, no automatic policy activation, and no writes to `.jikuo/policies/` during template extraction.
 
@@ -31,7 +31,7 @@ Those records should not be copied into JIKUO as active local policies. They sho
 - Infer basic required bindings such as `role://document/latest_todo_map` and `role://document/previous_todo_map`.
 - Export a template into the package template directory only with `--confirm-export-template` and an approval phrase.
 - Include exported templates in package data.
-- Preview template import against a target project without writing, including unresolved binding status.
+- Preview template import against a target project without writing, including project-context binding status.
 
 ## 4. Scenario-Chain-Atom Registration Evidence
 
@@ -53,7 +53,7 @@ Registered atoms:
 
 - `CAP-POLICY-TEMPLATE-EXTRACT-01`: implemented extraction, guarded export, and no-write import planning.
 - `CAP-POLICY-TEMPLATE-PORTABILITY-01`: contract source for template / binding / resolved-policy portability.
-- `CAP-PROJECT-CONTEXT-BINDING-01`: future resolver needed before guarded import / bind / activate.
+- `CAP-PROJECT-CONTEXT-BINDING-01`: contract source for resolver and guarded import / bind / activate.
 - `CAP-TRUST-PRIVACY-PROVENANCE-BASELINE-01`: provenance and cross-project safety baseline for portable templates.
 
 Policy review evidence:
@@ -62,8 +62,8 @@ Policy review evidence:
 
 ## 5. Out Of Scope
 
-- Do not import templates into a project policy store.
-- Do not activate templates as approved policies.
+- Do not import templates into a project policy store in this CORE-21 extraction slice.
+- Do not activate templates as approved policies in this CORE-21 extraction slice.
 - Do not write `.jikuo/project_context.yaml`.
 - Do not implement template signing, marketplace trust, MCP, Plugin, frontend UI, or gates.
 - Do not rewrite the incubating project's policy store.
@@ -76,6 +76,19 @@ python -B -m jikuo.policy_templates inspect-source --source-dir "<approved polic
 python -B -m jikuo.policy_templates plan-extract --source-policy "<policy yaml>" --source-project-ref "<private source project ref>" --format json
 python -B -m jikuo.policy_templates export-template --source-policy "<policy yaml>" --source-project-ref "<private source project ref>" --confirm-export-template --approval-phrase "<exact user phrase as spoken>" --format json
 python -B -m jikuo.policy_templates plan-import --template "<policy template yaml>" --project-root "<target project>" --format json
+```
+
+`JIKUO-CORE-23` adds the guarded activation follow-up:
+
+```powershell
+python -B -m jikuo.policy_templates activate-template --template "<policy template yaml>" --project-root "<target project>" --confirm-activate-template --approval-phrase "<exact user phrase as spoken>" --format json
+```
+
+`JIKUO-CORE-24` exposes the same adoption flow through the desktop harness:
+
+```powershell
+python -B -m jikuo.agent_flow propose --event policy_template_import_plan --template "<policy template yaml>" --project-root "<target project>" --format json
+python -B -m jikuo.agent_flow apply --operation policy_template_activation --template "<policy template yaml>" --project-root "<target project>" --confirm-apply --approval-phrase "<exact user phrase as spoken>" --format json
 ```
 
 ## 7. Verification
@@ -91,11 +104,9 @@ Expected:
 - template export refuses missing confirmation / approval
 - exported package templates redact source project identity, local paths, and original source refs
 - template export writes package templates but never creates `.jikuo/policies/`
-- template import planning reports missing project-context bindings without writing
+- template import planning reports project-context binding status without writing
 
 ## 8. Follow-Up
 
-- implement project-context resolver for `role://`, `project://`, and `pkg://`
-- implement guarded template import / bind / resolve plan
-- implement guarded activation from resolved template to approved project policy
+- add a desktop-agent / `agent_flow.py` card bridge for template import and activation
 - expose the stable template flow through MCP after portability and privacy boundaries are settled

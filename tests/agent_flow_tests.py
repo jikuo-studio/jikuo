@@ -18,6 +18,43 @@ POLICY_EVIDENCE_SESSION_PROJECT = FIXTURES / "policy_evidence_session_project"
 POLICY_EVIDENCE_INGEST_PROJECT = FIXTURES / "policy_store_evidence_project"
 POLICY_CONDITION_PROJECT = FIXTURES / "policy_store_condition_project"
 POLICY_REAL_CHAIN_PROJECT = FIXTURES / "policy_store_real_chain_testing_project"
+POLICY_TEMPLATE = (
+    ROOT
+    / "src"
+    / "jikuo"
+    / "policy_templates"
+    / "engineering_governance"
+    / "POLICYTEMPLATE-local-policy-task-scope-control-before-packaging.yaml"
+)
+
+
+def write_agent_flow_project_context(root: Path) -> None:
+    docs_dir = root / "docs"
+    docs_dir.mkdir(parents=True, exist_ok=True)
+    (docs_dir / "latest.md").write_text("latest", encoding="utf-8")
+    (docs_dir / "previous.md").write_text("previous", encoding="utf-8")
+    context_path = root / ".jikuo" / "project_context.yaml"
+    context_path.parent.mkdir(parents=True, exist_ok=True)
+    context_path.write_text(
+        "\n".join(
+            [
+                'schema_version: "jikuo.project_context.v0"',
+                "project:",
+                '  project_id: "agent_flow_template_import_fixture"',
+                '  project_type: "test"',
+                '  project_root_policy: "bindings_must_resolve_inside_project_root"',
+                "document_roles:",
+                "  latest_todo_map:",
+                '    path: "docs/latest.md"',
+                "    required: true",
+                "  previous_todo_map:",
+                '    path: "docs/previous.md"',
+                "    required: true",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
 
 
 class AgentFlowProposalTests(unittest.TestCase):
@@ -47,6 +84,12 @@ class AgentFlowProposalTests(unittest.TestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         proposal = json.loads(completed.stdout)
         self.assertEqual(proposal["schema"], "jikuo.agent_flow_proposal.v1")
+        self.assertEqual(
+            proposal["chat_ready_markdown_schema"],
+            "jikuo.chat_ready_markdown.v0",
+        )
+        self.assertIn("# JIKUO Agent Flow Proposal", proposal["chat_ready_markdown"])
+        self.assertIn("## Cards", proposal["chat_ready_markdown"])
         self.assertEqual(proposal["previous_schema"], "jikuo.agent_flow_proposal.v0")
         self.assertTrue(proposal["report_only"])
         self.assertEqual(proposal["runner_mode"], "propose")
@@ -224,6 +267,8 @@ class AgentFlowProposalTests(unittest.TestCase):
             runtime_status["triggered_policies"][0]["policy_ref"],
             "POLICY-three-phase-audit",
         )
+        self.assertIn("## Policy runtime status", proposal["chat_ready_markdown"])
+        self.assertIn("POLICY-three-phase-audit", proposal["chat_ready_markdown"])
         self.assertEqual(
             {item["feedback_type"] for item in proposal["policy_feedback_options"]},
             {"not_applicable", "defer", "needs_scope_narrowing"},
@@ -433,6 +478,11 @@ class AgentFlowProposalTests(unittest.TestCase):
         self.assertEqual(completed.returncode, 2, completed.stderr)
         report = json.loads(completed.stdout)
         self.assertEqual(report["schema"], "jikuo.agent_flow_apply_result.v0")
+        self.assertEqual(
+            report["chat_ready_markdown_schema"],
+            "jikuo.chat_ready_markdown.v0",
+        )
+        self.assertIn("# JIKUO Agent Flow Apply Result", report["chat_ready_markdown"])
         self.assertFalse(report["write_performed"])
         self.assertEqual(report["status"], "refused")
         self.assertIn("missing_confirmation_flag", report["refusal_reasons"])
@@ -581,6 +631,188 @@ class AgentFlowProposalTests(unittest.TestCase):
             )
             atom_ids = {trace["atom_id"] for trace in report["atom_trace"]}
             self.assertIn("CAP-AGENT-FLOW-APPLY-STARTER-POLICY-PACK-01", atom_ids)
+
+    def test_policy_template_import_plan_proposes_visible_guarded_activation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "template_project"
+            project_root.mkdir()
+            write_agent_flow_project_context(project_root)
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "propose",
+                    "--event",
+                    "policy_template_import_plan",
+                    "--template",
+                    str(POLICY_TEMPLATE),
+                    "--project-root",
+                    str(project_root),
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            proposal = json.loads(completed.stdout)
+            self.assertEqual(proposal["status"], "review")
+            self.assertTrue(proposal["approval_boundary"]["guarded_apply_available"])
+            self.assertFalse(proposal["write_effect"]["writes_performed"])
+            self.assertEqual(
+                proposal["trigger_decision"]["invocation_scenario"],
+                "policy_template_import_plan",
+            )
+            card = proposal["cards"][0]
+            self.assertEqual(card["card_kind"], "policy_template_import_plan")
+            self.assertEqual(card["status"], "review")
+            plan = card["policy_template_import_plan"]
+            self.assertEqual(plan["status"], "review")
+            self.assertEqual(plan["project_context_status"], "present")
+            self.assertEqual(
+                {item["status"] for item in plan["binding_status"]},
+                {"resolved"},
+            )
+            self.assertEqual(
+                plan["resolved_policy"]["schema"],
+                "jikuo.resolved_policy.v0",
+            )
+            command = card["command_proposal"]["command_preview"]
+            self.assertIn("python -B -m jikuo.agent_flow", command)
+            self.assertIn("policy_template_activation", command)
+            self.assertIn("--confirm-apply", command)
+            self.assertNotIn("jikuo.policy_templates", command)
+            self.assertIn(
+                "## Policy template import plan",
+                proposal["chat_ready_markdown"],
+            )
+            atom_ids = {trace["atom_id"] for trace in proposal["atom_trace"]}
+            self.assertIn("CAP-PROJECT-CONTEXT-RESOLVER-01", atom_ids)
+            self.assertIn("CAP-POLICY-TEMPLATE-IMPORT-PLAN-01", atom_ids)
+            self.assertIn(
+                "CAP-AGENT-FLOW-POLICY-TEMPLATE-IMPORT-PLAN-01",
+                atom_ids,
+            )
+            self.assertFalse((project_root / ".jikuo" / "policies").exists())
+
+    def test_apply_policy_template_activation_refuses_without_approval(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "template_project"
+            project_root.mkdir()
+            write_agent_flow_project_context(project_root)
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "apply",
+                    "--operation",
+                    "policy_template_activation",
+                    "--template",
+                    str(POLICY_TEMPLATE),
+                    "--project-root",
+                    str(project_root),
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 2, completed.stderr)
+            report = json.loads(completed.stdout)
+            self.assertEqual(report["schema"], "jikuo.agent_flow_apply_result.v0")
+            self.assertEqual(report["operation"], "policy_template_activation")
+            self.assertEqual(
+                report["target_result_schema"],
+                "jikuo.policy_template_activation_result.v0",
+            )
+            self.assertEqual(report["status"], "refused")
+            self.assertFalse(report["write_performed"])
+            self.assertIn("missing_confirmation_flag", report["refusal_reasons"])
+            self.assertIn("approval_evidence_missing", report["refusal_reasons"])
+            atom_ids = {trace["atom_id"] for trace in report["atom_trace"]}
+            self.assertIn("CAP-POLICY-TEMPLATE-ACTIVATE-01", atom_ids)
+            self.assertIn(
+                "CAP-AGENT-FLOW-APPLY-POLICY-TEMPLATE-ACTIVATION-01",
+                atom_ids,
+            )
+            self.assertFalse((project_root / ".jikuo" / "policies").exists())
+
+    def test_apply_policy_template_activation_writes_after_approval(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "template_project"
+            project_root.mkdir()
+            write_agent_flow_project_context(project_root)
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "apply",
+                    "--operation",
+                    "policy_template_activation",
+                    "--template",
+                    str(POLICY_TEMPLATE),
+                    "--project-root",
+                    str(project_root),
+                    "--confirm-apply",
+                    "--approval-phrase",
+                    "I approve activating this reusable policy template.",
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            report = json.loads(completed.stdout)
+            self.assertEqual(report["schema"], "jikuo.agent_flow_apply_result.v0")
+            self.assertEqual(report["operation"], "policy_template_activation")
+            self.assertEqual(report["status"], "applied")
+            self.assertTrue(report["write_performed"])
+            self.assertEqual(
+                report["target_result_schema"],
+                "jikuo.policy_template_activation_result.v0",
+            )
+            target = report["target_result"]
+            self.assertEqual(target["status"], "written")
+            self.assertEqual(
+                target["policy_ref"],
+                "POLICY-task-scope-control-before-packaging",
+            )
+            self.assertTrue(target["post_write_verification"]["policy_active"])
+            approved_path = (
+                project_root
+                / ".jikuo"
+                / "policies"
+                / "approved"
+                / "POLICY-task-scope-control-before-packaging.yaml"
+            )
+            self.assertTrue(approved_path.is_file())
+            approved_text = approved_path.read_text(encoding="utf-8")
+            self.assertIn("resolved_bindings:", approved_text)
+            self.assertIn("pkg://jikuo/policy_templates/", approved_text)
+            self.assertNotIn("NarrativeSystem", approved_text)
+            self.assertIn(
+                "## Target Result",
+                report["chat_ready_markdown"],
+            )
 
     def test_apply_policy_evolution_write_refuses_without_approval(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -14,9 +14,17 @@ from pathlib import Path
 from typing import Any
 
 if __package__:
-    from . import project_state, policy_store, starter_policies, task_session, task_session_cards
+    from . import (
+        policy_store,
+        policy_templates,
+        project_state,
+        starter_policies,
+        task_session,
+        task_session_cards,
+    )
 else:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import policy_templates
     import project_state
     import policy_store
     import starter_policies
@@ -28,6 +36,7 @@ PREVIOUS_PROPOSAL_SCHEMA = "jikuo.agent_flow_proposal.v0"
 PROPOSAL_SCHEMA = "jikuo.agent_flow_proposal.v1"
 APPLY_RESULT_SCHEMA = "jikuo.agent_flow_apply_result.v0"
 GENERIC_CARD_SCHEMA = "jikuo.agent_flow_card.v0"
+CHAT_READY_MARKDOWN_SCHEMA = "jikuo.chat_ready_markdown.v0"
 TRIGGER_DECISION_SCHEMA = "jikuo.agent_trigger_decision.v0"
 APPROVAL_PHRASE_PLACEHOLDER = "<exact user phrase as spoken>"
 POLICY_STORE_STATUS_UNAVAILABLE = "unavailable"
@@ -38,6 +47,7 @@ POLICY_RUNTIME_STATUS_SCHEMA = "jikuo.policy_runtime_status.v0"
 POLICY_FEEDBACK_TYPES = {"not_applicable", "defer", "needs_scope_narrowing"}
 APPLY_OPERATIONS = {
     "policy_evolution_write",
+    "policy_template_activation",
     "starter_policy_pack_init",
     "task_session_evidence_update",
 }
@@ -67,6 +77,10 @@ EVENT_ALIASES = {
     "starter_policy_pack_init": "starter_policy_pack_init",
     "starter_init": "starter_policy_pack_init",
     "initialize_jikuo": "starter_policy_pack_init",
+    "policy_template_import": "policy_template_import_plan",
+    "policy_template_import_plan": "policy_template_import_plan",
+    "template_import": "policy_template_import_plan",
+    "template_import_plan": "policy_template_import_plan",
     "verification": "verification_review",
     "verification_review": "verification_review",
     "completion": "completion_review",
@@ -97,6 +111,9 @@ NO_WRITE_ATOMS = {
     "CAP-POLICY-EVOLUTION-PLAN-PROPOSE-01",
     "CAP-POLICY-RUNTIME-STATUS-CARD-01",
     "CAP-STARTER-POLICY-PACK-INIT-01",
+    "CAP-PROJECT-CONTEXT-RESOLVER-01",
+    "CAP-POLICY-TEMPLATE-IMPORT-PLAN-01",
+    "CAP-AGENT-FLOW-POLICY-TEMPLATE-IMPORT-PLAN-01",
 }
 
 
@@ -1458,6 +1475,158 @@ def build_starter_policy_pack_init_cards(
     return [card], [trace], list(plan["refusal_reasons"])
 
 
+def build_policy_template_import_plan_cards(
+    *,
+    project_root: Path | None,
+    template_path: Path | None,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]:
+    if template_path is None:
+        refusal = "template_required_for_policy_template_import_plan"
+        card = generic_card(
+            card_kind="policy_template_import_refusal",
+            status="refused",
+            title="Policy template import plan needs a template",
+            summary="Template import planning requires an explicit reusable policy template path.",
+            shown_inputs=[f"project_root: {project_root or '.'}"],
+            refusal_reasons=[refusal],
+            next_actions=["provide --template before retrying template import planning"],
+        )
+        trace = atom_trace(
+            loop_step_id="DPL-05",
+            atom_id="CAP-AGENT-FLOW-POLICY-TEMPLATE-IMPORT-PLAN-01",
+            mode="no-write",
+            status="refused",
+            summary="refused policy-template import planning because no template path was provided",
+        )
+        return [card], [trace], [refusal]
+
+    plan = policy_templates.build_import_plan(
+        template_path=template_path,
+        project_root=project_root,
+    )
+    binding_status = list(plan.get("binding_status", []))
+    binding_counts: dict[str, int] = {}
+    for item in binding_status:
+        status = str(item.get("status") or "unknown")
+        binding_counts[status] = binding_counts.get(status, 0) + 1
+
+    outputs = [
+        f"plan_id: {plan['plan_id']}",
+        f"status: {plan['status']}",
+        f"template_ref: {plan.get('template_ref')}",
+        f"project_context_status: {plan['project_context_status']}",
+        f"policy_store_status: {plan['policy_store_status']}",
+        f"binding_count: {len(binding_status)}",
+        f"resolved_binding_count: {binding_counts.get('resolved', 0)}",
+        f"missing_binding_count: {sum(count for status, count in binding_counts.items() if status != 'resolved')}",
+    ]
+    preview = plan.get("resolved_policy_preview") or {}
+    if preview.get("policy_id"):
+        outputs.append(f"resolved_policy_ref: {preview.get('policy_id')}")
+    outputs.append(f"proposal_ref: {plan.get('proposal_ref')}")
+    outputs.append(f"decision_record_ref: {plan.get('decision_record_ref')}")
+    outputs.extend(
+        f"binding: {item.get('role_ref')} -> {item.get('status')} ({item.get('resolved_ref')})"
+        for item in binding_status
+    )
+    outputs.extend(
+        f"would_write: {item['path']} ({item['effect']})"
+        for item in plan.get("write_set", [])
+    )
+
+    activation_blockers = (
+        ["template_import_bindings_unresolved"]
+        if plan["status"] == "missing_binding"
+        else []
+    )
+    plan_refusals = list(plan["refusal_reasons"]) + activation_blockers
+    card_status_value = "refused" if plan["status"] == "refused" else "review"
+    card = generic_card(
+        card_kind="policy_template_import_plan",
+        status=card_status_value,
+        title="Policy template import plan",
+        summary=(
+            "A reusable policy template is resolved against project context; activation still requires approval."
+            if plan["status"] == "review"
+            else "Policy template import needs resolved project-context bindings before activation."
+            if plan["status"] == "missing_binding"
+            else "Policy template import planning could not be prepared safely."
+        ),
+        shown_inputs=[
+            f"project_root: {project_root or '.'}",
+            f"template: {template_path}",
+            f"project_context_ref: {policy_templates.PROJECT_CONTEXT_REF}",
+        ],
+        shown_outputs=outputs,
+        refusal_reasons=plan_refusals,
+        next_actions=plan["next_actions"],
+    )
+    card["policy_template_import_plan"] = plan
+    card["write_effect"] = {
+        "target": ".jikuo/policies/ (future guarded template activation target)",
+        "effect": "renders a template import plan only; no durable write is performed",
+        "non_effects": plan["non_effects"],
+    }
+    if plan["status"] == "review":
+        command_parts = [
+            "python",
+            "-B",
+            "-m",
+            "jikuo.agent_flow",
+            "apply",
+            "--operation",
+            command_arg("policy_template_activation"),
+            "--project-root",
+            command_arg(str(project_root or ".")),
+            "--template",
+            command_arg(str(template_path)),
+            "--confirm-apply",
+            "--approval-phrase",
+            command_arg(APPROVAL_PHRASE_PLACEHOLDER),
+            "--format",
+            "json",
+        ]
+        card["command_proposal"] = {
+            "command_preview": " ".join(command_parts),
+            "approval_required": True,
+            "technical_confirmation_required": True,
+            "writes_if_approved": [
+                item["path"] for item in plan.get("write_set", [])
+            ],
+            "non_effects": [
+                "does not execute policy actions",
+                "does not promote gates or blocking enforcement",
+                "does not modify package template files",
+                "does not write project_context bindings",
+            ],
+        }
+
+    traces = [
+        atom_trace(
+            loop_step_id="DPL-05",
+            atom_id="CAP-PROJECT-CONTEXT-RESOLVER-01",
+            mode="no-write",
+            status=plan["project_context_status"],
+            summary="resolved policy-template bindings through project_context without writing files",
+        ),
+        atom_trace(
+            loop_step_id="DPL-05",
+            atom_id="CAP-POLICY-TEMPLATE-IMPORT-PLAN-01",
+            mode="no-write",
+            status=plan["status"],
+            summary="built resolved-policy preview and guarded activation write set without writing files",
+        ),
+        atom_trace(
+            loop_step_id="DPL-06",
+            atom_id="CAP-AGENT-FLOW-POLICY-TEMPLATE-IMPORT-PLAN-01",
+            mode="no-write",
+            status=card_status_value,
+            summary="projected policy-template import planning into a visible desktop card",
+        ),
+    ]
+    return [card], traces, plan_refusals
+
+
 def build_audit_cards() -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]:
     card = generic_card(
         card_kind="audit_report_not_configured",
@@ -1518,6 +1687,7 @@ def build_proposal(
     replacement_action_type: str = "render_pre_task_review",
     replacement_evidence_type: str = "card_rendered",
     starter_pack_id: str = starter_policies.DEFAULT_PACK_ID,
+    template_path: Path | None = None,
     action_ref: str | None = None,
     requirement_ref: str | None = None,
     command_name: str | None = None,
@@ -1543,7 +1713,9 @@ def build_proposal(
                 title="Unsupported JIKUO event",
                 summary="The local runner cannot map this event to a known JIKUO loop.",
                 refusal_reasons=[refusal],
-                next_actions=["retry with status, task_start, task_continue, index, evidence, verification, completion, handoff, or audit"],
+                next_actions=[
+                    "retry with status, task_start, task_continue, index, evidence, policy_template_import_plan, verification, completion, handoff, or audit"
+                ],
             )
         ]
         traces = []
@@ -1612,6 +1784,11 @@ def build_proposal(
         cards, traces, refusals = build_starter_policy_pack_init_cards(
             project_root=project_root,
             starter_pack_id=starter_pack_id,
+        )
+    elif event == "policy_template_import_plan":
+        cards, traces, refusals = build_policy_template_import_plan_cards(
+            project_root=project_root,
+            template_path=template_path,
         )
     elif event == "policy_evidence_record":
         cards, traces, refusals = build_policy_evidence_record_cards(
@@ -1696,10 +1873,11 @@ def build_proposal(
     status = "refused" if "refused" in statuses else "review" if "review" in statuses else "ok"
     atom_ids = [trace["atom_id"] for trace in traces]
     unsafe_atoms = sorted(set(atom_ids) - NO_WRITE_ATOMS - {"CAP-AGENT-FLOW-01"})
-    guarded_apply_available = event in {
+    guarded_apply_available = not refusals and event in {
         "policy_evolution_plan",
         "policy_evidence_record",
         "policy_feedback_record",
+        "policy_template_import_plan",
         "starter_policy_pack_init",
     }
 
@@ -1762,6 +1940,8 @@ def next_actions_for(*, status: str, event: str | None) -> list[str]:
         return ["review policy write targets and non-effects before approving any future guarded writer"]
     if event == "policy_evolution_plan":
         return ["review policy evolution recommendation and any generated guarded command before approving a write"]
+    if event == "policy_template_import_plan":
+        return ["review resolved bindings, write targets, and the generated guarded activation command before approving a write"]
     if event in {"evidence_review", "verification_review", "completion_review", "handoff"}:
         return ["review lifecycle preview before approving any task-session update"]
     return ["review this proposal in chat; no durable write has been performed"]
@@ -1791,6 +1971,7 @@ def build_apply_result(
     replacement_action_type: str = "render_pre_task_review",
     replacement_evidence_type: str = "card_rendered",
     starter_pack_id: str = starter_policies.DEFAULT_PACK_ID,
+    template_path: Path | None = None,
     confirmed: bool = False,
     approval_phrase: str | None = None,
 ) -> tuple[dict[str, Any], int]:
@@ -1886,6 +2067,62 @@ def build_apply_result(
             "does not promote gates or blocking enforcement",
             "does not upload telemetry",
             "does not modify source template files",
+        ]
+    elif operation == "policy_template_activation":
+        if template_path is None:
+            target_result = {
+                "schema": policy_templates.POLICY_TEMPLATE_ACTIVATION_RESULT_SCHEMA,
+                "schema_version": policy_templates.POLICY_TEMPLATE_ACTIVATION_RESULT_SCHEMA,
+                "status": "refused",
+                "write_performed": False,
+                "template_ref": None,
+                "policy_ref": None,
+                "written_paths": [],
+                "refusal_reasons": [
+                    "template_required_for_policy_template_activation"
+                ],
+                "warnings": [],
+                "next_actions": [
+                    "provide --template before retrying template activation"
+                ],
+            }
+            exit_code = 2
+        else:
+            target_result, exit_code = policy_templates.activate_template_from_plan(
+                template_path=template_path,
+                project_root=project_root,
+                confirmed=confirmed,
+                approval_phrase=approval_phrase,
+            )
+        write_performed = bool(target_result.get("write_performed"))
+        traces.extend(
+            [
+                atom_trace(
+                    loop_step_id="DPL-07",
+                    atom_id="CAP-POLICY-TEMPLATE-ACTIVATE-01",
+                    mode="guarded-write",
+                    status=target_result.get("status", "unknown"),
+                    summary="called guarded policy-template activation writer",
+                ),
+                atom_trace(
+                    loop_step_id="DPL-07",
+                    atom_id="CAP-AGENT-FLOW-APPLY-POLICY-TEMPLATE-ACTIVATION-01",
+                    mode="guarded-write",
+                    status=target_result.get("status", "unknown"),
+                    summary="applied guarded policy-template activation through agent_flow.py",
+                ),
+            ]
+        )
+        approval_target = "JIKUO policy template activation"
+        approval_effect = (
+            f"activate template {target_result.get('template_ref')} "
+            f"as policy {target_result.get('policy_ref')}"
+        )
+        approval_non_effects = [
+            "does not execute policy actions",
+            "does not promote gates or blocking enforcement",
+            "does not modify package template files",
+            "does not write project_context bindings",
         ]
     else:
         binding_plan = policy_store.build_policy_evolution_plan(
@@ -2046,8 +2283,16 @@ def render_apply_markdown(report: dict[str, Any]) -> str:
         )
         if target.get("operation"):
             lines.append(f"- Target operation: `{target.get('operation')}`")
+        if target.get("template_ref"):
+            lines.append(f"- Template ref: `{target.get('template_ref')}`")
         if target.get("policy_ref"):
             lines.append(f"- Policy ref: `{target.get('policy_ref')}`")
+        if target.get("proposal_ref"):
+            lines.append(f"- Proposal ref: `{target.get('proposal_ref')}`")
+        if target.get("decision_record_ref"):
+            lines.append(
+                f"- Decision record ref: `{target.get('decision_record_ref')}`"
+            )
         if target.get("replacement_policy_ref"):
             lines.append(
                 f"- Replacement policy ref: `{target.get('replacement_policy_ref')}`"
@@ -2072,6 +2317,20 @@ def render_apply_markdown(report: dict[str, Any]) -> str:
         lines.extend(["", "## Next Actions", ""])
         lines.extend(f"- {item}" for item in report["next_actions"])
     return "\n".join(lines).rstrip() + "\n"
+
+
+def proposal_with_chat_ready_markdown(proposal: dict[str, Any]) -> dict[str, Any]:
+    output = dict(proposal)
+    output["chat_ready_markdown_schema"] = CHAT_READY_MARKDOWN_SCHEMA
+    output["chat_ready_markdown"] = render_markdown(proposal)
+    return output
+
+
+def apply_result_with_chat_ready_markdown(report: dict[str, Any]) -> dict[str, Any]:
+    output = dict(report)
+    output["chat_ready_markdown_schema"] = CHAT_READY_MARKDOWN_SCHEMA
+    output["chat_ready_markdown"] = render_apply_markdown(report)
+    return output
 
 
 def render_generic_card(card: dict[str, Any]) -> str:
@@ -2291,6 +2550,7 @@ def build_parser() -> argparse.ArgumentParser:
     propose.add_argument("--replacement-action-type", default="render_pre_task_review")
     propose.add_argument("--replacement-evidence-type", default="card_rendered")
     propose.add_argument("--starter-pack-id", default=starter_policies.DEFAULT_PACK_ID)
+    propose.add_argument("--template", type=Path, default=None)
     propose.add_argument(
         "--produced-evidence-json",
         default=None,
@@ -2350,6 +2610,7 @@ def build_parser() -> argparse.ArgumentParser:
     apply.add_argument("--replacement-action-type", default="render_pre_task_review")
     apply.add_argument("--replacement-evidence-type", default="card_rendered")
     apply.add_argument("--starter-pack-id", default=starter_policies.DEFAULT_PACK_ID)
+    apply.add_argument("--template", type=Path, default=None)
     apply.add_argument("--project-root", type=Path, default=None)
     apply.add_argument("--confirm-apply", action="store_true")
     apply.add_argument("--approval-phrase", default=None)
@@ -2384,11 +2645,18 @@ def main(argv: list[str] | None = None) -> int:
             replacement_action_type=args.replacement_action_type,
             replacement_evidence_type=args.replacement_evidence_type,
             starter_pack_id=args.starter_pack_id,
+            template_path=args.template,
             confirmed=args.confirm_apply,
             approval_phrase=args.approval_phrase,
         )
         if args.format == "json":
-            print(json.dumps(report, ensure_ascii=False, indent=2))
+            print(
+                json.dumps(
+                    apply_result_with_chat_ready_markdown(report),
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            )
         else:
             print(render_apply_markdown(report))
         return exit_code
@@ -2457,6 +2725,7 @@ def main(argv: list[str] | None = None) -> int:
         replacement_action_type=args.replacement_action_type,
         replacement_evidence_type=args.replacement_evidence_type,
         starter_pack_id=args.starter_pack_id,
+        template_path=args.template,
         action_ref=args.action_ref,
         requirement_ref=args.requirement_ref,
         command_name=args.command_name,
@@ -2469,7 +2738,13 @@ def main(argv: list[str] | None = None) -> int:
         produced_evidence=produced_evidence,
     )
     if args.format == "json":
-        print(json.dumps(proposal, ensure_ascii=False, indent=2))
+        print(
+            json.dumps(
+                proposal_with_chat_ready_markdown(proposal),
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
     else:
         print(render_markdown(proposal))
     return 0 if proposal["status"] != "refused" else 2
