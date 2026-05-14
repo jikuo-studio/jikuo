@@ -28,6 +28,8 @@ else:
 STARTER_PACK_INIT_PLAN_SCHEMA = "jikuo.starter_policy_pack_init_plan.v0"
 STARTER_PACK_INIT_RESULT_SCHEMA = "jikuo.starter_policy_pack_init_result.v0"
 STARTER_PACK_MANIFEST_SCHEMA = "jikuo.starter_policy_pack_manifest.v0"
+STARTER_POLICY_PROVENANCE_SCHEMA = "jikuo.policy_provenance.v0"
+OFFICIAL_STARTER_POLICY_PROVENANCE_SOURCE = "verified_jikuo_official"
 DEFAULT_PACK_ID = "engineering_governance"
 PACKAGE_ROOT = Path(__file__).resolve().parent
 STARTER_PACKS_ROOT = PACKAGE_ROOT / "starter_policy_packs"
@@ -123,6 +125,27 @@ def load_template_policy(
     return policy, warnings
 
 
+def official_starter_policy_provenance(
+    *,
+    template_ref: str,
+    pack_id: str,
+) -> dict[str, Any]:
+    return {
+        "schema": STARTER_POLICY_PROVENANCE_SCHEMA,
+        "source": OFFICIAL_STARTER_POLICY_PROVENANCE_SOURCE,
+        "source_ref": template_ref,
+        "starter_pack_ref": pack_id,
+        "imported_at_utc": None,
+        "reviewed_by": {
+            "principal_id": "jikuo_package_maintainers",
+            "principal_type": "package_maintainer",
+        },
+        "review_wall_required": False,
+        "signed_by": None,
+        "verified_at_utc": None,
+    }
+
+
 def load_pack_policies(pack_id: str) -> tuple[list[dict[str, Any]], list[str]]:
     manifest, warnings = load_pack_manifest(pack_id)
     if manifest is None:
@@ -149,6 +172,10 @@ def load_pack_policies(pack_id: str) -> tuple[list[dict[str, Any]], list[str]]:
         if policy is None:
             continue
         policy["starter_pack_ref"] = pack_id
+        policy["provenance"] = official_starter_policy_provenance(
+            template_ref=template_ref,
+            pack_id=pack_id,
+        )
         policies.append(
             {
                 "policy_id": policy.get("policy_id"),
@@ -382,6 +409,7 @@ def build_starter_init_plan(
                 "policy_id": item["policy_id"],
                 "title": item["title"],
                 "template_ref": item["template_ref"],
+                "provenance": item["policy"].get("provenance"),
             }
             for item in policies
         ],

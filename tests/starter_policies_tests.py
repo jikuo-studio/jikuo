@@ -53,6 +53,17 @@ class StarterPolicyPackTests(unittest.TestCase):
             self.assertTrue(report["would_create_registry"])
             self.assertTrue(report["would_create_project_state"])
             self.assertEqual(len(report["starter_policies"]), 4)
+            for item in report["starter_policies"]:
+                provenance = item["provenance"]
+                self.assertEqual(provenance["schema"], "jikuo.policy_provenance.v0")
+                self.assertEqual(provenance["source"], "verified_jikuo_official")
+                self.assertEqual(provenance["source_ref"], item["template_ref"])
+                self.assertEqual(provenance["starter_pack_ref"], "engineering_governance")
+                self.assertFalse(provenance["review_wall_required"])
+                self.assertEqual(
+                    provenance["reviewed_by"]["principal_type"],
+                    "package_maintainer",
+                )
             self.assertFalse((root / ".jikuo").exists())
 
     def test_init_requires_confirmation_and_approval(self):
@@ -111,7 +122,15 @@ class StarterPolicyPackTests(unittest.TestCase):
             self.assertTrue((root / "docs" / "governance" / "rule_registry.yaml").is_file())
             self.assertTrue((root / ".jikuo" / "project_state.yaml").is_file())
             approved = root / ".jikuo" / "policies" / "approved"
-            self.assertEqual(len(list(approved.glob("POLICY-*.yaml"))), 4)
+            policy_files = list(approved.glob("POLICY-*.yaml"))
+            self.assertEqual(len(policy_files), 4)
+            for policy_file in policy_files:
+                policy_text = policy_file.read_text(encoding="utf-8")
+                self.assertIn("provenance:", policy_text)
+                self.assertIn('schema: "jikuo.policy_provenance.v0"', policy_text)
+                self.assertIn('source: "verified_jikuo_official"', policy_text)
+                self.assertIn('starter_pack_ref: "engineering_governance"', policy_text)
+                self.assertIn("review_wall_required: false", policy_text)
             self.assertTrue(report["post_write_verification"]["starter_policies_active"])
 
             status = subprocess.run(

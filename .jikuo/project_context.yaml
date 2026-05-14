@@ -77,6 +77,10 @@ document_roles:
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-18_previous_latest_todo_snapshot_posture.md"
     required: true
     note: "Pre-MCP follow-up disabling fake previous_todo_map binding until snapshot rotation exists."
+  starter_policy_provenance_work_order:
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-19_starter_policy_provenance_backfill.md"
+    required: true
+    note: "Pre-MCP follow-up backfilling explicit package provenance onto official starter policies."
   desktop_operating_loop_work_order:
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-FLOW-02_desktop_app_primary_operating_loop.md"
     required: true

@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-SEC-01: Trust Privacy Provenance Baseline
 
-> **Status**: Draft contract, ready for user review
+> **Status**: Draft contract, updated by LIVE-19 on 2026-05-15
 > **Product meaning**: define the social trust and safety fields JIKUO needs before reusable policy templates or MCP tools cross project, user, or machine boundaries.
 > **Scope rule**: contract only; do not implement auth, signing, telemetry, redaction, locking, template import, package extraction, or MCP in this slice.
 
@@ -22,7 +22,7 @@ Portability creates a trust surface:
 
 This slice defines:
 
-- template provenance fields
+- template and official starter policy provenance fields
 - principal / approval authority fields
 - privacy boundary classes for MCP-facing results
 - namespace and fully qualified id fields
@@ -50,7 +50,7 @@ This slice must not:
 
 ## 4. Deliverables
 
-- `docs/jikuo/governance/jikuo_trust_privacy_provenance_baseline.md`
+- `docs/governance/jikuo_trust_privacy_provenance_baseline.md`
 - this work order
 - task-map updates for `JIKUO-SEC-01`
 - execution-mount updates so future `CORE-20B`, package extraction, and MCP tasks mount this contract

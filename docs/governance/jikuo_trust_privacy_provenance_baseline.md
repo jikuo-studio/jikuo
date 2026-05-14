@@ -81,8 +81,10 @@ Minimal shape:
 
 ```yaml
 provenance:
-  source: "local | imported | community | verified"
+  schema: "jikuo.policy_provenance.v0"
+  source: "local | imported | community | verified_jikuo_official | verified"
   source_ref: "..."
+  starter_pack_ref: null
   imported_at_utc: null
   reviewed_by:
     principal_id: "local_user"
@@ -96,9 +98,12 @@ Rules:
 
 - `local` templates may still require review before activation
 - `imported` and `community` templates must require review before approval
-- `verified` is a future trust level, not implemented by this slice
+- `verified_jikuo_official` is reserved for package-owned starter policies and templates bundled with the installed JIKUO package; it does not imply third-party marketplace signing
+- official starter policies may set `review_wall_required: false` when the starter-pack initialization itself remains guarded by explicit approval and confirmation
+- `verified` remains a future third-party trust level, not implemented by this slice
 - `signed_by` and `verified_at_utc` are reserved fields; this slice does not implement signing
 - provenance must be visible in future template review cards
+- MCP tools must not expose starter policies that are missing provenance once starter policy flows enter MCP scope
 
 ## 4. Principal And Authority
 

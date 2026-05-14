@@ -1,7 +1,7 @@
 # 机括：AI-Primary Process Governance Productization Task Map
 
 > **Date**: 2026-05-03  
-> **Updated**: 2026-05-14
+> **Updated**: 2026-05-15
 > **Status**: Draft task map / planning entry  
 > **Source context**: Sprint 050 `WORKTREE-05` governance hardening  
 > **Product name**: 机括  
@@ -184,10 +184,11 @@ Already created in `WORKTREE-05` or incubated from it:
 - `JIKUO-LIVE-16`: policy runtime card priority, implemented on 2026-05-15 and ready for user review; `chat_ready_markdown` and runtime cards render `policy_runtime_status` before task-session / lifecycle cards, and proposal JSON exposes `display.card_priority_order`
 - `JIKUO-LIVE-17`: task-session index stale hint, implemented on 2026-05-15 and ready for user review; `jikuo show` reports whether `latest_task_session_refs` is current or stale and surfaces dry-run / guarded refresh commands without writing project state
 - `JIKUO-LIVE-18`: previous/latest todo snapshot posture, implemented on 2026-05-15 and ready for user review; removes the fake same-file `previous_todo_map` binding, records snapshot rotation as a deferred insight, and guards against treating latest-vs-previous comparison as available in v0
+- `JIKUO-LIVE-19`: starter policy provenance backfill, implemented on 2026-05-15 and ready for user review; official starter policies now carry `verified_jikuo_official` provenance in plan and guarded initialization outputs before MCP exposure
 - `JIKUO-INTG-01`: universal instruction file distribution, implemented and accepted on 2026-05-14 as a pre-MCP companion; adds review-only and guarded `jikuo install` flows for canonical `JIKUO.md` plus client instruction sync without making client-specific hooks a baseline dependency
 - `JIKUO-MCP-01`: MCP wrapper MVP work order, drafted and ready for user review; formally shifts the next slice from more kernel expansion to wrapping stable `agent_flow.py` / `policy_store.py` atoms for cross-client desktop Agent invocation
 - `JIKUO-ARCH-02`: integration neutrality and `src/jikuo/integrations/` layout, accepted on 2026-05-14 as the immediate pre-MCP architecture contract; anchors protocol / SDK / client adapters outside the kernel before MCP implementation
-- `JIKUO-ARCH-03`: MCP pre-implementation API neutrality review, completed and accepted on 2026-05-15; confirms the first MCP adapter can wrap structured core functions without calling CLI `main()` or adding MCP-specific kernel behavior, while keeping starter provenance and MCP response privacy classification visible as blockers
+- `JIKUO-ARCH-03`: MCP pre-implementation API neutrality review, completed and accepted on 2026-05-15; confirms the first MCP adapter can wrap structured core functions without calling CLI `main()` or adding MCP-specific kernel behavior, while keeping MCP response privacy classification visible as a blocker
 - `JIKUO-SDK-01`: Agent SDK and agentic platform adapter exploration, accepted on 2026-05-14 as a pre-MCP / MCP-adjacent architecture posture; compares OpenAI Agents SDK, Claude Agent SDK, Google ADK, Google Antigravity, and Vercel AI SDK while preserving future orchestration extensibility without replacing the JIKUO kernel, MCP wrapper, or local runtime evidence authority
 - `JIKUO-PKG-00`: package boundary and extraction plan, drafted and ready for user review; separates JIKUO tool-owned package assets from user-project-local `.jikuo/` state before CORE-20 or MCP implementation
 - `JIKUO-CORE-20`: project context binding and policy template portability, draft contract ready for user review; separates reusable policy templates from project-specific document / directory bindings
@@ -205,6 +206,7 @@ Current scenario-chain registrations:
 |---|---|---|---|---|
 | `policy_template_seed_extraction` | A JIKUO maintainer turns proven approved policies from an incubating project into reusable package templates without activating them in another project | inspect approved source -> plan extraction -> guarded package-template export -> no-write target import preview -> report unresolved bindings | `CAP-POLICY-TEMPLATE-EXTRACT-01`; `CAP-POLICY-TEMPLATE-PORTABILITY-01`; `CAP-PROJECT-CONTEXT-BINDING-01`; `CAP-TRUST-PRIVACY-PROVENANCE-BASELINE-01` | `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-21_policy_template_extraction_import_mvp.md` section `Scenario-Chain-Atom Registration Evidence` |
 | `starter_policy_pack_first_use` | A new project starts using JIKUO and receives useful report-only starter policies without knowing source-project paths or raw template extraction commands | desktop initialize request -> `agent_flow.py propose` starter card -> user reviews write set and non-effects -> `agent_flow.py apply --operation starter_policy_pack_init` after approval -> project state / policy store initialized -> future task-start proposals evaluate starter policies | `CAP-AGENT-FLOW-01`; `CAP-STARTER-POLICY-PACK-INIT-01`; `CAP-AGENT-FLOW-APPLY-STARTER-POLICY-PACK-01`; `CAP-PROJECT-STATE-WRITE-01`; `CAP-POLICY-STORE-STATUS-01`; `CAP-POLICY-TEMPLATE-EXTRACT-01` | `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-22_starter_policy_pack_first_use_initialization.md` section `Scenario-Chain-Atom Registration Evidence` |
+| `starter_policy_provenance_backfill` | A JIKUO project initializes official starter policies and needs those approved policies to carry auditable package provenance before any MCP exposure | load official starter pack -> copy template policy into starter record -> attach `verified_jikuo_official` provenance -> expose provenance in plan summary -> guarded init writes approved policy with provenance | `CAP-STARTER-POLICY-PROVENANCE-01`; `CAP-STARTER-POLICY-PACK-INIT-01`; `CAP-TRUST-PRIVACY-PROVENANCE-BASELINE-01`; `CAP-MCP-PREIMPLEMENTATION-API-NEUTRALITY-REVIEW-01` | `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-19_starter_policy_provenance_backfill.md` |
 | `policy_runtime_visibility` | A desktop Agent user wants to see whether JIKUO rules actually triggered during governed work | agent invokes `agent_flow.py propose` -> policy store is inspected -> active policies are evaluated -> policy runtime card is appended -> user sees triggered and non-triggered policy state in chat | `CAP-LIVE-DESKTOP-POLICY-EVAL-01`; `CAP-POLICY-STORE-STATUS-01`; `CAP-POLICY-TRIGGER-EVALUATE-01`; `CAP-POLICY-CONDITION-EVALUATOR-01`; `CAP-POLICY-EVIDENCE-CHECK-01`; `CAP-POLICY-RUNTIME-STATUS-CARD-01` | `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-10_policy_runtime_status_card.md` section `Scenario-Chain-Atom Registration Evidence` |
 | `policy_runtime_first_screen_priority` | A desktop Agent user needs policy runtime status to be the first visible governance card, not buried behind lifecycle cards | agent invokes `agent_flow.py propose` -> proposal attaches display directives with `policy_runtime_status` first -> chat-ready markdown renders prioritized cards before detailed trace sections -> runtime snapshot stores the same prioritized card order | `CAP-POLICY-RUNTIME-CARD-PRIORITY-01`; `CAP-POLICY-RUNTIME-STATUS-CARD-01`; `CAP-DESKTOP-CHAT-HARNESS-SURFACE-01`; `CAP-RUNTIME-VISIBILITY-CHANNEL-01` | `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-16_policy_runtime_card_priority.md` |
 | `desktop_chat_harness_surfacing` | A desktop Agent user needs JIKUO output to behave like a strict harness result rather than an optional summary | agent invokes runner / future MCP tool -> tool returns structured result plus `chat_ready_markdown` -> agent posts the chat-ready markdown -> user sees policy runtime status, write boundaries, evidence state, and atom trace in chat | `CAP-DESKTOP-CHAT-HARNESS-SURFACE-01`; `CAP-POLICY-RUNTIME-STATUS-CARD-01`; `CAP-AGENT-FLOW-01`; `CAP-MCP-AGENT-FLOW-WRAPPER-01` | `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-11_deterministic_harness_chat_return_contract.md` section `Scenario-Chain-Atom Registration Evidence` |
@@ -287,6 +289,7 @@ Current code / data artifacts:
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-16_policy_runtime_card_priority.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-17_task_session_index_stale_hint.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-18_previous_latest_todo_snapshot_posture.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-19_starter_policy_provenance_backfill.md`
 - `docs/insights/INSIGHT-2026-05-15-todo-snapshot-rotation.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-INTG-01_universal_instruction_file_distribution.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-MCP-01_mcp_wrapper_mvp.md`
@@ -324,7 +327,7 @@ Current posture:
 - report-only for governance gates and checker enforcement
 - project-local JIKUO bootstrap state initialized in `.jikuo/project_state.yaml`
 - guarded project-state and task-session sidecar write modes exist
-- no root project task-session record has been created for the current Codex task
+- self-bootstrap task-session records exist under `.jikuo/task_sessions/`; `.jikuo/project_state.yaml latest_task_session_refs` refresh remains a separate guarded action with stale/current status surfaced by `jikuo show`
 - no hook
 - no CI gate
 - no task-stop gate
@@ -440,6 +443,7 @@ Loop composition policy:
 | `CAP-CLIENT-RUNTIME-LINK-SURFACE-01` | Client runtime link surfacing | implemented chat-ready projection | `python -B -m jikuo.agent_flow propose ...`; `jikuo show` | returns absolute Markdown links for `.jikuo/runtime/last_card.md`, `state_summary.json`, and history cards so desktop clients can expose click targets even before MCP | none | links must stay confined under `.jikuo/runtime/` |
 | `CAP-TASK-SESSION-INDEX-STALE-HINT-01` | Task-session index stale hint | implemented read-only CLI projection | `jikuo show`; `src/jikuo/runtime_visibility.py`; `src/jikuo/task_session.py build_index_refresh_plan` | shows whether `.jikuo/project_state.yaml latest_task_session_refs` is current relative to discovered `.jikuo/task_sessions/*.yaml` files and surfaces dry-run / guarded refresh commands | none | `jikuo show` must not mutate project state |
 | `CAP-TODO-SNAPSHOT-POSTURE-01` | Previous/latest todo snapshot posture | implemented context/documentation guard | `.jikuo/project_context.yaml`; `docs/insights/INSIGHT-2026-05-15-todo-snapshot-rotation.md`; `tests/policy_templates_tests.py` | disables fake previous-todo binding in v0 and records guarded snapshot rotation as the future capability required for real latest-vs-previous comparison | none | no policy should treat previous/latest comparison as available while `previous_todo_map.path` is null |
+| `CAP-STARTER-POLICY-PROVENANCE-01` | Starter policy provenance backfill | implemented metadata guard | `src/jikuo/starter_policies.py`; `tests/starter_policies_tests.py`; `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-19_starter_policy_provenance_backfill.md` | attaches `verified_jikuo_official` provenance to official starter policies in plan and guarded initialization outputs before MCP exposure | none beyond existing guarded starter initialization outputs | starter init remains approval-gated; provenance itself is package metadata |
 | `CAP-TASKMAP-INSIGHT-FOLLOWUP-EVIDENCE-01` | Taskmap / insight / follow-up distinction evidence | implemented no-write evidence projection | `python -B -m jikuo.agent_flow propose --event task_start ...` | emits structured `work_routing` and `taskmap_insight_followup_distinction_evidence` so the distinction policy can be matched by the evidence checker instead of depending only on final assistant wording | none | default category is `taskmap`; explicit category can be supplied with `--work-routing-category` |
 | `CAP-COMPLETION-REVIEW-POLICY-ONLY-SURFACE-01` | Completion review policy-only surfacing | implemented by `JIKUO-LIVE-14` | `python -B -m jikuo.agent_flow propose --event completion_review ...` | lets completion-review policy status and evidence succeed visibly even when task-session lifecycle preview is unavailable | none | task-session lifecycle unavailability remains visible as separate non-blocking review context |
 | `CAP-TASK-SESSION-BINDING-EVIDENCE-01` | Task-session binding evidence | implemented by `JIKUO-LIVE-15` | `python -B -m jikuo.agent_flow propose --event task_start ...` | emits structured `task_session_binding_evidence` when a task-start proposal surfaces a guarded task-session creation path | none | evidence means binding was handled visibly; durable creation still requires guarded apply |
@@ -464,7 +468,7 @@ Loop composition policy:
 | `CAP-AGENT-FLOW-APPLY-STARTER-POLICY-PACK-01` | Agent flow guarded starter policy pack apply | implemented guarded apply | `python -B -m jikuo.agent_flow apply --operation starter_policy_pack_init --confirm-apply --approval-phrase ...` | lets the desktop agent apply one explicitly approved starter pack initialization without exposing users to raw template extraction or starter CLI orchestration | project registry mount, `.jikuo/project_state.yaml`, `.jikuo/policies/**` starter policy records | approval phrase and technical confirmation required |
 | `CAP-UNIVERSAL-INSTRUCTION-FILE-01` | Universal instruction file distribution | implemented by `JIKUO-INTG-01` | `src/jikuo/integrations/instruction_files.py`; `jikuo install`; `JIKUO.md`; `AGENTS.md`; `CLAUDE.md`; `.cursorrules`; `.continuerules` | distributes JIKUO invocation, card-display, approval, and out-of-band verification rules across clients without relying on one client hook | instruction files only | default is review-only; guarded write requires `--write`, `--confirm-install`, and `--approval-phrase` |
 | `CAP-INTEGRATION-NEUTRALITY-CONTRACT-01` | Integration neutrality and integrations layout | accepted by `JIKUO-ARCH-02` | `src/jikuo/integrations/` layout planned; SEC-01 baseline updated | keeps protocol / SDK / client / IDE adapters outside the JIKUO kernel so core APIs can be used by CLI, MCP, Agent SDKs, UI, and future integrations | none | integrations may depend on core APIs; core APIs must not depend on integrations |
-| `CAP-MCP-PREIMPLEMENTATION-API-NEUTRALITY-REVIEW-01` | MCP pre-implementation API neutrality review | ready for user review by `JIKUO-ARCH-03` | `docs/work_orders/SPRINT_050_WO-PER-JIKUO-ARCH-03_mcp_pre_implementation_api_neutrality_review.md` | confirms the first MCP adapter can call structured core functions instead of CLI `main()` or stdout scraping, and names remaining blockers before MCP code begins | none beyond approved task-session record | user acceptance required before MCP implementation |
+| `CAP-MCP-PREIMPLEMENTATION-API-NEUTRALITY-REVIEW-01` | MCP pre-implementation API neutrality review | accepted by `JIKUO-ARCH-03` | `docs/work_orders/SPRINT_050_WO-PER-JIKUO-ARCH-03_mcp_pre_implementation_api_neutrality_review.md` | confirms the first MCP adapter can call structured core functions instead of CLI `main()` or stdout scraping, and names remaining blockers before MCP code begins | none beyond approved task-session record | accepted review still blocks MCP implementation until response privacy classification and revised scope are accepted |
 | `CAP-MCP-AGENT-FLOW-WRAPPER-01` | MCP wrapper around stable JIKUO atoms | planned by `JIKUO-MCP-01` | `src/jikuo/integrations/mcp/adapter.py`; `src/jikuo/integrations/mcp/server.py` planned | exposes scoped status / proposal / display-card / guarded apply operations to MCP clients while preserving the Desktop App Primary Operating Loop and out-of-band runtime visibility | only the same guarded writes as underlying atoms; card-producing tools may update `.jikuo/runtime/` | same approval phrase, technical confirmation, proposal-ref binding, and display contract as underlying atoms |
 | `CAP-MCP-RUNTIME-STATUS-CARD-01` | MCP runtime status card tool | planned by `JIKUO-MCP-01` | `jikuo.get_runtime_status_card` planned | returns compact card Markdown and display directives so Agents have a narrow card-only path to show policy runtime status | local runtime projection may update | card markdown must be shown verbatim |
 | `CAP-AGENTS-SDK-ADAPTER-EXPLORATION-01` | Agent SDK and agentic platform adapter exploration | accepted by `JIKUO-SDK-01` | docs-only architecture posture accepted | maps OpenAI Agents SDK, Claude Agent SDK, Google ADK, Google Antigravity, and Vercel AI SDK agents / tools / handoffs / permissions / guardrails / tracing / artifacts / MCP support to JIKUO extension points while keeping the kernel and runtime audit authority local | none | SDKs and platforms remain optional unless a later approved implementation slice changes dependency posture |
@@ -1081,7 +1085,7 @@ Status:
 - write mode creates exactly one task-session YAML file after preflight passes.
 - write mode refuses missing confirmation / approval, project-root mismatch, and session-id collision.
 - `src/jikuo/task_session.py status` can read persisted task-session summaries.
-- root project `.jikuo/task_sessions/` has not been created for the current Codex task.
+- root project `.jikuo/task_sessions/` now contains self-bootstrap task-session records from later LIVE slices; index refresh remains a separate guarded action.
 - accepted by user for downstream index proposal planning.
 - `.jikuo/project_state.yaml` index update remains out of scope.
 
@@ -1120,8 +1124,8 @@ Status:
 - refresh updates only `.jikuo/project_state.yaml` `latest_task_session_refs`.
 - refresh does not create task-session files.
 - duplicate session ids refuse.
-- root project `.jikuo/project_state.yaml` index has not been updated during verification.
-- root project `.jikuo/task_sessions/` has not been created.
+- at TASKSESSION-03 verification time, root project `.jikuo/project_state.yaml` index had not been updated.
+- at TASKSESSION-03 verification time, root project `.jikuo/task_sessions/` had not been created; later LIVE slices created self-bootstrap task-session records.
 - accepted by user for downstream lifecycle / evidence / completion / handoff proposal planning.
 
 ### JIKUO-TASKSESSION-04: Task-Session Lifecycle Update, Evidence Append, Completion, And Handoff Boundary
@@ -1163,8 +1167,8 @@ Status:
 - guarded lifecycle writes require technical confirmation and approval phrase.
 - accepted completion requires explicit user decision evidence.
 - duplicate session matches and raw chat transcript markers refuse.
-- root project `.jikuo/task_sessions/` has not been created.
-- root project `.jikuo/project_state.yaml` index has not been updated during verification.
+- at TASKSESSION-04 verification time, root project `.jikuo/task_sessions/` had not been created; later LIVE slices created self-bootstrap task-session records.
+- at TASKSESSION-04 verification time, root project `.jikuo/project_state.yaml` index had not been updated.
 - accepted by user for downstream `JIKUO-AGENT-02` desktop-agent task-session workflow card planning.
 
 ### JIKUO-UI-02: Run Control Console
@@ -2630,6 +2634,7 @@ Completed in this snapshot:
 - implemented `JIKUO-LIVE-16` policy runtime card priority so chat-ready/runtime cards render `policy_runtime_status` before lifecycle or task cards
 - implemented `JIKUO-LIVE-17` task-session index stale hint so `jikuo show` surfaces stale/current index state without auto-refreshing project state
 - implemented `JIKUO-LIVE-18` previous/latest todo snapshot posture so `previous_todo_map` is disabled in v0 instead of fake-bound to the latest taskmap
+- implemented `JIKUO-LIVE-19` starter policy provenance backfill so official starter policies carry `verified_jikuo_official` provenance in both plan summaries and guarded initialization outputs
 
 Latest todo map:
 
@@ -2646,19 +2651,19 @@ Accepted precondition:
 - `JIKUO-LIVE-16` policy runtime card priority implemented on 2026-05-15: `display.card_priority_order[0]` is `policy_runtime_status`, and chat-ready/runtime Markdown renders that card first when present.
 - `JIKUO-LIVE-17` task-session index stale hint implemented on 2026-05-15: `latest_task_session_refs` remains an independent guarded refresh, while `jikuo show` now reports stale/current index state and review / refresh commands.
 - `JIKUO-LIVE-18` previous/latest todo snapshot posture implemented on 2026-05-15: `.jikuo/project_context.yaml previous_todo_map.path` is `null`, snapshot rotation is deferred to a future capability, and same-file fallback is guarded by regression coverage.
+- `JIKUO-LIVE-19` starter policy provenance backfill implemented on 2026-05-15: `starter_policies.py plan-init` exposes provenance and guarded init writes `verified_jikuo_official` provenance into approved starter policies.
 
 Open items:
 
 1. Review / accept revised `JIKUO-MCP-01` visibility and integration-neutral scope: structured tools, card-only tools, `jikuo.get_runtime_status`, `jikuo.get_runtime_status_card`, `jikuo.get_display_card`, display directives, runtime snapshot refs, and implementation under `src/jikuo/integrations/mcp/`.
 2. Record the MCP implementation startup checklist and user-experience acceptance standard before code implementation.
-3. Review / implement starter policy provenance backfill or an explicit missing-provenance fallback before starter policies are exposed through MCP.
-4. Review / accept the updated SEC-01 visibility and integration neutrality baseline: critical JIKUO runtime state must have both chat-ready output and user-accessible out-of-band output, and integration-specific logic must stay outside the core kernel.
-5. Review release-readiness follow-ups before external users: product-facing root README, license decision, minimal CI, pytest/dev extras.
-6. Return to `JIKUO-MCP-01` implementation only after the above pre-MCP items are accepted or explicitly deferred; stop for user discussion before code implementation.
-7. Keep the decision about whether new self-bootstrap policies enter built-in starter templates suspended until explicit user approval.
-8. Plan `JIKUO-STUDIO-01` dashboard as the next major slice after MCP MVP; it is deferred from MCP-01 scope but not abandoned.
-9. Keep per-client hooks/packs and Agent SDK / platform adapters as planned post-MCP work, not current MCP blockers.
-10. Defer OS notifications, rollback, broader conditions, UI beyond Studio, Plugin, and gates unless explicitly promoted by user approval.
+3. Review / accept the updated SEC-01 visibility, integration neutrality, provenance, and MCP response privacy classification baseline: critical JIKUO runtime state must have both chat-ready output and user-accessible out-of-band output, integration-specific logic must stay outside the core kernel, and MCP responses must distinguish returnable fields from local-only / redacted fields.
+4. Review release-readiness follow-ups before external users: product-facing root README, license decision, minimal CI, pytest/dev extras.
+5. Return to `JIKUO-MCP-01` implementation only after the above pre-MCP items are accepted or explicitly deferred; stop for user discussion before code implementation.
+6. Keep the decision about whether new self-bootstrap policies enter built-in starter templates suspended until explicit user approval.
+7. Plan `JIKUO-STUDIO-01` dashboard as the next major slice after MCP MVP; it is deferred from MCP-01 scope but not abandoned.
+8. Keep per-client hooks/packs and Agent SDK / platform adapters as planned post-MCP work, not current MCP blockers.
+9. Defer OS notifications, rollback, broader conditions, UI beyond Studio, Plugin, and gates unless explicitly promoted by user approval.
 
 MCP MVP scope freeze:
 
@@ -2706,5 +2711,5 @@ MCP implementation blockers:
 - no MCP implementation before `JIKUO-ARCH-02` integration neutrality and `src/jikuo/integrations/` layout is accepted or explicitly deferred
 - no MCP implementation before `JIKUO-ARCH-03` API neutrality review is accepted or explicitly deferred
 - no MCP implementation before `JIKUO-SDK-01` Agent SDK extension posture is accepted or explicitly deferred
-- no MCP exposure of starter policies before provenance backfill or a missing-provenance fallback rule is accepted
+- starter policy provenance exposure blocker is resolved by `JIKUO-LIVE-19`; future MCP starter-policy tools must still refuse missing-provenance records
 - no policy requiring previous/latest todo comparison may be treated as satisfied while `previous_todo_map` is disabled without snapshot rotation
