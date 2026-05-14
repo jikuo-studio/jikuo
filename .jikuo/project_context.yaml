@@ -21,9 +21,11 @@ document_roles:
     required: true
     note: "Current productization task map and latest todo section."
   previous_todo_map:
-    path: "docs/governance/jikuo_productization_task_map.md"
+    path: null
     required: false
-    note: "Disabled same-file fallback; real previous-todo comparison requires a future snapshot rotation mechanism."
+    status: "not_implemented_in_v0"
+    replacement: "future_snapshot_rotation"
+    note: "Disabled in v0; do not treat latest-vs-previous todo comparison as available until snapshot rotation writes a real previous snapshot."
   rule_registry:
     path: "docs/governance/rule_registry.yaml"
     required: true
@@ -71,6 +73,10 @@ document_roles:
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-17_task_session_index_stale_hint.md"
     required: true
     note: "Pre-MCP follow-up keeping latest_task_session_refs refresh separate while making stale task-session indexes visible in jikuo show."
+  previous_latest_todo_snapshot_posture_work_order:
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-18_previous_latest_todo_snapshot_posture.md"
+    required: true
+    note: "Pre-MCP follow-up disabling fake previous_todo_map binding until snapshot rotation exists."
   desktop_operating_loop_work_order:
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-FLOW-02_desktop_app_primary_operating_loop.md"
     required: true

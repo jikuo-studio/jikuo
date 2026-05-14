@@ -48,6 +48,7 @@ The following remain outside this repository's active documentation mount unless
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-15_self_bootstrap_task_session_binding.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-16_policy_runtime_card_priority.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-17_task_session_index_stale_hint.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-18_previous_latest_todo_snapshot_posture.md`
 
 ---
 

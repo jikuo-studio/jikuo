@@ -95,6 +95,16 @@ def write_project_context(root: Path, *, latest_path: str, previous_path: str) -
 
 
 class PolicyTemplateTests(unittest.TestCase):
+    def test_repository_previous_todo_map_is_disabled_until_snapshot_rotation_exists(self):
+        context = (ROOT / ".jikuo" / "project_context.yaml").read_text(encoding="utf-8")
+        self.assertIn("previous_todo_map:", context)
+        self.assertIn("status: \"not_implemented_in_v0\"", context)
+        self.assertIn("replacement: \"future_snapshot_rotation\"", context)
+        self.assertNotIn(
+            'previous_todo_map:\n    path: "docs/governance/jikuo_productization_task_map.md"',
+            context,
+        )
+
     def test_packaged_starter_templates_do_not_expose_private_source_refs(self):
         template_root = ROOT / "src" / "jikuo" / "policy_templates" / "engineering_governance"
         for template_path in template_root.glob("*.yaml"):

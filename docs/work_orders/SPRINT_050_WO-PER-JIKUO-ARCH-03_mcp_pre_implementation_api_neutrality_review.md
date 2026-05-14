@@ -75,9 +75,13 @@ This review does not clear every MCP blocker.
 Still blocking MCP implementation unless accepted or explicitly deferred:
 
 1. Starter policy provenance backfill or missing-provenance fallback.
-2. Previous/latest todo snapshot limitation.
-3. Response-level privacy classification for MCP-returned local paths, approval data, and raw sidecar records.
-4. User acceptance of the revised `JIKUO-MCP-01` scope and this ARCH-03 review.
+2. Response-level privacy classification for MCP-returned local paths, approval data, and raw sidecar records.
+3. User acceptance of the revised `JIKUO-MCP-01` scope.
+
+Resolved after this review:
+
+- `JIKUO-ARCH-03` was accepted by the user on 2026-05-15.
+- `JIKUO-LIVE-18` disabled the fake previous/latest todo same-file binding for v0 and deferred real snapshot rotation as a future capability.
 
 ## 6. Scenario-Chain-Atom Registration Evidence
 
