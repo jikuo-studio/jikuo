@@ -150,6 +150,7 @@ For future MCP / plugin work, also mount:
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-10_policy_runtime_status_card.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-11_deterministic_harness_chat_return_contract.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-12_out_of_band_runtime_visibility_channels.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-14_completion_review_policy_only_surfacing.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-INTG-01_universal_instruction_file_distribution.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-MCP-01_mcp_wrapper_mvp.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-ARCH-02_integration_neutrality_and_integrations_layout.md`
@@ -509,6 +510,7 @@ Plugin:
 Current next task:
 
 - accepted `JIKUO-LIVE-12` Phase 1 out-of-band runtime visibility
+- next review / implement `JIKUO-LIVE-14` completion review policy-only surfacing
 - next review / accept revised integration-neutral `JIKUO-MCP-01` card-only tool and display-directive scope
 
 Task goal:
@@ -528,7 +530,7 @@ Accepted target for the current pre-MCP visibility review:
 Accepted result:
 
 - keep `JIKUO-LIVE-12` Phase 1 as the baseline runtime visibility foundation for MCP implementation.
-- continue with revised MCP wrapper scope review before MCP implementation, then stop for user discussion before code implementation.
+- continue with `JIKUO-LIVE-14`, then revised MCP wrapper scope review before MCP implementation, then stop for user discussion before code implementation.
 
 If revised:
 

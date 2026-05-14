@@ -51,6 +51,10 @@ document_roles:
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-INTG-01_universal_instruction_file_distribution.md"
     required: true
     note: "Pre-MCP cross-client instruction file distribution contract and implementation record."
+  completion_review_policy_only_work_order:
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-14_completion_review_policy_only_surfacing.md"
+    required: true
+    note: "Pre-MCP follow-up for completion-review policy surfacing independent of task-session lifecycle availability."
   desktop_operating_loop_work_order:
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-FLOW-02_desktop_app_primary_operating_loop.md"
     required: true
