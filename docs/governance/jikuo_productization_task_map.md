@@ -2559,7 +2559,7 @@ Latest todo map:
 6. Review / accept `JIKUO-LIVE-11` deterministic harness chat return contract, especially the visible `chat_ready_markdown` requirement for desktop and future MCP callers.
 7. Review / accept `JIKUO-CORE-23` project-context template activation, including resolver safety and guarded activation writes.
 8. Review / accept `JIKUO-CORE-24` desktop `agent_flow.py` template activation bridge.
-9. Add `.jikuo/project_context.yaml` for the current standalone JIKUO repository.
+9. Review / accept `.jikuo/project_context.yaml` role bindings for the current standalone JIKUO repository.
 10. Evaluate whether absolute paths in `.jikuo/project_state.yaml` need a portable representation before broader package / MCP usage.
 11. Clean or ignore the current `tmp/` workspace artifacts so generated local scratch output does not keep polluting status.
 12. Return to `JIKUO-MCP-01` after acceptance or explicit deferral of remaining pre-MCP review items.

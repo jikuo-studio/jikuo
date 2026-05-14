@@ -1,0 +1,57 @@
+schema_version: "jikuo.project_context.v0"
+project:
+  project_id: "jikuo"
+  project_type: "standalone_package"
+  project_root_policy: "bindings_must_resolve_inside_project_root"
+document_roles:
+  latest_todo_map:
+    path: "docs/governance/jikuo_productization_task_map.md"
+    required: true
+    note: "Current productization task map and latest todo section."
+  previous_todo_map:
+    path: "docs/governance/jikuo_productization_task_map.md"
+    required: true
+    note: "Temporary same-file binding until a separate previous todo snapshot exists."
+  rule_registry:
+    path: "docs/governance/rule_registry.yaml"
+    required: true
+  policy_aware_agent_flow_contract:
+    path: "docs/governance/jikuo_policy_aware_agent_flow_contract.md"
+    required: true
+  project_context_contract:
+    path: "docs/governance/jikuo_project_context_binding_and_policy_template_portability.md"
+    required: true
+  insights_registry:
+    path: "docs/insights/insights_registry.yaml"
+    required: true
+directory_roles:
+  governance_docs:
+    path: "docs/governance"
+    required: true
+  work_orders:
+    path: "docs/work_orders"
+    required: true
+  development_insights:
+    path: "docs/insights"
+    required: true
+  policy_store:
+    path: ".jikuo/policies"
+    required: true
+  approved_policies:
+    path: ".jikuo/policies/approved"
+    required: true
+  source_package:
+    path: "src/jikuo"
+    required: true
+  package_policy_templates:
+    path: "src/jikuo/policy_templates/engineering_governance"
+    required: true
+  tests:
+    path: "tests"
+    required: true
+naming_conventions:
+  work_order_pattern: "SPRINT_*_WO-*"
+  policy_id_prefix: "POLICY-"
+  policy_template_id_prefix: "POLICYTEMPLATE-"
+compatibility:
+  unknown_fields: "preserve"
