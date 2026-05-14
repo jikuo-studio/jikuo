@@ -12,6 +12,7 @@ license = { text = "Proprietary" }
 authors = [{ name = "JIKUO contributors" }]
 
 [project.scripts]
+jikuo = "jikuo.cli:main"
 jikuo-agent-flow = "jikuo.agent_flow:main"
 jikuo-policy-store = "jikuo.policy_store:main"
 jikuo-policy-templates = "jikuo.policy_templates:main"

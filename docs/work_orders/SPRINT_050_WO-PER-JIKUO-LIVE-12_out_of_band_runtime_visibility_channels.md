@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-LIVE-12: Out-of-band Runtime Visibility Channels
 
-> **Status**: Draft, pre-MCP blocker for visibility foundation
+> **Status**: Phase 1 implemented, ready for review
 > **Product meaning**: make JIKUO runtime status independently visible even when a desktop Agent fails to paste a card into chat.
 > **Scope rule**: add user-accessible runtime visibility channels; do not implement MCP, dashboard UI, OS notifications, gates, or broad action execution in Phase 1.
 
@@ -31,6 +31,17 @@ Add read-only CLI views:
 - `jikuo show --last-card`
 
 Phase 1 may define, but should not implement, HTML rendering and dashboard hosting.
+
+## 3A. Phase 1 Implementation Delivered
+
+Implemented package artifacts:
+
+- `src/jikuo/runtime_visibility.py`: writes `last_card.md`, `state_summary.json`, and timestamped history cards under `.jikuo/runtime/`.
+- `src/jikuo/agent_flow.py`: attaches runtime visibility reports to proposal JSON / Markdown output and labels runtime projection as a side effect distinct from governance writes.
+- `src/jikuo/cli.py` and `src/jikuo/__main__.py`: expose `jikuo show` and `python -B -m jikuo show`.
+- `pyproject.toml`: adds the `jikuo` console script entry point.
+- `.gitignore`: ignores local `.jikuo/runtime/` projection files.
+- `tests/runtime_visibility_tests.py`: verifies snapshot writes, `jikuo show`, fixture non-mutation, and runtime-path confinement.
 
 ## 4. Phase 2 / Follow-up Scope
 

@@ -1531,7 +1531,9 @@ class AgentFlowProposalTests(unittest.TestCase):
             self.assertIn("--operation \"starter_policy_pack_init\"", command)
             self.assertIn("--confirm-apply", command)
             self.assertNotIn("tools/jikuo", command)
-            self.assertFalse((project_root / ".jikuo").exists())
+            self.assertTrue((project_root / ".jikuo" / "runtime").is_dir())
+            self.assertFalse((project_root / ".jikuo" / "project_state.yaml").exists())
+            self.assertFalse((project_root / ".jikuo" / "policies").exists())
 
     def test_policy_evolution_plan_projects_refinement_without_write(self):
         completed = subprocess.run(

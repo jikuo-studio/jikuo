@@ -288,7 +288,7 @@ Goal:
 Current status:
 
 - `JIKUO-MCP-01` work order is drafted but blocked by pre-MCP portability / security / package / visibility foundation.
-- `JIKUO-LIVE-12` and `JIKUO-INTG-01` are drafted as the current visibility foundations to review before MCP implementation.
+- `JIKUO-LIVE-12` Phase 1 is implemented and ready for review; `JIKUO-INTG-01` remains drafted as the cross-client instruction foundation to review before MCP implementation.
 - implementation has not started.
 - this step is packaging-only: wrap stable `agent_flow.py` / `policy_store.py` atoms without adding new governance capability.
 
@@ -505,7 +505,7 @@ Plugin:
 
 Current next task:
 
-- review / accept `JIKUO-LIVE-12` Phase 1 out-of-band runtime visibility
+- review / accept implemented `JIKUO-LIVE-12` Phase 1 out-of-band runtime visibility
 - then review / accept revised `JIKUO-MCP-01` card-only tool and display-directive scope
 - then review / accept `JIKUO-INTG-01` universal instruction distribution
 
@@ -515,7 +515,7 @@ Task goal:
 
 Acceptance target for the current pre-MCP visibility review:
 
-- `JIKUO-LIVE-12` defines `.jikuo/runtime/last_card.md`, `.jikuo/runtime/state_summary.json`, runtime history, and `jikuo show`
+- `JIKUO-LIVE-12` writes `.jikuo/runtime/last_card.md`, `.jikuo/runtime/state_summary.json`, runtime history, and exposes `jikuo show`
 - `JIKUO-MCP-01` includes `jikuo.get_runtime_status`, `jikuo.get_runtime_status_card`, `jikuo.get_display_card`, display directives, and runtime snapshot refs
 - `JIKUO-INTG-01` defines canonical `JIKUO.md` and client instruction sync without making client hooks mandatory
 - `JIKUO-MCP-01` remains blocked until visibility, provenance, package boundary, project-context binding, privacy return boundaries, and resource-reference hygiene are accepted or explicitly deferred
@@ -523,7 +523,7 @@ Acceptance target for the current pre-MCP visibility review:
 
 If accepted:
 
-- implement `JIKUO-LIVE-12` Phase 1 before MCP implementation, unless the user explicitly records a chat-only risk deferral.
+- if accepted, keep `JIKUO-LIVE-12` Phase 1 as the baseline runtime visibility foundation for MCP implementation.
 - then implement the revised MCP wrapper scope.
 
 If revised:

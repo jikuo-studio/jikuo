@@ -18,6 +18,7 @@ if __package__:
         policy_store,
         policy_templates,
         project_state,
+        runtime_visibility,
         starter_policies,
         task_session,
         task_session_cards,
@@ -27,6 +28,7 @@ else:
     import policy_templates
     import project_state
     import policy_store
+    import runtime_visibility
     import starter_policies
     import task_session
     import task_session_cards
@@ -110,6 +112,7 @@ NO_WRITE_ATOMS = {
     "CAP-POLICY-STORE-WRITE-PROPOSE-01",
     "CAP-POLICY-EVOLUTION-PLAN-PROPOSE-01",
     "CAP-POLICY-RUNTIME-STATUS-CARD-01",
+    "CAP-RUNTIME-VISIBILITY-CHANNEL-01",
     "CAP-STARTER-POLICY-PACK-INIT-01",
     "CAP-PROJECT-CONTEXT-RESOLVER-01",
     "CAP-POLICY-TEMPLATE-IMPORT-PLAN-01",
@@ -2319,10 +2322,58 @@ def render_apply_markdown(report: dict[str, Any]) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
-def proposal_with_chat_ready_markdown(proposal: dict[str, Any]) -> dict[str, Any]:
+def add_runtime_visibility_projection(
+    proposal: dict[str, Any],
+    *,
+    project_root: Path | None,
+) -> dict[str, Any]:
     output = dict(proposal)
+    output["atom_trace"] = list(proposal.get("atom_trace", []))
+    output["write_effect"] = dict(proposal.get("write_effect", {}))
+    prepared = runtime_visibility.prepare_agent_flow_snapshot(
+        project_root=project_root,
+        proposal=output,
+    )
+    report = dict(prepared)
+    if prepared.get("status") != "skipped":
+        report["status"] = "ok"
+        report["write_performed"] = True
+        report["reason"] = "runtime visibility snapshot written"
+        output["atom_trace"].append(
+            atom_trace(
+                loop_step_id="DPL-06",
+                atom_id="CAP-RUNTIME-VISIBILITY-CHANNEL-01",
+                mode="runtime-projection",
+                status="ok",
+                summary="wrote latest JIKUO card and state summary to .jikuo/runtime",
+            )
+        )
+    output["runtime_visibility"] = report
+    output["write_effect"]["runtime_visibility_side_effect"] = {
+        "write_performed": bool(report.get("write_performed")),
+        "target": report.get("runtime_root_ref"),
+        "last_card_ref": report.get("last_card_ref"),
+        "state_summary_ref": report.get("state_summary_ref"),
+        "history_ref": report.get("history_ref"),
+        "reason": report.get("reason"),
+    }
+    if prepared.get("status") != "skipped":
+        runtime_visibility.persist_prepared_agent_flow_snapshot(
+            proposal=output,
+            card_markdown=render_markdown(output),
+            prepared_report=prepared,
+        )
+    return output
+
+
+def proposal_with_chat_ready_markdown(
+    proposal: dict[str, Any],
+    *,
+    project_root: Path | None = None,
+) -> dict[str, Any]:
+    output = add_runtime_visibility_projection(proposal, project_root=project_root)
     output["chat_ready_markdown_schema"] = CHAT_READY_MARKDOWN_SCHEMA
-    output["chat_ready_markdown"] = render_markdown(proposal)
+    output["chat_ready_markdown"] = render_markdown(output)
     return output
 
 
@@ -2389,9 +2440,34 @@ def render_markdown(proposal: dict[str, Any]) -> str:
         "- Writes performed: `false`",
         "- Guarded apply available: "
         f"`{str(proposal.get('approval_boundary', {}).get('guarded_apply_available', False)).lower()}`",
-        "",
-        "## Trigger Decision",
-        "",
+    ]
+    runtime_report = proposal.get("runtime_visibility")
+    if runtime_report:
+        lines.extend(
+            [
+                "- Runtime visibility: "
+                f"`{runtime_report.get('status')}` "
+                f"(write_performed=`{str(runtime_report.get('write_performed', False)).lower()}`)",
+                "",
+                "## Runtime Visibility",
+                "",
+                f"- Last card: `{runtime_report.get('last_card_ref')}`",
+                f"- State summary: `{runtime_report.get('state_summary_ref')}`",
+            ]
+        )
+        if runtime_report.get("history_ref"):
+            lines.append(f"- History card: `{runtime_report.get('history_ref')}`")
+        if runtime_report.get("reason"):
+            lines.append(f"- Reason: {runtime_report.get('reason')}")
+    lines.extend(
+        [
+            "",
+            "## Trigger Decision",
+            "",
+        ]
+    )
+    lines.extend(
+        [
         f"- Scenario: `{proposal['trigger_decision']['invocation_scenario']}`",
         f"- Source: `{proposal['trigger_decision']['trigger_source']}`",
         f"- Match confidence: `{proposal['trigger_decision']['confidence']}`",
@@ -2419,7 +2495,8 @@ def render_markdown(proposal: dict[str, Any]) -> str:
         "",
         "## Atom Trace",
         "",
-    ]
+        ]
+    )
     if policy_context.get("evidence_source_refs"):
         atom_trace_index = lines.index("## Atom Trace")
         evidence_ref_lines = ["### Evidence Source Refs", ""]
@@ -2737,16 +2814,20 @@ def main(argv: list[str] | None = None) -> int:
         user_phrase=args.user_phrase,
         produced_evidence=produced_evidence,
     )
+    proposal_output = proposal_with_chat_ready_markdown(
+        proposal,
+        project_root=args.project_root,
+    )
     if args.format == "json":
         print(
             json.dumps(
-                proposal_with_chat_ready_markdown(proposal),
+                proposal_output,
                 ensure_ascii=False,
                 indent=2,
             )
         )
     else:
-        print(render_markdown(proposal))
+        print(proposal_output["chat_ready_markdown"])
     return 0 if proposal["status"] != "refused" else 2
 
 
