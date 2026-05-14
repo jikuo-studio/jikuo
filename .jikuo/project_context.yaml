@@ -4,6 +4,18 @@ project:
   project_type: "standalone_package"
   project_root_policy: "bindings_must_resolve_inside_project_root"
 document_roles:
+  project_context:
+    path: ".jikuo/project_context.yaml"
+    required: true
+    note: "Canonical project-local document and directory role bindings."
+  docs_entry:
+    path: "docs/README.md"
+    required: true
+    note: "Standalone repository documentation entry point and directory layout."
+  execution_mounts:
+    path: "docs/governance/jikuo_execution_mounts.md"
+    required: true
+    note: "Required active mount set and slice-completion document checks."
   latest_todo_map:
     path: "docs/governance/jikuo_productization_task_map.md"
     required: true
@@ -21,9 +33,43 @@ document_roles:
   project_context_contract:
     path: "docs/governance/jikuo_project_context_binding_and_policy_template_portability.md"
     required: true
+  skeleton_kernel_boundary:
+    path: "docs/governance/jikuo_skeleton_kernel_boundary_and_backlog.md"
+    required: true
+  trust_privacy_provenance_baseline:
+    path: "docs/governance/jikuo_trust_privacy_provenance_baseline.md"
+    required: true
+  desktop_operating_loop_work_order:
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-FLOW-02_desktop_app_primary_operating_loop.md"
+    required: true
   insights_registry:
     path: "docs/insights/insights_registry.yaml"
     required: true
+  policy_manifest:
+    path: ".jikuo/policies/manifest.yaml"
+    required: true
+    note: "Check before slice completion when policy-store refs changed."
+main_document_mounts:
+  canonical_path_root: "."
+  path_policy: "standalone_repo_paths_only"
+  active_mount_authority:
+    - ".jikuo/project_context.yaml"
+    - "docs/governance/jikuo_execution_mounts.md"
+  checked_before_slice_completion:
+    - path: ".jikuo/project_context.yaml"
+      update_required_when: "document roles, directory roles, mount policy, or completion-check scope changes"
+    - path: "docs/README.md"
+      update_required_when: "documentation roots, entry points, or directory responsibilities change"
+    - path: "docs/governance/jikuo_execution_mounts.md"
+      update_required_when: "required mounts, execution order, command previews, or active context changes"
+    - path: "docs/governance/jikuo_productization_task_map.md"
+      update_required_when: "taskmap, current snapshot, capability registry, todo list, or task/follow-up distinction changes"
+    - path: "docs/insights/insights_registry.yaml"
+      update_required_when: "development ideas are captured, promoted, resolved, deferred, or reclassified"
+    - path: ".jikuo/policies/manifest.yaml"
+      update_required_when: "approved, deprecated, superseded, or proposal policy refs change"
+  unchanged_report_required: true
+  scope_change_rule: "User may shrink, expand, or change this maintained main-document scope by explicit approval."
 directory_roles:
   governance_docs:
     path: "docs/governance"

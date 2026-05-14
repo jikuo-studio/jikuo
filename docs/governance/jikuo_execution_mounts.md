@@ -38,60 +38,75 @@ When continuing the JIKUO productization track, read this document first, then m
 
 Always mount:
 
-- `docs/jikuo/README.md`
-- `docs/jikuo/governance/jikuo_execution_mounts.md`
-- `docs/jikuo/governance/jikuo_productization_task_map.md`
-- `docs/jikuo/governance/jikuo_skeleton_kernel_boundary_and_backlog.md`
-- `docs/jikuo/governance/jikuo_project_context_binding_and_policy_template_portability.md`
-- `docs/jikuo/governance/jikuo_trust_privacy_provenance_baseline.md`
-- `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-FLOW-02_desktop_app_primary_operating_loop.md`
-- `docs/scenarios/interactive_novel/sprints/SPRINT_050_20260409.md`
+- `docs/README.md`
+- `docs/governance/jikuo_execution_mounts.md`
+- `docs/governance/jikuo_productization_task_map.md`
+- `docs/governance/jikuo_skeleton_kernel_boundary_and_backlog.md`
+- `docs/governance/jikuo_project_context_binding_and_policy_template_portability.md`
+- `docs/governance/jikuo_trust_privacy_provenance_baseline.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-FLOW-02_desktop_app_primary_operating_loop.md`
+
+Standalone path rule:
+
+- Current active JIKUO product documents live under `docs/`; do not use legacy nested documentation roots for active mounts.
+- Source-project history is not part of the active mount set unless explicitly promoted into this repository.
+- Package-owned command previews should use `python -B -m jikuo...`; source references should point at `src/jikuo/...` or `pkg://jikuo/...` as appropriate.
+
+Slice completion main document check:
+
+- Before closing any JIKUO development slice, check `.jikuo/project_context.yaml`.
+- Check `docs/README.md` when document roots, directory roles, or entry points change.
+- Check `docs/governance/jikuo_execution_mounts.md` when required mounts, execution order, command previews, or active context changes.
+- Check `docs/governance/jikuo_productization_task_map.md` when the task map, current snapshot, capability registry, or todo list changes.
+- Check `docs/insights/insights_registry.yaml` when a development idea is captured, promoted, resolved, or deferred.
+- Check `.jikuo/policies/manifest.yaml` when approved, deprecated, superseded, or proposal policy refs change.
+- If a checked main document does not need an update, report that it was checked and why the existing scope remains valid.
 
 Atomic capability registry:
 
-- current registry location: `docs/jikuo/governance/jikuo_productization_task_map.md` section `Atomic Capability Registry`
+- current registry location: `docs/governance/jikuo_productization_task_map.md` section `Atomic Capability Registry`
 - do not create a separate atomic-capability registry document unless the registry needs machine-readable extraction
 - if machine-readable extraction becomes necessary, derive it from the task-map section rather than creating divergent sources of truth
 
 Loop composition map:
 
-- current first loop composition location: `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-FLOW-02_desktop_app_primary_operating_loop.md` section `Loop Composition Map`
+- current first loop composition location: `docs/work_orders/SPRINT_050_WO-PER-JIKUO-FLOW-02_desktop_app_primary_operating_loop.md` section `Loop Composition Map`
 - use loop composition maps to understand which `CAP-*` atoms a user-facing loop depends on
 - do not duplicate atom definitions inside loop maps; reference `CAP-*` IDs from the task-map registry
 - future `agent_flow.py` and MCP work should preserve loop step ids and atom ids in trace output
 
 Skeleton / kernel boundary:
 
-- current boundary location: `docs/jikuo/governance/jikuo_skeleton_kernel_boundary_and_backlog.md`
+- current boundary location: `docs/governance/jikuo_skeleton_kernel_boundary_and_backlog.md`
 - every future JIKUO work order should declare its `JIKUO layer`, what it is not implementing, kernel compatibility notes, and deferred kernel backlog refs
 - skeleton work may preserve future policy hook points, but must not claim configurable rule-kernel implementation
 - `R-013` in `rule_registry.yaml` reports missing layer / kernel declarations in report-only mode
 
 Configurable rule trigger policy:
 
-- current policy contract location: `docs/jikuo/governance/jikuo_configurable_rule_trigger_policy.md`
+- current policy contract location: `docs/governance/jikuo_configurable_rule_trigger_policy.md`
 - mount this document for future configurable-rule-kernel, policy-store, policy-aware runner, policy evidence checker, UI configuration, MCP, Skill, Plugin, or gate work
 - this contract defines policy sources, triggers, conditions, required actions, required evidence, document mounts, lifecycle, and projection hooks
 - this contract does not implement policy persistence, action execution, evidence checking, UI, Skill, MCP, Plugin, or gates
 
 Rule action / evidence model:
 
-- current action/evidence model location: `docs/jikuo/governance/jikuo_rule_action_evidence_model.md`
+- current action/evidence model location: `docs/governance/jikuo_rule_action_evidence_model.md`
 - mount this document for future policy-aware runner, evidence checker, task-session evidence persistence, UI audit surface, MCP, Skill, Plugin, or gate work
 - this model defines policy actions, evidence requirements, produced evidence, satisfaction matching, missing-evidence reports, and compact retention boundaries
 - this model does not implement action execution, evidence persistence, policy-aware runner behavior, evidence checking, UI, Skill, MCP, Plugin, or gates
 
 Policy store / user configuration flow:
 
-- current policy store/configuration contract location: `docs/jikuo/governance/jikuo_policy_store_configuration_flow.md`
+- current policy store/configuration contract location: `docs/governance/jikuo_policy_store_configuration_flow.md`
 - mount this document for future policy-aware runner, policy store adapter, evidence checker, UI configuration, MCP, Skill, Plugin, or gate work
 - this contract defines policy store source hierarchy, future `.jikuo/policies/` layout proposal, policy proposals, approved policy metadata, decision records, write plans/results, revision, deprecation, supersession, rollback, and desktop APP configuration flow
-- current implementation includes a read-only status adapter, report-only trigger/condition/evidence evaluator, explicit task-session policy evidence ingestion, proposal-only policy write planning, guarded initial policy-store writing, guarded active-store append, and guarded policy decision records: `tools/jikuo/policy_store.py status`; `tools/jikuo/policy_store.py evaluate`; `tools/jikuo/policy_store.py plan-write`; `tools/jikuo/policy_store.py write-policy`
+- current implementation includes a read-only status adapter, report-only trigger/condition/evidence evaluator, explicit task-session policy evidence ingestion, proposal-only policy write planning, guarded initial policy-store writing, guarded active-store append, and guarded policy decision records: `python -B -m jikuo.policy_store status`; `python -B -m jikuo.policy_store evaluate`; `python -B -m jikuo.policy_store plan-write`; `python -B -m jikuo.policy_store write-policy`
 - read-only / proposal-only paths do not create `.jikuo/policies/`; the guarded writer may create `.jikuo/policies/` only with explicit confirmation and approval; no path executes actions, auto-persists evidence, updates `.jikuo/project_state.yaml`, or implements UI, Skill, MCP, Plugin, or gates
 
 Policy-aware agent flow projection:
 
-- current projection contract location: `docs/jikuo/governance/jikuo_policy_aware_agent_flow_contract.md`
+- current projection contract location: `docs/governance/jikuo_policy_aware_agent_flow_contract.md`
 - mount this document before future `agent_flow.py` policy-aware implementation, MCP wrapper, Skill / Plugin packaging, frontend run-control, or checker integration work
 - this contract defines policy context, policy store status, triggered policy, required action, evidence status, missing evidence, and fallback projection for desktop proposal cards
 - the current runner implements read-only policy-store status projection, exact lifecycle trigger evaluation, report-only condition evaluation, report-only inline evidence matching, guarded persistence proposal, explicit task-session policy evidence ingestion, proposal-only policy write-plan cards, and guarded writer command previews from this contract
@@ -99,42 +114,42 @@ Policy-aware agent flow projection:
 
 For desktop invocation work, also mount:
 
-- `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-AGENT-00_agent_native_interaction_contract.md`
-- `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-AGENT-01_desktop_agent_card_projection_contract.md`
-- `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-AGENT-02_desktop_agent_task_session_workflow_cards.md`
-- `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-AGENT-03_minimal_task_session_card_projection_helper.md`
-- `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-AGENT-04_desktop_agent_invocation_contract.md` after it exists
-- `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-AGENT-05_local_deterministic_agent_flow_proposal_runner.md`
-- `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-AGENT-06_lightweight_desktop_agent_instruction_pack.md` after it exists
-- `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-AGENT-08_policy_aware_agent_flow_fallback.md` after it exists
-- `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-08_read_only_policy_store_inspection.md` after it exists
-- `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-09_policy_trigger_evaluator_mvp.md` after it exists
-- `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-10_policy_evidence_checker_mvp.md` after it exists
-- `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-11_policy_evidence_persistence_proposal_bridge.md` after it exists
-- `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-12_policy_evidence_ingestion_mvp.md` after it exists
-- `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-13_policy_condition_evaluator_mvp.md` after it exists
-- `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-14_policy_write_plan_proposal_mvp.md` after it exists
-- `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-15_guarded_policy_store_write_mvp.md` after it exists
-- `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-16_active_policy_store_append_mvp.md` after it exists
-- `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-17_policy_decision_record_mvp.md` after it exists
-- `docs/jikuo/governance/jikuo_desktop_agent_instruction_pack.md` after it exists
-- `tools/jikuo/task_session_cards.py`
-- `tools/jikuo/task_session.py`
-- `tools/jikuo/policy_store.py`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-AGENT-00_agent_native_interaction_contract.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-AGENT-01_desktop_agent_card_projection_contract.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-AGENT-02_desktop_agent_task_session_workflow_cards.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-AGENT-03_minimal_task_session_card_projection_helper.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-AGENT-04_desktop_agent_invocation_contract.md` after it exists
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-AGENT-05_local_deterministic_agent_flow_proposal_runner.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-AGENT-06_lightweight_desktop_agent_instruction_pack.md` after it exists
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-AGENT-08_policy_aware_agent_flow_fallback.md` after it exists
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-08_read_only_policy_store_inspection.md` after it exists
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-09_policy_trigger_evaluator_mvp.md` after it exists
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-10_policy_evidence_checker_mvp.md` after it exists
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-11_policy_evidence_persistence_proposal_bridge.md` after it exists
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-12_policy_evidence_ingestion_mvp.md` after it exists
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-13_policy_condition_evaluator_mvp.md` after it exists
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-14_policy_write_plan_proposal_mvp.md` after it exists
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-15_guarded_policy_store_write_mvp.md` after it exists
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-16_active_policy_store_append_mvp.md` after it exists
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-17_policy_decision_record_mvp.md` after it exists
+- `docs/governance/jikuo_desktop_agent_instruction_pack.md` after it exists
+- `src/jikuo/task_session_cards.py`
+- `src/jikuo/task_session.py`
+- `src/jikuo/policy_store.py`
 
 For future MCP / plugin work, also mount:
 
 - the accepted `JIKUO-AGENT-04` work order after user review
-- `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-AGENT-05_local_deterministic_agent_flow_proposal_runner.md`
-- `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-PKG-00_package_boundary_and_extraction_plan.md`
-- `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-20_project_context_binding_and_policy_template_portability.md`
-- `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-SEC-01_trust_privacy_provenance_baseline.md`
-- `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-PKG-01_minimal_package_extraction.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-AGENT-05_local_deterministic_agent_flow_proposal_runner.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-PKG-00_package_boundary_and_extraction_plan.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-20_project_context_binding_and_policy_template_portability.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-SEC-01_trust_privacy_provenance_baseline.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-PKG-01_minimal_package_extraction.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-21_policy_template_extraction_import_mvp.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-22_starter_policy_pack_first_use_initialization.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-10_policy_runtime_status_card.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-11_deterministic_harness_chat_return_contract.md`
-- `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-MCP-01_mcp_wrapper_mvp.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-MCP-01_mcp_wrapper_mvp.md`
 - any generated MCP / skill / plugin contract documents
 
 For future policy template extraction / import work, also mount:
@@ -199,13 +214,13 @@ Current status:
 Expected shape:
 
 ```powershell
-python -B tools/jikuo/agent_flow.py propose --event "<event>" --task-title "<task title>" --format markdown
+python -B -m jikuo.agent_flow propose --event "<event>" --task-title "<task title>" --format markdown
 ```
 
 Potential later shape:
 
 ```powershell
-python -B tools/jikuo/agent_flow.py apply --card-id "<card id>" --approval-phrase "<exact user phrase as spoken>" --format json
+python -B -m jikuo.agent_flow apply --card-id "<card id>" --approval-phrase "<exact user phrase as spoken>" --format json
 ```
 
 Role:
@@ -219,9 +234,9 @@ Role:
 Current implemented shape:
 
 ```powershell
-python -B tools/jikuo/agent_flow.py propose --event task_start --task-title "<task title>" --format markdown
-python -B tools/jikuo/agent_flow.py apply --operation task_session_evidence_update --confirm-apply --approval-phrase "<exact user phrase as spoken>" --format json
-python -B tools/jikuo/agent_flow.py apply --operation policy_evolution_write --proposal-ref "<approved proposal ref>" --confirm-apply --approval-phrase "<exact user phrase as spoken>" --format json
+python -B -m jikuo.agent_flow propose --event task_start --task-title "<task title>" --format markdown
+python -B -m jikuo.agent_flow apply --operation task_session_evidence_update --confirm-apply --approval-phrase "<exact user phrase as spoken>" --format json
+python -B -m jikuo.agent_flow apply --operation policy_evolution_write --proposal-ref "<approved proposal ref>" --confirm-apply --approval-phrase "<exact user phrase as spoken>" --format json
 ```
 
 Current boundary:
@@ -490,8 +505,8 @@ Task goal:
 
 Acceptance target for `JIKUO-SEC-01`:
 
-- work order exists at `docs/jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-SEC-01_trust_privacy_provenance_baseline.md`
-- governance contract exists at `docs/jikuo/governance/jikuo_trust_privacy_provenance_baseline.md`
+- work order exists at `docs/work_orders/SPRINT_050_WO-PER-JIKUO-SEC-01_trust_privacy_provenance_baseline.md`
+- governance contract exists at `docs/governance/jikuo_trust_privacy_provenance_baseline.md`
 - provenance, principal, privacy, namespace, telemetry, time, and concurrency baseline fields are defined at contract level
 - telemetry default is off
 - MCP-facing result fields distinguish returned, local-only, and redacted data classes
