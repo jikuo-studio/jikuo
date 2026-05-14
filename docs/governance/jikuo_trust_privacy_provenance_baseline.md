@@ -39,6 +39,25 @@ Default posture:
 - every guarded write records a principal field, even if MVP principal is only `local_user`
 - every durable event records UTC time and a local monotonic sequence when available
 
+## 2A. Visibility Baseline
+
+JIKUO visibility must not depend on any single desktop client cooperating.
+
+Every critical JIKUO runtime state projection MUST exist on at least two independent channels:
+
+1. Agent-displayable chat-ready output.
+2. User-accessible out-of-band output, such as a local file, CLI view, or dashboard.
+
+If only the chat channel exists, the governed flow is incomplete and should be treated as a governance failure because the user cannot independently verify whether the Agent displayed the card faithfully.
+
+Implementation requirements:
+
+- MCP tools that return governance cards must also make the latest card available through the out-of-band runtime visibility channel.
+- Runtime state must be queryable through a local command such as `jikuo show`.
+- Out-of-band snapshots must avoid raw chat transcripts, raw approval phrases, and unredacted local file content.
+- Client-specific hooks, plugins, or settings are optional enhancement layers, not baseline dependencies.
+- Future dashboards or notifications may build on the same local runtime projection, but they must not replace the file / CLI verification baseline.
+
 ## 3. Template Provenance
 
 Reusable templates need provenance fields.

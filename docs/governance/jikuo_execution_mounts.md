@@ -149,6 +149,8 @@ For future MCP / plugin work, also mount:
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-22_starter_policy_pack_first_use_initialization.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-10_policy_runtime_status_card.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-11_deterministic_harness_chat_return_contract.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-12_out_of_band_runtime_visibility_channels.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-INTG-01_universal_instruction_file_distribution.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-MCP-01_mcp_wrapper_mvp.md`
 - any generated MCP / skill / plugin contract documents
 
@@ -285,34 +287,41 @@ Goal:
 
 Current status:
 
-- `JIKUO-MCP-01` work order is drafted but blocked by pre-MCP portability / security / package foundation.
-- `JIKUO-PKG-00` is the current next task.
+- `JIKUO-MCP-01` work order is drafted but blocked by pre-MCP portability / security / package / visibility foundation.
+- `JIKUO-LIVE-12` and `JIKUO-INTG-01` are drafted as the current visibility foundations to review before MCP implementation.
 - implementation has not started.
 - this step is packaging-only: wrap stable `agent_flow.py` / `policy_store.py` atoms without adding new governance capability.
 
 Scoped MVP tool calls:
 
 - `jikuo.status`
+- `jikuo.get_runtime_status`
+- `jikuo.get_runtime_status_card`
+- `jikuo.get_display_card`
 - `jikuo.propose_task_start`
 - `jikuo.propose_policy_write_plan`
 - `jikuo.propose_policy_evolution_plan`
+- `jikuo.propose_policy_template_import_plan`
 - `jikuo.apply_task_session_evidence_update`
 - `jikuo.apply_policy_evolution_write`
+- `jikuo.apply_policy_template_activation`
 
 Role:
 
 - reliable cross-client tool layer
-- future Claude Desktop primary integration path
+- future MCP-compatible desktop integration path
 - shared API over the same local deterministic flow
 - same-chat proposal / apply card rendering for desktop Agents through `chat_ready_markdown`
+- out-of-band runtime visibility through `.jikuo/runtime/` and `jikuo show`
 
 Boundary:
 
 - no-write proposal paths remain no-write
 - guarded apply paths preserve confirmation, approval phrase, and proposal-ref binding requirements
 - proposal tools must return structured results plus `chat_ready_markdown`; `policy_runtime_status` must remain visible when present
+- card-producing tools must include display directives and update runtime visibility, or explicitly report that runtime visibility is unavailable
 - no rollback, in-place revision, gate, frontend, Skill, Plugin, or broad action executor
-- no MCP implementation before package boundary, project-context binding, privacy return boundaries, and hardcoded resource-reference hygiene are accepted or explicitly deferred
+- no MCP implementation before package boundary, project-context binding, privacy return boundaries, hardcoded resource-reference hygiene, `JIKUO-LIVE-12`, `JIKUO-INTG-01`, starter policy provenance handling, and previous/latest todo snapshot limitations are accepted or explicitly deferred
 
 ### Step 5: Codex Plugin
 
@@ -496,32 +505,30 @@ Plugin:
 
 Current next task:
 
-- review `JIKUO-SEC-01` trust privacy provenance baseline
-- then review `JIKUO-PKG-01` initial local package extraction before `CORE-20B`
+- review / accept `JIKUO-LIVE-12` Phase 1 out-of-band runtime visibility
+- then review / accept revised `JIKUO-MCP-01` card-only tool and display-directive scope
+- then review / accept `JIKUO-INTG-01` universal instruction distribution
 
 Task goal:
 
-- confirm that reusable templates and future MCP responses have explicit trust, privacy, provenance, namespace, principal, telemetry, and timestamp boundaries before implementation.
+- make JIKUO visibility universal rather than dependent on one desktop client: every critical card should have a chat-ready channel and a user-accessible out-of-band channel.
 
-Acceptance target for `JIKUO-SEC-01`:
+Acceptance target for the current pre-MCP visibility review:
 
-- work order exists at `docs/work_orders/SPRINT_050_WO-PER-JIKUO-SEC-01_trust_privacy_provenance_baseline.md`
-- governance contract exists at `docs/governance/jikuo_trust_privacy_provenance_baseline.md`
-- provenance, principal, privacy, namespace, telemetry, time, and concurrency baseline fields are defined at contract level
-- telemetry default is off
-- MCP-facing result fields distinguish returned, local-only, and redacted data classes
-- no auth, signing, telemetry, redaction, locks, package extraction, or MCP implementation is created by this slice
-- `JIKUO-MCP-01` remains blocked until portability / security / package foundation is accepted or explicitly deferred
-- rollback, broader conditions, UI, Plugin, and gates remain deferred
+- `JIKUO-LIVE-12` defines `.jikuo/runtime/last_card.md`, `.jikuo/runtime/state_summary.json`, runtime history, and `jikuo show`
+- `JIKUO-MCP-01` includes `jikuo.get_runtime_status`, `jikuo.get_runtime_status_card`, `jikuo.get_display_card`, display directives, and runtime snapshot refs
+- `JIKUO-INTG-01` defines canonical `JIKUO.md` and client instruction sync without making client hooks mandatory
+- `JIKUO-MCP-01` remains blocked until visibility, provenance, package boundary, project-context binding, privacy return boundaries, and resource-reference hygiene are accepted or explicitly deferred
+- dashboard, OS notifications, per-client hook packs, rollback, broader conditions, UI, Plugin, and gates remain deferred
 
 If accepted:
 
-- review / accept `JIKUO-PKG-01` initial local package extraction next.
-- after `PKG-01`, review `JIKUO-CORE-20B` resource-reference and `CONTRACT_REFS` hygiene inside the extracted package boundary.
+- implement `JIKUO-LIVE-12` Phase 1 before MCP implementation, unless the user explicitly records a chat-only risk deferral.
+- then implement the revised MCP wrapper scope.
 
 If revised:
 
-- update the SEC-01 trust / privacy baseline, task map, and mount docs before package extraction, CORE-20B, or MCP implementation.
+- update the visibility baseline, task map, and mount docs before MCP implementation.
 
 ---
 
@@ -535,6 +542,6 @@ Do not do next:
 - do not implement configurable rule kernel behavior inside skeleton / packaging work
 - do not implement `CORE-20B` resource-reference hygiene before package extraction unless the user explicitly defers `PKG-01`
 - do not implement MCP before local invocation contract and `agent_flow.py` semantics are clear
-- do not implement MCP before package extraction, project-context binding, privacy return boundaries, and hardcoded resource-reference hygiene are accepted or explicitly deferred
+- do not implement MCP before package extraction, project-context binding, privacy return boundaries, hardcoded resource-reference hygiene, out-of-band runtime visibility, universal instruction distribution, starter provenance handling, and previous/latest todo limitations are accepted or explicitly deferred
 - do not build Codex Plugin before MCP / runner semantics stabilize
 - do not promote gates or blocking behavior as part of this line

@@ -22,8 +22,8 @@ document_roles:
     note: "Current productization task map and latest todo section."
   previous_todo_map:
     path: "docs/governance/jikuo_productization_task_map.md"
-    required: true
-    note: "Temporary same-file binding until a separate previous todo snapshot exists."
+    required: false
+    note: "Disabled same-file fallback; real previous-todo comparison requires a future snapshot rotation mechanism."
   rule_registry:
     path: "docs/governance/rule_registry.yaml"
     required: true
@@ -86,6 +86,10 @@ directory_roles:
   approved_policies:
     path: ".jikuo/policies/approved"
     required: true
+  runtime_visibility:
+    path: ".jikuo/runtime"
+    required: false
+    note: "Planned out-of-band runtime visibility channel root for JIKUO-LIVE-12."
   source_package:
     path: "src/jikuo"
     required: true

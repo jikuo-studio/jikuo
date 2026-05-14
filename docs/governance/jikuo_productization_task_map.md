@@ -177,6 +177,8 @@ Already created in `WORKTREE-05` or incubated from it:
 - `JIKUO-LIVE-09`: proposal-to-apply binding MVP, implemented and ready for user review; requires `agent_flow.py apply --operation policy_evolution_write` to include the proposal ref that the user reviewed, and refuses mismatched refs before any durable write
 - `JIKUO-LIVE-10`: policy runtime status card, implemented and ready for user review; appends a visible `policy_runtime_status` card so triggered / non-triggered policies, required actions, and missing evidence are not hidden in structured proposal fields
 - `JIKUO-LIVE-11`: deterministic harness chat return contract, implemented and ready for user review; adds `chat_ready_markdown` to JSON runner output and requires desktop / future MCP callers to surface tool-rendered cards rather than probabilistically summarize them away
+- `JIKUO-LIVE-12`: out-of-band runtime visibility channels, drafted and ready for review as a pre-MCP blocker; pairs chat-ready cards with `.jikuo/runtime/` snapshots and `jikuo show` so users can verify runtime state without relying on any single desktop Agent
+- `JIKUO-INTG-01`: universal instruction file distribution, drafted and ready for review as a pre-MCP companion; plans canonical `JIKUO.md` plus client instruction sync without making client-specific hooks a baseline dependency
 - `JIKUO-MCP-01`: MCP wrapper MVP work order, drafted and ready for user review; formally shifts the next slice from more kernel expansion to wrapping stable `agent_flow.py` / `policy_store.py` atoms for cross-client desktop Agent invocation
 - `JIKUO-PKG-00`: package boundary and extraction plan, drafted and ready for user review; separates JIKUO tool-owned package assets from user-project-local `.jikuo/` state before CORE-20 or MCP implementation
 - `JIKUO-CORE-20`: project context binding and policy template portability, draft contract ready for user review; separates reusable policy templates from project-specific document / directory bindings
@@ -196,6 +198,8 @@ Current scenario-chain registrations:
 | `starter_policy_pack_first_use` | A new project starts using JIKUO and receives useful report-only starter policies without knowing source-project paths or raw template extraction commands | desktop initialize request -> `agent_flow.py propose` starter card -> user reviews write set and non-effects -> `agent_flow.py apply --operation starter_policy_pack_init` after approval -> project state / policy store initialized -> future task-start proposals evaluate starter policies | `CAP-AGENT-FLOW-01`; `CAP-STARTER-POLICY-PACK-INIT-01`; `CAP-AGENT-FLOW-APPLY-STARTER-POLICY-PACK-01`; `CAP-PROJECT-STATE-WRITE-01`; `CAP-POLICY-STORE-STATUS-01`; `CAP-POLICY-TEMPLATE-EXTRACT-01` | `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-22_starter_policy_pack_first_use_initialization.md` section `Scenario-Chain-Atom Registration Evidence` |
 | `policy_runtime_visibility` | A desktop Agent user wants to see whether JIKUO rules actually triggered during governed work | agent invokes `agent_flow.py propose` -> policy store is inspected -> active policies are evaluated -> policy runtime card is appended -> user sees triggered and non-triggered policy state in chat | `CAP-LIVE-DESKTOP-POLICY-EVAL-01`; `CAP-POLICY-STORE-STATUS-01`; `CAP-POLICY-TRIGGER-EVALUATE-01`; `CAP-POLICY-CONDITION-EVALUATOR-01`; `CAP-POLICY-EVIDENCE-CHECK-01`; `CAP-POLICY-RUNTIME-STATUS-CARD-01` | `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-10_policy_runtime_status_card.md` section `Scenario-Chain-Atom Registration Evidence` |
 | `desktop_chat_harness_surfacing` | A desktop Agent user needs JIKUO output to behave like a strict harness result rather than an optional summary | agent invokes runner / future MCP tool -> tool returns structured result plus `chat_ready_markdown` -> agent posts the chat-ready markdown -> user sees policy runtime status, write boundaries, evidence state, and atom trace in chat | `CAP-DESKTOP-CHAT-HARNESS-SURFACE-01`; `CAP-POLICY-RUNTIME-STATUS-CARD-01`; `CAP-AGENT-FLOW-01`; `CAP-MCP-AGENT-FLOW-WRAPPER-01` | `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-11_deterministic_harness_chat_return_contract.md` section `Scenario-Chain-Atom Registration Evidence` |
+| `out_of_band_runtime_visibility` | A user needs to verify JIKUO runtime state even when the active Agent does not paste cards back into chat | agent / MCP invokes JIKUO -> card-producing result updates `.jikuo/runtime/last_card.md` and `state_summary.json` -> user runs `jikuo show` or opens the file -> latest policy runtime status is independently visible | `CAP-RUNTIME-VISIBILITY-CHANNEL-01`; `CAP-RUNTIME-SHOW-CLI-01`; `CAP-POLICY-RUNTIME-STATUS-CARD-01`; `CAP-DESKTOP-CHAT-HARNESS-SURFACE-01` | `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-12_out_of_band_runtime_visibility_channels.md` |
+| `universal_instruction_distribution` | A project wants multiple desktop Agent clients to follow the same JIKUO harness display contract | generate canonical `JIKUO.md` -> sync reviewed content into supported client instruction files -> agents learn card display and out-of-band verification rules -> client-specific hooks remain optional | `CAP-UNIVERSAL-INSTRUCTION-FILE-01`; `CAP-DESKTOP-CHAT-HARNESS-SURFACE-01`; `CAP-RUNTIME-VISIBILITY-CHANNEL-01` | `docs/work_orders/SPRINT_050_WO-PER-JIKUO-INTG-01_universal_instruction_file_distribution.md` |
 | `policy_template_import_bind_activate` | A project adopts a reusable JIKUO policy template without copying private paths or activating unsafe bindings | template import plan -> project context read -> role bindings resolved -> unsafe / missing bindings reported -> resolved policy preview rendered -> guarded activation after approval -> active policy appears in policy-store status | `CAP-PROJECT-CONTEXT-RESOLVER-01`; `CAP-POLICY-TEMPLATE-IMPORT-PLAN-01`; `CAP-POLICY-TEMPLATE-ACTIVATE-01`; `CAP-POLICY-STORE-STATUS-01` | `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-23_project_context_template_activation.md` section `Scenario-Chain-Atom Registration Evidence` |
 | `policy_template_desktop_activation_bridge` | A desktop Agent user adopts a reusable JIKUO policy template and sees bindings, write effects, and activation result in chat | template selected -> `agent_flow.py propose --event policy_template_import_plan` -> project context / bindings resolved -> import card with guarded command rendered -> `agent_flow.py apply --operation policy_template_activation` after approval -> policy-store activation result returned with `chat_ready_markdown` | `CAP-AGENT-FLOW-POLICY-TEMPLATE-IMPORT-PLAN-01`; `CAP-PROJECT-CONTEXT-RESOLVER-01`; `CAP-POLICY-TEMPLATE-IMPORT-PLAN-01`; `CAP-POLICY-TEMPLATE-ACTIVATE-01`; `CAP-AGENT-FLOW-APPLY-POLICY-TEMPLATE-ACTIVATION-01` | `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-24_agent_flow_template_activation_bridge.md` section `Scenario-Chain-Atom Registration Evidence` |
 | `main_document_mount_maintenance` | A JIKUO maintainer finishes a development slice and needs the active document mount scope to stay visible and current | task-start classification -> update standalone document roles and active mount docs -> register main-document completion scope -> completion review triggers main-document policy -> report checked documents and evidence | `CAP-MAIN-DOC-MOUNT-MAINTENANCE-01`; `CAP-PROJECT-CONTEXT-BINDING-01`; `CAP-EXEC-MOUNT-01`; `CAP-POLICY-RUNTIME-STATUS-CARD-01` | `.jikuo/project_context.yaml`; `docs/README.md`; `docs/governance/jikuo_execution_mounts.md`; this task-map section |
@@ -259,6 +263,8 @@ Current code / data artifacts:
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-09_proposal_to_apply_binding_mvp.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-10_policy_runtime_status_card.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-11_deterministic_harness_chat_return_contract.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-12_out_of_band_runtime_visibility_channels.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-INTG-01_universal_instruction_file_distribution.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-MCP-01_mcp_wrapper_mvp.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-PKG-00_package_boundary_and_extraction_plan.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-PKG-01_minimal_package_extraction.md`
@@ -395,6 +401,8 @@ Loop composition policy:
 | `CAP-LIVE-DESKTOP-POLICY-EVAL-01` | Policy evaluation in desktop chat | implemented no-write proposal | `python -B -m jikuo.agent_flow propose ...` | makes active policy evaluation visible in the same desktop proposal card, including triggered policies, missing evidence, inline evidence status, and lightweight feedback options | none | no persistence; feedback is report-only |
 | `CAP-POLICY-RUNTIME-STATUS-CARD-01` | Policy runtime status card | implemented no-write card projection | `python -B -m jikuo.agent_flow propose ...` | appends a visible `policy_runtime_status` card so active, triggered, non-triggered, required-action, and missing-evidence status is not hidden in structured fields | none | no persistence; card projection only |
 | `CAP-DESKTOP-CHAT-HARNESS-SURFACE-01` | Deterministic harness chat return | implemented chat-ready projection | `python -B -m jikuo.agent_flow propose ... --format json`; `python -B -m jikuo.agent_flow apply ... --format json` | returns `chat_ready_markdown` alongside structured proposal / apply results so desktop agents and future MCP callers can surface tool-rendered cards instead of summarizing them away | none | no persistence; same-chat surfacing required |
+| `CAP-RUNTIME-VISIBILITY-CHANNEL-01` | Out-of-band runtime visibility channel | planned by `JIKUO-LIVE-12` | `.jikuo/runtime/last_card.md`; `.jikuo/runtime/state_summary.json`; `.jikuo/runtime/history/*.md` | gives users a client-independent place to inspect the latest JIKUO governance card and runtime summary | local runtime projection files only | no raw chat transcript or approval phrase |
+| `CAP-RUNTIME-SHOW-CLI-01` | Runtime visibility CLI | planned by `JIKUO-LIVE-12` | `jikuo show`; `jikuo show --last-card` planned | lets users inspect current runtime status without relying on Agent chat behavior | none | read-only |
 | `CAP-POLICY-FEEDBACK-PERSIST-PROPOSE-01` | Policy feedback persistence proposal bridge | implemented no-write proposal | `python -B -m jikuo.agent_flow propose --event policy_feedback_record ...` | converts explicit user feedback on a triggered policy into a guarded task-session evidence append command proposal | none in propose; future guarded command writes one task-session file | approval required for generated command |
 | `CAP-AGENT-FLOW-APPLY-TASK-EVIDENCE-01` | Agent flow guarded task-session evidence apply | implemented guarded apply | `python -B -m jikuo.agent_flow apply --operation task_session_evidence_update ... --confirm-apply --approval-phrase ...` | lets the desktop agent apply one explicitly approved task-session evidence append without exposing users to raw helper orchestration | explicit task-session file | approval phrase and technical confirmation required |
 | `CAP-POLICY-EVOLUTION-APPLY-BINDING-01` | Proposal-to-apply binding check | implemented guarded preflight | `python -B -m jikuo.agent_flow apply --operation policy_evolution_write --proposal-ref <proposal-ref> ...` | refuses policy evolution apply when the proposal ref supplied at approval time does not match the deterministic policy evolution plan that will be written | none | proposal ref, approval phrase, and technical confirmation required |
@@ -413,7 +421,9 @@ Loop composition policy:
 | `CAP-AGENT-FLOW-APPLY-POLICY-TEMPLATE-ACTIVATION-01` | Agent flow guarded policy-template activation apply | implemented guarded apply | `python -B -m jikuo.agent_flow apply --operation policy_template_activation --template ... --confirm-apply --approval-phrase ...` | lets the desktop agent apply one explicitly approved template activation without exposing users to the lower-level template helper | `.jikuo/policies/proposals/*.yaml`; `.jikuo/policies/approved/*.yaml`; `.jikuo/policies/decisions/*.yaml`; `.jikuo/policies/manifest.yaml` | approval phrase and technical confirmation required |
 | `CAP-STARTER-POLICY-PACK-INIT-01` | Starter policy pack first-use initialization | implemented guarded bootstrap | `src/jikuo/starter_policies.py`; `src/jikuo/starter_policy_packs/engineering_governance/manifest.yaml`; `python -B -m jikuo.agent_flow propose --event initialize_jikuo ...` | initializes a new project with curated report-only policies so first use is guided rather than empty | none in propose; guarded apply may create project registry mount, `.jikuo/project_state.yaml`, and `.jikuo/policies/**` starter policy records | approval phrase and technical confirmation required |
 | `CAP-AGENT-FLOW-APPLY-STARTER-POLICY-PACK-01` | Agent flow guarded starter policy pack apply | implemented guarded apply | `python -B -m jikuo.agent_flow apply --operation starter_policy_pack_init --confirm-apply --approval-phrase ...` | lets the desktop agent apply one explicitly approved starter pack initialization without exposing users to raw template extraction or starter CLI orchestration | project registry mount, `.jikuo/project_state.yaml`, `.jikuo/policies/**` starter policy records | approval phrase and technical confirmation required |
-| `CAP-MCP-AGENT-FLOW-WRAPPER-01` | MCP wrapper around stable JIKUO atoms | planned by `JIKUO-MCP-01` | `src/jikuo/mcp_server.py` / `src/jikuo/mcp_adapter.py` planned | exposes scoped status / proposal / guarded apply operations to MCP clients while preserving the Desktop App Primary Operating Loop and returning `chat_ready_markdown` | only the same guarded writes as underlying atoms | same approval phrase, technical confirmation, and proposal-ref binding as underlying atoms |
+| `CAP-UNIVERSAL-INSTRUCTION-FILE-01` | Universal instruction file distribution | planned by `JIKUO-INTG-01` | `JIKUO.md`; `AGENTS.md`; `CLAUDE.md`; `.cursorrules`; `.continuerules` planned | distributes JIKUO invocation, card-display, approval, and out-of-band verification rules across clients without relying on one client hook | instruction files only | user review before syncing client-specific files |
+| `CAP-MCP-AGENT-FLOW-WRAPPER-01` | MCP wrapper around stable JIKUO atoms | planned by `JIKUO-MCP-01` | `src/jikuo/mcp_server.py` / `src/jikuo/mcp_adapter.py` planned | exposes scoped status / proposal / display-card / guarded apply operations to MCP clients while preserving the Desktop App Primary Operating Loop and out-of-band runtime visibility | only the same guarded writes as underlying atoms; card-producing tools may update `.jikuo/runtime/` | same approval phrase, technical confirmation, proposal-ref binding, and display contract as underlying atoms |
+| `CAP-MCP-RUNTIME-STATUS-CARD-01` | MCP runtime status card tool | planned by `JIKUO-MCP-01` | `jikuo.get_runtime_status_card` planned | returns compact card Markdown and display directives so Agents have a narrow card-only path to show policy runtime status | local runtime projection may update | card markdown must be shown verbatim |
 | `CAP-POLICY-EVIDENCE-CHECK-01` | Policy evidence checker MVP | implemented no-write | `python -B -m jikuo.policy_store evaluate --event ... --produced-evidence-json ...`; `--produced-evidence-type ...` | matches policy required evidence against inline produced evidence and reports missing evidence; consumed by `agent_flow.py propose` for runner-rendered cards | none | N/A |
 | `CAP-POLICY-EVIDENCE-PERSIST-PROPOSE-01` | Policy evidence persistence proposal bridge | implemented no-write proposal | `python -B -m jikuo.agent_flow propose --event policy_evidence_record ...` | converts explicit policy evidence refs into a guarded task-session evidence append command proposal | none in propose; future guarded command writes one task-session file | approval required for generated command |
 | `CAP-POLICY-EVIDENCE-INGEST-01` | Policy evidence ingestion MVP | implemented no-write | `python -B -m jikuo.policy_store evaluate --event ... --task-session-id ...`; `python -B -m jikuo.agent_flow propose --event policy_evidence_check --policy-event ... --session-id ...` | reads persisted task-session `policy_evidence:*` snapshots and feeds them into report-only evidence matching | none | N/A |
@@ -429,6 +439,10 @@ Known missing atoms:
 - `CAP-TRUST-PRIVACY-PROVENANCE-BASELINE-01`: draft contract ready for review; future implementation still planned before MCP implementation
 - `CAP-CONTRACT-REF-HYGIENE-01`: implemented package-owned `pkg://` refs and module command previews; general-purpose package resource dereferencing remains future work
 - `CAP-MCP-AGENT-FLOW-WRAPPER-01`: MCP wrapper around stable `agent_flow.py` / `policy_store.py` atoms, scoped by `JIKUO-MCP-01` but blocked by pre-MCP foundations
+- `CAP-RUNTIME-VISIBILITY-CHANNEL-01`: out-of-band runtime card / status snapshots under `.jikuo/runtime/`, scoped by `JIKUO-LIVE-12`
+- `CAP-RUNTIME-SHOW-CLI-01`: `jikuo show` runtime inspection command, scoped by `JIKUO-LIVE-12`
+- `CAP-UNIVERSAL-INSTRUCTION-FILE-01`: cross-client instruction file generation / sync, scoped by `JIKUO-INTG-01`
+- `CAP-MCP-RUNTIME-STATUS-CARD-01`: MCP card-only runtime status tool, scoped by revised `JIKUO-MCP-01`
 - `CAP-CODEX-PLUGIN-01`: Codex Plugin packaging, planned after MCP / runner semantics are stable
 - broader policy conditions such as mounted documents, work-order metadata, checker results, approval events, or compound predicates
 - broader evidence ingestion beyond explicit task-session `policy_evidence:*` snapshots
@@ -2418,18 +2432,20 @@ Recommended next sequence:
 53. Review `JIKUO-LIVE-09`, where policy evolution apply must bind to the proposal ref reviewed by the user.
 54. Review `JIKUO-LIVE-10`, where policy runtime status becomes a visible card instead of hidden structured fields.
 55. Review `JIKUO-LIVE-11`, where runner JSON gains `chat_ready_markdown` and desktop / future MCP callers must surface tool-rendered cards as harness evidence.
-56. Review `JIKUO-PKG-00`, where the package boundary separates tool-owned assets from user-project-local `.jikuo/` state.
-57. Review `JIKUO-CORE-20`, where project context binding and policy template portability are made explicit.
-58. Review `JIKUO-SEC-01`, where trust, privacy, provenance, namespace, principal, telemetry, and timestamp baseline fields are declared before MCP.
-59. Review / execute `JIKUO-PKG-01` minimal package extraction after boundary, portability, and trust baseline foundations are accepted.
-60. Implement `JIKUO-CORE-20B`, where hardcoded resource references such as `CONTRACT_REFS` are removed or neutralized inside the extracted package boundary.
-61. Return to `JIKUO-MCP-01`, where the MCP wrapper MVP freezes a packaging-only scope around stable atoms.
-62. Implement the MCP adapter / wrapper when the pre-MCP foundations are accepted, prioritizing Claude / cross-client consistency.
-63. Consider Codex Plugin after runner / MCP semantics are stable.
-64. Build `JIKUO-UI-01` rule configuration console after the desktop invocation line and policy configuration boundary are stable enough to preserve primary-surface continuity.
-65. Build `JIKUO-UI-02` run control console after the desktop primary loop and configuration boundary are accepted.
-66. Add `JIKUO-AUDIT-01` evolution dashboard.
-67. Consider `JIKUO-GATE-01` only after report-only false positives are low.
+56. Review `JIKUO-LIVE-12`, where runtime cards and summaries become visible through client-independent files and `jikuo show`.
+57. Review `JIKUO-INTG-01`, where canonical `JIKUO.md` can be distributed into client instruction files without depending on one client hook.
+58. Review `JIKUO-PKG-00`, where the package boundary separates tool-owned assets from user-project-local `.jikuo/` state.
+59. Review `JIKUO-CORE-20`, where project context binding and policy template portability are made explicit.
+60. Review `JIKUO-SEC-01`, where trust, privacy, provenance, namespace, principal, telemetry, timestamp, and visibility baseline fields are declared before MCP.
+61. Review / execute `JIKUO-PKG-01` minimal package extraction after boundary, portability, and trust baseline foundations are accepted.
+62. Implement `JIKUO-CORE-20B`, where hardcoded resource references such as `CONTRACT_REFS` are removed or neutralized inside the extracted package boundary.
+63. Return to `JIKUO-MCP-01`, where the MCP wrapper MVP freezes a packaging-only scope around stable atoms, card-only display tools, and display directives.
+64. Implement the MCP adapter / wrapper when the pre-MCP foundations are accepted, prioritizing cross-client consistency.
+65. Consider Codex Plugin after runner / MCP semantics are stable.
+66. Build `JIKUO-UI-01` rule configuration console after the desktop invocation line and policy configuration boundary are stable enough to preserve primary-surface continuity.
+67. Build `JIKUO-UI-02` run control console after the desktop primary loop and configuration boundary are accepted.
+68. Add `JIKUO-AUDIT-01` evolution dashboard.
+69. Consider `JIKUO-GATE-01` only after report-only false positives are low.
 
 Parallel option:
 
@@ -2524,7 +2540,7 @@ Latest mounted todo map:
 
 - source: `docs/governance/jikuo_productization_task_map.md`
 - current snapshot: `Current Task Map Snapshot: 2026-05-14`
-- current pause point: review `JIKUO-PKG-01` initial extraction, then `JIKUO-CORE-20B`
+- current pause point: review `JIKUO-LIVE-12` out-of-band runtime visibility, then revised `JIKUO-MCP-01` display scope and `JIKUO-INTG-01`
 
 Previous mounted todo map:
 
@@ -2538,6 +2554,8 @@ Delta from previous todo map:
 - `JIKUO-LIVE-09` was added as the final pre-MCP safety lock for policy evolution apply.
 - `JIKUO-PKG-01` was promoted ahead of `CORE-20B`, so physical package extraction happens before resource-reference hygiene and prevents future fixes from inheriting source-project identity.
 - MCP wrapper implementation is now blocked until package boundary, project-context binding, trust/security baseline, minimal package extraction, and resource-reference hygiene are accepted or explicitly deferred.
+- MCP wrapper planning now treats visibility as a universal harness requirement: out-of-band runtime snapshots, narrow card tools, display directives, and universal instruction files are pre-MCP foundations rather than client-specific enhancements.
+- The temporary same-file `previous_todo_map` binding is disabled in `.jikuo/project_context.yaml`; real previous/latest todo comparison requires future snapshot rotation.
 - durable revision / rollback writers, broader apply operations, broader condition vocabulary, frontend, Plugin, and gates are deferred by default.
 
 Completed in this snapshot:
@@ -2554,26 +2572,29 @@ Completed in this snapshot:
 - implement `JIKUO-CORE-23` project-context resolver and guarded template activation in `policy_templates.py`
 - implement `JIKUO-CORE-24` desktop `agent_flow.py` bridge for template import planning and guarded activation
 - unify standalone repository main document mount paths under `docs/`, register `CAP-MAIN-DOC-MOUNT-MAINTENANCE-01`, and define the slice-completion main-document check scope
+- draft `JIKUO-LIVE-12` out-of-band runtime visibility channels as the next pre-MCP visibility foundation
+- draft `JIKUO-INTG-01` universal instruction file distribution as the cross-client instruction foundation
+- revise `JIKUO-MCP-01` scope to include card-only runtime status tools, display directives, and runtime visibility updates
 
 Latest todo map:
 
-1. Review / accept the standalone main document mount path unification and slice-completion main-document scope.
-2. Review / accept `JIKUO-SEC-01` trust / privacy / provenance / namespace / principal / telemetry / timestamp baseline.
-3. Review / accept `JIKUO-PKG-01` initial local package extraction at `D:\personal_project\Jikuo`.
-4. Review / accept `JIKUO-CORE-20B` resource-reference and `CONTRACT_REFS` hygiene inside the extracted package boundary.
-5. Review / accept `JIKUO-CORE-21` policy template extraction / export MVP and the first redacted source-project-derived package templates.
-6. Review / accept `JIKUO-CORE-22` starter policy pack first-use initialization, including desktop-agent card projection and guarded apply.
-7. Review / accept `JIKUO-LIVE-11` deterministic harness chat return contract, especially the visible `chat_ready_markdown` requirement for desktop and future MCP callers.
-8. Review / accept `JIKUO-CORE-23` project-context template activation, including resolver safety and guarded activation writes.
-9. Review / accept `JIKUO-CORE-24` desktop `agent_flow.py` template activation bridge.
-10. Review / accept portable `.jikuo/project_state.yaml` path representation: durable state now stores project roots as relative refs while runtime readers keep absolute-root safety checks.
-11. Return to `JIKUO-MCP-01` after acceptance or explicit deferral of remaining pre-MCP review items.
-12. Keep the decision about whether new self-bootstrap policies enter built-in starter templates suspended until explicit user approval.
-13. Defer rollback, broader conditions, UI, Plugin, and gates unless explicitly promoted by user approval.
+1. Review / accept `JIKUO-LIVE-12` Phase 1 out-of-band runtime visibility: `.jikuo/runtime/last_card.md`, `.jikuo/runtime/state_summary.json`, runtime history, and `jikuo show`.
+2. Review / accept revised `JIKUO-MCP-01` visibility scope: structured tools, card-only tools, `jikuo.get_runtime_status`, `jikuo.get_runtime_status_card`, `jikuo.get_display_card`, display directives, and runtime snapshot refs.
+3. Review / accept `JIKUO-INTG-01` universal instruction distribution: canonical `JIKUO.md` and opt-in sync to `AGENTS.md`, `CLAUDE.md`, `.cursorrules`, and `.continuerules`.
+4. Decide whether `.jikuo/project_context.yaml` previous/latest todo comparison remains disabled for now or gets a future snapshot rotation work order.
+5. Review / implement starter policy provenance backfill or an explicit missing-provenance fallback before starter policies are exposed through MCP.
+6. Review / accept the updated SEC-01 visibility baseline: critical JIKUO runtime state must have both chat-ready output and user-accessible out-of-band output.
+7. Review release-readiness follow-ups before external users: product-facing root README, license decision, minimal CI, pytest/dev extras.
+8. Return to `JIKUO-MCP-01` implementation only after the above pre-MCP items are accepted or explicitly deferred.
+9. Keep the decision about whether new self-bootstrap policies enter built-in starter templates suspended until explicit user approval.
+10. Defer dashboard, OS notifications, per-client hooks/packs, rollback, broader conditions, UI, Plugin, and gates unless explicitly promoted by user approval.
 
 MCP MVP scope freeze:
 
 - include: policy-store status inspection
+- include: `jikuo.get_runtime_status` structured runtime status inspection
+- include: `jikuo.get_runtime_status_card` narrow card-only runtime status rendering
+- include: `jikuo.get_display_card` narrow latest-card rendering
 - include: task-start proposal rendering
 - include: policy-write-plan proposal rendering
 - include: policy-evolution-plan proposal rendering
@@ -2581,6 +2602,8 @@ MCP MVP scope freeze:
 - include: guarded task-session evidence apply
 - include: guarded policy evolution apply with proposal-ref binding
 - include: guarded policy-template activation apply
+- require: card-producing MCP tools return display directives that identify verbatim card fields, summarizable fields, hidden debug fields, and response priority
+- require: card-producing MCP tools update the out-of-band runtime visibility channel or explicitly report that runtime visibility is unavailable
 - require: no-write proposal mode remains no-write
 - require: guarded apply still requires explicit approval phrase and technical confirmation
 - require: all MCP calls return structured results suitable for desktop chat rendering
@@ -2604,3 +2627,7 @@ MCP implementation blockers:
 - no MCP implementation before project-specific paths are represented as project-context bindings or package resources
 - no MCP implementation before privacy return boundaries are declared
 - no MCP implementation before `CONTRACT_REFS` hardcoded the incubating source project references are removed, neutralized, or explicitly classified as bundled package refs
+- no MCP implementation before `JIKUO-LIVE-12` Phase 1 runtime visibility is accepted or explicitly deferred with a recorded chat-only risk
+- no MCP implementation before `JIKUO-INTG-01` universal instruction distribution is accepted or explicitly deferred
+- no MCP exposure of starter policies before provenance backfill or a missing-provenance fallback rule is accepted
+- no policy requiring previous/latest todo comparison may be treated as satisfied while `previous_todo_map` is disabled without snapshot rotation

@@ -1,7 +1,7 @@
 # INSIGHT-2026-05-14: Harness Card Surfacing Gap
 
-> **Classification**: `task_candidate`
-> **Status**: captured
+> **Classification**: `promoted_to_task`
+> **Status**: promoted
 > **Created**: 2026-05-14
 > **Related policy**: `.jikuo/policies/approved/POLICY-jikuo-deterministic-harness-chat-return.yaml`
 
@@ -29,26 +29,26 @@ from summarizing the result away.
 
 ## Classification
 
-This is a `task_candidate`, not a new policy candidate yet.
+This has been promoted from a `task_candidate` into pre-MCP task-map work.
 
 The policy principle already exists:
 
 - JIKUO is a deterministic harness once activated.
 - Policy runtime status and cards must be visible and auditable.
 
-The missing work is likely implementation / integration:
+The missing work is implementation / integration across general layers:
 
-- MCP wrapper or equivalent desktop-agent wrapper should make `chat_ready_markdown`
-  the mandatory returned artifact.
-- The agent instruction pack may need a stricter response checklist, but that
-  remains weaker than tool-level enforcement.
+- out-of-band runtime files / CLI that users can inspect without client cooperation
+- MCP display-card tools and display directives that make omission easy to notice
+- universal instruction files that describe the display contract for multiple agents
 
 ## Follow-Up Candidate
 
-Potential task:
+Promoted tasks:
 
-- `JIKUO-LIVE-12` or `JIKUO-MCP-01` sub-slice: enforce chat-ready card surfacing
-  at the client/tool boundary so runner output cannot be silently summarized.
+- `JIKUO-LIVE-12`: out-of-band runtime visibility channels.
+- `JIKUO-MCP-01`: runtime status card / display-card MCP tools and display directives.
+- `JIKUO-INTG-01`: universal instruction file distribution.
 
-This insight should remain captured until the next task-map review decides
-whether to promote it into an active work order.
+Dashboard, OS notifications, and per-client packs remain follow-up layers unless
+the user explicitly promotes them.
