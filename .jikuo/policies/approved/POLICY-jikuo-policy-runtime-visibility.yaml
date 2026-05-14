@@ -1,0 +1,27 @@
+schema_version: "jikuo.configurable_rule_policy.v0"
+policy_id: "POLICY-jikuo-policy-runtime-visibility"
+version: 1
+status: "active_report_only"
+title: "Policy runtime visibility in governed desktop flows"
+scenario_package: "engineering_governance"
+source_refs:
+  - type: "user_natural_language"
+    ref: "user_policy:policy_trigger_status_must_be_user_visible"
+triggers:
+  - trigger_id: "TRG-task-start"
+    type: "task_lifecycle_event"
+    event: "task_start"
+conditions:
+  - condition_id: "COND-policy-jikuo-policy-runtime-visibility-task-type"
+    type: "task_type_is"
+    value: "code_change"
+required_actions:
+  - action_id: "ACT-render-policy-runtime-status-card-for-governed-flow"
+    type: "render_policy_runtime_status_card_for_governed_flow"
+required_evidence:
+  - evidence_id: "EVD-policy-runtime-status-visibility-evidence"
+    type: "policy_runtime_status_visibility_evidence"
+    satisfies_action: "ACT-render-policy-runtime-status-card-for-governed-flow"
+enforcement:
+  phase: "report_only"
+  level: "review_required"

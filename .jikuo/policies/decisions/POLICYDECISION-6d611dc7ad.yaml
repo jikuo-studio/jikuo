@@ -1,0 +1,17 @@
+schema_version: "jikuo.policy_decision.v0"
+decision_id: "POLICYDECISION-6d611dc7ad"
+proposal_ref: ".jikuo/policies/proposals/POLICYPROPOSAL-48704abad6.yaml"
+policy_ref: "POLICY-jikuo-development-idea-routing"
+decision: "approve_write"
+target:
+  kind: "approved_policy"
+  ref: "POLICY-jikuo-development-idea-routing"
+effect: "append_policy POLICY-jikuo-development-idea-routing and update policy-store manifest active refs"
+non_effect: "does not execute policy actions, persist evidence, or promote gates"
+approval_phrase: "在开发过程中，需要将开发想法需要被分类为任务或者insights,并更新对应文档记录为policy"
+created_at: "2026-05-14T03:45:04Z"
+source_plan_ref: "POLICYWRITEPLAN-37a80ec852"
+source_plan_schema: "jikuo.policy_write_plan.v0"
+storage:
+  path: ".jikuo/policies/decisions/POLICYDECISION-6d611dc7ad.yaml"
+  policy_store_ref: ".jikuo/policies"

@@ -1,0 +1,36 @@
+schema_version: "jikuo.configurable_rule_policy.v0"
+policy_id: "POLICY-jikuo-self-bootstrap-workflow"
+version: 1
+status: "active_report_only"
+title: "JIKUO self-bootstrap workflow"
+scenario_package: "engineering_governance"
+source_refs:
+  - type: "user_natural_language"
+    ref: "user_policy:self_bootstrap_jikuo_development_with_jikuo_workflow"
+triggers:
+  - trigger_id: "TRG-task-start"
+    type: "task_lifecycle_event"
+    event: "task_start"
+conditions:
+  - condition_id: "COND-policy-jikuo-self-bootstrap-workflow-task-type"
+    type: "task_type_is"
+    value: "jikuo_development"
+  - condition_id: "COND-policy-jikuo-self-bootstrap-workflow-jikuo-layer"
+    type: "jikuo_layer_is"
+    value: "process_governance"
+  - condition_id: "COND-policy-jikuo-self-bootstrap-workflow-changed-path"
+    type: "changed_path_matches"
+    pattern: "src/jikuo/**"
+  - condition_id: "COND-policy-jikuo-self-bootstrap-workflow-added-path"
+    type: "added_path_matches"
+    pattern: "docs/work_orders/**"
+required_actions:
+  - action_id: "ACT-render-pre-task-review"
+    type: "render_pre_task_review"
+required_evidence:
+  - evidence_id: "EVD-jikuo-self-bootstrap-workflow-evidence"
+    type: "jikuo_self_bootstrap_workflow_evidence"
+    satisfies_action: "ACT-render-pre-task-review"
+enforcement:
+  phase: "report_only"
+  level: "review_required"

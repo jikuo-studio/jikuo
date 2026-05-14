@@ -1,0 +1,17 @@
+schema_version: "jikuo.policy_decision.v0"
+decision_id: "POLICYDECISION-6441213839"
+proposal_ref: ".jikuo/policies/proposals/POLICYPROPOSAL-2826fe0ff1.yaml"
+policy_ref: "POLICY-jikuo-policy-vs-code-before-implementation"
+decision: "approve_write"
+target:
+  kind: "approved_policy"
+  ref: "POLICY-jikuo-policy-vs-code-before-implementation"
+effect: "append_policy POLICY-jikuo-policy-vs-code-before-implementation and update policy-store manifest active refs"
+non_effect: "does not execute policy actions, persist evidence, or promote gates"
+approval_phrase: "user approved adding self-bootstrap policy: distinguish policy concept from code implementation before edits"
+created_at: "2026-05-13T17:28:38Z"
+source_plan_ref: "POLICYWRITEPLAN-e4cbc6a1ce"
+source_plan_schema: "jikuo.policy_write_plan.v0"
+storage:
+  path: ".jikuo/policies/decisions/POLICYDECISION-6441213839.yaml"
+  policy_store_ref: ".jikuo/policies"

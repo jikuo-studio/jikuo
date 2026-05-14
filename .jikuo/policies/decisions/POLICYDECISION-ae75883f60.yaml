@@ -1,0 +1,17 @@
+schema_version: "jikuo.policy_decision.v0"
+decision_id: "POLICYDECISION-ae75883f60"
+proposal_ref: ".jikuo/policies/proposals/POLICYPROPOSAL-96871848a0.yaml"
+policy_ref: "POLICY-jikuo-implementation-intent-routing-before-change"
+decision: "approve_write"
+target:
+  kind: "approved_policy"
+  ref: "POLICY-jikuo-implementation-intent-routing-before-change"
+effect: "append_policy POLICY-jikuo-implementation-intent-routing-before-change and update policy-store manifest active refs"
+non_effect: "does not execute policy actions, persist evidence, or promote gates"
+approval_phrase: "那请你整合两条policy，启用新policy，将原有的两条有重复的policy改成非活动"
+created_at: "2026-05-14T03:52:52Z"
+source_plan_ref: "POLICYWRITEPLAN-8d291057a0"
+source_plan_schema: "jikuo.policy_write_plan.v0"
+storage:
+  path: ".jikuo/policies/decisions/POLICYDECISION-ae75883f60.yaml"
+  policy_store_ref: ".jikuo/policies"

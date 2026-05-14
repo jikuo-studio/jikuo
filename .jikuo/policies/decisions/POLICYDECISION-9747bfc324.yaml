@@ -1,0 +1,17 @@
+schema_version: "jikuo.policy_decision.v0"
+decision_id: "POLICYDECISION-9747bfc324"
+proposal_ref: ".jikuo/policies/proposals/POLICYPROPOSAL-5e2821fa41.yaml"
+policy_ref: "POLICY-jikuo-self-bootstrap-workflow"
+decision: "approve_write"
+target:
+  kind: "approved_policy"
+  ref: "POLICY-jikuo-self-bootstrap-workflow"
+effect: "create_policy POLICY-jikuo-self-bootstrap-workflow and update policy-store manifest active refs"
+non_effect: "does not execute policy actions, persist evidence, or promote gates"
+approval_phrase: "批准写入 JIKUO 自举开发 policy"
+created_at: "2026-05-13T16:14:22Z"
+source_plan_ref: "POLICYWRITEPLAN-4263e7c796"
+source_plan_schema: "jikuo.policy_write_plan.v0"
+storage:
+  path: ".jikuo/policies/decisions/POLICYDECISION-9747bfc324.yaml"
+  policy_store_ref: ".jikuo/policies"

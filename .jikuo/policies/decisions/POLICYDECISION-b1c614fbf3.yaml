@@ -1,0 +1,17 @@
+schema_version: "jikuo.policy_decision.v0"
+decision_id: "POLICYDECISION-b1c614fbf3"
+proposal_ref: ".jikuo/policies/proposals/POLICYEVOPROPOSAL-9f89a5f956.yaml"
+policy_ref: "POLICY-jikuo-policy-vs-code-before-implementation"
+decision: "deprecate"
+target:
+  kind: "approved_policy"
+  ref: "POLICY-jikuo-policy-vs-code-before-implementation"
+effect: "deprecate_policy POLICY-jikuo-policy-vs-code-before-implementation and update policy-store manifest lifecycle refs"
+non_effect: "does not execute policy actions, persist evidence, or promote gates"
+approval_phrase: "那请你整合两条policy，启用新policy，将原有的两条有重复的policy改成非活动"
+created_at: "2026-05-14T03:53:07Z"
+source_plan_ref: "POLICYEVO-b7cd6e5277"
+source_plan_schema: "jikuo.policy_evolution_plan.v0"
+storage:
+  path: ".jikuo/policies/decisions/POLICYDECISION-b1c614fbf3.yaml"
+  policy_store_ref: ".jikuo/policies"

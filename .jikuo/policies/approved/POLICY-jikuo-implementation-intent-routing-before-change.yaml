@@ -1,0 +1,30 @@
+schema_version: "jikuo.configurable_rule_policy.v0"
+policy_id: "POLICY-jikuo-implementation-intent-routing-before-change"
+version: 1
+status: "active_report_only"
+title: "Implementation intent routing before JIKUO change"
+scenario_package: "engineering_governance"
+source_refs:
+  - type: "policy_consolidation"
+    ref: "user_policy:consolidate_policy_vs_code_and_development_idea_routing"
+triggers:
+  - trigger_id: "TRG-task-start"
+    type: "task_lifecycle_event"
+    event: "task_start"
+conditions:
+  - condition_id: "COND-policy-jikuo-implementation-intent-routing-before-change-task-type"
+    type: "task_type_is"
+    value: "code_change"
+  - condition_id: "COND-policy-jikuo-implementation-intent-routing-before-change-jikuo-layer"
+    type: "jikuo_layer_is"
+    value: "implementation_governance"
+required_actions:
+  - action_id: "ACT-classify-implementation-intent-and-route-development-ideas-befor"
+    type: "classify_implementation_intent_and_route_development_ideas_before_change"
+required_evidence:
+  - evidence_id: "EVD-implementation-intent-routing-evidence"
+    type: "implementation_intent_routing_evidence"
+    satisfies_action: "ACT-classify-implementation-intent-and-route-development-ideas-befor"
+enforcement:
+  phase: "report_only"
+  level: "review_required"

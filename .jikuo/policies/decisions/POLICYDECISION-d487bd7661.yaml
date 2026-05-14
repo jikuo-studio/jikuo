@@ -1,0 +1,17 @@
+schema_version: "jikuo.policy_decision.v0"
+decision_id: "POLICYDECISION-d487bd7661"
+proposal_ref: ".jikuo/policies/proposals/POLICYPROPOSAL-d718938f5b.yaml"
+policy_ref: "POLICY-jikuo-deterministic-harness-chat-return"
+decision: "approve_write"
+target:
+  kind: "approved_policy"
+  ref: "POLICY-jikuo-deterministic-harness-chat-return"
+effect: "append_policy POLICY-jikuo-deterministic-harness-chat-return and update policy-store manifest active refs"
+non_effect: "does not execute policy actions, persist evidence, or promote gates"
+approval_phrase: "是的，我批准关于“机括是工具，但是启动后并须严格执行的harness工具，而非概率触发工具，特别在关键流程的可见性、可追溯、可审计性上”这条policy写入"
+created_at: "2026-05-14T02:45:08Z"
+source_plan_ref: "POLICYWRITEPLAN-cfd52a329d"
+source_plan_schema: "jikuo.policy_write_plan.v0"
+storage:
+  path: ".jikuo/policies/decisions/POLICYDECISION-d487bd7661.yaml"
+  policy_store_ref: ".jikuo/policies"

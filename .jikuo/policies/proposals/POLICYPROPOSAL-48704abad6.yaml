@@ -1,0 +1,87 @@
+schema: "jikuo.policy_write_plan.v0"
+schema_version: "jikuo.policy_write_plan.v0"
+report_only: true
+plan_id: "POLICYWRITEPLAN-37a80ec852"
+operation: "append_policy"
+status: "review"
+proposal_ref: ".jikuo/policies/proposals/POLICYPROPOSAL-48704abad6.yaml"
+policy_ref: "POLICY-jikuo-development-idea-routing"
+project_root: "D:\\personal_project\\Jikuo"
+policy_store_status: "active"
+policy_store_root: "D:\\personal_project\\Jikuo\\.jikuo\\policies"
+preflight:
+  project_state_initialized: true
+  store_exists: true
+  target_collision: false
+  decision_record_collision: false
+  proposal_snapshot_collision: false
+  manifest_stale: false
+  approval_present: false
+write_set:
+  - path: ".jikuo/policies/approved/POLICY-jikuo-development-idea-routing.yaml"
+    effect: "create approved policy file"
+    operation: "create"
+  - path: ".jikuo/policies/decisions/POLICYDECISION-6d611dc7ad.yaml"
+    effect: "create policy decision record"
+    operation: "create"
+  - path: ".jikuo/policies/manifest.yaml"
+    effect: "create or update policy-store manifest active_policy_refs"
+    operation: "create_or_update"
+  - path: ".jikuo/policies/proposals/POLICYPROPOSAL-48704abad6.yaml"
+    effect: "create policy write proposal snapshot"
+    operation: "create"
+non_effects:
+  - "does not create .jikuo/policies/"
+  - "does not write approved policy files"
+  - "does not update manifest.yaml"
+  - "does not execute policy actions"
+  - "does not create task-session evidence"
+  - "does not promote gates"
+approval_required: true
+write_allowed_by_command: false
+writes_performed: false
+guarded_apply_available: false
+proposed_policy:
+  schema_version: "jikuo.configurable_rule_policy.v0"
+  policy_id: "POLICY-jikuo-development-idea-routing"
+  version: 1
+  status: "active_report_only"
+  title: "Development idea routing before JIKUO implementation"
+  scenario_package: "engineering_governance"
+  source_refs:
+    - type: "user_natural_language"
+      ref: "user_policy:development_ideas_must_be_classified_as_tasks_or_insights"
+  triggers:
+    - trigger_id: "TRG-task-start"
+      type: "task_lifecycle_event"
+      event: "task_start"
+  conditions:
+    - condition_id: "COND-policy-jikuo-development-idea-routing-task-type"
+      type: "task_type_is"
+      value: "code_change"
+    - condition_id: "COND-policy-jikuo-development-idea-routing-jikuo-layer"
+      type: "jikuo_layer_is"
+      value: "implementation_governance"
+  required_actions:
+    - action_id: "ACT-classify-development-idea-as-task-or-insight-and-update-docs"
+      type: "classify_development_idea_as_task_or_insight_and_update_docs"
+  required_evidence:
+    - evidence_id: "EVD-development-idea-classification-evidence"
+      type: "development_idea_classification_evidence"
+      satisfies_action: "ACT-classify-development-idea-as-task-or-insight-and-update-docs"
+  enforcement:
+    phase: "report_only"
+    level: "review_required"
+refusal_reasons:
+  []
+warnings:
+  []
+source_refs:
+  - "pkg://jikuo/governance/jikuo_policy_store_configuration_flow.md"
+  - "pkg://jikuo/governance/jikuo_configurable_rule_trigger_policy.md"
+  - "pkg://jikuo/governance/jikuo_rule_action_evidence_model.md"
+  - "pkg://jikuo/governance/jikuo_policy_aware_agent_flow_contract.md"
+status_reason: "policy write plan is ready for desktop review; no durable write was performed"
+next_actions:
+  - "review the proposed policy, write targets, and non-effects in chat"
+  - "approve a future guarded policy writer only after the plan is correct"

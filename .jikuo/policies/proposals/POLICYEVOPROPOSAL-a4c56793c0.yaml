@@ -1,0 +1,67 @@
+schema: "jikuo.policy_evolution_plan.v0"
+schema_version: "jikuo.policy_evolution_plan.v0"
+report_only: true
+plan_id: "POLICYEVO-74e4cd540b"
+operation: "deprecate_policy"
+status: "review"
+proposal_ref: ".jikuo/policies/proposals/POLICYEVOPROPOSAL-a4c56793c0.yaml"
+decision_record_ref: ".jikuo/policies/decisions/POLICYDECISION-427b4746a8.yaml"
+project_root: "D:\\personal_project\\Jikuo"
+policy_store_status: "active"
+target_policy_ref: "POLICY-jikuo-development-idea-routing"
+target_policy_snapshot:
+  policy_id: "POLICY-jikuo-development-idea-routing"
+  version: 1
+  path: ".jikuo/policies/approved/POLICY-jikuo-development-idea-routing.yaml"
+  title: "Development idea routing before JIKUO implementation"
+  status: "active_report_only"
+replacement_policy_ref: null
+replacement_policy_path: null
+replacement_policy: null
+write_set:
+  - path: ".jikuo/policies/proposals/POLICYEVOPROPOSAL-a4c56793c0.yaml"
+    effect: "create policy evolution proposal snapshot"
+    operation: "create"
+  - path: ".jikuo/policies/decisions/POLICYDECISION-427b4746a8.yaml"
+    effect: "create policy evolution decision record"
+    operation: "create"
+  - path: ".jikuo/policies/manifest.yaml"
+    effect: "update policy-store manifest lifecycle refs"
+    operation: "update"
+preflight:
+  replacement_policy_collision: false
+feedback:
+  feedback_type: "needs_scope_narrowing"
+  summary: "Superseded by consolidated implementation intent routing policy."
+  source_ref: "POLICY-jikuo-implementation-intent-routing-before-change"
+recommended_changes:
+  - "confirm the policy should stop triggering for future tasks"
+  - "review the guarded deprecation write command before approval"
+  - "record a decision explaining why deprecation is preferred over narrowing"
+future_write_boundary:
+  requires_new_proposal: true
+  requires_decision_record: true
+  requires_guarded_writer: true
+  writer_implemented: true
+non_effects:
+  - "does not write policy files"
+  - "does not update manifest.yaml"
+  - "does not deprecate or supersede active policies"
+  - "does not execute policy actions"
+  - "does not promote gates"
+write_allowed_by_command: false
+writes_performed: false
+guarded_apply_available: false
+refusal_reasons:
+  []
+warnings:
+  []
+source_refs:
+  - "pkg://jikuo/governance/jikuo_policy_store_configuration_flow.md"
+  - "pkg://jikuo/governance/jikuo_configurable_rule_trigger_policy.md"
+  - "pkg://jikuo/governance/jikuo_rule_action_evidence_model.md"
+  - "pkg://jikuo/governance/jikuo_policy_aware_agent_flow_contract.md"
+status_reason: "policy evolution plan is ready for desktop review; no durable write was performed"
+next_actions:
+  - "review the proposed policy evolution path in chat"
+  - "if accepted, approve the generated guarded evolution write command"

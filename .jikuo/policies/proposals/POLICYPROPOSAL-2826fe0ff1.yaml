@@ -1,0 +1,87 @@
+schema: "jikuo.policy_write_plan.v0"
+schema_version: "jikuo.policy_write_plan.v0"
+report_only: true
+plan_id: "POLICYWRITEPLAN-e4cbc6a1ce"
+operation: "append_policy"
+status: "review"
+proposal_ref: ".jikuo/policies/proposals/POLICYPROPOSAL-2826fe0ff1.yaml"
+policy_ref: "POLICY-jikuo-policy-vs-code-before-implementation"
+project_root: "D:\\personal_project\\Jikuo"
+policy_store_status: "active"
+policy_store_root: "D:\\personal_project\\Jikuo\\.jikuo\\policies"
+preflight:
+  project_state_initialized: true
+  store_exists: true
+  target_collision: false
+  decision_record_collision: false
+  proposal_snapshot_collision: false
+  manifest_stale: false
+  approval_present: false
+write_set:
+  - path: ".jikuo/policies/approved/POLICY-jikuo-policy-vs-code-before-implementation.yaml"
+    effect: "create approved policy file"
+    operation: "create"
+  - path: ".jikuo/policies/decisions/POLICYDECISION-6441213839.yaml"
+    effect: "create policy decision record"
+    operation: "create"
+  - path: ".jikuo/policies/manifest.yaml"
+    effect: "create or update policy-store manifest active_policy_refs"
+    operation: "create_or_update"
+  - path: ".jikuo/policies/proposals/POLICYPROPOSAL-2826fe0ff1.yaml"
+    effect: "create policy write proposal snapshot"
+    operation: "create"
+non_effects:
+  - "does not create .jikuo/policies/"
+  - "does not write approved policy files"
+  - "does not update manifest.yaml"
+  - "does not execute policy actions"
+  - "does not create task-session evidence"
+  - "does not promote gates"
+approval_required: true
+write_allowed_by_command: false
+writes_performed: false
+guarded_apply_available: false
+proposed_policy:
+  schema_version: "jikuo.configurable_rule_policy.v0"
+  policy_id: "POLICY-jikuo-policy-vs-code-before-implementation"
+  version: 1
+  status: "active_report_only"
+  title: "Policy-vs-code classification before JIKUO implementation"
+  scenario_package: "engineering_governance"
+  source_refs:
+    - type: "user_natural_language"
+      ref: "user_policy:distinguish_policy_concept_from_code_change_before_editing"
+  triggers:
+    - trigger_id: "TRG-task-start"
+      type: "task_lifecycle_event"
+      event: "task_start"
+  conditions:
+    - condition_id: "COND-policy-jikuo-policy-vs-code-before-implementation-task-type"
+      type: "task_type_is"
+      value: "code_change"
+    - condition_id: "COND-policy-jikuo-policy-vs-code-before-implementation-jikuo-layer"
+      type: "jikuo_layer_is"
+      value: "implementation_governance"
+  required_actions:
+    - action_id: "ACT-classify-governance-vs-implementation-before-code-change"
+      type: "classify_governance_vs_implementation_before_code_change"
+  required_evidence:
+    - evidence_id: "EVD-governance-vs-implementation-classification-evidence"
+      type: "governance_vs_implementation_classification_evidence"
+      satisfies_action: "ACT-classify-governance-vs-implementation-before-code-change"
+  enforcement:
+    phase: "report_only"
+    level: "review_required"
+refusal_reasons:
+  []
+warnings:
+  []
+source_refs:
+  - "pkg://jikuo/governance/jikuo_policy_store_configuration_flow.md"
+  - "pkg://jikuo/governance/jikuo_configurable_rule_trigger_policy.md"
+  - "pkg://jikuo/governance/jikuo_rule_action_evidence_model.md"
+  - "pkg://jikuo/governance/jikuo_policy_aware_agent_flow_contract.md"
+status_reason: "policy write plan is ready for desktop review; no durable write was performed"
+next_actions:
+  - "review the proposed policy, write targets, and non-effects in chat"
+  - "approve a future guarded policy writer only after the plan is correct"

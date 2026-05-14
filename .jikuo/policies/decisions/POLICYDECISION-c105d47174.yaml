@@ -1,0 +1,17 @@
+schema_version: "jikuo.policy_decision.v0"
+decision_id: "POLICYDECISION-c105d47174"
+proposal_ref: ".jikuo/policies/proposals/POLICYPROPOSAL-325c1ea795.yaml"
+policy_ref: "POLICY-jikuo-policy-runtime-visibility"
+decision: "approve_write"
+target:
+  kind: "approved_policy"
+  ref: "POLICY-jikuo-policy-runtime-visibility"
+effect: "append_policy POLICY-jikuo-policy-runtime-visibility and update policy-store manifest active refs"
+non_effect: "does not execute policy actions, persist evidence, or promote gates"
+approval_phrase: "user approved continuing work on visible policy runtime status"
+created_at: "2026-05-13T17:38:04Z"
+source_plan_ref: "POLICYWRITEPLAN-6d0464a5f8"
+source_plan_schema: "jikuo.policy_write_plan.v0"
+storage:
+  path: ".jikuo/policies/decisions/POLICYDECISION-c105d47174.yaml"
+  policy_store_ref: ".jikuo/policies"
