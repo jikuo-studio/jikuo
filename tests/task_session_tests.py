@@ -294,6 +294,22 @@ class TaskSessionHelperTests(unittest.TestCase):
                 1,
             )
 
+    def test_write_accepts_relative_project_root_value(self):
+        module = load_task_session_module()
+        with temp_project_dir() as temp_dir:
+            project_root = create_ready_project(temp_dir, project_root_value=".")
+            result, code = module.write_task_session(
+                project_root=project_root,
+                task_title="Task Session Probe",
+                owner_agent="codex",
+                confirmed=True,
+                approval_phrase="<exact user phrase as spoken>",
+            )
+
+            self.assertEqual(code, 0, result)
+            self.assertEqual(result["status"], "written")
+            self.assertTrue(Path(result["session_path"]).exists())
+
     def test_write_refuses_project_root_mismatch(self):
         module = load_task_session_module()
         with temp_project_dir() as temp_dir:
@@ -347,6 +363,15 @@ class TaskSessionHelperTests(unittest.TestCase):
                     encoding="utf-8"
                 ),
             )
+
+    def test_index_dry_run_accepts_relative_project_root_value(self):
+        module = load_task_session_module()
+        with temp_project_dir() as temp_dir:
+            project_root = create_ready_project(temp_dir, project_root_value=".")
+            plan = module.build_index_refresh_plan(project_root=project_root)
+
+            self.assertTrue(plan["can_refresh"])
+            self.assertEqual(plan["refusal_reasons"], [])
 
     def test_index_dry_run_discovers_written_session_without_writing_index(self):
         module = load_task_session_module()

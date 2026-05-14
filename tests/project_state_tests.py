@@ -69,6 +69,8 @@ class ProjectStateBootstrapTests(unittest.TestCase):
             report["would_create"]["schema"],
             "jikuo.project_local_state.v0",
         )
+        self.assertEqual(report["would_create"]["project_root"], ".")
+        self.assertEqual(report["would_create"]["jikuo_state_root"], ".jikuo")
         self.assertFalse((MISSING_PROJECT / ".jikuo").exists())
 
     def test_valid_existing_project_state_is_initialized(self):

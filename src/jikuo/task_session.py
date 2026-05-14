@@ -271,6 +271,18 @@ def read_project_state_field(project_state_file: Path, field_name: str) -> str |
     return None
 
 
+def read_project_state_path_field(
+    project_state_file: Path,
+    field_name: str,
+    *,
+    project_root: Path,
+) -> Path | None:
+    return project_state.resolve_stored_project_path(
+        read_project_state_field(project_state_file, field_name),
+        project_root=project_root,
+    )
+
+
 def yaml_scalar(value: Any) -> str:
     if value is None:
         return "null"
@@ -392,7 +404,11 @@ def build_write_plan(
     if start_plan["project_state_status"] != "initialized":
         refusal_reasons.append("project_state_not_initialized")
 
-    project_state_root = read_project_state_field(project_state_file, "project_root")
+    project_state_root = read_project_state_path_field(
+        project_state_file,
+        "project_root",
+        project_root=resolved_root,
+    )
     if project_state_root is not None and Path(project_state_root) != resolved_root:
         refusal_reasons.append("project_root_mismatch")
     elif project_state_root is None and start_plan["project_state_status"] == "initialized":
@@ -758,7 +774,11 @@ def build_index_refresh_plan(
     if state_report["state_status"] != "initialized":
         refusal_reasons.append("project_state_not_initialized")
 
-    project_state_root = read_project_state_field(project_state_path, "project_root")
+    project_state_root = read_project_state_path_field(
+        project_state_path,
+        "project_root",
+        project_root=resolved_root,
+    )
     if project_state_root is not None and Path(project_state_root) != resolved_root:
         refusal_reasons.append("project_root_mismatch")
     elif project_state_root is None and state_report["state_status"] == "initialized":

@@ -20,6 +20,8 @@ PROJECT_STATE_SCHEMA = "jikuo.project_local_state.v0"
 WRITE_PLAN_SCHEMA = "jikuo.project_state_write_plan.v0"
 WRITE_RESULT_SCHEMA = "jikuo.project_state_write_result.v0"
 REGISTRY_REF = "docs/governance/rule_registry.yaml"
+PORTABLE_PROJECT_ROOT_REF = "."
+PORTABLE_STATE_ROOT_REF = ".jikuo"
 APPROVAL_TARGET = "JIKUO project-state initialization"
 APPROVAL_EFFECT = "create .jikuo/project_state.yaml"
 CONTRACT_REFS = [
@@ -48,6 +50,20 @@ def derive_project_id(project_root: Path) -> str:
     base = project_root.name.strip().lower()
     slug = re.sub(r"[^a-z0-9]+", "_", base).strip("_")
     return slug or "project"
+
+
+def resolve_stored_project_path(value: str | None, *, project_root: Path) -> Path | None:
+    """Resolve absolute, relative, or project:// path values from project_state."""
+
+    if not value:
+        return None
+    raw_value = value
+    if raw_value.startswith("project://"):
+        raw_value = raw_value[len("project://") :] or "."
+    candidate = Path(raw_value).expanduser()
+    if not candidate.is_absolute():
+        candidate = project_root / candidate
+    return candidate.resolve()
 
 
 def read_top_level_schema(path: Path) -> str | None:
@@ -145,8 +161,8 @@ def build_project_state_draft(
     return {
         "schema": PROJECT_STATE_SCHEMA,
         "project_id": derive_project_id(project_root),
-        "project_root": str(project_root),
-        "jikuo_state_root": str(state_root),
+        "project_root": PORTABLE_PROJECT_ROOT_REF,
+        "jikuo_state_root": PORTABLE_STATE_ROOT_REF,
         "active_scenario_packages": ["engineering_governance"],
         "accepted_contract_refs": CONTRACT_REFS,
         "registry_ref": REGISTRY_REF,
