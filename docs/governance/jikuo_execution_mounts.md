@@ -249,7 +249,7 @@ Current boundary:
 - no arbitrary command execution
 - emits loop step id and atom id trace
 - emits `chat_ready_markdown_schema: jikuo.chat_ready_markdown.v0` and `chat_ready_markdown` in JSON output for proposals and apply results
-- emits `jikuo.agent_flow_proposal.v1` with read-only policy-store status, exact trigger evaluation, report-only condition evaluation, report-only evidence matching, visible policy runtime status cards, guarded evidence persistence proposal, explicit task-session evidence ingestion, policy write-plan cards, no-write policy evolution-plan cards, and starter policy pack initialization cards where requested
+- emits `jikuo.agent_flow_proposal.v1` with read-only policy-store status, exact trigger evaluation, report-only condition evaluation, report-only evidence matching, visible policy runtime status cards, work-routing distinction evidence, guarded evidence persistence proposal, explicit task-session evidence ingestion, policy write-plan cards, no-write policy evolution-plan cards, and starter policy pack initialization cards where requested
 - emits `jikuo.agent_flow_apply_result.v0` for narrow approved task-session evidence, policy evolution, and starter policy pack initialization apply paths
 
 ### Step 3: Lightweight Codex Skill / Agent Instruction
@@ -289,6 +289,7 @@ Current status:
 
 - `JIKUO-MCP-01` work order is drafted but blocked by pre-MCP portability / security / package / visibility foundation.
 - `JIKUO-LIVE-12` Phase 1 is accepted as the out-of-band runtime visibility baseline; `JIKUO-INTG-01` remains drafted as the cross-client instruction foundation to review before MCP implementation.
+- `JIKUO-LIVE-13` is implemented and ready for review as the current self-bootstrap evidence-quality slice.
 - implementation has not started.
 - this step is packaging-only: wrap stable `agent_flow.py` / `policy_store.py` atoms without adding new governance capability.
 

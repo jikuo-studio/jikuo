@@ -57,6 +57,70 @@ def write_agent_flow_project_context(root: Path) -> None:
     )
 
 
+def write_taskmap_distinction_policy_store(root: Path) -> None:
+    store = root / ".jikuo" / "policies"
+    approved = store / "approved"
+    approved.mkdir(parents=True, exist_ok=True)
+    (approved / "POLICY-jikuo-taskmap-insight-followup-distinction.yaml").write_text(
+        "\n".join(
+            [
+                'schema_version: "jikuo.configurable_rule_policy.v0"',
+                'policy_id: "POLICY-jikuo-taskmap-insight-followup-distinction"',
+                "version: 1",
+                'status: "active_report_only"',
+                'title: "Taskmap insight follow-up distinction in user summaries"',
+                'scenario_package: "engineering_governance"',
+                "source_refs:",
+                '  - type: "test_fixture"',
+                '    ref: "tests:taskmap_distinction_policy"',
+                "triggers:",
+                '  - trigger_id: "TRG-task-start"',
+                '    type: "task_lifecycle_event"',
+                '    event: "task_start"',
+                "conditions:",
+                "  []",
+                "required_actions:",
+                '  - action_id: "ACT-distinguish-taskmap-insights-followups-in-user-summary"',
+                '    type: "distinguish_taskmap_insights_followups_in_user_summary"',
+                "required_evidence:",
+                '  - evidence_id: "EVD-taskmap-insight-followup-distinction-evidence"',
+                '    type: "taskmap_insight_followup_distinction_evidence"',
+                '    satisfies_action: "ACT-distinguish-taskmap-insights-followups-in-user-summary"',
+                "enforcement:",
+                '  phase: "report_only"',
+                '  level: "review_required"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (store / "manifest.yaml").write_text(
+        "\n".join(
+            [
+                'schema_version: "jikuo.policy_store_manifest.v0"',
+                'project_id: "agent_flow_taskmap_distinction_fixture"',
+                'store_root: ".jikuo/policies"',
+                "active_policy_refs:",
+                '  - policy_id: "POLICY-jikuo-taskmap-insight-followup-distinction"',
+                "    version: 1",
+                '    path: ".jikuo/policies/approved/POLICY-jikuo-taskmap-insight-followup-distinction.yaml"',
+                "proposal_refs:",
+                "  []",
+                "deprecated_policy_refs:",
+                "  []",
+                "superseded_policy_refs:",
+                "  []",
+                'last_updated_at: "2026-05-14T00:00:00Z"',
+                "compatibility:",
+                '  unknown_fields: "preserve"',
+                '  writer: "test_fixture"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+
 class AgentFlowProposalTests(unittest.TestCase):
     def test_task_start_propose_json_composes_no_write_atoms(self):
         completed = subprocess.run(
@@ -1361,6 +1425,55 @@ class AgentFlowProposalTests(unittest.TestCase):
         self.assertFalse(
             (POLICY_REAL_CHAIN_PROJECT / ".jikuo" / "task_sessions").exists()
         )
+
+    def test_task_start_records_taskmap_insight_followup_distinction_evidence(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            shutil.copytree(READY_PROJECT, project_root)
+            write_taskmap_distinction_policy_store(project_root)
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "propose",
+                    "--event",
+                    "task_start",
+                    "--task-title",
+                    "Taskmap Evidence Probe",
+                    "--project-root",
+                    str(project_root),
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            proposal = json.loads(completed.stdout)
+            self.assertEqual(proposal["policy_context"]["policy_store_status"], "active")
+            self.assertEqual(proposal["work_routing"]["category"], "taskmap")
+            self.assertEqual(
+                proposal["work_routing"]["taskmap_items"],
+                ["Taskmap Evidence Probe"],
+            )
+            self.assertIn("## Work Routing Evidence", proposal["chat_ready_markdown"])
+            self.assertEqual(len(proposal["triggered_policies"]), 1)
+            self.assertEqual(proposal["missing_evidence_reports"], [])
+            self.assertEqual(
+                proposal["evidence_status"][0]["required_type"],
+                "taskmap_insight_followup_distinction_evidence",
+            )
+            self.assertEqual(proposal["evidence_status"][0]["current_status"], "ok")
+            self.assertIn(
+                "CAP-TASKMAP-INSIGHT-FOLLOWUP-EVIDENCE-01",
+                {trace["atom_id"] for trace in proposal["atom_trace"]},
+            )
 
     def test_task_start_projects_pre_code_change_classification_policy(self):
         completed = subprocess.run(

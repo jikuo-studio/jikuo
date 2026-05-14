@@ -53,6 +53,29 @@ APPLY_OPERATIONS = {
     "starter_policy_pack_init",
     "task_session_evidence_update",
 }
+WORK_ROUTING_CATEGORIES = {
+    "taskmap",
+    "insight",
+    "follow_up",
+    "policy",
+    "deferred",
+    "mixed",
+}
+WORK_ROUTING_CATEGORY_ALIASES = {
+    "task": "taskmap",
+    "task_map": "taskmap",
+    "task-map": "taskmap",
+    "taskmap": "taskmap",
+    "insight": "insight",
+    "idea": "insight",
+    "followup": "follow_up",
+    "follow-up": "follow_up",
+    "follow_up": "follow_up",
+    "policy": "policy",
+    "defer": "deferred",
+    "deferred": "deferred",
+    "mixed": "mixed",
+}
 
 EVENT_ALIASES = {
     "status": "project_status",
@@ -113,6 +136,7 @@ NO_WRITE_ATOMS = {
     "CAP-POLICY-EVOLUTION-PLAN-PROPOSE-01",
     "CAP-POLICY-RUNTIME-STATUS-CARD-01",
     "CAP-RUNTIME-VISIBILITY-CHANNEL-01",
+    "CAP-TASKMAP-INSIGHT-FOLLOWUP-EVIDENCE-01",
     "CAP-STARTER-POLICY-PACK-INIT-01",
     "CAP-PROJECT-CONTEXT-RESOLVER-01",
     "CAP-POLICY-TEMPLATE-IMPORT-PLAN-01",
@@ -295,15 +319,156 @@ def build_policy_not_inspected_context() -> dict[str, Any]:
     }
 
 
+def normalize_work_routing_category(value: str | None) -> str:
+    if not value:
+        return "taskmap"
+    key = value.strip().lower().replace(" ", "_")
+    normalized = WORK_ROUTING_CATEGORY_ALIASES.get(key)
+    if normalized:
+        return normalized
+    if key in WORK_ROUTING_CATEGORIES:
+        return key
+    return "mixed"
+
+
+def item_for_work_routing(
+    *,
+    category: str,
+    task_title: str | None,
+    summary: str | None,
+) -> str:
+    title = (task_title or "").strip()
+    if title:
+        return title
+    text = (summary or "").strip()
+    if text:
+        return text
+    return f"current {category} work"
+
+
+def build_work_routing_distinction(
+    *,
+    event: str | None,
+    task_title: str | None,
+    summary: str | None,
+    work_routing_category: str | None,
+    work_routing_summary: str | None,
+) -> dict[str, Any] | None:
+    if event != "task_start":
+        return None
+
+    category = normalize_work_routing_category(work_routing_category)
+    item = item_for_work_routing(
+        category=category,
+        task_title=task_title,
+        summary=work_routing_summary or summary,
+    )
+    buckets = {
+        "taskmap_items": [],
+        "insight_items": [],
+        "follow_up_items": [],
+        "policy_items": [],
+        "deferred_items": [],
+    }
+    if category == "taskmap":
+        buckets["taskmap_items"].append(item)
+    elif category == "insight":
+        buckets["insight_items"].append(item)
+    elif category == "follow_up":
+        buckets["follow_up_items"].append(item)
+    elif category == "policy":
+        buckets["policy_items"].append(item)
+    elif category == "deferred":
+        buckets["deferred_items"].append(item)
+    else:
+        buckets["taskmap_items"].append(item)
+        buckets["follow_up_items"].append(
+            "review whether this mixed work should be split before final delivery"
+        )
+
+    routing_id = stable_id(
+        "work_route",
+        "|".join([event, category, item, work_routing_summary or summary or ""]),
+    )
+    if work_routing_summary:
+        routing_summary = work_routing_summary
+    elif category == "taskmap":
+        routing_summary = (
+            "Current governed work is classified as taskmap execution; insights "
+            "and follow-ups must be reported separately when present."
+        )
+    else:
+        routing_summary = (
+            f"Current governed work is classified as {category}; taskmap items, "
+            "insights, and follow-ups must stay distinct in user-facing summaries."
+        )
+    return {
+        "schema": "jikuo.taskmap_insight_followup_distinction.v0",
+        "routing_id": routing_id,
+        "category": category,
+        "classification_basis": (
+            "agent_supplied_work_routing_category"
+            if work_routing_category
+            else "agent_flow_default_task_start_taskmap"
+        ),
+        "summary": routing_summary,
+        **buckets,
+        "user_summary_contract": (
+            "Final governed-work summaries must distinguish taskmap work, "
+            "captured insights, and follow-up/deferred items."
+        ),
+    }
+
+
+def taskmap_insight_followup_evidence_for(
+    *,
+    event: str,
+    work_routing: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "evidence_id": stable_id(
+            "evidence",
+            "|".join(
+                [
+                    event,
+                    str(work_routing.get("routing_id") or "work_route"),
+                    "distinguish_taskmap_insights_followups_in_user_summary",
+                ]
+            ),
+        ),
+        "evidence_type": "taskmap_insight_followup_distinction_evidence",
+        "action_type": "distinguish_taskmap_insights_followups_in_user_summary",
+        "source": {
+            "kind": "agent_flow_work_routing_distinction",
+            "ref": work_routing.get("routing_id"),
+        },
+        "producer": {
+            "actor": "agent",
+            "tool": "python -B -m jikuo.agent_flow",
+        },
+        "status": "ok",
+        "summary": work_routing.get("summary"),
+        "taskmap_insight_followup_distinction": work_routing,
+    }
+
+
 def produced_policy_evidence_for(
     *,
     event: str | None,
     cards: list[dict[str, Any]],
+    work_routing: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     if event != "task_start":
         return []
 
     evidence: list[dict[str, Any]] = []
+    if work_routing:
+        evidence.append(
+            taskmap_insight_followup_evidence_for(
+                event=event,
+                work_routing=work_routing,
+            )
+        )
     for card in cards:
         if card.get("status") == "refused":
             continue
@@ -1727,6 +1892,8 @@ def build_proposal(
     project_root: Path | None = None,
     user_phrase: str | None = None,
     produced_evidence: list[dict[str, Any]] | None = None,
+    work_routing_category: str | None = None,
+    work_routing_summary: str | None = None,
 ) -> dict[str, Any]:
     event = normalize_event(raw_event)
     cards: list[dict[str, Any]]
@@ -1850,6 +2017,27 @@ def build_proposal(
     else:
         cards, traces, refusals = build_audit_cards()
 
+    work_routing = build_work_routing_distinction(
+        event=event,
+        task_title=task_title,
+        summary=summary,
+        work_routing_category=work_routing_category,
+        work_routing_summary=work_routing_summary,
+    )
+    if work_routing:
+        traces.append(
+            atom_trace(
+                loop_step_id="DPL-05",
+                atom_id="CAP-TASKMAP-INSIGHT-FOLLOWUP-EVIDENCE-01",
+                mode="no-write",
+                status="ok",
+                summary=(
+                    "classified current work as taskmap, insight, follow-up, "
+                    "policy, deferred, or mixed structured evidence"
+                ),
+            )
+        )
+
     if event is not None:
         policy_eval_event = (
             normalize_event(policy_event or "")
@@ -1859,6 +2047,7 @@ def build_proposal(
         inline_produced_evidence = produced_policy_evidence_for(
             event=event,
             cards=cards,
+            work_routing=work_routing,
         )
         inline_produced_evidence.extend(produced_evidence or [])
         policy_context, policy_traces, policy_sections = build_policy_context(
@@ -1934,6 +2123,7 @@ def build_proposal(
         "evidence_status": policy_sections["evidence_status"],
         "missing_evidence_reports": policy_sections["missing_evidence_reports"],
         "policy_feedback_options": policy_feedback_options,
+        "work_routing": work_routing,
         "atom_trace": traces,
         "cards": cards,
         "approval_boundary": {
@@ -2472,6 +2662,30 @@ def render_client_display_links(display_links: dict[str, Any]) -> list[str]:
     return lines
 
 
+def render_work_routing(work_routing: dict[str, Any]) -> list[str]:
+    lines = [
+        "## Work Routing Evidence",
+        "",
+        f"- Category: `{work_routing.get('category')}`",
+        f"- Routing id: `{work_routing.get('routing_id')}`",
+        f"- Basis: `{work_routing.get('classification_basis')}`",
+        f"- Summary: {work_routing.get('summary')}",
+    ]
+    bucket_labels = [
+        ("taskmap_items", "Taskmap items"),
+        ("insight_items", "Insight items"),
+        ("follow_up_items", "Follow-up items"),
+        ("policy_items", "Policy items"),
+        ("deferred_items", "Deferred items"),
+    ]
+    for key, label in bucket_labels:
+        values = work_routing.get(key) or []
+        lines.append(f"- {label}: `{len(values)}`")
+        lines.extend(f"  - {item}" for item in values)
+    lines.append("")
+    return lines
+
+
 def render_markdown(proposal: dict[str, Any]) -> str:
     policy_context = proposal["policy_context"]
     lines = [
@@ -2506,6 +2720,9 @@ def render_markdown(proposal: dict[str, Any]) -> str:
     if display_links:
         lines.extend([""])
         lines.extend(render_client_display_links(display_links))
+    work_routing = proposal.get("work_routing")
+    if work_routing:
+        lines.extend(render_work_routing(work_routing))
     lines.extend(
         [
             "",
@@ -2643,6 +2860,12 @@ def build_parser() -> argparse.ArgumentParser:
     propose.add_argument("--changed-path", action="append", default=[])
     propose.add_argument("--added-path", action="append", default=[])
     propose.add_argument("--summary", default=None)
+    propose.add_argument(
+        "--work-routing-category",
+        choices=sorted(WORK_ROUTING_CATEGORY_ALIASES),
+        default=None,
+    )
+    propose.add_argument("--work-routing-summary", default=None)
     propose.add_argument("--evidence-kind", default=None)
     propose.add_argument("--evidence-ref", default=None)
     propose.add_argument(
@@ -2860,6 +3083,8 @@ def main(argv: list[str] | None = None) -> int:
         project_root=args.project_root,
         user_phrase=args.user_phrase,
         produced_evidence=produced_evidence,
+        work_routing_category=args.work_routing_category,
+        work_routing_summary=args.work_routing_summary,
     )
     proposal_output = proposal_with_chat_ready_markdown(
         proposal,
