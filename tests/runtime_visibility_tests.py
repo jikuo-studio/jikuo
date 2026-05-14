@@ -144,6 +144,106 @@ class RuntimeVisibilityTests(unittest.TestCase):
             self.assertEqual(show_card.returncode, 0, show_card.stderr)
             self.assertEqual(show_card.stdout, proposal["chat_ready_markdown"])
 
+    def test_show_reports_stale_task_session_index_without_refreshing_it(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            shutil.copytree(READY_PROJECT, project_root)
+            state_path = project_root / ".jikuo" / "project_state.yaml"
+            state_path.write_text(
+                state_path.read_text(encoding="utf-8")
+                .replace('project_root: "fixture"', 'project_root: "."')
+                .replace('jikuo_state_root: "fixture/.jikuo"', 'jikuo_state_root: ".jikuo"'),
+                encoding="utf-8",
+            )
+            sessions_root = project_root / ".jikuo" / "task_sessions"
+            sessions_root.mkdir(parents=True)
+            session_path = sessions_root / "task_20260514T000000Z_stale_probe.yaml"
+            session_path.write_text(
+                "\n".join(
+                    [
+                        'schema: "jikuo.task_session.v0"',
+                        'session_id: "task_20260514T000000Z_stale_probe"',
+                        'task_title: "Stale Probe"',
+                        'owner_agent: "codex"',
+                        'created_at: "2026-05-14T00:00:00Z"',
+                        'lifecycle_status: "started"',
+                        "",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            runtime_visibility.persist_agent_flow_snapshot(
+                project_root=project_root,
+                proposal={
+                    "schema": "test.proposal",
+                    "proposal_id": "stale_task_session_index_probe",
+                    "runner_mode": "test",
+                    "status": "review",
+                    "trigger_decision": {"invocation_scenario": "test"},
+                    "cards": [],
+                    "triggered_policies": [],
+                    "missing_evidence_reports": [],
+                    "required_actions": [],
+                    "write_effect": {"writes_performed": False},
+                },
+                card_markdown="# Probe\n",
+            )
+
+            show = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    "-m",
+                    "jikuo",
+                    "show",
+                    "--project-root",
+                    str(project_root),
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(show.returncode, 0, show.stderr)
+            show_report = json.loads(show.stdout)
+            task_index = show_report["task_session_index"]
+            self.assertEqual(task_index["schema"], "jikuo.task_session_index_status.v0")
+            self.assertEqual(task_index["status"], "stale")
+            self.assertEqual(task_index["current_latest_task_session_ref_count"], 0)
+            self.assertEqual(task_index["discovered_task_session_count"], 1)
+            self.assertTrue(task_index["would_update_project_state"])
+            self.assertIn("--dry-run", task_index["commands"]["dry_run"])
+            self.assertIn("--refresh", task_index["commands"]["refresh"])
+            self.assertIn("latest_task_session_refs: []", (
+                project_root / ".jikuo" / "project_state.yaml"
+            ).read_text(encoding="utf-8"))
+
+            show_markdown = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    "-m",
+                    "jikuo",
+                    "show",
+                    "--project-root",
+                    str(project_root),
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(show_markdown.returncode, 0, show_markdown.stderr)
+            self.assertIn("## Task-Session Index", show_markdown.stdout)
+            self.assertIn("- Status: `stale`", show_markdown.stdout)
+            self.assertIn("jikuo.task_session index --dry-run", show_markdown.stdout)
+
     def test_package_fixture_projects_are_not_mutated_by_runtime_visibility(self):
         completed = subprocess.run(
             [

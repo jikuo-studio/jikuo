@@ -1,0 +1,42 @@
+schema: "jikuo.task_session.v0"
+session:
+  session_id: "task_20260514T174452Z_jikuo_live_17_task_session_index_stale_hint_3c76a2a9"
+  task_title: "JIKUO-LIVE-17 task-session index stale hint"
+  owner_agent: "codex"
+  created_at: "2026-05-14T17:44:52Z"
+  updated_at: "2026-05-14T17:44:52Z"
+  lifecycle_status: "started"
+scenario:
+  scenario_chain_id: "engineering_governance.task_session_start"
+  scenario_package: "engineering_governance"
+changed_surfaces: []
+rule_results: []
+document_mounts: []
+evidence_snapshots: []
+verification: []
+user_decisions:
+  -
+    decision_id: "task_session_start_approval"
+    decision_target: "JIKUO task-session file creation"
+    decision_effect: "create one compact task-session sidecar record"
+    decision_noneffect: "do not capture raw chat transcript"
+    exact_user_phrase: "ARCH-03\u6211\u6279\u51c6\u63a5\u53d7\uff0c\u7136\u540e\u6211\u4eec\u6309\u7167\u4e0a\u9762\u7684\u6e05\u5355\uff0c\u7ee7\u7eed\u4e0b\u4e00\u6b65\u7684\u5de5\u4f5c\u5427\u3002"
+    recorded_at: "2026-05-14T17:44:52Z"
+    surface: "desktop_agent_or_cli_bridge"
+completion:
+  status: "in_progress"
+handoff:
+  summary: null
+audit_trail:
+  -
+    action: "task_session_started"
+    actor: "codex"
+    recorded_at: "2026-05-14T17:44:52Z"
+    effect: "create one compact task-session sidecar record"
+supersession:
+  supersedes: []
+  superseded_by: null
+capture_policy:
+  raw_chat_transcript: "disallowed"
+  exact_user_phrase: "decision_only_with_target_and_effect"
+  product_output_quality_judgement: "out_of_scope"

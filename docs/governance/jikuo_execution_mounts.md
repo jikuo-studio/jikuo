@@ -528,11 +528,12 @@ Accepted target for the current pre-MCP visibility review:
 - `JIKUO-ARCH-02` is accepted and keeps integration-specific logic under `src/jikuo/integrations/` while anchoring MCP under `src/jikuo/integrations/mcp/`
 - `JIKUO-ARCH-03` is accepted and verifies that the first MCP wrapper can call structured core APIs instead of CLI `main()` or stdout scraping; remaining blockers are starter provenance, previous/latest todo snapshot limits, and response privacy classification
 - `JIKUO-LIVE-16` makes `policy_runtime_status` the first visible governance card in chat-ready and runtime-card output while keeping structured `cards[]` order stable for callers
+- `JIKUO-LIVE-17` keeps `latest_task_session_refs` as a separate guarded refresh and makes stale/current task-session index status visible through `jikuo show`
 - `JIKUO-MCP-01` includes `jikuo.get_runtime_status`, `jikuo.get_runtime_status_card`, `jikuo.get_display_card`, display directives, card priority order, runtime snapshot refs, and integration-neutral implementation placement
 - `JIKUO-INTG-01` is accepted and implements canonical `JIKUO.md` plus guarded client instruction sync without making client hooks mandatory
 - `JIKUO-SDK-01` is accepted and defines OpenAI Agents SDK, Claude Agent SDK, Google ADK, Vercel AI SDK, and Google Antigravity-style agentic platforms as optional orchestration / client-environment adapters that consume JIKUO through MCP / CLI / public adapter APIs while local policy, evidence, approvals, and runtime visibility remain authoritative
 - `JIKUO-LIVE-15` adds a self-bootstrap requirement that governed JIKUO development slices bind, create, or explicitly defer a task-session at task start; `.jikuo/project_state.yaml latest_task_session_refs` refresh remains a separate guarded action unless promoted later
-- `JIKUO-MCP-01` remains blocked until visibility, provenance, package boundary, project-context binding, privacy return boundaries, resource-reference hygiene, integration neutrality, and Agent SDK extension posture are accepted or explicitly deferred
+- `JIKUO-MCP-01` remains blocked until visibility, provenance, package boundary, project-context binding, previous/latest todo snapshot posture, privacy return boundaries, resource-reference hygiene, integration neutrality, and Agent SDK extension posture are accepted or explicitly deferred
 - dashboard, OS notifications, per-client hook packs, rollback, broader conditions, UI, Plugin, and gates remain deferred
 
 Accepted result:

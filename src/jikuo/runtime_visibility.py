@@ -11,15 +11,17 @@ from pathlib import Path
 from typing import Any
 
 if __package__:
-    from . import project_state
+    from . import project_state, task_session
 else:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     import project_state
+    import task_session
 
 
 RUNTIME_VISIBILITY_REPORT_SCHEMA = "jikuo.runtime_visibility_report.v0"
 RUNTIME_STATE_SUMMARY_SCHEMA = "jikuo.runtime_state_summary.v0"
 CLIENT_DISPLAY_LINKS_SCHEMA = "jikuo.client_display_links.v0"
+TASK_SESSION_INDEX_STATUS_SCHEMA = "jikuo.task_session_index_status.v0"
 RUNTIME_DIR_REF = ".jikuo/runtime"
 LAST_CARD_REF = ".jikuo/runtime/last_card.md"
 STATE_SUMMARY_REF = ".jikuo/runtime/state_summary.json"
@@ -377,6 +379,77 @@ def load_last_card(project_root: Path | None = None) -> tuple[str | None, dict[s
     }
 
 
+def index_refresh_commands(project_root: Path) -> dict[str, str]:
+    root = str(project_root)
+    return {
+        "dry_run": (
+            'python -B -m jikuo.task_session index --dry-run '
+            f'--project-root "{root}" --format json'
+        ),
+        "refresh": (
+            'python -B -m jikuo.task_session index --refresh '
+            f'--project-root "{root}" --confirm-update-project-state-index '
+            '--approval-phrase "<exact user phrase as spoken>" --format json'
+        ),
+    }
+
+
+def build_task_session_index_status(project_root: Path | None = None) -> dict[str, Any]:
+    resolved_root = project_root_for(project_root)
+    try:
+        plan = task_session.build_index_refresh_plan(project_root=resolved_root)
+    except Exception as exc:  # pragma: no cover - defensive display boundary
+        return {
+            "schema": TASK_SESSION_INDEX_STATUS_SCHEMA,
+            "status": "unavailable",
+            "project_root": str(resolved_root),
+            "project_state_ref": ".jikuo/project_state.yaml",
+            "reason": f"task-session index status unavailable: {exc}",
+        }
+
+    current_refs = plan.get("current_latest_task_session_refs") or []
+    proposed_refs = plan.get("proposed_latest_task_session_refs") or []
+    can_refresh = bool(plan.get("can_refresh"))
+    needs_refresh = can_refresh and not task_session.refs_equal(current_refs, proposed_refs)
+    if not can_refresh:
+        status = "unavailable"
+        reason = "task-session index refresh plan has refusal reasons"
+    elif needs_refresh:
+        status = "stale"
+        reason = "latest_task_session_refs does not match discovered task-session files"
+    else:
+        status = "current"
+        reason = "latest_task_session_refs already matches discovered task-session files"
+
+    return {
+        "schema": TASK_SESSION_INDEX_STATUS_SCHEMA,
+        "status": status,
+        "project_root": str(resolved_root),
+        "project_state_ref": ".jikuo/project_state.yaml",
+        "current_latest_task_session_ref_count": len(current_refs),
+        "discovered_task_session_count": int(plan.get("discovered_session_count", 0)),
+        "proposed_latest_task_session_ref_count": len(proposed_refs),
+        "can_refresh": can_refresh,
+        "would_update_project_state": needs_refresh,
+        "refusal_reasons": plan.get("refusal_reasons", []),
+        "warnings": plan.get("warnings", []),
+        "commands": index_refresh_commands(resolved_root) if needs_refresh else {},
+        "reason": reason,
+    }
+
+
+def attach_task_session_index_status(
+    summary: dict[str, Any],
+    *,
+    project_root: Path | None = None,
+) -> dict[str, Any]:
+    output = dict(summary)
+    output["task_session_index"] = build_task_session_index_status(
+        project_root=project_root,
+    )
+    return output
+
+
 def format_state_summary(summary: dict[str, Any]) -> str:
     status = summary.get("status", "available")
     lines = [
@@ -408,6 +481,36 @@ def format_state_summary(summary: dict[str, Any]) -> str:
             lines.append(f"- Status: `{display_links.get('status', 'unavailable')}`")
             if display_links.get("reason"):
                 lines.append(f"- Reason: {display_links['reason']}")
+    task_session_index = summary.get("task_session_index") or {}
+    if task_session_index:
+        lines.extend(
+            [
+                "",
+                "## Task-Session Index",
+                "",
+                f"- Status: `{task_session_index.get('status')}`",
+                (
+                    "- Indexed latest refs: "
+                    f"`{task_session_index.get('current_latest_task_session_ref_count')}`"
+                ),
+                (
+                    "- Discovered task sessions: "
+                    f"`{task_session_index.get('discovered_task_session_count')}`"
+                ),
+            ]
+        )
+        if task_session_index.get("reason"):
+            lines.append(f"- Reason: {task_session_index['reason']}")
+        commands = task_session_index.get("commands") or {}
+        if commands:
+            lines.extend(
+                [
+                    "- Review command:",
+                    f"  `{commands['dry_run']}`",
+                    "- Refresh command:",
+                    f"  `{commands['refresh']}`",
+                ]
+            )
     counts = summary.get("counts") or {}
     if counts:
         lines.extend(
@@ -464,7 +567,10 @@ def main(argv: list[str] | None = None) -> int:
             print(format_state_summary(report), end="")
         return 0 if report["status"] == "available" else 2
 
-    summary = load_state_summary(project_root=args.project_root)
+    summary = attach_task_session_index_status(
+        load_state_summary(project_root=args.project_root),
+        project_root=args.project_root,
+    )
     if args.format == "json":
         print(json.dumps(summary, ensure_ascii=False, indent=2))
     else:

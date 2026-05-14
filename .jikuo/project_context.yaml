@@ -67,6 +67,10 @@ document_roles:
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-16_policy_runtime_card_priority.md"
     required: true
     note: "Pre-MCP follow-up making policy_runtime_status the first visible governance card in chat-ready and runtime output."
+  task_session_index_stale_hint_work_order:
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-17_task_session_index_stale_hint.md"
+    required: true
+    note: "Pre-MCP follow-up keeping latest_task_session_refs refresh separate while making stale task-session indexes visible in jikuo show."
   desktop_operating_loop_work_order:
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-FLOW-02_desktop_app_primary_operating_loop.md"
     required: true
