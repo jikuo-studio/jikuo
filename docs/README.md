@@ -50,6 +50,7 @@ The following remain outside this repository's active documentation mount unless
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-17_task_session_index_stale_hint.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-18_previous_latest_todo_snapshot_posture.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-19_starter_policy_provenance_backfill.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-SEC-02_mcp_response_privacy_classification_baseline.md`
 
 ---
 

@@ -137,35 +137,72 @@ Rules:
 
 MCP tools may return data to a desktop client. That makes response shape a privacy boundary.
 
-Every future MCP-facing result should classify fields as one of:
+Every MCP-facing response must classify fields before serialization. The first implementation may assume local desktop `stdio`, but the response model must still distinguish local-only data from data safe to return through a future remote transport.
 
-- `returned_to_client`
-- `stays_local`
-- `redacted_before_return`
+Classification vocabulary:
 
-Minimal shape:
+| Classification | Meaning | Default serialization |
+|---|---|---|
+| `return` | Safe compact projection for MCP response. | Return as-is. |
+| `local_only` | Useful on the local machine but unsafe for remote or shared transport. | Return only for explicitly local transport; omit for remote / unknown transport. |
+| `redact_required` | Sensitive value needed for local records but not for model/client display. | Replace with `<REDACTED>`. |
+| `redact_optional` | Potentially sensitive evidence or user content. | Return compact summary by default; full content requires explicit local-only mode. |
+
+Minimal response metadata:
 
 ```yaml
 privacy:
+  schema: "jikuo.response_privacy.v0"
+  default_transport: "local_stdio"
   default_return_policy: "return_explicit_projection_only"
-  returned_to_client:
-    - "card_summary"
-    - "policy_status"
-  stays_local:
-    - "raw_local_file_content"
-    - "approval_phrase_raw"
-  redaction:
-    enabled: true
-    redacted_fields:
-      - "approval_phrase"
+  fields:
+    policy_id: "return"
+    policy_namespace: "return"
+    task_title: "return"
+    evidence_summary: "return"
+    relative_file_path: "return"
+    absolute_file_path: "local_only"
+    approval_phrase: "redact_required"
+    evidence_full_content: "redact_optional"
+    raw_chat_transcript: "local_only"
+```
+
+Default field classifications:
+
+| Field kind | Default classification |
+|---|---|
+| IDs, refs, enum values, status strings, counts, and timestamps | `return` |
+| Compact policy / evidence / task summaries | `return` |
+| Relative project paths such as `.jikuo/runtime/last_card.md` | `return` |
+| Absolute local paths such as `D:\personal_project\...` | `local_only` |
+| Approval phrase values | `redact_required` |
+| Full evidence text or user-provided excerpts | `redact_optional` |
+| Raw chat transcript or raw model/tool transcript | `local_only` |
+| Raw local file content | `local_only` |
+| Secrets, tokens, credentials, environment dumps | `redact_required` or refuse before serialization |
+
+Runtime display links:
+
+```yaml
+client_display_links:
+  last_card_relative:
+    ref: ".jikuo/runtime/last_card.md"
+    classification: "return"
+  last_card_absolute:
+    path: "D:\\personal_project\\Jikuo\\.jikuo\\runtime\\last_card.md"
+    classification: "local_only"
 ```
 
 Rules:
 
-- raw chat transcripts should not be returned by default
-- raw approval phrases should not be returned unless explicitly needed for a local audit display
-- tool results should prefer compact projections over raw local records
-- future MCP implementation must define response-level privacy classification before returning project-local records
+- raw chat transcripts must not be returned by default
+- raw approval phrases must not be returned in MCP responses; return approval boundary summaries instead
+- tool results must prefer compact projections over raw local records
+- every MCP response schema must identify which fields are `return`, `local_only`, `redact_required`, or `redact_optional`
+- local desktop clickable absolute paths are allowed only when transport is explicitly local
+- remote or unknown transports must omit `local_only` fields and redact required fields before return
+- card-only tools may return `card_markdown` as `return`, but they must not embed raw approval phrases, raw transcripts, or raw local file contents in the card
+- starter policy MCP tools must refuse or omit any policy record missing provenance
 
 ## 6. Namespace And ID Stability
 
@@ -266,7 +303,7 @@ SEC-01 adds the trust posture:
 Before MCP implementation:
 
 - MCP tool schemas should include project root / context profile fields only where needed
-- MCP responses should expose privacy-classified projections
+- MCP responses must expose privacy-classified projections and apply field-level serialization rules before return
 - write-capable MCP tools should preserve principal, approval phrase boundary, and proposal-ref binding
 - MCP server logs must not pollute stdout protocol traffic
 - MCP implementation must not return raw sidecar records when a compact card projection is enough
@@ -293,7 +330,7 @@ This contract is acceptable if it makes the following clear:
 
 - templates need provenance before reuse
 - approval needs a principal field even in single-user MVP
-- MCP responses need explicit privacy return boundaries
+- MCP responses need explicit field-level privacy return boundaries
 - ids need namespace fields before cross-project sharing
 - telemetry default is off
 - durable events need UTC time and future local monotonic sequence

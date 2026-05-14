@@ -62,7 +62,7 @@ Review acceptance:
 - Does the contract state telemetry is off by default?
 - Does every future approval record have a `principal` field, even if MVP uses `local_user`?
 - Does a template have provenance fields before import / approval?
-- Do MCP-facing results distinguish `returned_to_client`, `stays_local`, and `redacted_before_return`?
+- Do MCP-facing results distinguish `return`, `local_only`, `redact_required`, and `redact_optional` fields?
 - Do portable ids have `namespace` and `fully_qualified_id` fields?
 - Do durable records include `timestamp_utc`, `timestamp_source`, and future `monotonic_seq`?
 - Does concurrency appear as a future guarded-write requirement without implementing locks in this slice?
@@ -72,7 +72,7 @@ Review acceptance:
 Unit tests:
 
 - not required for this contract-only slice.
-- future implementation must test privacy classification, principal preservation, namespace stability, and telemetry-off default.
+- future implementation must test field-level privacy classification, local-only omission, redaction, principal preservation, namespace stability, and telemetry-off default.
 
 Integration tests:
 

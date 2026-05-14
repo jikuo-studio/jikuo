@@ -44,8 +44,8 @@ Review evidence:
 | `policy_store.inspect_policy_store(...)` / `evaluate_policy_triggers(...)` | Pass. Policy store inspection and report-only evaluation return structured reports without stdout scraping. | `jikuo.status` and runtime-status tools can wrap these functions directly. |
 | `policy_store.build_policy_write_plan(...)` / `build_policy_evolution_plan(...)` | Pass. Proposal paths are no-write, structured, and already separate from guarded writers. | MCP plan tools can expose proposal cards without introducing new policy mutation semantics. |
 | `runtime_visibility.prepare_agent_flow_snapshot(...)` / `persist_prepared_agent_flow_snapshot(...)` | Pass. Runtime visibility is local, project-root confined, and reusable outside CLI. | Card-producing MCP tools should call this core path or the existing proposal output helper. |
-| `runtime_visibility.build_client_display_links(...)` | Pass for local desktop use; privacy caution for remote transports. Absolute local paths are useful for clickable desktop links but must be treated as local-only if a future non-local MCP transport appears. | First MCP MVP should assume local desktop `stdio`; any remote transport must add explicit response privacy classification before exposing local paths. |
-| `policy_templates.build_import_plan(...)` / `activate_template_from_plan(...)` | Pass. Template import is structured, binding-aware, and guarded for activation. | MCP template import tools can wrap the plan/apply path after response privacy classification is accepted. |
+| `runtime_visibility.build_client_display_links(...)` | Pass for local desktop use; privacy caution for remote transports. Absolute local paths are useful for clickable desktop links but must be treated as local-only if a future non-local MCP transport appears. | First MCP MVP should assume local desktop `stdio`; `JIKUO-SEC-02` defines field-level serialization rules for local-only fields before implementation begins. |
+| `policy_templates.build_import_plan(...)` / `activate_template_from_plan(...)` | Pass. Template import is structured, binding-aware, and guarded for activation. | MCP template import tools can wrap the plan/apply path after `JIKUO-SEC-02` and revised `JIKUO-MCP-01` are accepted. |
 | `starter_policies.build_starter_init_plan(...)` / `initialize_starter_pack(...)` | Pass after `JIKUO-LIVE-19`. Starter init is structured and guarded, and official starter policies now carry SEC-01-style `provenance` metadata with `source: verified_jikuo_official`. | Starter policy MCP exposure must preserve provenance and refuse missing-provenance records. |
 | `src/jikuo/integrations/` | Pass. Client instruction sync already lives under integrations; core modules do not import integration adapters. | MCP implementation should create its adapter under `src/jikuo/integrations/mcp/` and should not add MCP-specific logic to `agent_flow.py` or `policy_store.py`. |
 
@@ -74,7 +74,7 @@ This review does not clear every MCP blocker.
 
 Still blocking MCP implementation unless accepted or explicitly deferred:
 
-1. Response-level privacy classification for MCP-returned local paths, approval data, and raw sidecar records.
+1. User acceptance of `JIKUO-SEC-02` field-level MCP response privacy classification.
 2. User acceptance of the revised `JIKUO-MCP-01` scope.
 
 Resolved after this review:
@@ -82,6 +82,7 @@ Resolved after this review:
 - `JIKUO-ARCH-03` was accepted by the user on 2026-05-15.
 - `JIKUO-LIVE-18` disabled the fake previous/latest todo same-file binding for v0 and deferred real snapshot rotation as a future capability.
 - `JIKUO-LIVE-19` backfilled official starter policy provenance and removed missing starter provenance as an MCP blocker.
+- `JIKUO-SEC-02` documents field-level MCP response privacy classification and moves the remaining privacy blocker to user acceptance.
 
 ## 6. Scenario-Chain-Atom Registration Evidence
 

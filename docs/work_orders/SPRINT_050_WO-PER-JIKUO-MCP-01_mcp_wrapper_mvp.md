@@ -27,6 +27,7 @@ Implementation is intentionally blocked until these pre-MCP foundations are acce
 - `JIKUO-ARCH-03`: MCP pre-implementation API neutrality review, or an explicit user decision to defer the review
 - `JIKUO-SDK-01`: Agent SDK / agentic platform extension posture, or an explicit user decision to defer SDK ecosystem planning
 - `JIKUO-LIVE-19`: starter policy provenance backfill accepted before starter policies are exposed through MCP
+- `JIKUO-SEC-02`: MCP response privacy classification baseline accepted before any MCP response is serialized
 - `.jikuo/project_context.yaml` previous-todo binding must not pretend to provide a real previous snapshot unless snapshot rotation exists
 
 ## 2. User Scenario
@@ -140,7 +141,7 @@ This slice must not implement:
 
 Recommended implementation slices:
 
-0. Confirm `PKG-00`, `CORE-20`, `SEC-01`, `PKG-01`, `CORE-20B`, `CORE-23`, `CORE-24`, `LIVE-12` Phase 1, `INTG-01`, `ARCH-02`, `ARCH-03`, `SDK-01`, `LIVE-19`, response privacy classification, revised MCP scope acceptance, and any approved minimal package extraction prerequisites are complete or explicitly deferred with user approval.
+0. Confirm `PKG-00`, `CORE-20`, `SEC-01`, `PKG-01`, `CORE-20B`, `CORE-23`, `CORE-24`, `LIVE-12` Phase 1, `INTG-01`, `ARCH-02`, `ARCH-03`, `SDK-01`, `LIVE-19`, `SEC-02`, revised MCP scope acceptance, and any approved minimal package extraction prerequisites are complete or explicitly deferred with user approval.
 1. Create a testable MCP adapter boundary under `src/jikuo/integrations/mcp/` that maps tool names and arguments to package-safe `agent_flow.py` / `policy_store.py` behavior.
 2. Add card-only and runtime-status-card tool adapters before broader proposal tools.
 3. Add display directives, `card_priority_order`, and out-of-band runtime snapshot refs to card-producing tool responses.
@@ -150,6 +151,35 @@ Recommended implementation slices:
 7. Add smoke verification for tool discovery and one no-write card-only tool call.
 8. Update universal and client-specific instruction packs to prefer MCP when available, while keeping `agent_flow.py` as a fallback.
 
+## 7A. MCP Implementation Startup Checklist
+
+MCP implementation must not start until each item is checked, accepted, or explicitly deferred by the user:
+
+- [x] `JIKUO-ARCH-03` API neutrality review accepted.
+- [x] `JIKUO-LIVE-16` keeps `policy_runtime_status` first in card display order.
+- [x] `JIKUO-LIVE-17` keeps task-session index refresh independent and visible through `jikuo show`.
+- [x] `JIKUO-LIVE-18` disables fake previous/latest todo snapshot binding.
+- [x] `JIKUO-LIVE-19` backfills official starter policy provenance.
+- [x] `JIKUO-SEC-02` defines field-level MCP response privacy classification.
+- [ ] User accepts the revised `JIKUO-MCP-01` scope as the implementation scope.
+- [ ] First fixture project for MCP integration tests is selected or created.
+- [ ] MCP SDK dependency posture is decided: use official SDK if locally available; stop at adapter boundary if unavailable.
+- [ ] First implementation PR/slice confirms it will create code under `src/jikuo/integrations/mcp/` only.
+
+Field-level response privacy requirements for the implementation slice:
+
+- every MCP response schema identifies `return`, `local_only`, `redact_required`, and `redact_optional` fields
+- `local_only` fields are returned only for explicit local desktop `stdio`
+- remote or unknown transports omit `local_only` fields
+- `redact_required` fields are never returned as raw values
+- starter policy tools refuse or omit records missing provenance
+
+First user-experience acceptance standard:
+
+- In an MCP-compatible desktop client, a governed task-start call must display `policy_runtime_status` before lifecycle or task-session cards.
+- The user must be able to open `.jikuo/runtime/last_card.md` or run `jikuo show --last-card` to verify the same card out of band.
+- A no-write MCP call must not create `.jikuo/policies/`, `.jikuo/task_sessions/`, or update `.jikuo/project_state.yaml`; only runtime visibility files may update when a card is produced.
+
 ## 8. Testing Requirements
 
 Unit tests:
@@ -158,6 +188,9 @@ Unit tests:
 - no-write proposal calls do not write
 - guarded apply calls refuse without confirmation and approval phrase
 - policy evolution apply refuses mismatched proposal refs
+- every response field is classified as `return`, `local_only`, `redact_required`, or `redact_optional`
+- `redact_required` fields replace raw values before return
+- `local_only` fields are omitted for non-local or unknown transports
 
 Integration tests:
 
@@ -166,6 +199,8 @@ Integration tests:
 - `jikuo.get_runtime_status_card` returns card markdown only plus display directives
 - `jikuo.get_display_card` returns the last runtime card from `.jikuo/runtime/`
 - card-producing proposal tools return display directives where `card_priority_order[0]` is `policy_runtime_status`
+- card-producing proposal tools return relative runtime refs as `return` and absolute local paths as `local_only`
+- starter policy tools refuse or omit missing-provenance records
 - `jikuo.propose_policy_write_plan` returns a no-write card
 - `jikuo.propose_policy_evolution_plan` returns a proposal ref
 - `jikuo.apply_policy_evolution_write` succeeds only in a copied temporary fixture with matching proposal ref
