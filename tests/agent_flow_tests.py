@@ -28,6 +28,37 @@ POLICY_TEMPLATE = (
 )
 
 
+def create_agent_flow_ready_project(root: Path) -> None:
+    registry = root / "docs" / "governance"
+    registry.mkdir(parents=True, exist_ok=True)
+    (registry / "rule_registry.yaml").write_text("rules: []\n", encoding="utf-8")
+    state_root = root / ".jikuo"
+    state_root.mkdir(parents=True, exist_ok=True)
+    (state_root / "project_state.yaml").write_text(
+        "\n".join(
+            [
+                'schema: "jikuo.project_local_state.v0"',
+                'project_id: "agent_flow_ready_project"',
+                f'project_root: "{root}"',
+                f'jikuo_state_root: "{state_root}"',
+                "active_scenario_packages:",
+                '  - "engineering_governance"',
+                "accepted_contract_refs:",
+                '  - "pkg://jikuo/schemas/task_session.schema.md"',
+                'registry_ref: "docs/governance/rule_registry.yaml"',
+                "latest_task_session_refs: []",
+                "latest_rule_proposal_refs: []",
+                "latest_handoff_ref: null",
+                "compatibility:",
+                '  unknown_fields: "preserve"',
+                '  writer: "test_fixture"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+
 def write_agent_flow_project_context(root: Path) -> None:
     docs_dir = root / "docs"
     docs_dir.mkdir(parents=True, exist_ok=True)
@@ -164,6 +195,79 @@ def write_main_doc_mount_policy_store(root: Path) -> None:
             [
                 'schema_version: "jikuo.policy_store_manifest.v0"',
                 'project_id: "agent_flow_main_doc_mount_fixture"',
+                'store_root: ".jikuo/policies"',
+                "active_policy_refs:",
+                f'  - policy_id: "{policy_id}"',
+                "    version: 1",
+                f'    path: ".jikuo/policies/approved/{policy_id}.yaml"',
+                "proposal_refs:",
+                "  []",
+                "deprecated_policy_refs:",
+                "  []",
+                "superseded_policy_refs:",
+                "  []",
+                'last_updated_at: "2026-05-14T00:00:00Z"',
+                "compatibility:",
+                '  unknown_fields: "preserve"',
+                '  writer: "test_fixture"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+
+def write_task_session_binding_policy_store(root: Path) -> None:
+    store = root / ".jikuo" / "policies"
+    approved = store / "approved"
+    approved.mkdir(parents=True, exist_ok=True)
+    policy_id = "POLICY-jikuo-task-session-binding-at-slice-start"
+    (approved / f"{policy_id}.yaml").write_text(
+        "\n".join(
+            [
+                'schema_version: "jikuo.configurable_rule_policy.v0"',
+                f'policy_id: "{policy_id}"',
+                "version: 1",
+                'status: "active_report_only"',
+                'title: "Task-session binding at governed slice start"',
+                'scenario_package: "self_bootstrap_governance"',
+                "source_refs:",
+                '  - type: "test_fixture"',
+                '    ref: "tests:task_session_binding_policy"',
+                "triggers:",
+                '  - trigger_id: "TRG-task-start"',
+                '    type: "task_lifecycle_event"',
+                '    event: "task_start"',
+                "conditions:",
+                '  - condition_id: "COND-code-change"',
+                '    type: "task_type_is"',
+                '    value: "code_change"',
+                '  - condition_id: "COND-implementation-governance"',
+                '    type: "jikuo_layer_is"',
+                '    value: "implementation_governance"',
+                '  - condition_id: "COND-source-change"',
+                '    type: "changed_path_matches"',
+                '    pattern: "src/jikuo/**"',
+                "required_actions:",
+                '  - action_id: "ACT-bind-create-or-explicitly-defer-task-session"',
+                '    type: "bind_create_or_explicitly_defer_task_session"',
+                "required_evidence:",
+                '  - evidence_id: "EVD-task-session-binding-evidence"',
+                '    type: "task_session_binding_evidence"',
+                '    satisfies_action: "ACT-bind-create-or-explicitly-defer-task-session"',
+                "enforcement:",
+                '  phase: "report_only"',
+                '  level: "review_required"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (store / "manifest.yaml").write_text(
+        "\n".join(
+            [
+                'schema_version: "jikuo.policy_store_manifest.v0"',
+                'project_id: "agent_flow_task_session_binding_fixture"',
                 'store_root: ".jikuo/policies"',
                 "active_policy_refs:",
                 f'  - policy_id: "{policy_id}"',
@@ -679,6 +783,95 @@ class AgentFlowProposalTests(unittest.TestCase):
             self.assertIn(
                 "User marked this triggered policy as not applicable for this task.",
                 updated,
+            )
+
+    def test_apply_task_session_start_refuses_without_approval(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_copy = Path(tmp) / "ready_project"
+            project_copy.mkdir()
+            create_agent_flow_ready_project(project_copy)
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "apply",
+                    "--operation",
+                    "task_session_start",
+                    "--task-title",
+                    "Agent Flow Start Apply Probe",
+                    "--project-root",
+                    str(project_copy),
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 2, completed.stderr)
+            report = json.loads(completed.stdout)
+            self.assertEqual(report["schema"], "jikuo.agent_flow_apply_result.v0")
+            self.assertEqual(report["operation"], "task_session_start")
+            self.assertEqual(report["status"], "refused")
+            self.assertFalse(report["write_performed"])
+            self.assertIn("missing_confirmation_flag", report["refusal_reasons"])
+            self.assertIn("approval_evidence_missing", report["refusal_reasons"])
+            self.assertFalse((project_copy / ".jikuo" / "task_sessions").exists())
+
+    def test_apply_task_session_start_writes_after_approval(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_copy = Path(tmp) / "ready_project"
+            project_copy.mkdir()
+            create_agent_flow_ready_project(project_copy)
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "apply",
+                    "--operation",
+                    "task_session_start",
+                    "--task-title",
+                    "Agent Flow Start Apply Probe",
+                    "--project-root",
+                    str(project_copy),
+                    "--confirm-apply",
+                    "--approval-phrase",
+                    "I approve this task-session start through agent_flow.",
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            report = json.loads(completed.stdout)
+            self.assertEqual(report["schema"], "jikuo.agent_flow_apply_result.v0")
+            self.assertEqual(report["operation"], "task_session_start")
+            self.assertEqual(report["status"], "applied")
+            self.assertTrue(report["write_performed"])
+            self.assertEqual(
+                report["target_result_schema"],
+                "jikuo.task_session_write_result.v0",
+            )
+            target = Path(report["target_result"]["session_path"])
+            self.assertTrue(target.is_file())
+            self.assertTrue(
+                report["target_result"]["verification"]["schema_ok"]
+            )
+            atom_ids = {trace["atom_id"] for trace in report["atom_trace"]}
+            self.assertIn("CAP-TASK-START-WRITE-01", atom_ids)
+            self.assertIn(
+                "CAP-AGENT-FLOW-APPLY-TASK-SESSION-START-01",
+                atom_ids,
             )
 
     def test_apply_starter_policy_pack_init_refuses_without_approval(self):
@@ -1539,6 +1732,144 @@ class AgentFlowProposalTests(unittest.TestCase):
                 "CAP-TASKMAP-INSIGHT-FOLLOWUP-EVIDENCE-01",
                 {trace["atom_id"] for trace in proposal["atom_trace"]},
             )
+
+    def test_task_start_records_task_session_binding_evidence(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            shutil.copytree(READY_PROJECT, project_root)
+            write_task_session_binding_policy_store(project_root)
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "propose",
+                    "--event",
+                    "task_start",
+                    "--task-title",
+                    "Task Session Binding Probe",
+                    "--project-root",
+                    str(project_root),
+                    "--task-type",
+                    "code_change",
+                    "--jikuo-layer",
+                    "implementation_governance",
+                    "--changed-path",
+                    "src/jikuo/agent_flow.py",
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            proposal = json.loads(completed.stdout)
+            self.assertEqual(proposal["policy_context"]["policy_store_status"], "active")
+            self.assertEqual(
+                proposal["triggered_policies"][0]["policy_ref"],
+                "POLICY-jikuo-task-session-binding-at-slice-start",
+            )
+            self.assertEqual(proposal["missing_evidence_reports"], [])
+            self.assertEqual(
+                proposal["evidence_status"][0]["required_type"],
+                "task_session_binding_evidence",
+            )
+            self.assertEqual(proposal["evidence_status"][0]["current_status"], "ok")
+            atom_ids = {trace["atom_id"] for trace in proposal["atom_trace"]}
+            self.assertIn("CAP-TASK-SESSION-BINDING-EVIDENCE-01", atom_ids)
+            self.assertTrue(
+                proposal["approval_boundary"]["guarded_apply_available"]
+            )
+            command = proposal["cards"][0]["command_proposal"]["command_preview"]
+            self.assertIn("python -B -m jikuo.agent_flow apply", command)
+            self.assertIn("--operation \"task_session_start\"", command)
+            self.assertIn("--confirm-apply", command)
+            self.assertIn("--approval-phrase", command)
+            self.assertFalse((project_root / ".jikuo" / "task_sessions").exists())
+
+    def test_task_start_binds_existing_task_session_as_policy_evidence(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            create_agent_flow_ready_project(project_root)
+            write_task_session_binding_policy_store(project_root)
+            completed_create = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "apply",
+                    "--operation",
+                    "task_session_start",
+                    "--task-title",
+                    "Existing Binding Probe",
+                    "--project-root",
+                    str(project_root),
+                    "--confirm-apply",
+                    "--approval-phrase",
+                    "I approve this task-session start through agent_flow.",
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertEqual(completed_create.returncode, 0, completed_create.stderr)
+            created_report = json.loads(completed_create.stdout)
+            session_id = created_report["target_result"]["session_id"]
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "propose",
+                    "--event",
+                    "task_start",
+                    "--task-title",
+                    "Existing Binding Probe",
+                    "--session-id",
+                    session_id,
+                    "--project-root",
+                    str(project_root),
+                    "--task-type",
+                    "code_change",
+                    "--jikuo-layer",
+                    "implementation_governance",
+                    "--changed-path",
+                    "src/jikuo/agent_flow.py",
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            proposal = json.loads(completed.stdout)
+            self.assertEqual(proposal["cards"][0]["card_kind"], "task_session_binding")
+            self.assertEqual(proposal["cards"][0]["status"], "ok")
+            self.assertIsNone(proposal["cards"][0].get("command_proposal"))
+            self.assertEqual(proposal["missing_evidence_reports"], [])
+            self.assertEqual(
+                proposal["evidence_status"][0]["required_type"],
+                "task_session_binding_evidence",
+            )
+            self.assertEqual(proposal["evidence_status"][0]["current_status"], "ok")
+            atom_ids = {trace["atom_id"] for trace in proposal["atom_trace"]}
+            self.assertIn("CAP-TASK-STATUS-01", atom_ids)
+            self.assertIn("CAP-TASK-SESSION-BINDING-EVIDENCE-01", atom_ids)
 
     def test_completion_review_policy_evidence_surfaces_without_task_session_root(self):
         with tempfile.TemporaryDirectory() as tmp:

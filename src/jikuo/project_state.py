@@ -119,7 +119,7 @@ def classify_state(state_root: Path, state_file: Path) -> tuple[str, list[str]]:
 
 
 def quote_yaml(value: str) -> str:
-    return json.dumps(value, ensure_ascii=False)
+    return json.dumps(value, ensure_ascii=True)
 
 
 def render_project_state_yaml(state: dict[str, Any]) -> str:

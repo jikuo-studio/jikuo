@@ -151,6 +151,7 @@ For future MCP / plugin work, also mount:
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-11_deterministic_harness_chat_return_contract.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-12_out_of_band_runtime_visibility_channels.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-14_completion_review_policy_only_surfacing.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-15_self_bootstrap_task_session_binding.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-INTG-01_universal_instruction_file_distribution.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-MCP-01_mcp_wrapper_mvp.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-ARCH-02_integration_neutrality_and_integrations_layout.md`
@@ -294,6 +295,7 @@ Current status:
 - `JIKUO-LIVE-12` Phase 1 is accepted as the out-of-band runtime visibility baseline; `JIKUO-ARCH-02` is accepted as the integration-neutrality layout contract; `JIKUO-SDK-01` is accepted as the Agent SDK and agentic platform extension-posture review; `JIKUO-INTG-01` is implemented and accepted as the cross-client instruction foundation before MCP implementation.
 - `JIKUO-LIVE-13` is accepted as the self-bootstrap evidence-quality slice; normal task-start proposals now satisfy the taskmap / insight / follow-up distinction evidence requirement.
 - `JIKUO-LIVE-14` is accepted as the completion-review surfacing slice; completion-review policy evidence can now succeed visibly while task-session lifecycle unavailability remains separate review context.
+- `JIKUO-LIVE-15` is accepted as the self-bootstrap task-session binding slice; task-start proposals now emit task-session binding evidence, `agent_flow.py apply --operation task_session_start` can create a guarded session, and the current LIVE-15 slice has a durable task-session record.
 - implementation has not started.
 - this step is packaging-only: wrap stable `agent_flow.py` / `policy_store.py` atoms without adding new governance capability.
 
@@ -512,6 +514,7 @@ Current next task:
 
 - accepted `JIKUO-LIVE-12` Phase 1 out-of-band runtime visibility
 - accepted `JIKUO-LIVE-14` completion review policy-only surfacing
+- accepted `JIKUO-LIVE-15` self-bootstrap task-session binding
 - next review / accept revised integration-neutral `JIKUO-MCP-01` card-only tool and display-directive scope
 
 Task goal:
@@ -525,6 +528,7 @@ Accepted target for the current pre-MCP visibility review:
 - `JIKUO-MCP-01` includes `jikuo.get_runtime_status`, `jikuo.get_runtime_status_card`, `jikuo.get_display_card`, display directives, runtime snapshot refs, and integration-neutral implementation placement
 - `JIKUO-INTG-01` is accepted and implements canonical `JIKUO.md` plus guarded client instruction sync without making client hooks mandatory
 - `JIKUO-SDK-01` is accepted and defines OpenAI Agents SDK, Claude Agent SDK, Google ADK, Vercel AI SDK, and Google Antigravity-style agentic platforms as optional orchestration / client-environment adapters that consume JIKUO through MCP / CLI / public adapter APIs while local policy, evidence, approvals, and runtime visibility remain authoritative
+- `JIKUO-LIVE-15` adds a self-bootstrap requirement that governed JIKUO development slices bind, create, or explicitly defer a task-session at task start; `.jikuo/project_state.yaml latest_task_session_refs` refresh remains a separate guarded action unless promoted later
 - `JIKUO-MCP-01` remains blocked until visibility, provenance, package boundary, project-context binding, privacy return boundaries, resource-reference hygiene, integration neutrality, and Agent SDK extension posture are accepted or explicitly deferred
 - dashboard, OS notifications, per-client hook packs, rollback, broader conditions, UI, Plugin, and gates remain deferred
 

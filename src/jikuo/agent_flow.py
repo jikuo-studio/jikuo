@@ -52,6 +52,7 @@ APPLY_OPERATIONS = {
     "policy_template_activation",
     "starter_policy_pack_init",
     "task_session_evidence_update",
+    "task_session_start",
 }
 WORK_ROUTING_CATEGORIES = {
     "taskmap",
@@ -136,6 +137,7 @@ NO_WRITE_ATOMS = {
     "CAP-POLICY-EVOLUTION-PLAN-PROPOSE-01",
     "CAP-POLICY-RUNTIME-STATUS-CARD-01",
     "CAP-RUNTIME-VISIBILITY-CHANNEL-01",
+    "CAP-TASK-SESSION-BINDING-EVIDENCE-01",
     "CAP-TASKMAP-INSIGHT-FOLLOWUP-EVIDENCE-01",
     "CAP-STARTER-POLICY-PACK-INIT-01",
     "CAP-PROJECT-CONTEXT-RESOLVER-01",
@@ -452,6 +454,56 @@ def taskmap_insight_followup_evidence_for(
     }
 
 
+def task_session_binding_evidence_for(
+    *,
+    event: str,
+    card: dict[str, Any],
+) -> dict[str, Any]:
+    task_session_refs = list(card.get("task_session_refs") or [])
+    command = card.get("command_proposal") or {}
+    binding_status = str(
+        card.get(
+            "task_session_binding_status",
+            "guarded_create_proposed"
+            if command.get("command_preview")
+            else "binding_reviewed",
+        )
+    )
+    return {
+        "evidence_id": stable_id(
+            "evidence",
+            "|".join(
+                [
+                    event,
+                    str(card.get("card_id") or "task_session_start_preview"),
+                    "bind_create_or_explicitly_defer_task_session",
+                ]
+            ),
+        ),
+        "evidence_type": "task_session_binding_evidence",
+        "action_type": "bind_create_or_explicitly_defer_task_session",
+        "source": {
+            "kind": "agent_flow_card",
+            "ref": card.get("card_id"),
+        },
+        "producer": {
+            "actor": "agent",
+            "tool": "python -B -m jikuo.agent_flow",
+        },
+        "status": "ok",
+        "summary": (
+            "agent_flow surfaced task-session binding handling for this slice: "
+            f"{binding_status}"
+        ),
+        "task_session_binding": {
+            "status": binding_status,
+            "task_session_refs": task_session_refs,
+            "command_kind": command.get("command_kind"),
+            "approval_required": bool(command.get("requires_user_approval")),
+        },
+    }
+
+
 def produced_policy_evidence_for(
     *,
     event: str | None,
@@ -472,6 +524,10 @@ def produced_policy_evidence_for(
     for card in cards:
         if card.get("status") == "refused":
             continue
+        if card.get("card_kind") in {"task_session_start_preview", "task_session_binding"}:
+            evidence.append(
+                task_session_binding_evidence_for(event=event, card=card)
+            )
         card_id = str(card.get("card_id") or "")
         evidence.append(
             {
@@ -911,6 +967,7 @@ def build_task_start_cards(
     *,
     project_root: Path | None,
     task_title: str | None,
+    session_id: str | None,
     owner_agent: str,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]:
     if not task_title:
@@ -925,12 +982,86 @@ def build_task_start_cards(
         )
         return [card], [], [refusal]
 
+    if session_id:
+        status_report = task_session.build_status_report(
+            project_root=project_root,
+            session_id=session_id,
+        )
+        if status_report.get("session_status") == "found":
+            card = generic_card(
+                card_kind="task_session_binding",
+                status="ok",
+                title="Task-session binding",
+                summary="An existing task-session is bound to this governed slice.",
+                shown_inputs=[
+                    f"project_root: {status_report.get('project_root')}",
+                    f"session_id: {session_id}",
+                ],
+                shown_outputs=[
+                    f"matches: {len(status_report.get('matched_paths', []))}",
+                    *[
+                        f"session_path: {match}"
+                        for match in status_report.get("matched_paths", [])
+                    ],
+                ],
+                next_actions=[
+                    "use the bound task-session for evidence, completion, and handoff updates"
+                ],
+            )
+            card["task_session_refs"] = [session_id]
+            card["task_session_binding_status"] = "existing_session_bound"
+            traces = [
+                atom_trace(
+                    loop_step_id="DPL-04",
+                    atom_id="CAP-TASK-STATUS-01",
+                    mode="no-write",
+                    status="found",
+                    summary="verified explicit task-session binding for task start",
+                ),
+                atom_trace(
+                    loop_step_id="DPL-06",
+                    atom_id="CAP-CARD-TASKSESSION-01",
+                    mode="no-write",
+                    status=card_status(card),
+                    summary="projected existing task-session binding into a desktop card",
+                ),
+            ]
+            return [card], traces, []
+
     plan = task_session.build_start_plan(
         project_root=project_root,
         task_title=task_title,
         owner_agent=owner_agent,
     )
     card = task_session_cards.build_card(plan)
+    if plan.get("can_start") and card.get("command_proposal"):
+        card = dict(card)
+        command = dict(card["command_proposal"])
+        command["command_kind"] = "agent_flow_task_session_start"
+        command["expected_result_schema"] = APPLY_RESULT_SCHEMA
+        command["command_preview"] = " ".join(
+            [
+                "python -B -m jikuo.agent_flow apply",
+                "--operation",
+                command_arg("task_session_start"),
+                "--task-title",
+                command_arg(task_title),
+                "--owner-agent",
+                command_arg(owner_agent),
+                "--project-root",
+                command_arg(plan["project_root"]),
+                "--confirm-apply",
+                "--approval-phrase",
+                command_arg(APPROVAL_PHRASE_PLACEHOLDER),
+                "--format json",
+            ]
+        )
+        command["required_flags"] = ["--confirm-apply", "--approval-phrase"]
+        card["command_proposal"] = command
+        if card.get("approval_request"):
+            approval = dict(card["approval_request"])
+            approval["approved_command_kind"] = "agent_flow_task_session_start"
+            card["approval_request"] = approval
     traces = [
         atom_trace(
             loop_step_id="DPL-03",
@@ -1951,6 +2082,7 @@ def build_proposal(
         cards, traces, refusals = build_task_start_cards(
             project_root=project_root,
             task_title=task_title,
+            session_id=session_id,
             owner_agent=owner_agent,
         )
     elif event == "index_preview":
@@ -2066,6 +2198,23 @@ def build_proposal(
                 ),
             )
         )
+    if event == "task_start" and any(
+        card.get("card_kind") in {"task_session_start_preview", "task_session_binding"}
+        and card.get("status") != "refused"
+        for card in cards
+    ):
+        traces.append(
+            atom_trace(
+                loop_step_id="DPL-05",
+                atom_id="CAP-TASK-SESSION-BINDING-EVIDENCE-01",
+                mode="no-write",
+                status="ok",
+                summary=(
+                    "projected task-session binding handling as report-only "
+                    "policy evidence"
+                ),
+            )
+        )
 
     if event is not None:
         policy_eval_event = (
@@ -2083,7 +2232,7 @@ def build_proposal(
             project_root=project_root,
             event=policy_eval_event or event,
             produced_evidence=inline_produced_evidence,
-            task_session_id=session_id if event == "policy_evidence_check" else None,
+            task_session_id=session_id,
             task_type=task_type,
             jikuo_layer=jikuo_layer,
             changed_paths=changed_paths,
@@ -2126,6 +2275,7 @@ def build_proposal(
         "policy_feedback_record",
         "policy_template_import_plan",
         "starter_policy_pack_init",
+        "task_start",
     }
 
     return {
@@ -2199,6 +2349,7 @@ def build_apply_result(
     *,
     operation: str,
     project_root: Path | None,
+    task_title: str | None,
     session_id: str | None,
     evidence_kind: str | None,
     evidence_ref: str | None,
@@ -2260,7 +2411,42 @@ def build_apply_result(
             "next_actions": ["retry with a supported apply operation"],
         }, 2
 
-    if operation == "task_session_evidence_update":
+    if operation == "task_session_start":
+        target_result, exit_code = task_session.write_task_session(
+            project_root=project_root,
+            task_title=task_title or "",
+            owner_agent=owner_agent,
+            confirmed=confirmed,
+            approval_phrase=approval_phrase,
+        )
+        write_performed = bool(target_result.get("write_performed"))
+        traces.extend(
+            [
+                atom_trace(
+                    loop_step_id="DPL-07",
+                    atom_id="CAP-TASK-START-WRITE-01",
+                    mode="guarded-write",
+                    status=target_result.get("status", "unknown"),
+                    summary="called guarded task-session start writer",
+                ),
+                atom_trace(
+                    loop_step_id="DPL-07",
+                    atom_id="CAP-AGENT-FLOW-APPLY-TASK-SESSION-START-01",
+                    mode="guarded-write",
+                    status=target_result.get("status", "unknown"),
+                    summary="applied guarded task-session start through agent_flow.py",
+                ),
+            ]
+        )
+        approval_target = "JIKUO task-session file creation"
+        approval_effect = "create one compact task-session sidecar record"
+        approval_non_effects = [
+            "does not update .jikuo/project_state.yaml latest_task_session_refs",
+            "does not write policy files",
+            "does not execute policy actions",
+            "does not judge product output quality",
+        ]
+    elif operation == "task_session_evidence_update":
         target_result, exit_code = task_session.update_task_session(
             project_root=project_root,
             session_id=session_id,
@@ -2958,6 +3144,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     apply = subparsers.add_parser("apply")
     apply.add_argument("--operation", choices=sorted(APPLY_OPERATIONS), required=True)
+    apply.add_argument("--task-title", default=None)
     apply.add_argument("--session-id", default=None)
     apply.add_argument("--evidence-kind", default=None)
     apply.add_argument("--evidence-ref", default=None)
@@ -3001,6 +3188,7 @@ def main(argv: list[str] | None = None) -> int:
         report, exit_code = build_apply_result(
             operation=args.operation,
             project_root=args.project_root,
+            task_title=args.task_title,
             session_id=args.session_id,
             evidence_kind=args.evidence_kind,
             evidence_ref=args.evidence_ref,
