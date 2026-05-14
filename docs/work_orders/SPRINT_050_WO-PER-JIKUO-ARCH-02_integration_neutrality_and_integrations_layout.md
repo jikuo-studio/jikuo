@@ -139,4 +139,4 @@ API-neutrality precheck:
 - `policy_store.evaluate_policy_triggers`, `build_policy_write_plan`, and `build_policy_evolution_plan` already expose structured core behavior.
 - `runtime_visibility.prepare_agent_flow_snapshot`, `persist_prepared_agent_flow_snapshot`, `load_state_summary`, and `load_last_card` provide reusable local visibility helpers.
 - Future MCP / SDK adapters should call these core functions or a small facade over them, not CLI `main()` functions.
-- A fuller MCP pre-implementation API neutrality review remains a task before code implementation.
+- The fuller MCP pre-implementation API neutrality review is tracked by `docs/work_orders/SPRINT_050_WO-PER-JIKUO-ARCH-03_mcp_pre_implementation_api_neutrality_review.md`.

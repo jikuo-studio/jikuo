@@ -43,6 +43,10 @@ document_roles:
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-ARCH-02_integration_neutrality_and_integrations_layout.md"
     required: true
     note: "Immediate pre-MCP contract for integration-neutral core APIs and src/jikuo/integrations/ layout."
+  mcp_api_neutrality_review_work_order:
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-ARCH-03_mcp_pre_implementation_api_neutrality_review.md"
+    required: true
+    note: "Pre-MCP review of callable core APIs, display/runtime visibility reuse, and remaining blockers before MCP implementation."
   agent_sdk_adapter_work_order:
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-SDK-01_agent_sdk_adapter_exploration.md"
     required: true

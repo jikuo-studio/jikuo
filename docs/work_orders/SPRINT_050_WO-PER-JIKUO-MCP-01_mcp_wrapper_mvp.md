@@ -24,6 +24,7 @@ Implementation is intentionally blocked until these pre-MCP foundations are acce
 - `JIKUO-LIVE-12`: out-of-band runtime visibility files, `jikuo show` CLI, and `client_display_links` accepted on 2026-05-14
 - `JIKUO-INTG-01`: universal instruction file distribution, or an explicit user decision to defer cross-client instruction sync
 - `JIKUO-ARCH-02`: integration neutrality and `src/jikuo/integrations/` layout, or an explicit user decision to defer integration layout cleanup
+- `JIKUO-ARCH-03`: MCP pre-implementation API neutrality review, or an explicit user decision to defer the review
 - `JIKUO-SDK-01`: Agent SDK / agentic platform extension posture, or an explicit user decision to defer SDK ecosystem planning
 - starter policy provenance backfill / fallback rule before starter policies are exposed through MCP
 - `.jikuo/project_context.yaml` previous-todo binding must not pretend to provide a real previous snapshot unless snapshot rotation exists
@@ -134,7 +135,7 @@ This slice must not implement:
 
 Recommended implementation slices:
 
-0. Confirm `PKG-00`, `CORE-20`, `SEC-01`, `PKG-01`, `CORE-20B`, `CORE-23`, `CORE-24`, `LIVE-12` Phase 1, `INTG-01`, `ARCH-02`, `SDK-01`, starter provenance handling, and any approved minimal package extraction prerequisites are complete or explicitly deferred with user approval.
+0. Confirm `PKG-00`, `CORE-20`, `SEC-01`, `PKG-01`, `CORE-20B`, `CORE-23`, `CORE-24`, `LIVE-12` Phase 1, `INTG-01`, `ARCH-02`, `ARCH-03`, `SDK-01`, starter provenance handling, and any approved minimal package extraction prerequisites are complete or explicitly deferred with user approval.
 1. Create a testable MCP adapter boundary under `src/jikuo/integrations/mcp/` that maps tool names and arguments to package-safe `agent_flow.py` / `policy_store.py` behavior.
 2. Add card-only and runtime-status-card tool adapters before broader proposal tools.
 3. Add display directives and out-of-band runtime snapshot refs to card-producing tool responses.
