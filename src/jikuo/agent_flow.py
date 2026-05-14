@@ -1057,6 +1057,22 @@ def build_update_cards(
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]:
     if not session_id:
         refusal = "session_id_required_for_lifecycle_preview"
+        if event == "completion_review":
+            card = generic_card(
+                card_kind="task_session_lifecycle_unavailable",
+                status="review",
+                title="Task-session lifecycle context unavailable",
+                summary=(
+                    "Completion policy review can continue; no guarded lifecycle "
+                    "update is ready without an explicit task-session id."
+                ),
+                refusal_reasons=[refusal],
+                next_actions=[
+                    "review completion policy status",
+                    "provide --session-id only if a task-session lifecycle update is needed",
+                ],
+            )
+            return [card], [], []
         card = generic_card(
             card_kind="task_lifecycle_refusal",
             status="refused",
@@ -1082,6 +1098,19 @@ def build_update_cards(
         completion_status=completion_status or "ready_for_review",
     )
     card = task_session_cards.build_card(plan)
+    if event == "completion_review" and card_status(card) == "refused":
+        card = dict(card)
+        card["status"] = "review"
+        card["card_kind"] = "task_session_lifecycle_unavailable"
+        card["title"] = "Task-session lifecycle context unavailable"
+        card["user_facing_summary"] = (
+            "Completion policy review can continue; no guarded lifecycle update "
+            "is ready from this preview."
+        )
+        card["next_actions"] = [
+            "review completion policy status",
+            "resolve task-session context only if a lifecycle update is needed",
+        ]
     traces = [
         atom_trace(
             loop_step_id="DPL-04",

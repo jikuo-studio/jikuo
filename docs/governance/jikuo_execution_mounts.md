@@ -292,7 +292,8 @@ Current status:
 
 - `JIKUO-MCP-01` work order is drafted but blocked by pre-MCP portability / security / package / visibility foundation.
 - `JIKUO-LIVE-12` Phase 1 is accepted as the out-of-band runtime visibility baseline; `JIKUO-ARCH-02` is accepted as the integration-neutrality layout contract; `JIKUO-SDK-01` is accepted as the Agent SDK and agentic platform extension-posture review; `JIKUO-INTG-01` is implemented and accepted as the cross-client instruction foundation before MCP implementation.
-- `JIKUO-LIVE-13` is accepted as the current self-bootstrap evidence-quality slice; normal task-start proposals now satisfy the taskmap / insight / follow-up distinction evidence requirement.
+- `JIKUO-LIVE-13` is accepted as the self-bootstrap evidence-quality slice; normal task-start proposals now satisfy the taskmap / insight / follow-up distinction evidence requirement.
+- `JIKUO-LIVE-14` is accepted as the completion-review surfacing slice; completion-review policy evidence can now succeed visibly while task-session lifecycle unavailability remains separate review context.
 - implementation has not started.
 - this step is packaging-only: wrap stable `agent_flow.py` / `policy_store.py` atoms without adding new governance capability.
 
@@ -510,7 +511,7 @@ Plugin:
 Current next task:
 
 - accepted `JIKUO-LIVE-12` Phase 1 out-of-band runtime visibility
-- next review / implement `JIKUO-LIVE-14` completion review policy-only surfacing
+- accepted `JIKUO-LIVE-14` completion review policy-only surfacing
 - next review / accept revised integration-neutral `JIKUO-MCP-01` card-only tool and display-directive scope
 
 Task goal:
@@ -530,7 +531,7 @@ Accepted target for the current pre-MCP visibility review:
 Accepted result:
 
 - keep `JIKUO-LIVE-12` Phase 1 as the baseline runtime visibility foundation for MCP implementation.
-- continue with `JIKUO-LIVE-14`, then revised MCP wrapper scope review before MCP implementation, then stop for user discussion before code implementation.
+- continue with revised MCP wrapper scope review before MCP implementation, then stop for user discussion before code implementation.
 
 If revised:
 

@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-LIVE-14: Completion Review Policy-Only Surfacing
 
-> **Status**: Draft, pre-MCP harness quality follow-up
+> **Status**: Implemented and accepted on 2026-05-14, pre-MCP harness quality follow-up
 > **Product meaning**: make slice-completion policy checks visible even when task-session lifecycle state is unavailable.
 > **Scope rule**: fix completion-review surfacing in the local harness; do not implement MCP.
 
@@ -45,3 +45,10 @@ If these remain coupled, a successful policy audit can look like a failed harnes
 - The top-level proposal status is not `refused` solely because task-session lifecycle preview is unavailable.
 - The task-session lifecycle unavailability remains visible as separate non-blocking context.
 - Runtime links point to the completion-review card.
+
+## 6. Implemented Result
+
+- `completion_review` now treats task-session lifecycle preview unavailability as a separate `task_session_lifecycle_unavailable` review card instead of letting it mask policy review status.
+- Policy-trigger and evidence evaluation remain visible through the normal policy runtime status card.
+- Runtime visibility still writes `.jikuo/runtime/last_card.md`, `.jikuo/runtime/state_summary.json`, history, and `client_display_links`.
+- Regression coverage: `tests.agent_flow_tests.AgentFlowProposalTests.test_completion_review_policy_evidence_surfaces_without_task_session_root`.

@@ -121,6 +121,71 @@ def write_taskmap_distinction_policy_store(root: Path) -> None:
     )
 
 
+def write_main_doc_mount_policy_store(root: Path) -> None:
+    store = root / ".jikuo" / "policies"
+    approved = store / "approved"
+    approved.mkdir(parents=True, exist_ok=True)
+    policy_id = "POLICY-jikuo-main-doc-mount-maintenance"
+    (approved / f"{policy_id}.yaml").write_text(
+        "\n".join(
+            [
+                'schema_version: "jikuo.configurable_rule_policy.v0"',
+                f'policy_id: "{policy_id}"',
+                "version: 1",
+                'status: "active_report_only"',
+                'title: "Main development document mount maintenance before slice completion"',
+                'scenario_package: "self_bootstrap_governance"',
+                "source_refs:",
+                '  - type: "test_fixture"',
+                '    ref: "tests:main_doc_mount_policy"',
+                "triggers:",
+                '  - trigger_id: "TRG-completion-review"',
+                '    type: "task_lifecycle_event"',
+                '    event: "completion_review"',
+                "conditions:",
+                "  []",
+                "required_actions:",
+                '  - action_id: "ACT-main-doc-mount-maintenance"',
+                '    type: "maintain_main_document_mounts_and_update_scope_before_completion"',
+                "required_evidence:",
+                '  - evidence_id: "EVD-main-doc-mount-maintenance"',
+                '    type: "main_document_mount_maintenance_evidence"',
+                '    satisfies_action: "ACT-main-doc-mount-maintenance"',
+                "enforcement:",
+                '  phase: "report_only"',
+                '  level: "review_required"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (store / "manifest.yaml").write_text(
+        "\n".join(
+            [
+                'schema_version: "jikuo.policy_store_manifest.v0"',
+                'project_id: "agent_flow_main_doc_mount_fixture"',
+                'store_root: ".jikuo/policies"',
+                "active_policy_refs:",
+                f'  - policy_id: "{policy_id}"',
+                "    version: 1",
+                f'    path: ".jikuo/policies/approved/{policy_id}.yaml"',
+                "proposal_refs:",
+                "  []",
+                "deprecated_policy_refs:",
+                "  []",
+                "superseded_policy_refs:",
+                "  []",
+                'last_updated_at: "2026-05-14T00:00:00Z"',
+                "compatibility:",
+                '  unknown_fields: "preserve"',
+                '  writer: "test_fixture"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+
 class AgentFlowProposalTests(unittest.TestCase):
     def test_task_start_propose_json_composes_no_write_atoms(self):
         completed = subprocess.run(
@@ -1474,6 +1539,92 @@ class AgentFlowProposalTests(unittest.TestCase):
                 "CAP-TASKMAP-INSIGHT-FOLLOWUP-EVIDENCE-01",
                 {trace["atom_id"] for trace in proposal["atom_trace"]},
             )
+
+    def test_completion_review_policy_evidence_surfaces_without_task_session_root(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            write_main_doc_mount_policy_store(project_root)
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "propose",
+                    "--event",
+                    "completion_review",
+                    "--session-id",
+                    "missing_session_for_policy_only_review",
+                    "--task-title",
+                    "Completion Review Probe",
+                    "--project-root",
+                    str(project_root),
+                    "--summary",
+                    "Checked main document mount scope before completion.",
+                    "--produced-evidence-id",
+                    "EVD-main-doc-review",
+                    "--produced-evidence-type",
+                    "main_document_mount_maintenance_evidence",
+                    "--produced-evidence-action-type",
+                    "maintain_main_document_mounts_and_update_scope_before_completion",
+                    "--produced-evidence-summary",
+                    "Checked main document mounts before slice completion.",
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            proposal = json.loads(completed.stdout)
+            self.assertEqual(proposal["status"], "review")
+            self.assertEqual(proposal["trigger_decision"]["execution_readiness"], "ready")
+            self.assertEqual(proposal["trigger_decision"]["required_clarification"], [])
+            self.assertEqual(
+                proposal["triggered_policies"][0]["policy_ref"],
+                "POLICY-jikuo-main-doc-mount-maintenance",
+            )
+            self.assertEqual(proposal["missing_evidence_reports"], [])
+            self.assertEqual(
+                proposal["evidence_status"][0]["required_type"],
+                "main_document_mount_maintenance_evidence",
+            )
+            self.assertEqual(proposal["evidence_status"][0]["current_status"], "ok")
+
+            lifecycle_cards = [
+                card
+                for card in proposal["cards"]
+                if card["card_kind"] == "task_session_lifecycle_unavailable"
+            ]
+            self.assertEqual(len(lifecycle_cards), 1)
+            self.assertEqual(lifecycle_cards[0]["status"], "review")
+            self.assertIn(
+                "task_sessions_root_missing",
+                lifecycle_cards[0]["refusal_reasons"],
+            )
+
+            runtime_cards = [
+                card
+                for card in proposal["cards"]
+                if card["card_kind"] == "policy_runtime_status"
+            ]
+            self.assertEqual(len(runtime_cards), 1)
+            self.assertEqual(runtime_cards[0]["status"], "ok")
+            self.assertEqual(
+                runtime_cards[0]["policy_runtime_status"]["missing_evidence_count"],
+                0,
+            )
+            self.assertEqual(proposal["runtime_visibility"]["status"], "ok")
+            self.assertEqual(proposal["client_display_links"]["status"], "available")
+            self.assertTrue(
+                (project_root / ".jikuo" / "runtime" / "last_card.md").is_file()
+            )
+            self.assertFalse((project_root / ".jikuo" / "task_sessions").exists())
 
     def test_task_start_projects_pre_code_change_classification_policy(self):
         completed = subprocess.run(
