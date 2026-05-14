@@ -23,6 +23,8 @@ Implementation is intentionally blocked until these pre-MCP foundations are acce
 - `JIKUO-CORE-24`: desktop `agent_flow.py` bridge for template import planning and guarded activation, or an explicit decision to keep template activation outside the first MCP wrapper
 - `JIKUO-LIVE-12`: out-of-band runtime visibility files, `jikuo show` CLI, and `client_display_links` accepted on 2026-05-14
 - `JIKUO-INTG-01`: universal instruction file distribution, or an explicit user decision to defer cross-client instruction sync
+- `JIKUO-ARCH-02`: integration neutrality and `src/jikuo/integrations/` layout, or an explicit user decision to defer integration layout cleanup
+- `JIKUO-SDK-01`: Agent SDK / agentic platform extension posture, or an explicit user decision to defer SDK ecosystem planning
 - starter policy provenance backfill / fallback rule before starter policies are exposed through MCP
 - `.jikuo/project_context.yaml` previous-todo binding must not pretend to provide a real previous snapshot unless snapshot rotation exists
 
@@ -62,6 +64,7 @@ MVP protocol posture:
 - keep human approval visible for sensitive write-capable tools
 - resolve project-specific document and policy bindings before tool execution; MCP tools must not depend on NarrativeSystem hardcoded paths
 - distinguish fields that may be returned to the MCP client from fields that must stay local
+- implement MCP under `src/jikuo/integrations/mcp/` so MCP is an adapter layer rather than part of the core kernel
 
 ## 4. In Scope
 
@@ -131,8 +134,8 @@ This slice must not implement:
 
 Recommended implementation slices:
 
-0. Confirm `PKG-00`, `CORE-20`, `SEC-01`, `PKG-01`, `CORE-20B`, `CORE-23`, `CORE-24`, `LIVE-12` Phase 1, `INTG-01`, starter provenance handling, and any approved minimal package extraction prerequisites are complete or explicitly deferred with user approval.
-1. Create a testable MCP adapter boundary that maps tool names and arguments to package-safe `agent_flow.py` / `policy_store.py` behavior.
+0. Confirm `PKG-00`, `CORE-20`, `SEC-01`, `PKG-01`, `CORE-20B`, `CORE-23`, `CORE-24`, `LIVE-12` Phase 1, `INTG-01`, `ARCH-02`, `SDK-01`, starter provenance handling, and any approved minimal package extraction prerequisites are complete or explicitly deferred with user approval.
+1. Create a testable MCP adapter boundary under `src/jikuo/integrations/mcp/` that maps tool names and arguments to package-safe `agent_flow.py` / `policy_store.py` behavior.
 2. Add card-only and runtime-status-card tool adapters before broader proposal tools.
 3. Add display directives and out-of-band runtime snapshot refs to card-producing tool responses.
 4. Add an MCP server wrapper using the official Python SDK when available; if the SDK is not available locally, stop at the adapter boundary and record the dependency decision rather than hand-rolling a non-compliant server.
@@ -179,6 +182,7 @@ Human semantic review:
 ## 9. Acceptance Criteria
 
 - The work order, task map, and execution mounts all identify `JIKUO-MCP-01` as the scoped MCP implementation slice, blocked until pre-MCP foundations are accepted.
+- The planned implementation path is `src/jikuo/integrations/mcp/`, not root-level `src/jikuo/mcp_server.py` or `src/jikuo/mcp_adapter.py`.
 - The MCP MVP tool list is frozen before code implementation starts.
 - No-write proposal tools return chat-ready text plus structured fields, and policy runtime status remains visible when present.
 - Card-only tools return compact card Markdown and display directives.

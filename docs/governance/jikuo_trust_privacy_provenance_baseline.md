@@ -58,6 +58,21 @@ Implementation requirements:
 - Client-specific hooks, plugins, or settings are optional enhancement layers, not baseline dependencies.
 - Future dashboards or notifications may build on the same local runtime projection, but they must not replace the file / CLI verification baseline.
 
+## 2B. Integration Neutrality Baseline
+
+JIKUO core capability must not depend on any single client, protocol, Agent SDK, IDE, or platform.
+
+Core code owns policy, evidence, approvals, guarded apply semantics, and local runtime visibility. Integration adapters may expose those capabilities through MCP, Agent SDK plugins, IDE platforms, CLI affordances, instruction files, hooks, callbacks, or future protocols, but the adapters must not become the only place where governance semantics exist.
+
+Implementation requirements:
+
+- Protocol-, SDK-, client-, IDE-, and platform-specific logic belongs under `src/jikuo/integrations/`.
+- Core modules under `src/jikuo/` must remain callable without importing integration packages.
+- Integration adapters may depend on core APIs; core APIs must not depend on integration adapters.
+- Shared display contracts may live in core only when they are protocol-neutral and can be consumed by CLI, MCP, Agent SDK, UI, or future integrations.
+- MCP is the preferred cross-client tool protocol, but MCP is still an adapter layer, not the kernel.
+- Hooks, guardrails, callbacks, checkpoints, traces, or platform artifacts may strengthen enforcement or review, but they do not replace JIKUO policy evidence, approval records, or `.jikuo/runtime/` visibility unless a later approved policy imports them as evidence.
+
 ## 3. Template Provenance
 
 Reusable templates need provenance fields.

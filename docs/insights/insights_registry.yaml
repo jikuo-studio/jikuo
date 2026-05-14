@@ -36,3 +36,13 @@ entries:
     file: "docs/insights/INSIGHT-2026-05-14-policy-routing-overlap.md"
     related_policy_ref: ".jikuo/policies/approved/POLICY-jikuo-implementation-intent-routing-before-change.yaml"
     summary: "Resolved by activating a consolidated implementation-intent routing policy and deprecating the two overlapping active policies."
+  - insight_id: "INSIGHT-2026-05-14-agent-sdk-extension-path"
+    title: "Agent SDK and agentic platforms as optional orchestration adapters for JIKUO"
+    classification: "promoted_to_task"
+    status: "promoted"
+    file: "docs/insights/INSIGHT-2026-05-14-agent-sdk-extension-path.md"
+    related_task_refs:
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-SDK-01_agent_sdk_adapter_exploration.md"
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-MCP-01_mcp_wrapper_mvp.md"
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-INTG-01_universal_instruction_file_distribution.md"
+    summary: "Promoted into pre-MCP planning so future OpenAI / Claude / Google / Vercel SDKs and agentic platforms can consume JIKUO without replacing the kernel, MCP wrapper, or local runtime evidence authority."

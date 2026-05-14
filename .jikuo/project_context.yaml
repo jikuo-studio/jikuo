@@ -39,6 +39,10 @@ document_roles:
   trust_privacy_provenance_baseline:
     path: "docs/governance/jikuo_trust_privacy_provenance_baseline.md"
     required: true
+  integration_neutrality_work_order:
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-ARCH-02_integration_neutrality_and_integrations_layout.md"
+    required: true
+    note: "Immediate pre-MCP contract for integration-neutral core APIs and src/jikuo/integrations/ layout."
   desktop_operating_loop_work_order:
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-FLOW-02_desktop_app_primary_operating_loop.md"
     required: true
@@ -93,6 +97,10 @@ directory_roles:
   source_package:
     path: "src/jikuo"
     required: true
+  planned_integrations_package:
+    path: "src/jikuo/integrations"
+    required: false
+    note: "Planned adapter root for MCP, Agent SDK, client, IDE, and platform integrations; created by future implementation slices."
   package_policy_templates:
     path: "src/jikuo/policy_templates/engineering_governance"
     required: true
