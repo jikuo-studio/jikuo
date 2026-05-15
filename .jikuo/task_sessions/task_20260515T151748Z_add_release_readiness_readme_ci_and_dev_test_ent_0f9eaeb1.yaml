@@ -1,0 +1,165 @@
+schema: "jikuo.task_session.v0"
+session:
+  session_id: "task_20260515T151748Z_add_release_readiness_readme_ci_and_dev_test_ent_0f9eaeb1"
+  task_title: "Add release-readiness README, CI, and dev test entrypoints"
+  owner_agent: "codex"
+  created_at: "2026-05-15T15:17:48Z"
+  updated_at: "2026-05-15T15:20:42Z"
+  lifecycle_status: "ready_for_review"
+scenario:
+  scenario_chain_id: "engineering_governance.task_session_start"
+  scenario_package: "engineering_governance"
+changed_surfaces: []
+rule_results: []
+document_mounts: []
+evidence_snapshots:
+  -
+    evidence_id: "patch_evidence_b20d4753"
+    evidence_kind: "implementation_evidence"
+    source_ref: "README.md"
+    summary: "Rewrote the root README as a product-facing entry point with quickstart, MCP Stage A scope, docs map, development commands, and license decision status."
+    status: "present"
+    recorded_at: "2026-05-15T15:19:38Z"
+    recorded_by: "codex"
+  -
+    evidence_id: "patch_evidence_0e87329b"
+    evidence_kind: "implementation_evidence"
+    source_ref: "pyproject.toml;.github/workflows/test.yml"
+    summary: "Added dev optional dependency pytest>=8, pytest discovery configuration, and a minimal GitHub Actions workflow that installs .[dev], runs unittest, and runs pytest."
+    status: "present"
+    recorded_at: "2026-05-15T15:19:44Z"
+    recorded_by: "codex"
+  -
+    evidence_id: "patch_evidence_bc06ab4a"
+    evidence_kind: "policy_evidence:implementation_intent_routing_evidence"
+    source_ref: ".jikuo/task_sessions/task_20260515T151748Z_add_release_readiness_readme_ci_and_dev_test_ent_0f9eaeb1.yaml"
+    summary: "This slice is an implementation/release-readiness change, not a new policy; license remains a deferred user decision."
+    status: "ok"
+    recorded_at: "2026-05-15T15:19:50Z"
+    recorded_by: "codex"
+  -
+    evidence_id: "patch_evidence_374eb2b2"
+    evidence_kind: "policy_evidence:main_document_mount_maintenance_evidence"
+    source_ref: "docs/governance/jikuo_productization_task_map.md"
+    summary: "Main docs checked and updated: taskmap and execution mounts record the release-readiness baseline, while license remains an explicit open decision."
+    status: "ok"
+    recorded_at: "2026-05-15T15:19:57Z"
+    recorded_by: "codex"
+verification:
+  -
+    verification_id: "patch_verification_f233228d"
+    command: "python -B -m unittest discover -s tests -p *_tests.py"
+    summary: "Full unittest discovery passed: 139 tests OK."
+    status: "ok"
+    exit_code: 0
+    layer: "unit_tests"
+    recorded_at: "2026-05-15T15:20:02Z"
+    recorded_by: "codex"
+  -
+    verification_id: "patch_verification_bd77b6a2"
+    command: "git diff --check"
+    summary: "git diff --check passed; only line-ending warnings were reported."
+    status: "ok"
+    exit_code: 0
+    layer: "diff_hygiene"
+    recorded_at: "2026-05-15T15:20:07Z"
+    recorded_by: "codex"
+  -
+    verification_id: "patch_verification_1ff63316"
+    command: "python -B -m pytest"
+    summary: "Local pytest execution was not run successfully because pytest is not installed in the current interpreter; pyproject now exposes pytest through .[dev] and CI installs .[dev] before running pytest."
+    status: "ok"
+    exit_code: 1
+    layer: "pytest_entrypoint"
+    recorded_at: "2026-05-15T15:20:15Z"
+    recorded_by: "codex"
+  -
+    verification_id: "patch_verification_93b4bf11"
+    command: "python -B -c import tomllib; tomllib.load(open('pyproject.toml','rb'))"
+    summary: "pyproject.toml parsed successfully with tomllib."
+    status: "ok"
+    exit_code: 0
+    layer: "config_parse"
+    recorded_at: "2026-05-15T15:20:30Z"
+    recorded_by: "codex"
+user_decisions:
+  -
+    decision_id: "task_session_start_approval"
+    decision_target: "JIKUO task-session file creation"
+    decision_effect: "create one compact task-session sidecar record"
+    decision_noneffect: "do not capture raw chat transcript"
+    exact_user_phrase: "\u8bf7\u7ee7\u7eed\u4efb\u52a1\uff08\u5176\u5b9e\u6211\u521a\u624d\u5206\u522b\u7528codex\u548cClaude\u7684\u684c\u9762\u5e94\u7528\u9a8c\u6536\u8fc7\u4e86\uff0c\u6240\u4ee5\u9879\u76ee\u4e0b\u4f1a\u6709\u4e34\u65f6\u76ee\u5f55\uff09"
+    recorded_at: "2026-05-15T15:17:48Z"
+    surface: "desktop_agent_or_cli_bridge"
+  -
+    decision_id: "patch_completion_e7a9f780"
+    decision_target: "JIKUO task-session completion update"
+    decision_effect: "set task-session completion to ready_for_review"
+    decision_noneffect: "do not capture raw chat transcript or judge product output quality"
+    exact_user_phrase: "\u8bf7\u7ee7\u7eed\u4efb\u52a1\uff08\u5176\u5b9e\u6211\u521a\u624d\u5206\u522b\u7528codex\u548cClaude\u7684\u684c\u9762\u5e94\u7528\u9a8c\u6536\u8fc7\u4e86\uff0c\u6240\u4ee5\u9879\u76ee\u4e0b\u4f1a\u6709\u4e34\u65f6\u76ee\u5f55\uff09"
+    recorded_at: "2026-05-15T15:20:42Z"
+    surface: "desktop_agent_or_cli_bridge"
+completion:
+  status: "ready_for_review"
+  summary: "Added product-facing README, minimal CI, and dev pytest entrypoints while leaving license as an explicit user decision."
+  updated_at: "2026-05-15T15:20:42Z"
+handoff:
+  summary: null
+audit_trail:
+  -
+    action: "task_session_started"
+    actor: "codex"
+    recorded_at: "2026-05-15T15:17:48Z"
+    effect: "create one compact task-session sidecar record"
+  -
+    action: "task_session_evidence_updated"
+    actor: "codex"
+    recorded_at: "2026-05-15T15:19:38Z"
+    patch_id: "patch_evidence_b20d4753"
+  -
+    action: "task_session_evidence_updated"
+    actor: "codex"
+    recorded_at: "2026-05-15T15:19:44Z"
+    patch_id: "patch_evidence_0e87329b"
+  -
+    action: "task_session_evidence_updated"
+    actor: "codex"
+    recorded_at: "2026-05-15T15:19:50Z"
+    patch_id: "patch_evidence_bc06ab4a"
+  -
+    action: "task_session_evidence_updated"
+    actor: "codex"
+    recorded_at: "2026-05-15T15:19:57Z"
+    patch_id: "patch_evidence_374eb2b2"
+  -
+    action: "task_session_verification_updated"
+    actor: "codex"
+    recorded_at: "2026-05-15T15:20:02Z"
+    patch_id: "patch_verification_f233228d"
+  -
+    action: "task_session_verification_updated"
+    actor: "codex"
+    recorded_at: "2026-05-15T15:20:07Z"
+    patch_id: "patch_verification_bd77b6a2"
+  -
+    action: "task_session_verification_updated"
+    actor: "codex"
+    recorded_at: "2026-05-15T15:20:15Z"
+    patch_id: "patch_verification_1ff63316"
+  -
+    action: "task_session_verification_updated"
+    actor: "codex"
+    recorded_at: "2026-05-15T15:20:30Z"
+    patch_id: "patch_verification_93b4bf11"
+  -
+    action: "task_session_completion_updated"
+    actor: "codex"
+    recorded_at: "2026-05-15T15:20:42Z"
+    patch_id: "patch_completion_e7a9f780"
+supersession:
+  supersedes: []
+  superseded_by: null
+capture_policy:
+  raw_chat_transcript: "disallowed"
+  exact_user_phrase: "decision_only_with_target_and_effect"
+  product_output_quality_judgement: "out_of_scope"

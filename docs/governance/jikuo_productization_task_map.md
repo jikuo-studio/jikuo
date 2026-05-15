@@ -2661,7 +2661,7 @@ Accepted precondition:
 
 Open items:
 
-1. Review release-readiness follow-ups before external users: product-facing root README, license decision, minimal CI, pytest/dev extras.
+1. Decide the external release license; current package metadata remains `Proprietary` until explicit user decision.
 2. Keep Stage B guarded write tools blocked until the user explicitly accepts starting Stage B after Stage A.
 3. Keep the decision about whether new self-bootstrap policies enter built-in starter templates suspended until explicit user approval.
 4. Plan `JIKUO-STUDIO-01` dashboard as the next major slice after MCP MVP; it is deferred from MCP-01 scope but not abandoned.
@@ -2688,6 +2688,7 @@ MCP MVP scope freeze:
 - Stage A fixed: external smoke found `jikuo.get_runtime_status_card.card_markdown` was a single card while runtime last-card output was the full proposal; the card-only tool now persists the same single-card Markdown to `.jikuo/runtime/last_card.md`
 - Stage A recorded: client configuration examples live at `docs/integrations/mcp_client_configuration_examples.md` for Claude Code, Claude Desktop, Cursor, and Codex-style stdio setup notes
 - Stage A accepted: user verified real desktop-client smoke in Codex Desktop and Claude Desktop on 2026-05-15; local client/test temporary directories are expected under ignored paths such as `.claude/` and `tmp/`
+- Release-readiness implemented: root `README.md` is product-facing, `.github/workflows/test.yml` runs CI tests, and `pyproject.toml` exposes `.[dev]` plus pytest discovery; external release license remains a user decision
 - Stage A require: selected fixture is `src/jikuo/fixtures/policy_store_active_project`
 - Stage A require: adapter core is importable and testable without the MCP SDK; official SDK is isolated to `server.py`
 - Stage A require: card-producing responses include `display_verification` with user-verifiable relative runtime paths / commands

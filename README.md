@@ -1,69 +1,102 @@
-# JIKUO Product Development Docs
+# JIKUO
 
-> **Status**: Canonical JIKUO product documentation entry.
-> **Boundary**: This directory contains JIKUO's own product-development assets. It does not absorb incubating-source project history or documents that merely mention JIKUO as context.
+JIKUO is an AI-primary process governance harness for desktop agents, MCP
+clients, and future agent SDK integrations.
 
----
+It helps an AI-assisted project make its working state visible: which policies
+are active, which ones triggered, what evidence is missing, which task-session
+is being worked, and where the user can independently verify the runtime card.
 
-## 1. Purpose
+JIKUO is currently an early standalone package. Stage A MCP support is
+implemented for no-write status, card, and proposal tools. Guarded-write MCP
+tools remain blocked until explicitly accepted.
 
-`docs/` is the product documentation home for JIKUO.
+## What JIKUO Provides
 
-JIKUO now uses this standalone repository as its active product-development home. Historical source-project context is not part of the active mount set.
+- Project-local `.jikuo/` state for policies, task sessions, runtime cards, and
+  project context.
+- Policy runtime status cards that can be shown in chat and verified through
+  `.jikuo/runtime/last_card.md` or `jikuo show`.
+- Task-session records for durable process memory without capturing raw chat
+  transcripts.
+- Starter policy templates with provenance for first-use project bootstrap.
+- A Stage A MCP server wrapper around stable no-write JIKUO atoms.
+- Integration docs for desktop clients and future SDK adapters.
 
----
+## Quickstart
 
-## 2. Directory Layout
+From the repository root:
 
-- `docs/work_orders/`: JIKUO product work orders and implementation slices.
-- `docs/governance/`: JIKUO product maps, execution mounts, kernel/skeleton boundaries, policy contracts, and agent instruction contracts.
-- `docs/schemas/`: JIKUO-owned schema and view-model contracts.
-- `docs/insights/`: captured development insights and their registry.
+```powershell
+python -m pip install -e ".[dev]"
+python -B -m unittest discover -s tests -p "*_tests.py"
+jikuo show
+jikuo-mcp --help
+```
 
----
+For local source-tree development without an editable install:
 
-## 3. What Stays Outside
+```powershell
+$env:PYTHONPATH='src'
+python -B -m unittest discover -s tests -p "*_tests.py"
+```
 
-The following remain outside this repository's active documentation mount unless a later work order explicitly promotes them:
+## MCP Stage A
 
-- Source-project sprint histories.
-- Domain runtime design docs from projects that use or incubated JIKUO.
-- General engineering-governance documents owned by another project.
+The MCP server entry point is:
 
----
+```powershell
+python -B -m jikuo.integrations.mcp.server
+```
 
-## 4. Current Entry Points
+or, after installation:
 
-- `docs/README.md`
-- `docs/governance/jikuo_execution_mounts.md`
-- `docs/governance/jikuo_productization_task_map.md`
-- `docs/governance/jikuo_skeleton_kernel_boundary_and_backlog.md`
-- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-FLOW-02_desktop_app_primary_operating_loop.md`
+```powershell
+jikuo-mcp
+```
 
----
+Stage A exposes eight no-write tools:
 
-## 5. Migration Rule
+- `jikuo.status`
+- `jikuo.get_runtime_status`
+- `jikuo.get_runtime_status_card`
+- `jikuo.get_display_card`
+- `jikuo.propose_task_start`
+- `jikuo.propose_policy_write_plan`
+- `jikuo.propose_policy_evolution_plan`
+- `jikuo.propose_policy_template_import_plan`
 
-When a future task creates JIKUO-owned docs:
+Client configuration examples live in
+[`docs/integrations/mcp_client_configuration_examples.md`](docs/integrations/mcp_client_configuration_examples.md).
 
-- put work orders under `docs/work_orders/`
-- put durable contracts under `docs/governance/`
-- put schemas under `docs/schemas/`
-- put development insights under `docs/insights/`
-- update references in code, tests, sidecar state, fixtures, indexes, and checker rules
-- keep source-project historical context outside active mounts unless the document itself is promoted as a JIKUO product asset
+## Documentation Map
 
----
+- [`docs/README.md`](docs/README.md): internal documentation layout and mount
+  rules.
+- [`docs/governance/jikuo_productization_task_map.md`](docs/governance/jikuo_productization_task_map.md):
+  active task map and capability registry.
+- [`docs/governance/jikuo_execution_mounts.md`](docs/governance/jikuo_execution_mounts.md):
+  current execution mount set.
+- [`docs/work_orders/`](docs/work_orders/): accepted and in-progress work
+  orders.
+- [`docs/insights/`](docs/insights/): captured development insights and their
+  registry.
 
-## 6. Slice Completion Main Document Check
+## Development
 
-Before closing each JIKUO development slice, check whether these main documents need updates:
+Run the full test suite:
 
-- `.jikuo/project_context.yaml`
-- `docs/README.md`
-- `docs/governance/jikuo_execution_mounts.md`
-- `docs/governance/jikuo_productization_task_map.md`
-- `docs/insights/insights_registry.yaml`
-- `.jikuo/policies/manifest.yaml` when policy-store records changed
+```powershell
+python -B -m unittest discover -s tests -p "*_tests.py"
+```
 
-If no update is needed, report that the main document check was performed and why the scope stayed unchanged.
+Pytest is available as a developer entry point after installing `.[dev]`:
+
+```powershell
+pytest
+```
+
+## License
+
+The current package metadata is `Proprietary`. The external release license is
+an explicit product decision and has not been changed by the MCP Stage A work.

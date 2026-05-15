@@ -12,6 +12,9 @@ license = { text = "Proprietary" }
 authors = [{ name = "JIKUO contributors" }]
 dependencies = ["mcp"]
 
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
 [project.scripts]
 jikuo = "jikuo.cli:main"
 jikuo-agent-flow = "jikuo.agent_flow:main"
@@ -28,3 +31,7 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 jikuo = ["fixtures/**", "policy_templates/**", "starter_policy_packs/**"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["*_tests.py"]
