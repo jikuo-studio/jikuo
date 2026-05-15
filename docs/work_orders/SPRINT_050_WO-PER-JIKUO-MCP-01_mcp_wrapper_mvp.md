@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-MCP-01: MCP Wrapper MVP
 
-> **Status**: Stage A server wrapper in progress; SDK-free adapter, schemas, official `mcp` dependency declaration, and `server.py` wrapper implemented; real SDK import / module-entry / official SDK client smoke passed; desktop-client configuration smoke remains pending
+> **Status**: Stage A server wrapper implemented; SDK-free adapter, schemas, official `mcp` dependency declaration, `server.py`, SDK client smoke, and user-verified Codex Desktop / Claude Desktop smoke passed; Stage B guarded writes remain blocked until explicit user acceptance
 > **Product meaning**: formally move the next phase from more kernel expansion to an MCP wrapper MVP, so desktop Agents can call JIKUO through a stable tool surface while users remain in their desktop AI client.
 > **Scope rule**: wrap stable atoms only; do not add new governance capability in this slice.
 
@@ -229,7 +229,15 @@ Stage A implementation progress:
 - [x] External smoke found that `get_runtime_status_card.card_markdown` returned a single policy card while `.jikuo/runtime/last_card.md` and `jikuo show --last-card` showed the full proposal; fixed by making the card-only tool persist the same single-card Markdown to runtime visibility.
 - [x] Unit coverage verifies `jikuo.get_runtime_status_card.card_markdown`, `.jikuo/runtime/last_card.md`, and `runtime_visibility.load_last_card()` are byte-for-byte equal for the card-only runtime status call.
 - [x] Stage A client configuration examples are recorded in `docs/integrations/mcp_client_configuration_examples.md`.
-- [ ] Real desktop-client configuration smoke and two-client release gate remain pending; current Codex desktop did not expose a hot-loadable MCP client configuration surface during the external smoke.
+- [x] Real desktop-client configuration smoke and two-client release gate passed by user verification in Codex Desktop and Claude Desktop on 2026-05-15; local temporary directories may remain under ignored project paths such as `.claude/` and `tmp/`.
+
+Stage A desktop-client acceptance log:
+
+- 2026-05-15: user verified the Stage A MCP server from Codex Desktop and Claude Desktop desktop applications.
+- Evidence boundary: this is user-verified desktop smoke, not a captured tool log from this Codex thread.
+- Expected local byproducts: desktop-client and test-environment temporary directories under ignored paths, including `.claude/` and `tmp/`.
+- Acceptance effect: satisfies the two-client Stage A desktop smoke release gate.
+- Non-effect: does not accept or start Stage B guarded-write tools.
 
 SDK dependency decision record:
 

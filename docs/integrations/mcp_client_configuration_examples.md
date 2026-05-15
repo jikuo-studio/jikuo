@@ -81,7 +81,7 @@ Keep `.cursor/mcp.json` uncommitted unless the team explicitly agrees to share t
 
 ## Codex Desktop / Codex CLI
 
-This repository has not yet verified a hot-loadable Codex Desktop MCP configuration surface in the current environment. If Codex exposes an MCP settings UI or CLI configuration, use the same stdio command and arguments:
+Use the same stdio command and arguments when Codex exposes an MCP settings UI or CLI configuration surface:
 
 ```text
 command = "<PYTHON_EXE>"
@@ -89,7 +89,7 @@ args = ["-B", "-m", "jikuo.integrations.mcp.server"]
 cwd = "<PROJECT_ROOT>"
 ```
 
-Record the exact Codex configuration path or command in `JIKUO-MCP-01` after it is verified in a real Codex client.
+Record the exact Codex configuration path or command in `JIKUO-MCP-01` when a stable shareable Codex configuration surface is identified.
 
 ## Stage A Smoke Checklist
 
@@ -108,4 +108,7 @@ Stage B guarded-write tools remain blocked until Stage A release gates are accep
 
 - Official Python MCP SDK `ClientSession` stdio smoke passed in a separate Codex window.
 - The server listed the 8 Stage A tools and successfully called `jikuo.get_runtime_status_card`.
-- Current Codex Desktop session did not expose a hot-loadable MCP client configuration surface, so real desktop-client configuration remains pending client access.
+- User verified real desktop-client smoke from Codex Desktop on 2026-05-15.
+- User verified real desktop-client smoke from Claude Desktop on 2026-05-15.
+- Local client and test byproducts may remain under ignored project paths such as `.claude/` and `tmp/`; they are not Stage A source artifacts.
+- Stage B guarded-write tools remain blocked until explicitly accepted after Stage A.
