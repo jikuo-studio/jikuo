@@ -331,7 +331,7 @@ Boundary:
 - proposal tools must return structured results plus `chat_ready_markdown`; `policy_runtime_status` must remain visible when present
 - card-producing tools must include display directives and update runtime visibility, or explicitly report that runtime visibility is unavailable
 - no rollback, in-place revision, gate, frontend, Skill, Plugin, or broad action executor
-- no MCP implementation before package boundary, project-context binding, `JIKUO-SEC-02` privacy return classification, hardcoded resource-reference hygiene, `JIKUO-LIVE-12`, `JIKUO-ARCH-02`, `JIKUO-SDK-01`, `JIKUO-LIVE-19` starter policy provenance backfill, and previous/latest todo snapshot posture are accepted or explicitly deferred; `JIKUO-INTG-01` is accepted and must be preserved by the MCP display contract
+- no MCP implementation before package boundary, project-context binding, hardcoded resource-reference hygiene, `JIKUO-LIVE-12`, `JIKUO-ARCH-02`, `JIKUO-SDK-01`, `JIKUO-LIVE-19` starter policy provenance backfill, `JIKUO-SEC-02` response privacy classification, and previous/latest todo snapshot posture are accepted or explicitly deferred; `JIKUO-INTG-01` is accepted and must be preserved by the MCP display contract
 
 ### Step 5: Codex Plugin
 
@@ -518,8 +518,8 @@ Current next task:
 - accepted `JIKUO-LIVE-12` Phase 1 out-of-band runtime visibility
 - accepted `JIKUO-LIVE-14` completion review policy-only surfacing
 - accepted `JIKUO-LIVE-15` self-bootstrap task-session binding
-- `JIKUO-ARCH-03` MCP pre-implementation API neutrality review is complete and ready for user review
-- next review / accept revised integration-neutral `JIKUO-MCP-01` card-only tool and display-directive scope after remaining blockers are accepted or explicitly deferred
+- `JIKUO-ARCH-03` MCP pre-implementation API neutrality review is complete and accepted
+- next review / accept revised integration-neutral `JIKUO-MCP-01` card-only tool and display-directive scope
 
 Task goal:
 
@@ -529,9 +529,9 @@ Accepted target for the current pre-MCP visibility review:
 
 - `JIKUO-LIVE-12` writes `.jikuo/runtime/last_card.md`, `.jikuo/runtime/state_summary.json`, runtime history, exposes `jikuo show`, and returns `client_display_links` for direct desktop click targets
 - `JIKUO-ARCH-02` is accepted and keeps integration-specific logic under `src/jikuo/integrations/` while anchoring MCP under `src/jikuo/integrations/mcp/`
-- `JIKUO-ARCH-03` is accepted and verifies that the first MCP wrapper can call structured core APIs instead of CLI `main()` or stdout scraping; remaining acceptance blockers are `JIKUO-SEC-02` and revised `JIKUO-MCP-01`
+- `JIKUO-ARCH-03` is accepted and verifies that the first MCP wrapper can call structured core APIs instead of CLI `main()` or stdout scraping; remaining acceptance blocker is revised `JIKUO-MCP-01`
 - `JIKUO-LIVE-19` backfills `verified_jikuo_official` provenance onto official starter policies in plan and guarded initialization outputs, resolving the starter provenance MCP blocker
-- `JIKUO-SEC-02` defines field-level MCP response privacy classification and startup checklist requirements; MCP still needs user acceptance before implementation begins
+- `JIKUO-SEC-02` is accepted and defines field-level MCP response privacy classification and startup checklist requirements; MCP implementation must preserve this privacy contract
 - `JIKUO-LIVE-16` makes `policy_runtime_status` the first visible governance card in chat-ready and runtime-card output while keeping structured `cards[]` order stable for callers
 - `JIKUO-LIVE-17` keeps `latest_task_session_refs` as a separate guarded refresh and makes stale/current task-session index status visible through `jikuo show`
 - `JIKUO-LIVE-18` disables the fake same-file `previous_todo_map` binding for v0 and records guarded snapshot rotation as a deferred future capability
@@ -539,7 +539,7 @@ Accepted target for the current pre-MCP visibility review:
 - `JIKUO-INTG-01` is accepted and implements canonical `JIKUO.md` plus guarded client instruction sync without making client hooks mandatory
 - `JIKUO-SDK-01` is accepted and defines OpenAI Agents SDK, Claude Agent SDK, Google ADK, Vercel AI SDK, and Google Antigravity-style agentic platforms as optional orchestration / client-environment adapters that consume JIKUO through MCP / CLI / public adapter APIs while local policy, evidence, approvals, and runtime visibility remain authoritative
 - `JIKUO-LIVE-15` adds a self-bootstrap requirement that governed JIKUO development slices bind, create, or explicitly defer a task-session at task start; `.jikuo/project_state.yaml latest_task_session_refs` refresh remains a separate guarded action unless promoted later
-- `JIKUO-MCP-01` remains blocked until visibility, package boundary, project-context binding, `JIKUO-SEC-02`, resource-reference hygiene, integration neutrality, Agent SDK extension posture, and revised MCP scope are accepted or explicitly deferred
+- `JIKUO-MCP-01` remains blocked until visibility, package boundary, project-context binding, resource-reference hygiene, integration neutrality, Agent SDK extension posture, response privacy preservation, and revised MCP scope are accepted or explicitly deferred
 - dashboard, OS notifications, per-client hook packs, rollback, broader conditions, UI, Plugin, and gates remain deferred
 
 Accepted result:
@@ -563,7 +563,7 @@ Do not do next:
 - do not implement configurable rule kernel behavior inside skeleton / packaging work
 - do not implement `CORE-20B` resource-reference hygiene before package extraction unless the user explicitly defers `PKG-01`
 - do not implement MCP before local invocation contract and `agent_flow.py` semantics are clear
-- do not implement MCP before package extraction, project-context binding, `JIKUO-SEC-02` privacy return classification, hardcoded resource-reference hygiene, out-of-band runtime visibility, integration neutrality, Agent SDK extension posture, universal instruction distribution, API neutrality review, starter policy provenance backfill, and revised MCP scope are accepted or explicitly deferred
+- do not implement MCP before package extraction, project-context binding, hardcoded resource-reference hygiene, out-of-band runtime visibility, integration neutrality, Agent SDK extension posture, universal instruction distribution, API neutrality review, starter policy provenance backfill, response privacy preservation, and revised MCP scope are accepted or explicitly deferred
 - do not implement an Agents SDK runner before `JIKUO-SDK-01` is accepted and before MCP / instruction-distribution boundaries decide how SDK orchestration should call JIKUO
 - do not build Codex Plugin before MCP / runner semantics stabilize
 - do not promote gates or blocking behavior as part of this line

@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-SEC-02: MCP Response Privacy Classification Baseline
 
-> **Status**: Implemented and ready for user review on 2026-05-15
+> **Status**: Accepted on 2026-05-15
 > **Product meaning**: prevent MCP responses from leaking local paths, raw approval phrases, raw sidecar records, or user/project content when JIKUO becomes callable by desktop clients.
 > **Scope rule**: contract and checklist only; do not implement MCP adapter/server code, redaction code, auth, telemetry, dashboard, or remote transport behavior in this slice.
 
@@ -11,7 +11,7 @@
 - response-level privacy classification for local paths, approval data, and raw sidecar records
 - user acceptance of the revised `JIKUO-MCP-01` implementation scope
 
-`JIKUO-LIVE-19` resolved the starter policy provenance blocker. The remaining privacy blocker needs to be explicit before any MCP tool starts serializing JIKUO results.
+`JIKUO-LIVE-19` resolved the starter policy provenance blocker. This slice makes the remaining privacy blocker explicit and accepted before any MCP tool starts serializing JIKUO results.
 
 ## 2. Decision
 
@@ -56,7 +56,7 @@ Updated active mounts and task map:
 
 | User-facing chain | Operation chain | Required atoms | Acceptance boundary |
 |---|---|---|---|
-| MCP response privacy classification baseline | identify response fields -> classify fields as return / local_only / redact_required / redact_optional -> update SEC-01 -> update MCP startup checklist -> keep MCP implementation blocked until accepted | `CAP-MCP-RESPONSE-PRIVACY-CLASSIFICATION-01`; `CAP-TRUST-PRIVACY-PROVENANCE-BASELINE-01`; `CAP-MCP-PREIMPLEMENTATION-API-NEUTRALITY-REVIEW-01`; `CAP-MCP-AGENT-FLOW-WRAPPER-01` | docs/checklist only; no MCP adapter/server code; no redaction implementation; no remote transport implementation |
+| MCP response privacy classification baseline | identify response fields -> classify fields as return / local_only / redact_required / redact_optional -> update SEC-01 -> update MCP startup checklist -> preserve blocker until revised MCP-01 scope is accepted | `CAP-MCP-RESPONSE-PRIVACY-CLASSIFICATION-01`; `CAP-TRUST-PRIVACY-PROVENANCE-BASELINE-01`; `CAP-MCP-PREIMPLEMENTATION-API-NEUTRALITY-REVIEW-01`; `CAP-MCP-AGENT-FLOW-WRAPPER-01` | docs/checklist only; no MCP adapter/server code; no redaction implementation; no remote transport implementation |
 
 ## 5. Acceptance Criteria
 
@@ -66,3 +66,14 @@ Updated active mounts and task map:
 - MCP-01 startup checklist requires response privacy classification before code implementation.
 - MCP-01 testing requirements include field classification, local-only omission, and redaction checks.
 - The task map and execution mounts no longer list response privacy classification as an unaddressed blocker once this slice is accepted.
+
+## 6. Accepted Result
+
+Accepted by the user on 2026-05-15.
+
+Accepted decisions:
+
+- MCP response privacy classification uses field-level `return`, `local_only`, `redact_required`, and `redact_optional` categories.
+- This privacy baseline is a required precondition for MCP implementation.
+- Implementation may assume local desktop `stdio` first, but response shapes must preserve future remote-transport safety.
+- The next pre-MCP decision is revised `JIKUO-MCP-01` scope acceptance; MCP adapter / server code remains stopped until that review completes.

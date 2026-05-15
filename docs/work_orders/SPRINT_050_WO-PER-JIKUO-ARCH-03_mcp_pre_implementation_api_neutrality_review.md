@@ -74,15 +74,14 @@ This review does not clear every MCP blocker.
 
 Still blocking MCP implementation unless accepted or explicitly deferred:
 
-1. User acceptance of `JIKUO-SEC-02` field-level MCP response privacy classification.
-2. User acceptance of the revised `JIKUO-MCP-01` scope.
+1. User acceptance of the revised `JIKUO-MCP-01` scope.
 
 Resolved after this review:
 
 - `JIKUO-ARCH-03` was accepted by the user on 2026-05-15.
 - `JIKUO-LIVE-18` disabled the fake previous/latest todo same-file binding for v0 and deferred real snapshot rotation as a future capability.
 - `JIKUO-LIVE-19` backfilled official starter policy provenance and removed missing starter provenance as an MCP blocker.
-- `JIKUO-SEC-02` documents field-level MCP response privacy classification and moves the remaining privacy blocker to user acceptance.
+- `JIKUO-SEC-02` documents and accepts field-level MCP response privacy classification, resolving the remaining privacy-classification blocker.
 
 ## 6. Scenario-Chain-Atom Registration Evidence
 

@@ -1,0 +1,42 @@
+schema: "jikuo.task_session.v0"
+session:
+  session_id: "task_20260515T012440Z_jikuo_sec_02_acceptance_record_af67af62"
+  task_title: "JIKUO-SEC-02 acceptance record"
+  owner_agent: "codex"
+  created_at: "2026-05-15T01:24:40Z"
+  updated_at: "2026-05-15T01:24:40Z"
+  lifecycle_status: "started"
+scenario:
+  scenario_chain_id: "engineering_governance.task_session_start"
+  scenario_package: "engineering_governance"
+changed_surfaces: []
+rule_results: []
+document_mounts: []
+evidence_snapshots: []
+verification: []
+user_decisions:
+  -
+    decision_id: "task_session_start_approval"
+    decision_target: "JIKUO task-session file creation"
+    decision_effect: "create one compact task-session sidecar record"
+    decision_noneffect: "do not capture raw chat transcript"
+    exact_user_phrase: "\u597d\u7684\uff0c\u8bf7\u7ee7\u7eed\u5de5\u4f5c"
+    recorded_at: "2026-05-15T01:24:40Z"
+    surface: "desktop_agent_or_cli_bridge"
+completion:
+  status: "in_progress"
+handoff:
+  summary: null
+audit_trail:
+  -
+    action: "task_session_started"
+    actor: "codex"
+    recorded_at: "2026-05-15T01:24:40Z"
+    effect: "create one compact task-session sidecar record"
+supersession:
+  supersedes: []
+  superseded_by: null
+capture_policy:
+  raw_chat_transcript: "disallowed"
+  exact_user_phrase: "decision_only_with_target_and_effect"
+  product_output_quality_judgement: "out_of_scope"
