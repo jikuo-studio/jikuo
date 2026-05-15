@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from jikuo import runtime_visibility
 from jikuo.integrations.mcp import adapter, schemas
 
 
@@ -138,7 +139,14 @@ class MCPStageAAdapterTests(unittest.TestCase):
 
             self.assertIn("## Policy runtime status", response["card_markdown"])
             self.assertNotIn("# JIKUO Agent Flow Proposal", response["card_markdown"])
-            self.assertTrue((project_root / ".jikuo" / "runtime" / "last_card.md").is_file())
+            last_card = project_root / ".jikuo" / "runtime" / "last_card.md"
+            self.assertTrue(last_card.is_file())
+            self.assertEqual(last_card.read_text(encoding="utf-8"), response["card_markdown"])
+            show_card, show_report = runtime_visibility.load_last_card(
+                project_root=project_root
+            )
+            self.assertEqual(show_report["status"], "available")
+            self.assertEqual(show_card, response["card_markdown"])
 
     def test_stage_a_proposal_tools_return_display_verification_without_governance_write(self):
         with tempfile.TemporaryDirectory() as tmp:

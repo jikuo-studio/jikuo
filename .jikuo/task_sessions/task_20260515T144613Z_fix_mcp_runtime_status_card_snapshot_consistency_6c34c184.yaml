@@ -1,0 +1,166 @@
+schema: "jikuo.task_session.v0"
+session:
+  session_id: "task_20260515T144613Z_fix_mcp_runtime_status_card_snapshot_consistency_6c34c184"
+  task_title: "Fix MCP runtime status card snapshot consistency"
+  owner_agent: "codex"
+  created_at: "2026-05-15T14:46:13Z"
+  updated_at: "2026-05-15T14:51:10Z"
+  lifecycle_status: "ready_for_review"
+scenario:
+  scenario_chain_id: "engineering_governance.task_session_start"
+  scenario_package: "engineering_governance"
+changed_surfaces: []
+rule_results: []
+document_mounts: []
+evidence_snapshots:
+  -
+    evidence_id: "patch_evidence_0fb71acc"
+    evidence_kind: "policy_evidence:implementation_intent_routing_evidence"
+    source_ref: "policy_ref=POLICY-jikuo-implementation-intent-routing-before-change;action_ref=ACT-classify-implementation-intent-and-route-development-ideas-befor;requirement_ref=EVD-implementation-intent-routing-evidence;source=docs/work_orders/SPRINT_050_WO-PER-JIKUO-MCP-01_mcp_wrapper_mvp.md"
+    summary: "Classified this as a taskmap implementation fix for JIKUO-MCP-01 Stage A acceptance: code and docs change; no new policy or insight promotion."
+    status: "ok"
+    recorded_at: "2026-05-15T14:49:53Z"
+    recorded_by: "codex"
+  -
+    evidence_id: "patch_evidence_c0364f59"
+    evidence_kind: "implementation_evidence"
+    source_ref: "src/jikuo/integrations/mcp/adapter.py"
+    summary: "Changed get_runtime_status_card to persist the same single-card Markdown it returns, instead of writing a full proposal runtime snapshot for the card-only tool."
+    status: "ok"
+    recorded_at: "2026-05-15T14:50:05Z"
+    recorded_by: "codex"
+  -
+    evidence_id: "patch_evidence_433e1d2b"
+    evidence_kind: "policy_evidence:main_document_mount_maintenance_evidence"
+    source_ref: "policy_ref=POLICY-jikuo-main-doc-mount-maintenance;action_ref=ACT-maintain-main-doc-mounts-before-completion;requirement_ref=EVD-main-document-mount-maintenance-evidence;source=docs/work_orders/SPRINT_050_WO-PER-JIKUO-MCP-01_mcp_wrapper_mvp.md"
+    summary: "Updated MCP-01, taskmap, and execution mounts with the official SDK client smoke result, the card-only runtime snapshot mismatch, and the consistency fix."
+    status: "ok"
+    recorded_at: "2026-05-15T14:50:13Z"
+    recorded_by: "codex"
+verification:
+  -
+    verification_id: "patch_verification_1b3b1710"
+    command: "python -B -m unittest discover -s tests -p *_tests.py"
+    summary: "Full unittest discovery passed: 139 tests OK."
+    status: "ok"
+    exit_code: 0
+    layer: "unit_tests"
+    recorded_at: "2026-05-15T14:50:20Z"
+    recorded_by: "codex"
+  -
+    verification_id: "patch_verification_fc145e2e"
+    command: "git diff --check"
+    summary: "git diff --check passed; only line-ending warnings were reported."
+    status: "ok"
+    exit_code: 0
+    layer: "diff_hygiene"
+    recorded_at: "2026-05-15T14:50:25Z"
+    recorded_by: "codex"
+  -
+    verification_id: "patch_verification_9219c90e"
+    command: "python -B -m unittest tests.mcp_adapter_tests tests.mcp_server_tests"
+    summary: "MCP adapter/server focused tests passed: 11 tests OK, including card_markdown == last_card == load_last_card for get_runtime_status_card."
+    status: "ok"
+    exit_code: 0
+    layer: "mcp_unit_tests"
+    recorded_at: "2026-05-15T14:50:30Z"
+    recorded_by: "codex"
+  -
+    verification_id: "patch_verification_c6e5f2aa"
+    command: "official MCP SDK ClientSession stdio smoke"
+    summary: "Using tmp/mcp-stage-a-venv, official ClientSession listed 8 Stage A tools and called jikuo.get_runtime_status_card; result status was ok and card_markdown began with ## Policy runtime status."
+    status: "ok"
+    exit_code: 0
+    layer: "official_mcp_sdk_client_smoke"
+    recorded_at: "2026-05-15T14:50:36Z"
+    recorded_by: "codex"
+  -
+    verification_id: "patch_verification_d6ec788b"
+    command: "adapter card-only runtime equality smoke"
+    summary: "Local smoke confirmed adapter.call_tool('jikuo.get_runtime_status_card').card_markdown equals .jikuo/runtime/last_card.md exactly, and jikuo show --last-card starts with ## Policy runtime status."
+    status: "ok"
+    exit_code: 0
+    layer: "runtime_visibility_consistency"
+    recorded_at: "2026-05-15T14:50:52Z"
+    recorded_by: "codex"
+user_decisions:
+  -
+    decision_id: "task_session_start_approval"
+    decision_target: "JIKUO task-session file creation"
+    decision_effect: "create one compact task-session sidecar record"
+    decision_noneffect: "do not capture raw chat transcript"
+    exact_user_phrase: "\u597d\u7684\uff0c\u8bf7\u4f60\u505a\u8fd9\u6837\u7684\u4fee\u590d"
+    recorded_at: "2026-05-15T14:46:13Z"
+    surface: "desktop_agent_or_cli_bridge"
+  -
+    decision_id: "patch_completion_d9c9ecad"
+    decision_target: "JIKUO task-session completion update"
+    decision_effect: "set task-session completion to ready_for_review"
+    decision_noneffect: "do not capture raw chat transcript or judge product output quality"
+    exact_user_phrase: "\u597d\u7684\uff0c\u8bf7\u4f60\u505a\u8fd9\u6837\u7684\u4fee\u590d"
+    recorded_at: "2026-05-15T14:51:10Z"
+    surface: "desktop_agent_or_cli_bridge"
+completion:
+  status: "ready_for_review"
+  summary: "Completed MCP Stage A card-only runtime snapshot consistency fix after external SDK client smoke found card_markdown and last_card granularity differed."
+  updated_at: "2026-05-15T14:51:10Z"
+handoff:
+  summary: null
+audit_trail:
+  -
+    action: "task_session_started"
+    actor: "codex"
+    recorded_at: "2026-05-15T14:46:13Z"
+    effect: "create one compact task-session sidecar record"
+  -
+    action: "task_session_evidence_updated"
+    actor: "codex"
+    recorded_at: "2026-05-15T14:49:53Z"
+    patch_id: "patch_evidence_0fb71acc"
+  -
+    action: "task_session_evidence_updated"
+    actor: "codex"
+    recorded_at: "2026-05-15T14:50:05Z"
+    patch_id: "patch_evidence_c0364f59"
+  -
+    action: "task_session_evidence_updated"
+    actor: "codex"
+    recorded_at: "2026-05-15T14:50:13Z"
+    patch_id: "patch_evidence_433e1d2b"
+  -
+    action: "task_session_verification_updated"
+    actor: "codex"
+    recorded_at: "2026-05-15T14:50:20Z"
+    patch_id: "patch_verification_1b3b1710"
+  -
+    action: "task_session_verification_updated"
+    actor: "codex"
+    recorded_at: "2026-05-15T14:50:25Z"
+    patch_id: "patch_verification_fc145e2e"
+  -
+    action: "task_session_verification_updated"
+    actor: "codex"
+    recorded_at: "2026-05-15T14:50:30Z"
+    patch_id: "patch_verification_9219c90e"
+  -
+    action: "task_session_verification_updated"
+    actor: "codex"
+    recorded_at: "2026-05-15T14:50:36Z"
+    patch_id: "patch_verification_c6e5f2aa"
+  -
+    action: "task_session_verification_updated"
+    actor: "codex"
+    recorded_at: "2026-05-15T14:50:52Z"
+    patch_id: "patch_verification_d6ec788b"
+  -
+    action: "task_session_completion_updated"
+    actor: "codex"
+    recorded_at: "2026-05-15T14:51:10Z"
+    patch_id: "patch_completion_d9c9ecad"
+supersession:
+  supersedes: []
+  superseded_by: null
+capture_policy:
+  raw_chat_transcript: "disallowed"
+  exact_user_phrase: "decision_only_with_target_and_effect"
+  product_output_quality_judgement: "out_of_scope"

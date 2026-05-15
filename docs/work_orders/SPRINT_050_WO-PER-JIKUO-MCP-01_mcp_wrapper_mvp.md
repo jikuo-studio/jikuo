@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-MCP-01: MCP Wrapper MVP
 
-> **Status**: Stage A server wrapper in progress; SDK-free adapter, schemas, official `mcp` dependency declaration, and `server.py` wrapper implemented; real SDK import / module-entry smoke passed; desktop-client smoke remains pending
+> **Status**: Stage A server wrapper in progress; SDK-free adapter, schemas, official `mcp` dependency declaration, and `server.py` wrapper implemented; real SDK import / module-entry / official SDK client smoke passed; desktop-client configuration smoke remains pending
 > **Product meaning**: formally move the next phase from more kernel expansion to an MCP wrapper MVP, so desktop Agents can call JIKUO through a stable tool surface while users remain in their desktop AI client.
 > **Scope rule**: wrap stable atoms only; do not add new governance capability in this slice.
 
@@ -225,7 +225,10 @@ Stage A implementation progress:
 - [x] `src/jikuo/integrations/mcp/server.py` lazily imports `mcp.server.fastmcp.FastMCP`, registers the 8 Stage A tools, embeds the display contract in card-returning tool descriptions, and delegates all tool behavior to `adapter.call_tool`.
 - [x] Server-wrapper unit coverage uses a fake FastMCP object so registration, display-contract descriptions, and adapter delegation remain testable without the SDK installed in the current environment.
 - [x] Real SDK import / module-entry smoke passed after installing the declared dependency in the user environment: `mcp.server.fastmcp.FastMCP` imports, `create_server()` returns a real `FastMCP` instance, and `python -B -m jikuo.integrations.mcp.server --help` works.
-- [ ] Real MCP client smoke tests and two-client release gate are not started.
+- [x] Official Python SDK `ClientSession` stdio smoke passed in an external Codex window: `python -B -m jikuo.integrations.mcp.server` listed the 8 Stage A tools and called `jikuo.get_runtime_status_card`.
+- [x] External smoke found that `get_runtime_status_card.card_markdown` returned a single policy card while `.jikuo/runtime/last_card.md` and `jikuo show --last-card` showed the full proposal; fixed by making the card-only tool persist the same single-card Markdown to runtime visibility.
+- [x] Unit coverage verifies `jikuo.get_runtime_status_card.card_markdown`, `.jikuo/runtime/last_card.md`, and `runtime_visibility.load_last_card()` are byte-for-byte equal for the card-only runtime status call.
+- [ ] Real desktop-client configuration smoke and two-client release gate remain pending; current Codex desktop did not expose a hot-loadable MCP client configuration surface during the external smoke.
 
 SDK dependency decision record:
 
@@ -250,7 +253,8 @@ First user-experience acceptance standard:
 - In an MCP-compatible desktop client, a governed task-start call must display `policy_runtime_status` before lifecycle or task-session cards.
 - The user must be able to open `.jikuo/runtime/last_card.md` or run `jikuo show --last-card` to verify the same card out of band.
 - A no-write MCP call must not create `.jikuo/policies/`, `.jikuo/task_sessions/`, or update `.jikuo/project_state.yaml`; only runtime visibility files may update when a card is produced.
-- For a single no-write MCP call, chat, `.jikuo/runtime/last_card.md`, and `jikuo show --last-card` must expose the same policy runtime status.
+- For `jikuo.get_runtime_status_card`, chat, `.jikuo/runtime/last_card.md`, and `jikuo show --last-card` must expose the same single-card Markdown byte-for-byte.
+- For broader proposal tools, chat, `.jikuo/runtime/last_card.md`, and `jikuo show --last-card` must expose the same complete proposal Markdown with policy runtime status first when present.
 - If the Agent fails to paste `card_markdown`, it must surface `display_verification.user_can_verify_with` so the user can open the out-of-band card.
 
 ## 8. Testing Requirements
@@ -286,6 +290,7 @@ Smoke tests:
 - Stage A MCP tool list exposes only the 8 no-write / card / proposal tools
 - one no-write MCP call returns `chat_ready_markdown` plus structured result
 - one card-only MCP call returns a compact Markdown card that should be shown verbatim
+- the card-only runtime status call writes that same compact Markdown card to `.jikuo/runtime/last_card.md`
 - `jikuo.propose_task_start` returns `cards[]` containing `policy_runtime_status` when the wrapped runner produced one
 - card-producing tools render `policy_runtime_status` before task-session / lifecycle cards when the wrapped runner produced one
 - no root `.jikuo/policies/` or `.jikuo/task_sessions/` is created during no-write smoke

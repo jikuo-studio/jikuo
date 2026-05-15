@@ -239,11 +239,7 @@ def _runtime_status_card_response(
         raw_event="project_status",
         project_root=project_root,
     )
-    with_markdown = agent_flow.proposal_with_chat_ready_markdown(
-        proposal,
-        project_root=project_root,
-    )
-    cards = with_markdown.get("cards") or []
+    cards = proposal.get("cards") or []
     policy_card = next(
         (
             card
@@ -255,17 +251,54 @@ def _runtime_status_card_response(
     card_markdown = (
         agent_flow.render_card(policy_card)
         if isinstance(policy_card, dict)
-        else str(with_markdown.get("chat_ready_markdown") or "")
+        else agent_flow.render_markdown(proposal)
     )
+    data_details = dict(proposal)
+    data_details["display"] = agent_flow.build_display_directives()
+    data_details["chat_ready_markdown_schema"] = agent_flow.CHAT_READY_MARKDOWN_SCHEMA
+    data_details["chat_ready_markdown"] = card_markdown
+    runtime_report = runtime_visibility.persist_agent_flow_snapshot(
+        project_root=project_root,
+        proposal=data_details,
+        card_markdown=card_markdown,
+    )
+    data_details["runtime_visibility"] = runtime_report
+    data_details["client_display_links"] = runtime_visibility.build_client_display_links(
+        runtime_report
+    )
+    write_effect = data_details.get("write_effect")
+    if isinstance(write_effect, dict):
+        write_effect["runtime_visibility_side_effect"] = {
+            "write_performed": bool(runtime_report.get("write_performed")),
+            "target": runtime_report.get("runtime_root_ref"),
+            "last_card_ref": runtime_report.get("last_card_ref"),
+            "state_summary_ref": runtime_report.get("state_summary_ref"),
+            "history_ref": runtime_report.get("history_ref"),
+            "client_display_links_status": data_details["client_display_links"].get(
+                "status"
+            ),
+            "reason": runtime_report.get("reason"),
+        }
+    atom_trace = data_details.get("atom_trace")
+    if isinstance(atom_trace, list) and runtime_report.get("write_performed"):
+        atom_trace.append(
+            agent_flow.atom_trace(
+                loop_step_id="DPL-06",
+                atom_id="CAP-RUNTIME-VISIBILITY-CHANNEL-01",
+                mode="runtime-projection",
+                status="ok",
+                summary="wrote card-only runtime status snapshot to .jikuo/runtime",
+            )
+        )
     return _base_response(
         tool_name="jikuo.get_runtime_status_card",
-        status=str(with_markdown.get("status") or "review"),
-        data_details=with_markdown,
+        status=str(data_details.get("status") or "review"),
+        data_details=data_details,
         project_root=project_root,
         transport=transport,
         card_markdown=card_markdown,
         chat_ready_markdown=card_markdown,
-        runtime_report=_runtime_report_from(with_markdown),
+        runtime_report=runtime_report,
     )
 
 

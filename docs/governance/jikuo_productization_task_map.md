@@ -2662,7 +2662,7 @@ Accepted precondition:
 Open items:
 
 1. Review the implemented Stage A server wrapper: `src/jikuo/integrations/mcp/server.py`, `adapter.py`, `schemas.py`, `tests/mcp_server_tests.py`, and `tests/mcp_adapter_tests.py`.
-2. Run real MCP desktop-client smoke for `jikuo-mcp` in at least two available MCP-compatible clients, or record unavailable client access explicitly.
+2. Run real MCP desktop-client configuration smoke for `jikuo-mcp` in at least two available MCP-compatible clients, or record unavailable client access explicitly.
 3. Review release-readiness follow-ups before external users: product-facing root README, license decision, minimal CI, pytest/dev extras.
 4. Keep Stage B guarded write tools blocked until Stage A server / client smoke / release gates are accepted.
 5. Keep the decision about whether new self-bootstrap policies enter built-in starter templates suspended until explicit user approval.
@@ -2685,11 +2685,13 @@ MCP MVP scope freeze:
 - Stage A implemented: tests cover tool listing, policy-store status, task-start proposal, latest display card, runtime status card, policy proposal tools, runtime-only writes, and unknown-transport sanitization
 - Stage A implemented: `pyproject.toml` declares the official Python MCP SDK dependency `mcp` and exposes `jikuo-mcp`
 - Stage A implemented: `server.py` lazily imports `mcp.server.fastmcp.FastMCP`, registers the 8 Stage A tools, embeds the card display contract in tool descriptions, and delegates behavior to the SDK-free adapter
-- Stage A checked: official MCP Python SDK import / module-entry smoke passed after user-environment dependency install (`mcp 1.27.1`); desktop-client protocol smoke remains pending rather than being replaced by a handwritten protocol server
+- Stage A checked: official MCP Python SDK import / module-entry smoke passed after user-environment dependency install (`mcp 1.27.1`)
+- Stage A checked: official Python SDK `ClientSession` stdio smoke passed in an external Codex window; the server listed 8 Stage A tools and called `jikuo.get_runtime_status_card`
+- Stage A fixed: external smoke found `jikuo.get_runtime_status_card.card_markdown` was a single card while runtime last-card output was the full proposal; the card-only tool now persists the same single-card Markdown to `.jikuo/runtime/last_card.md`
 - Stage A require: selected fixture is `src/jikuo/fixtures/policy_store_active_project`
 - Stage A require: adapter core is importable and testable without the MCP SDK; official SDK is isolated to `server.py`
 - Stage A require: card-producing responses include `display_verification` with user-verifiable relative runtime paths / commands
-- Stage A require: chat, `.jikuo/runtime/last_card.md`, and `jikuo show --last-card` expose the same policy runtime status for the same no-write call
+- Stage A require: for `jikuo.get_runtime_status_card`, chat, `.jikuo/runtime/last_card.md`, and `jikuo show --last-card` expose the same single-card Markdown byte-for-byte; broader proposal tools may expose complete proposal Markdown as long as policy runtime status is first when present
 - Stage A require: no hidden governance writes; only `.jikuo/runtime/` may update for runtime visibility
 - Stage A release gate: at least two available MCP-compatible desktop clients are tested, or unavailable client access is explicitly recorded
 - Stage B include after Stage A acceptance: guarded task-session evidence apply
