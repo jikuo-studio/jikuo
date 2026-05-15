@@ -43,8 +43,14 @@ STAGE_B_TOOL_NAMES = (
 
 STAGE_B1_TOOL_NAMES = ("jikuo.apply_task_session_evidence_update",)
 STAGE_B2_TOOL_NAMES = ("jikuo.apply_policy_evolution_write",)
+STAGE_B3_TOOL_NAMES = ("jikuo.apply_policy_template_activation",)
 
-EXPOSED_TOOL_NAMES = STAGE_A_TOOL_NAMES + STAGE_B1_TOOL_NAMES + STAGE_B2_TOOL_NAMES
+EXPOSED_TOOL_NAMES = (
+    STAGE_A_TOOL_NAMES
+    + STAGE_B1_TOOL_NAMES
+    + STAGE_B2_TOOL_NAMES
+    + STAGE_B3_TOOL_NAMES
+)
 
 
 def _tool(
@@ -237,6 +243,31 @@ TOOL_DEFINITIONS: dict[str, dict[str, Any]] = {
         },
         card_returning=True,
         stage="B2",
+        write_mode="guarded-write",
+    ),
+    "jikuo.apply_policy_template_activation": _tool(
+        name="jikuo.apply_policy_template_activation",
+        description=(
+            "Activate one explicitly approved resolved policy template through the "
+            "guarded agent_flow apply boundary. Requires template, confirm_apply=true, "
+            "and an approval_phrase after the user reviews the template import plan."
+        ),
+        input_fields={
+            "project_root": LOCAL_ONLY,
+            "template": RETURN,
+            "owner_agent": RETURN,
+            "confirm_apply": RETURN,
+            "approval_phrase": REDACT_REQUIRED,
+        },
+        output_fields={
+            "write_performed": RETURN,
+            "target_result_schema": RETURN,
+            "target_result": RETURN,
+            "approval_boundary": RETURN,
+            "refusal_reasons": RETURN,
+        },
+        card_returning=True,
+        stage="B3",
         write_mode="guarded-write",
     ),
 }

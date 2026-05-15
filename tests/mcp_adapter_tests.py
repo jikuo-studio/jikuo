@@ -28,6 +28,35 @@ def copy_fixture(source: Path, tmp: str, name: str = "project") -> Path:
     return target
 
 
+def write_mcp_project_context(root: Path) -> None:
+    docs_dir = root / "docs"
+    docs_dir.mkdir(parents=True, exist_ok=True)
+    (docs_dir / "latest.md").write_text("latest", encoding="utf-8")
+    (docs_dir / "previous.md").write_text("previous", encoding="utf-8")
+    context_path = root / ".jikuo" / "project_context.yaml"
+    context_path.parent.mkdir(parents=True, exist_ok=True)
+    context_path.write_text(
+        "\n".join(
+            [
+                'schema_version: "jikuo.project_context.v0"',
+                "project:",
+                '  project_id: "mcp_template_activation_fixture"',
+                '  project_type: "test"',
+                '  project_root_policy: "bindings_must_resolve_inside_project_root"',
+                "document_roles:",
+                "  latest_todo_map:",
+                '    path: "docs/latest.md"',
+                "    required: true",
+                "  previous_todo_map:",
+                '    path: "docs/previous.md"',
+                "    required: true",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+
 def policy_evolution_args(
     project_root: Path,
     *,
@@ -75,7 +104,7 @@ class MCPStageAAdapterTests(unittest.TestCase):
         self.assertEqual(names, list(schemas.EXPOSED_TOOL_NAMES))
         self.assertIn("jikuo.apply_task_session_evidence_update", names)
         self.assertIn("jikuo.apply_policy_evolution_write", names)
-        self.assertNotIn("jikuo.apply_policy_template_activation", names)
+        self.assertIn("jikuo.apply_policy_template_activation", names)
         by_name = {tool["name"]: tool for tool in tools}
         for name in schemas.STAGE_A_TOOL_NAMES:
             self.assertEqual(by_name[name]["stage"], "A")
@@ -91,6 +120,14 @@ class MCPStageAAdapterTests(unittest.TestCase):
         self.assertEqual(by_name["jikuo.apply_policy_evolution_write"]["stage"], "B2")
         self.assertEqual(
             by_name["jikuo.apply_policy_evolution_write"]["write_mode"],
+            "guarded-write",
+        )
+        self.assertEqual(
+            by_name["jikuo.apply_policy_template_activation"]["stage"],
+            "B3",
+        )
+        self.assertEqual(
+            by_name["jikuo.apply_policy_template_activation"]["write_mode"],
             "guarded-write",
         )
 
@@ -403,9 +440,82 @@ class MCPStageAAdapterTests(unittest.TestCase):
             self.assertFalse((project_root / ".jikuo" / "task_sessions").exists())
             self.assertTrue((project_root / ".jikuo" / "runtime" / "last_card.md").is_file())
 
-    def test_stage_b3_tool_remains_unsupported(self):
-        with self.assertRaises(ValueError):
-            adapter.call_tool("jikuo.apply_policy_template_activation", {})
+    def test_stage_b3_policy_template_activation_refuses_without_approval(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "template_project"
+            project_root.mkdir()
+            write_mcp_project_context(project_root)
+
+            response = adapter.call_tool(
+                "jikuo.apply_policy_template_activation",
+                {
+                    "project_root": str(project_root),
+                    "template": str(POLICY_TEMPLATE),
+                },
+            )
+
+            self.assertEqual(response["tool_name"], "jikuo.apply_policy_template_activation")
+            self.assertEqual(response["stage"], "B3")
+            self.assertEqual(response["write_mode"], "guarded-write")
+            self.assertEqual(response["status"], "refused")
+            self.assertFalse(response["write_performed"])
+            self.assertEqual(
+                response["target_result_schema"],
+                "jikuo.policy_template_activation_result.v0",
+            )
+            self.assertIn("missing_confirmation_flag", response["refusal_reasons"])
+            self.assertIn("approval_evidence_missing", response["refusal_reasons"])
+            self.assertIn("# JIKUO Agent Flow Apply Result", response["card_markdown"])
+            self.assertTrue((project_root / ".jikuo" / "runtime" / "last_card.md").is_file())
+            self.assertFalse((project_root / ".jikuo" / "policies").exists())
+
+    def test_stage_b3_policy_template_activation_writes_after_approval(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "template_project"
+            project_root.mkdir()
+            write_mcp_project_context(project_root)
+
+            response = adapter.call_tool(
+                "jikuo.apply_policy_template_activation",
+                {
+                    "project_root": str(project_root),
+                    "template": str(POLICY_TEMPLATE),
+                    "confirm_apply": True,
+                    "approval_phrase": "I approve MCP B3 activating this policy template.",
+                },
+                transport=schemas.LOCAL_STDIO_TRANSPORT,
+            )
+
+            self.assertEqual(response["status"], "applied")
+            self.assertTrue(response["write_performed"])
+            self.assertEqual(
+                response["target_result_schema"],
+                "jikuo.policy_template_activation_result.v0",
+            )
+            target = response["target_result"]
+            self.assertEqual(target["status"], "written")
+            self.assertEqual(
+                target["policy_ref"],
+                "POLICY-task-scope-control-before-packaging",
+            )
+            self.assertTrue(target["post_write_verification"]["policy_active"])
+            self.assertNotIn(
+                "I approve MCP B3 activating this policy template.",
+                json.dumps(response),
+            )
+            tool = schemas.tool_definition("jikuo.apply_policy_template_activation")
+            self.assertEqual(tool["input_fields"]["approval_phrase"], schemas.REDACT_REQUIRED)
+            approved_path = (
+                project_root
+                / ".jikuo"
+                / "policies"
+                / "approved"
+                / "POLICY-task-scope-control-before-packaging.yaml"
+            )
+            self.assertTrue(approved_path.is_file())
+            self.assertIn("resolved_bindings:", approved_path.read_text(encoding="utf-8"))
+            self.assertFalse((project_root / ".jikuo" / "task_sessions").exists())
+            self.assertTrue((project_root / ".jikuo" / "runtime" / "last_card.md").is_file())
 
 
 if __name__ == "__main__":

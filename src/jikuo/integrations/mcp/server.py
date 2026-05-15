@@ -348,6 +348,43 @@ def register_stage_b2_tools(
     return server
 
 
+def register_stage_b3_tools(
+    server: Any,
+    *,
+    default_transport: str = schemas.LOCAL_STDIO_TRANSPORT,
+) -> Any:
+    """Register accepted Stage B3 guarded policy-template activation MCP tools."""
+
+    tool_definitions = {tool["name"]: tool for tool in adapter.list_tools()}
+
+    @server.tool(
+        name="jikuo.apply_policy_template_activation",
+        description=tool_description(
+            tool_definitions["jikuo.apply_policy_template_activation"]
+        ),
+    )
+    def jikuo_apply_policy_template_activation(
+        project_root: str | None = None,
+        template: str | None = None,
+        owner_agent: str | None = None,
+        confirm_apply: bool = False,
+        approval_phrase: str | None = None,
+    ) -> dict[str, Any]:
+        return _call(
+            "jikuo.apply_policy_template_activation",
+            {
+                "project_root": project_root,
+                "template": template,
+                "owner_agent": owner_agent,
+                "confirm_apply": confirm_apply,
+                "approval_phrase": approval_phrase,
+            },
+            default_transport=default_transport,
+        )
+
+    return server
+
+
 def create_server(
     *,
     fastmcp_cls: FastMCPFactory | None = None,
@@ -366,7 +403,8 @@ def create_server(
     )
     register_stage_a_tools(server, default_transport=default_transport)
     register_stage_b1_tools(server, default_transport=default_transport)
-    return register_stage_b2_tools(server, default_transport=default_transport)
+    register_stage_b2_tools(server, default_transport=default_transport)
+    return register_stage_b3_tools(server, default_transport=default_transport)
 
 
 def _adapter_transport_for_run(run_transport: str) -> str:

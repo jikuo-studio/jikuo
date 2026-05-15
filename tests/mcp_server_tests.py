@@ -10,12 +10,49 @@ ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "src" / "jikuo" / "fixtures"
 POLICY_ACTIVE_PROJECT = FIXTURES / "policy_store_active_project"
 POLICY_EVIDENCE_SESSION_PROJECT = FIXTURES / "policy_evidence_session_project"
+POLICY_TEMPLATE = (
+    ROOT
+    / "src"
+    / "jikuo"
+    / "policy_templates"
+    / "engineering_governance"
+    / "POLICYTEMPLATE-local-policy-task-scope-control-before-packaging.yaml"
+)
 
 
 def copy_fixture(source: Path, tmp: str, name: str = "project") -> Path:
     target = Path(tmp) / name
     shutil.copytree(source, target)
     return target
+
+
+def write_mcp_project_context(root: Path) -> None:
+    docs_dir = root / "docs"
+    docs_dir.mkdir(parents=True, exist_ok=True)
+    (docs_dir / "latest.md").write_text("latest", encoding="utf-8")
+    (docs_dir / "previous.md").write_text("previous", encoding="utf-8")
+    context_path = root / ".jikuo" / "project_context.yaml"
+    context_path.parent.mkdir(parents=True, exist_ok=True)
+    context_path.write_text(
+        "\n".join(
+            [
+                'schema_version: "jikuo.project_context.v0"',
+                "project:",
+                '  project_id: "mcp_server_template_activation_fixture"',
+                '  project_type: "test"',
+                '  project_root_policy: "bindings_must_resolve_inside_project_root"',
+                "document_roles:",
+                "  latest_todo_map:",
+                '    path: "docs/latest.md"',
+                "    required: true",
+                "  previous_todo_map:",
+                '    path: "docs/previous.md"',
+                "    required: true",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
 
 
 def policy_evolution_args(project_root: Path) -> dict[str, object]:
@@ -75,7 +112,7 @@ class MCPServerWrapperTests(unittest.TestCase):
         self.assertEqual(list(fake.tools), list(schemas.EXPOSED_TOOL_NAMES))
         self.assertIn("jikuo.apply_task_session_evidence_update", fake.tools)
         self.assertIn("jikuo.apply_policy_evolution_write", fake.tools)
-        self.assertNotIn("jikuo.apply_policy_template_activation", fake.tools)
+        self.assertIn("jikuo.apply_policy_template_activation", fake.tools)
 
     def test_card_tool_descriptions_include_display_contract(self):
         fake = server.create_server(fastmcp_cls=FakeFastMCP)
@@ -155,6 +192,42 @@ class MCPServerWrapperTests(unittest.TestCase):
             self.assertNotIn(
                 "I approve MCP server B2 applying this policy supersession.",
                 str(response),
+            )
+            self.assertFalse((project_root / ".jikuo" / "task_sessions").exists())
+
+    def test_stage_b3_registered_tool_delegates_guarded_apply(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "template_project"
+            project_root.mkdir()
+            write_mcp_project_context(project_root)
+            fake = server.create_server(fastmcp_cls=FakeFastMCP)
+
+            response = fake.tools["jikuo.apply_policy_template_activation"]["function"](
+                project_root=str(project_root),
+                template=str(POLICY_TEMPLATE),
+                confirm_apply=True,
+                approval_phrase="I approve MCP server B3 activating this policy template.",
+            )
+
+            self.assertEqual(
+                response["tool_name"],
+                "jikuo.apply_policy_template_activation",
+            )
+            self.assertEqual(response["status"], "applied")
+            self.assertTrue(response["write_performed"])
+            self.assertIn("# JIKUO Agent Flow Apply Result", response["card_markdown"])
+            self.assertNotIn(
+                "I approve MCP server B3 activating this policy template.",
+                str(response),
+            )
+            self.assertTrue(
+                (
+                    project_root
+                    / ".jikuo"
+                    / "policies"
+                    / "approved"
+                    / "POLICY-task-scope-control-before-packaging.yaml"
+                ).is_file()
             )
             self.assertFalse((project_root / ".jikuo" / "task_sessions").exists())
 

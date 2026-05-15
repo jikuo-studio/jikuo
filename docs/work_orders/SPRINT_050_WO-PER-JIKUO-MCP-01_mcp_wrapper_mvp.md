@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-MCP-01: MCP Wrapper MVP
 
-> **Status**: Stage A server wrapper accepted; Stage B1 task-session evidence guarded-write tool implemented after explicit user approval; Stage B2 policy evolution guarded-write tool implemented and externally smoke-accepted; Stage B3 template activation remains blocked until separate acceptance
+> **Status**: Stage A server wrapper accepted; Stage B1 task-session evidence guarded-write tool implemented after explicit user approval; Stage B2 policy evolution guarded-write tool implemented and externally smoke-accepted; Stage B3 policy-template activation guarded-write tool implemented and externally smoke-accepted
 > **Product meaning**: formally move the next phase from more kernel expansion to an MCP wrapper MVP, so desktop Agents can call JIKUO through a stable tool surface while users remain in their desktop AI client.
 > **Scope rule**: wrap stable atoms only; do not add new governance capability in this slice.
 
@@ -88,7 +88,8 @@ Stage A exposes only no-write / card-returning operations. These tools may updat
 Stage B exposes guarded write operations only after Stage A acceptance gates pass.
 Stage B1 is accepted for task-session evidence writes. Stage B2 is accepted for
 policy evolution deprecation / supersession writes with proposal-ref binding.
-Stage B3 template activation remains blocked.
+Stage B3 is accepted for one resolved policy-template activation after the user
+reviews the template import plan and supplies confirmation plus approval phrase.
 
 | Stage B MCP tool | Wrapped atom | Write mode | Product role |
 |---|---|---|---|
@@ -241,11 +242,17 @@ Stage A implementation progress:
 - [x] Unit coverage verifies Stage B1 refusal without confirmation / approval phrase, success after approval, no policy-store or project-state writes, approval phrase non-disclosure, runtime visibility projection, and continued non-registration for Stage B3.
 - [x] Official Python SDK `ClientSession` stdio smoke passed for Stage B1: during the B1 slice, the server listed 9 tools, exposed `jikuo.apply_task_session_evidence_update`, did not expose Stage B2 / B3 tools, and successfully appended one task-session evidence item without returning the approval phrase.
 - [x] Stage B2 user approval recorded on 2026-05-15: continue MCP Stage B by exposing only `jikuo.apply_policy_evolution_write`; dashboard / Studio UI remains deferred, and current visibility relies on card markdown plus runtime card links.
-- [x] `src/jikuo/integrations/mcp/schemas.py` exposes `jikuo.apply_policy_evolution_write` as the accepted Stage B2 guarded-write tool while `jikuo.apply_policy_template_activation` remains absent from the MCP tool list.
+- [x] During the Stage B2 slice, `src/jikuo/integrations/mcp/schemas.py` exposed `jikuo.apply_policy_evolution_write` as the accepted Stage B2 guarded-write tool while `jikuo.apply_policy_template_activation` remained absent from the MCP tool list.
 - [x] `src/jikuo/integrations/mcp/adapter.py` wraps `agent_flow.build_apply_result(operation="policy_evolution_write")`, preserves proposal-ref binding, confirmation, and approval phrase checks, and updates runtime visibility for the returned apply card.
 - [x] `src/jikuo/integrations/mcp/server.py` registers `jikuo.apply_policy_evolution_write` through the official FastMCP wrapper while continuing to delegate behavior to the SDK-free adapter.
 - [x] Unit coverage verifies Stage B2 refusal without confirmation / approval phrase / proposal ref, success after proposal-bound approval, no task-session writes, approval phrase non-disclosure, runtime visibility projection, and continued non-registration for Stage B3.
-- [x] External Claude-assisted acceptance on 2026-05-16 passed: adapter and FastMCP wrapper both listed 10 tools, `jikuo.apply_policy_evolution_write` refused unapproved calls, applied one proposal-bound supersession with `proposal_binding.status=ok`, did not create `.jikuo/task_sessions/`, did not leak the raw approval phrase, wrote `.jikuo/runtime/last_card.md` in the fixture project, and kept `jikuo.apply_policy_template_activation` absent from the tool list.
+- [x] External Claude-assisted Stage B2 acceptance on 2026-05-16 passed: adapter and FastMCP wrapper both listed 10 tools, `jikuo.apply_policy_evolution_write` refused unapproved calls, applied one proposal-bound supersession with `proposal_binding.status=ok`, did not create `.jikuo/task_sessions/`, did not leak the raw approval phrase, wrote `.jikuo/runtime/last_card.md` in the fixture project, and kept `jikuo.apply_policy_template_activation` absent from the tool list during that slice.
+- [x] Stage B3 user approval recorded on 2026-05-16: continue MCP Stage B by exposing `jikuo.apply_policy_template_activation`; license route remains deferred and dashboard / Studio UI remains out of scope.
+- [x] `src/jikuo/integrations/mcp/schemas.py` exposes `jikuo.apply_policy_template_activation` as the accepted Stage B3 guarded-write tool.
+- [x] `src/jikuo/integrations/mcp/adapter.py` wraps `agent_flow.build_apply_result(operation="policy_template_activation")`, preserves confirmation and approval phrase checks, activates only one resolved template, and updates runtime visibility for the returned apply card.
+- [x] `src/jikuo/integrations/mcp/server.py` registers `jikuo.apply_policy_template_activation` through the official FastMCP wrapper while continuing to delegate behavior to the SDK-free adapter.
+- [x] Unit coverage verifies Stage B3 refusal without confirmation / approval phrase, success after approval, no task-session writes, approval phrase non-disclosure, runtime visibility projection, and project-local approved policy activation.
+- [x] External Claude Code GUI acceptance on 2026-05-16 passed: adapter and FastMCP wrapper both listed 11 tools, `jikuo.apply_policy_template_activation` refused unapproved calls without creating `.jikuo/policies/`, activated one resolved template after approval, wrote proposal snapshot / approved policy / decision record / manifest, did not create `.jikuo/task_sessions/`, did not leak the raw approval phrase, wrote `.jikuo/runtime/last_card.md` in the fixture project, and showed no GUI MCP client tool-list cache issue.
 
 Stage A desktop-client acceptance log:
 
@@ -311,7 +318,7 @@ Integration tests:
 - `jikuo.apply_task_session_evidence_update` refuses without confirmation / approval phrase and succeeds only against an explicit task-session after approval
 - official SDK stdio smoke verifies the Stage B1 tool through a real MCP `ClientSession`
 - `jikuo.apply_policy_evolution_write` refuses without confirmation / approval phrase / proposal ref and succeeds only against a copied temporary fixture with a matching proposal ref
-- `jikuo.apply_policy_template_activation` remains blocked until Stage B3 is separately accepted
+- `jikuo.apply_policy_template_activation` refuses without confirmation / approval phrase and succeeds only against a project with resolved `.jikuo/project_context.yaml` bindings
 - external acceptance artifacts may be stored under ignored `tmp/` paths and must not be treated as product source
 
 Smoke tests:
