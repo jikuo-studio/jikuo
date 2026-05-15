@@ -63,3 +63,13 @@ entries:
       - "src/jikuo/task_session.py"
       - "tests/task_session_tests.py"
     summary: "Parallel guarded updates to the same task-session file can race on Windows; future task-session hardening should add per-session write serialization or explicit concurrent-update refusal."
+  - insight_id: "INSIGHT-2026-05-15-policy-evidence-prefix-footgun"
+    title: "Policy evidence prefix footgun in task-session snapshots"
+    classification: "task_candidate"
+    status: "open"
+    file: "docs/insights/INSIGHT-2026-05-15-policy-evidence-prefix-footgun.md"
+    related_task_refs:
+      - "src/jikuo/task_session.py"
+      - "src/jikuo/policy_store.py"
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-TASKSESSION-04_lifecycle_evidence_completion_handoff.md"
+    summary: "A task-session evidence item with evidence_kind equal to a policy evidence type is human-readable but not matcher-readable; policy satisfaction requires the policy_evidence:<type> prefix, so future hardening should make this distinction visible or automatic."

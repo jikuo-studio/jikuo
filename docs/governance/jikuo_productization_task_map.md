@@ -2661,8 +2661,8 @@ Accepted precondition:
 
 Open items:
 
-1. Review the implemented SDK-free Stage A adapter boundary: `src/jikuo/integrations/mcp/adapter.py`, `schemas.py`, and `tests/mcp_adapter_tests.py`.
-2. Decide whether to add / install the official MCP Python SDK dependency (`mcp`) and proceed to `server.py`; local availability was checked on 2026-05-15 and `mcp` is not currently importable.
+1. Review the implemented Stage A server wrapper: `src/jikuo/integrations/mcp/server.py`, `adapter.py`, `schemas.py`, `tests/mcp_server_tests.py`, and `tests/mcp_adapter_tests.py`.
+2. Run real MCP desktop-client smoke for `jikuo-mcp` in at least two available MCP-compatible clients, or record unavailable client access explicitly.
 3. Review release-readiness follow-ups before external users: product-facing root README, license decision, minimal CI, pytest/dev extras.
 4. Keep Stage B guarded write tools blocked until Stage A server / client smoke / release gates are accepted.
 5. Keep the decision about whether new self-bootstrap policies enter built-in starter templates suspended until explicit user approval.
@@ -2683,7 +2683,9 @@ MCP MVP scope freeze:
 - Stage A implemented: SDK-free `adapter.py` and `schemas.py` expose these 8 tools without importing MCP SDK code
 - Stage A implemented: adapter responses include display directives, `card_markdown`, `display_verification`, field classification, runtime snapshot refs, and transport-aware local path handling
 - Stage A implemented: tests cover tool listing, policy-store status, task-start proposal, latest display card, runtime status card, policy proposal tools, runtime-only writes, and unknown-transport sanitization
-- Stage A checked: local official MCP Python SDK package `mcp` is not installed/importable, so `server.py` remains blocked by dependency decision rather than hand-rolled
+- Stage A implemented: `pyproject.toml` declares the official Python MCP SDK dependency `mcp` and exposes `jikuo-mcp`
+- Stage A implemented: `server.py` lazily imports `mcp.server.fastmcp.FastMCP`, registers the 8 Stage A tools, embeds the card display contract in tool descriptions, and delegates behavior to the SDK-free adapter
+- Stage A checked: official MCP Python SDK import / module-entry smoke passed after user-environment dependency install (`mcp 1.27.1`); desktop-client protocol smoke remains pending rather than being replaced by a handwritten protocol server
 - Stage A require: selected fixture is `src/jikuo/fixtures/policy_store_active_project`
 - Stage A require: adapter core is importable and testable without the MCP SDK; official SDK is isolated to `server.py`
 - Stage A require: card-producing responses include `display_verification` with user-verifiable relative runtime paths / commands

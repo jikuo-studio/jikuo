@@ -10,10 +10,12 @@ requires-python = ">=3.10"
 readme = "README.md"
 license = { text = "Proprietary" }
 authors = [{ name = "JIKUO contributors" }]
+dependencies = ["mcp"]
 
 [project.scripts]
 jikuo = "jikuo.cli:main"
 jikuo-agent-flow = "jikuo.agent_flow:main"
+jikuo-mcp = "jikuo.integrations.mcp.server:main"
 jikuo-policy-store = "jikuo.policy_store:main"
 jikuo-policy-templates = "jikuo.policy_templates:main"
 jikuo-project-state = "jikuo.project_state:main"

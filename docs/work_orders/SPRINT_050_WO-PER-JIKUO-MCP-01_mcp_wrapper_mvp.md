@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-MCP-01: MCP Wrapper MVP
 
-> **Status**: Stage A adapter boundary in progress; SDK-free adapter and schemas implemented, MCP server wrapper blocked on official SDK availability / dependency decision
+> **Status**: Stage A server wrapper in progress; SDK-free adapter, schemas, official `mcp` dependency declaration, and `server.py` wrapper implemented; real SDK import / module-entry smoke passed; desktop-client smoke remains pending
 > **Product meaning**: formally move the next phase from more kernel expansion to an MCP wrapper MVP, so desktop Agents can call JIKUO through a stable tool surface while users remain in their desktop AI client.
 > **Scope rule**: wrap stable atoms only; do not add new governance capability in this slice.
 
@@ -209,7 +209,7 @@ MCP implementation must not start until each item is checked, accepted, or expli
 - [x] `JIKUO-SEC-02` defines field-level MCP response privacy classification.
 - [x] User accepts the revised `JIKUO-MCP-01` Stage A scope as the implementation scope.
 - [x] First fixture project for Stage A MCP integration tests is selected: `src/jikuo/fixtures/policy_store_active_project`.
-- [x] MCP SDK dependency posture is decided: keep `adapter.py` SDK-free, use the official SDK only in `server.py` if locally available, and stop at the adapter boundary if unavailable.
+- [x] MCP SDK dependency posture is decided: keep `adapter.py` SDK-free, use the official SDK only in `server.py`, and declare the official Python `mcp` SDK dependency for the MCP server entry point.
 - [x] First implementation slice created code under `src/jikuo/integrations/mcp/` only.
 
 Stage A implementation progress:
@@ -220,7 +220,11 @@ Stage A implementation progress:
 - [x] Unknown / non-local transports sanitize local project paths from returned payloads; explicit `local_stdio` may return `local_paths`.
 - [x] Unit coverage verifies Stage A tool listing, no hidden task-session / policy writes, runtime-only visibility updates, card-only runtime status output, latest-card retrieval, and privacy sanitization.
 - [x] Local SDK availability was checked on 2026-05-15: neither `mcp` nor `modelcontextprotocol` is importable in the current Python environment.
-- [ ] `server.py` MCP protocol wrapper using the official Python SDK is blocked until the user decides whether to add / install the official `mcp` Python SDK dependency.
+- [x] User approved declaring the official Python MCP SDK dependency (`mcp`) and implementing `src/jikuo/integrations/mcp/server.py`.
+- [x] `pyproject.toml` declares dependency `mcp` and exposes `jikuo-mcp = "jikuo.integrations.mcp.server:main"`.
+- [x] `src/jikuo/integrations/mcp/server.py` lazily imports `mcp.server.fastmcp.FastMCP`, registers the 8 Stage A tools, embeds the display contract in card-returning tool descriptions, and delegates all tool behavior to `adapter.call_tool`.
+- [x] Server-wrapper unit coverage uses a fake FastMCP object so registration, display-contract descriptions, and adapter delegation remain testable without the SDK installed in the current environment.
+- [x] Real SDK import / module-entry smoke passed after installing the declared dependency in the user environment: `mcp.server.fastmcp.FastMCP` imports, `create_server()` returns a real `FastMCP` instance, and `python -B -m jikuo.integrations.mcp.server --help` works.
 - [ ] Real MCP client smoke tests and two-client release gate are not started.
 
 SDK dependency decision record:
@@ -229,8 +233,9 @@ SDK dependency decision record:
 - official Python SDK package / import path to verify before `server.py`: `mcp`
 - expected server wrapper import path from official Python SDK examples: `mcp.server.fastmcp.FastMCP`
 - current local environment result: `importlib.util.find_spec("mcp") == None`
-- current decision: do not hand-roll an MCP protocol server; keep Stage A stopped at the SDK-free adapter boundary until dependency installation is explicitly approved
-- pyproject status: no runtime or optional MCP dependency is declared yet
+- user decision on 2026-05-15: approve declaring the official Python MCP SDK dependency and implementing `server.py`
+- current implementation decision: do not hand-roll an MCP protocol server; `server.py` is a thin official-SDK wrapper over the SDK-free adapter boundary
+- pyproject status: runtime dependency `mcp` is declared; the user environment installed `mcp 1.27.1` during this slice for smoke verification
 
 Field-level response privacy requirements for the implementation slice:
 

@@ -1,4 +1,4 @@
-"""SDK-free MCP integration boundary for JIKUO."""
+"""MCP integration boundary for JIKUO."""
 
 from .adapter import call_tool, list_tools
 
