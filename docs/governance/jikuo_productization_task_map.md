@@ -187,7 +187,7 @@ Already created in `WORKTREE-05` or incubated from it:
 - `JIKUO-LIVE-19`: starter policy provenance backfill, implemented on 2026-05-15 and ready for user review; official starter policies now carry `verified_jikuo_official` provenance in plan and guarded initialization outputs before MCP exposure
 - `JIKUO-SEC-02`: MCP response privacy classification baseline, implemented and accepted on 2026-05-15; SEC-01 defines field-level `return` / `local_only` / `redact_required` / `redact_optional` classifications and MCP-01 has a startup checklist
 - `JIKUO-INTG-01`: universal instruction file distribution, implemented and accepted on 2026-05-14 as a pre-MCP companion; adds review-only and guarded `jikuo install` flows for canonical `JIKUO.md` plus client instruction sync without making client-specific hooks a baseline dependency
-- `JIKUO-MCP-01`: MCP wrapper MVP work order, drafted and ready for user review; formally shifts the next slice from more kernel expansion to wrapping stable `agent_flow.py` / `policy_store.py` atoms for cross-client desktop Agent invocation
+- `JIKUO-MCP-01`: MCP wrapper MVP work order, drafted and updated for final scope acceptance; formally shifts the next slice from more kernel expansion to wrapping stable `agent_flow.py` / `policy_store.py` atoms for cross-client desktop Agent invocation, with Stage A no-write/card/proposal tools separated from Stage B guarded writes
 - `JIKUO-ARCH-02`: integration neutrality and `src/jikuo/integrations/` layout, accepted on 2026-05-14 as the immediate pre-MCP architecture contract; anchors protocol / SDK / client adapters outside the kernel before MCP implementation
 - `JIKUO-ARCH-03`: MCP pre-implementation API neutrality review, completed and accepted on 2026-05-15; confirms the first MCP adapter can wrap structured core functions without calling CLI `main()` or adding MCP-specific kernel behavior, while keeping revised `MCP-01` acceptance visible as the remaining pre-implementation blocker
 - `JIKUO-SDK-01`: Agent SDK and agentic platform adapter exploration, accepted on 2026-05-14 as a pre-MCP / MCP-adjacent architecture posture; compares OpenAI Agents SDK, Claude Agent SDK, Google ADK, Google Antigravity, and Vercel AI SDK while preserving future orchestration extensibility without replacing the JIKUO kernel, MCP wrapper, or local runtime evidence authority
@@ -2661,28 +2661,34 @@ Accepted precondition:
 
 Open items:
 
-1. Review / accept revised `JIKUO-MCP-01` visibility and integration-neutral scope: structured tools, card-only tools, `jikuo.get_runtime_status`, `jikuo.get_runtime_status_card`, `jikuo.get_display_card`, display directives, runtime snapshot refs, startup checklist, UX acceptance standard, and implementation under `src/jikuo/integrations/mcp/`.
-2. Review release-readiness follow-ups before external users: product-facing root README, license decision, minimal CI, pytest/dev extras.
-3. Return to `JIKUO-MCP-01` implementation only after the above pre-MCP items are accepted or explicitly deferred; stop for user discussion before code implementation.
-4. Keep the decision about whether new self-bootstrap policies enter built-in starter templates suspended until explicit user approval.
-5. Plan `JIKUO-STUDIO-01` dashboard as the next major slice after MCP MVP; it is deferred from MCP-01 scope but not abandoned.
-6. Keep per-client hooks/packs and Agent SDK / platform adapters as planned post-MCP work, not current MCP blockers.
-7. Defer OS notifications, rollback, broader conditions, UI beyond Studio, Plugin, and gates unless explicitly promoted by user approval.
+1. Review / accept final `JIKUO-MCP-01` Stage A scope: 8 no-write / card / proposal tools, `display_verification`, `policy_store_active_project` fixture, SDK-free `adapter.py`, `schemas.py`, SDK-wrapped `server.py`, and chat / file / CLI consistency acceptance.
+2. Decide the first implementation slice after acceptance: create only `src/jikuo/integrations/mcp/adapter.py`, `schemas.py`, and tests unless the official MCP SDK is locally available and user approves proceeding to `server.py`.
+3. Review release-readiness follow-ups before external users: product-facing root README, license decision, minimal CI, pytest/dev extras.
+4. Return to `JIKUO-MCP-01` implementation only after the final Stage A scope is accepted or explicitly revised; stop for user discussion before code implementation.
+5. Keep the decision about whether new self-bootstrap policies enter built-in starter templates suspended until explicit user approval.
+6. Plan `JIKUO-STUDIO-01` dashboard as the next major slice after MCP MVP; it is deferred from MCP-01 scope but not abandoned.
+7. Keep per-client hooks/packs and Agent SDK / platform adapters as planned post-MCP work, not current MCP blockers.
+8. Defer OS notifications, rollback, broader conditions, UI beyond Studio, Plugin, and gates unless explicitly promoted by user approval.
 
 MCP MVP scope freeze:
 
-- include: policy-store status inspection
-- include: `jikuo.get_runtime_status` structured runtime status inspection
-- include: `jikuo.get_runtime_status_card` narrow card-only runtime status rendering
-- include: `jikuo.get_display_card` narrow latest-card rendering
-- include: task-start proposal rendering
-- include: guarded task-session start apply
-- include: policy-write-plan proposal rendering
-- include: policy-evolution-plan proposal rendering
-- include: policy-template import-plan proposal rendering
-- include: guarded task-session evidence apply
-- include: guarded policy evolution apply with proposal-ref binding
-- include: guarded policy-template activation apply
+- Stage A include: policy-store status inspection through `jikuo.status`
+- Stage A include: `jikuo.get_runtime_status` structured runtime status inspection
+- Stage A include: `jikuo.get_runtime_status_card` narrow card-only runtime status rendering
+- Stage A include: `jikuo.get_display_card` narrow latest-card rendering
+- Stage A include: `jikuo.propose_task_start` task-start proposal rendering
+- Stage A include: `jikuo.propose_policy_write_plan` policy-write-plan proposal rendering
+- Stage A include: `jikuo.propose_policy_evolution_plan` policy-evolution-plan proposal rendering
+- Stage A include: `jikuo.propose_policy_template_import_plan` policy-template import-plan proposal rendering
+- Stage A require: selected fixture is `src/jikuo/fixtures/policy_store_active_project`
+- Stage A require: adapter core is importable and testable without the MCP SDK; official SDK is isolated to `server.py`
+- Stage A require: card-producing responses include `display_verification` with user-verifiable relative runtime paths / commands
+- Stage A require: chat, `.jikuo/runtime/last_card.md`, and `jikuo show --last-card` expose the same policy runtime status for the same no-write call
+- Stage A require: no hidden governance writes; only `.jikuo/runtime/` may update for runtime visibility
+- Stage A release gate: at least two available MCP-compatible desktop clients are tested, or unavailable client access is explicitly recorded
+- Stage B include after Stage A acceptance: guarded task-session evidence apply
+- Stage B include after Stage A acceptance: guarded policy evolution apply with proposal-ref binding
+- Stage B include after Stage A acceptance: guarded policy-template activation apply
 - require: MCP implementation lives under `src/jikuo/integrations/mcp/` and consumes integration-neutral core APIs
 - require: card-producing MCP tools return display directives that identify verbatim card fields, `card_priority_order`, summarizable fields, hidden debug fields, and response priority
 - require: card-producing MCP tools update the out-of-band runtime visibility channel or explicitly report that runtime visibility is unavailable

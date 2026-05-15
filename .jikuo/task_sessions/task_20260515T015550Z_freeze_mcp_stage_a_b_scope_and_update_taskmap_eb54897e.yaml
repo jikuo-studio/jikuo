@@ -1,0 +1,98 @@
+schema: "jikuo.task_session.v0"
+session:
+  session_id: "task_20260515T015550Z_freeze_mcp_stage_a_b_scope_and_update_taskmap_eb54897e"
+  task_title: "Freeze MCP Stage A/B scope and update taskmap"
+  owner_agent: "codex"
+  created_at: "2026-05-15T01:55:50Z"
+  updated_at: "2026-05-15T02:03:10Z"
+  lifecycle_status: "ready_for_review"
+scenario:
+  scenario_chain_id: "engineering_governance.task_session_start"
+  scenario_package: "engineering_governance"
+changed_surfaces: []
+rule_results: []
+document_mounts: []
+evidence_snapshots:
+  -
+    evidence_id: "patch_evidence_140faa1c"
+    evidence_kind: "main_document_mount_maintenance_evidence"
+    source_ref: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-MCP-01_mcp_wrapper_mvp.md; docs/governance/jikuo_productization_task_map.md; docs/governance/jikuo_execution_mounts.md"
+    summary: "Updated mounted MCP planning documents: MCP-01 now has Stage A/B gates, display_verification, selected fixture, SDK-free adapter/server split, and chat/file/CLI consistency acceptance; taskmap and execution mounts mirror the same sequence."
+    status: "ok"
+    recorded_at: "2026-05-15T02:02:46Z"
+    recorded_by: "codex"
+verification:
+  -
+    verification_id: "patch_verification_c6e5c649"
+    command: "python -B -m unittest discover -s tests -p *_tests.py"
+    summary: "Ran 128 tests; all passed."
+    status: "ok"
+    exit_code: 0
+    layer: "unit_tests"
+    recorded_at: "2026-05-15T02:02:46Z"
+    recorded_by: "codex"
+  -
+    verification_id: "patch_verification_e92b64cf"
+    command: "git diff --check"
+    summary: "Checked staged working diff for whitespace errors; no errors reported."
+    status: "ok"
+    exit_code: 0
+    layer: "diff_check"
+    recorded_at: "2026-05-15T02:03:10Z"
+    recorded_by: "codex"
+user_decisions:
+  -
+    decision_id: "task_session_start_approval"
+    decision_target: "JIKUO task-session file creation"
+    decision_effect: "create one compact task-session sidecar record"
+    decision_noneffect: "do not capture raw chat transcript"
+    exact_user_phrase: "\u597d\u7684\uff0c\u8bf7\u6574\u5408\u8ba8\u8bba\u540e\uff0c\u8c03\u6574\u4efb\u52a1\u6e05\u5355\uff0c\u5f00\u5c55\u4e0b\u4e00\u6b65\u5de5\u4f5c"
+    recorded_at: "2026-05-15T01:55:50Z"
+    surface: "desktop_agent_or_cli_bridge"
+  -
+    decision_id: "patch_completion_6586606e"
+    decision_target: "JIKUO task-session completion update"
+    decision_effect: "set task-session completion to ready_for_review"
+    decision_noneffect: "do not capture raw chat transcript or judge product output quality"
+    exact_user_phrase: "\u597d\u7684\uff0c\u8bf7\u6574\u5408\u8ba8\u8bba\u540e\uff0c\u8c03\u6574\u4efb\u52a1\u6e05\u5355\uff0c\u5f00\u5c55\u4e0b\u4e00\u6b65\u5de5\u4f5c"
+    recorded_at: "2026-05-15T02:01:58Z"
+    surface: "desktop_agent_or_cli_bridge"
+completion:
+  status: "ready_for_review"
+  summary: "Updated MCP-01 and mounted governance docs to freeze Stage A no-write/card/proposal scope, defer Stage B guarded writes behind Stage A acceptance gates, add display_verification, choose policy_store_active_project as the first integration fixture, and preserve the stop-before-MCP-implementation discussion point."
+  updated_at: "2026-05-15T02:01:58Z"
+handoff:
+  summary: null
+audit_trail:
+  -
+    action: "task_session_started"
+    actor: "codex"
+    recorded_at: "2026-05-15T01:55:50Z"
+    effect: "create one compact task-session sidecar record"
+  -
+    action: "task_session_completion_updated"
+    actor: "codex"
+    recorded_at: "2026-05-15T02:01:58Z"
+    patch_id: "patch_completion_6586606e"
+  -
+    action: "task_session_evidence_updated"
+    actor: "codex"
+    recorded_at: "2026-05-15T02:02:46Z"
+    patch_id: "patch_evidence_140faa1c"
+  -
+    action: "task_session_verification_updated"
+    actor: "codex"
+    recorded_at: "2026-05-15T02:02:46Z"
+    patch_id: "patch_verification_c6e5c649"
+  -
+    action: "task_session_verification_updated"
+    actor: "codex"
+    recorded_at: "2026-05-15T02:03:10Z"
+    patch_id: "patch_verification_e92b64cf"
+supersession:
+  supersedes: []
+  superseded_by: null
+capture_policy:
+  raw_chat_transcript: "disallowed"
+  exact_user_phrase: "decision_only_with_target_and_effect"
+  product_output_quality_judgement: "out_of_scope"
