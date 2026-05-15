@@ -285,6 +285,69 @@ def register_stage_b1_tools(
     return server
 
 
+def register_stage_b2_tools(
+    server: Any,
+    *,
+    default_transport: str = schemas.LOCAL_STDIO_TRANSPORT,
+) -> Any:
+    """Register accepted Stage B2 guarded policy-evolution MCP tools."""
+
+    tool_definitions = {tool["name"]: tool for tool in adapter.list_tools()}
+
+    @server.tool(
+        name="jikuo.apply_policy_evolution_write",
+        description=tool_description(
+            tool_definitions["jikuo.apply_policy_evolution_write"]
+        ),
+    )
+    def jikuo_apply_policy_evolution_write(
+        project_root: str | None = None,
+        policy_ref: str | None = None,
+        proposal_ref: str | None = None,
+        policy_evolution_operation: str | None = None,
+        feedback_type: str | None = None,
+        summary: str | None = None,
+        policy_source_ref: str | None = None,
+        replacement_policy_ref: str | None = None,
+        replacement_title: str | None = None,
+        replacement_task_type: str | None = None,
+        replacement_jikuo_layer: str | None = None,
+        replacement_changed_path_pattern: str | None = None,
+        replacement_added_path_pattern: str | None = None,
+        replacement_action_type: str | None = None,
+        replacement_evidence_type: str | None = None,
+        owner_agent: str | None = None,
+        confirm_apply: bool = False,
+        approval_phrase: str | None = None,
+    ) -> dict[str, Any]:
+        return _call(
+            "jikuo.apply_policy_evolution_write",
+            {
+                "project_root": project_root,
+                "policy_ref": policy_ref,
+                "proposal_ref": proposal_ref,
+                "policy_evolution_operation": policy_evolution_operation,
+                "feedback_type": feedback_type,
+                "summary": summary,
+                "policy_source_ref": policy_source_ref,
+                "replacement_policy_ref": replacement_policy_ref,
+                "replacement_title": replacement_title,
+                "replacement_task_type": replacement_task_type,
+                "replacement_jikuo_layer": replacement_jikuo_layer,
+                "replacement_changed_path_pattern": replacement_changed_path_pattern,
+                "replacement_added_path_pattern": replacement_added_path_pattern,
+                "replacement_action_type": replacement_action_type,
+                "replacement_evidence_type": replacement_evidence_type,
+                "owner_agent": owner_agent,
+                "confirm_apply": confirm_apply,
+                "approval_phrase": approval_phrase,
+            },
+            default_transport=default_transport,
+        )
+
+    return server
+
+
 def create_server(
     *,
     fastmcp_cls: FastMCPFactory | None = None,
@@ -302,7 +365,8 @@ def create_server(
         ),
     )
     register_stage_a_tools(server, default_transport=default_transport)
-    return register_stage_b1_tools(server, default_transport=default_transport)
+    register_stage_b1_tools(server, default_transport=default_transport)
+    return register_stage_b2_tools(server, default_transport=default_transport)
 
 
 def _adapter_transport_for_run(run_transport: str) -> str:

@@ -42,8 +42,9 @@ STAGE_B_TOOL_NAMES = (
 )
 
 STAGE_B1_TOOL_NAMES = ("jikuo.apply_task_session_evidence_update",)
+STAGE_B2_TOOL_NAMES = ("jikuo.apply_policy_evolution_write",)
 
-EXPOSED_TOOL_NAMES = STAGE_A_TOOL_NAMES + STAGE_B1_TOOL_NAMES
+EXPOSED_TOOL_NAMES = STAGE_A_TOOL_NAMES + STAGE_B1_TOOL_NAMES + STAGE_B2_TOOL_NAMES
 
 
 def _tool(
@@ -197,6 +198,45 @@ TOOL_DEFINITIONS: dict[str, dict[str, Any]] = {
         },
         card_returning=True,
         stage="B1",
+        write_mode="guarded-write",
+    ),
+    "jikuo.apply_policy_evolution_write": _tool(
+        name="jikuo.apply_policy_evolution_write",
+        description=(
+            "Apply one explicitly approved active-policy deprecation or supersession "
+            "through the guarded agent_flow apply boundary. Requires proposal_ref, "
+            "confirm_apply=true, and an approval_phrase matching the reviewed plan."
+        ),
+        input_fields={
+            "project_root": LOCAL_ONLY,
+            "policy_ref": RETURN,
+            "proposal_ref": RETURN,
+            "policy_evolution_operation": RETURN,
+            "feedback_type": RETURN,
+            "summary": REDACT_OPTIONAL,
+            "policy_source_ref": REDACT_OPTIONAL,
+            "replacement_policy_ref": RETURN,
+            "replacement_title": RETURN,
+            "replacement_task_type": RETURN,
+            "replacement_jikuo_layer": RETURN,
+            "replacement_changed_path_pattern": RETURN,
+            "replacement_added_path_pattern": RETURN,
+            "replacement_action_type": RETURN,
+            "replacement_evidence_type": RETURN,
+            "owner_agent": RETURN,
+            "confirm_apply": RETURN,
+            "approval_phrase": REDACT_REQUIRED,
+        },
+        output_fields={
+            "write_performed": RETURN,
+            "target_result_schema": RETURN,
+            "target_result": RETURN,
+            "proposal_binding": RETURN,
+            "approval_boundary": RETURN,
+            "refusal_reasons": RETURN,
+        },
+        card_returning=True,
+        stage="B2",
         write_mode="guarded-write",
     ),
 }

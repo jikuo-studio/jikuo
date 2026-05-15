@@ -542,20 +542,21 @@ Accepted target for the current pre-MCP visibility review:
 - `JIKUO-MCP-01` Stage A SDK-free adapter boundary is implemented: `src/jikuo/integrations/mcp/adapter.py`, `schemas.py`, and `tests/mcp_adapter_tests.py` expose the 8 no-write / card / proposal tools without importing MCP SDK code; `server.py` and real-client smoke are accepted for Stage A
 - `JIKUO-MCP-01` official SDK availability was checked on 2026-05-15 and the user approved declaring the Python `mcp` dependency: `server.py` is implemented as a thin official FastMCP wrapper over the SDK-free adapter; real SDK import / module-entry smoke and official SDK `ClientSession` stdio smoke passed after installing `mcp 1.27.1` in a test environment, and desktop-client configuration smoke is accepted as user-verified in Codex Desktop and Claude Desktop
 - `JIKUO-MCP-01` client setup examples now live at `docs/integrations/mcp_client_configuration_examples.md`; use them for future Claude Code, Claude Desktop, Cursor, or Codex-style local stdio smoke before accepting Stage A release gates
-- `JIKUO-MCP-01` Stage A desktop smoke is accepted as user-verified on 2026-05-15 for Codex Desktop and Claude Desktop; Stage B2 / Stage B3 guarded policy-store writes remain blocked until explicit user acceptance
-- `JIKUO-MCP-01` Stage B1 is accepted and implemented for `jikuo.apply_task_session_evidence_update` only; Stage B2 policy evolution and Stage B3 policy-template activation remain blocked until separate explicit user acceptance
-- `JIKUO-MCP-01` Stage B1 official SDK smoke passed: a Python MCP `ClientSession` listed 9 tools, called `jikuo.apply_task_session_evidence_update`, and confirmed Stage B2 / B3 tools were not exposed
+- `JIKUO-MCP-01` Stage A desktop smoke is accepted as user-verified on 2026-05-15 for Codex Desktop and Claude Desktop; Stage B2 policy evolution guarded-write is implemented after user approval to continue MCP Stage B, while Stage B3 policy-template activation remains blocked until explicit user acceptance
+- `JIKUO-MCP-01` Stage B1 is accepted and implemented for `jikuo.apply_task_session_evidence_update`; Stage B2 is accepted, implemented, and externally smoke-accepted on 2026-05-16 for `jikuo.apply_policy_evolution_write`; Stage B3 policy-template activation remains blocked until separate explicit user acceptance
+- `JIKUO-MCP-01` Stage B1 official SDK smoke passed during the B1 slice: a Python MCP `ClientSession` listed 9 tools, called `jikuo.apply_task_session_evidence_update`, and confirmed Stage B2 / B3 tools were not exposed before later Stage B2 approval
+- `JIKUO-MCP-01` Stage B2 Claude-assisted acceptance passed with adapter and FastMCP wrapper tool lists showing 10 tools, B2 refusal / apply paths working, no task-session side effects, no raw approval phrase leakage, fixture runtime card written, and Stage B3 still absent
 - JIKUO release-readiness baseline now includes a product-facing root `README.md`, `.[dev]` pytest extras in `pyproject.toml`, and `.github/workflows/test.yml`; the external release license remains an explicit user decision
 - `JIKUO-INTG-01` is accepted and implements canonical `JIKUO.md` plus guarded client instruction sync without making client hooks mandatory
 - `JIKUO-SDK-01` is accepted and defines OpenAI Agents SDK, Claude Agent SDK, Google ADK, Vercel AI SDK, and Google Antigravity-style agentic platforms as optional orchestration / client-environment adapters that consume JIKUO through MCP / CLI / public adapter APIs while local policy, evidence, approvals, and runtime visibility remain authoritative
 - `JIKUO-LIVE-15` adds a self-bootstrap requirement that governed JIKUO development slices bind, create, or explicitly defer a task-session at task start; `.jikuo/project_state.yaml latest_task_session_refs` refresh remains a separate guarded action unless promoted later
-- `JIKUO-MCP-01` remains blocked until visibility, package boundary, project-context binding, resource-reference hygiene, integration neutrality, Agent SDK extension posture, response privacy preservation, and revised MCP scope are accepted or explicitly deferred
-- dashboard, OS notifications, per-client hook packs, rollback, broader conditions, UI, Plugin, and gates remain deferred
+- `JIKUO-MCP-01` prerequisites for Stage A, Stage B1, and Stage B2 are accepted; Stage B3 and product-surface expansion remain separate approval points
+- dashboard / Studio UI, OS notifications, per-client hook packs, rollback, broader conditions, UI, Plugin, and gates remain deferred; current MCP visibility relies on card markdown plus runtime card links
 
 Accepted result:
 
 - keep `JIKUO-LIVE-12` Phase 1 as the baseline runtime visibility foundation for MCP implementation.
-- continue through pre-MCP readiness items in order, then stop for user discussion before MCP code implementation.
+- continue MCP Stage B only inside explicitly accepted guarded-write slices.
 
 If revised:
 

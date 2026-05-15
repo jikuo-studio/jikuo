@@ -395,6 +395,97 @@ def _apply_task_session_evidence_update_response(
     )
 
 
+def _apply_policy_evolution_write_response(
+    *,
+    arguments: dict[str, Any],
+    project_root: Path | None,
+    transport: str,
+) -> dict[str, Any]:
+    report, _exit_code = agent_flow.build_apply_result(
+        operation="policy_evolution_write",
+        project_root=project_root,
+        task_title=None,
+        session_id=None,
+        evidence_kind=None,
+        evidence_ref=None,
+        summary=arguments.get("summary"),
+        evidence_status="ok",
+        owner_agent=str(arguments.get("owner_agent") or "codex"),
+        policy_ref=arguments.get("policy_ref"),
+        proposal_ref=arguments.get("proposal_ref"),
+        policy_evolution_operation=str(
+            arguments.get("policy_evolution_operation") or "deprecate_policy"
+        ),
+        feedback_type=arguments.get("feedback_type"),
+        policy_source_ref=arguments.get("policy_source_ref"),
+        replacement_policy_ref=arguments.get("replacement_policy_ref"),
+        replacement_title=arguments.get("replacement_title"),
+        replacement_task_type=arguments.get("replacement_task_type"),
+        replacement_jikuo_layer=arguments.get("replacement_jikuo_layer"),
+        replacement_changed_path_pattern=arguments.get(
+            "replacement_changed_path_pattern"
+        ),
+        replacement_added_path_pattern=arguments.get("replacement_added_path_pattern"),
+        replacement_action_type=str(
+            arguments.get("replacement_action_type") or "render_pre_task_review"
+        ),
+        replacement_evidence_type=str(
+            arguments.get("replacement_evidence_type") or "card_rendered"
+        ),
+        confirmed=_bool_arg(arguments.get("confirm_apply")),
+        approval_phrase=arguments.get("approval_phrase"),
+    )
+    with_markdown = agent_flow.apply_result_with_chat_ready_markdown(report)
+    markdown = str(with_markdown.get("chat_ready_markdown") or "")
+    runtime_report = runtime_visibility.persist_agent_flow_snapshot(
+        project_root=project_root,
+        proposal=with_markdown,
+        card_markdown=markdown,
+    )
+    with_markdown["runtime_visibility"] = runtime_report
+    with_markdown["client_display_links"] = runtime_visibility.build_client_display_links(
+        runtime_report
+    )
+    atom_trace = with_markdown.get("atom_trace")
+    if isinstance(atom_trace, list) and runtime_report.get("write_performed"):
+        atom_trace.append(
+            agent_flow.atom_trace(
+                loop_step_id="DPL-06",
+                atom_id="CAP-RUNTIME-VISIBILITY-CHANNEL-01",
+                mode="runtime-projection",
+                status="ok",
+                summary="wrote guarded policy evolution apply snapshot to .jikuo/runtime",
+            )
+        )
+    response = _base_response(
+        tool_name="jikuo.apply_policy_evolution_write",
+        status=str(with_markdown.get("status") or "unknown"),
+        data_details=with_markdown,
+        project_root=project_root,
+        transport=transport,
+        card_markdown=markdown,
+        chat_ready_markdown=markdown,
+        runtime_report=runtime_report,
+    )
+    response["write_performed"] = bool(with_markdown.get("write_performed"))
+    response["target_result_schema"] = with_markdown.get("target_result_schema")
+    response["target_result"] = _redact_required_fields(
+        with_markdown.get("target_result")
+    )
+    response["proposal_binding"] = _redact_required_fields(
+        with_markdown.get("proposal_binding")
+    )
+    response["approval_boundary"] = _redact_required_fields(
+        with_markdown.get("approval_boundary")
+    )
+    response["refusal_reasons"] = list(with_markdown.get("refusal_reasons") or [])
+    return _sanitize_for_transport(
+        response,
+        project_root=project_root,
+        transport=transport,
+    )
+
+
 def call_tool(
     tool_name: str,
     arguments: dict[str, Any] | None = None,
@@ -554,6 +645,13 @@ def call_tool(
 
     if tool_name == "jikuo.apply_task_session_evidence_update":
         return _apply_task_session_evidence_update_response(
+            arguments=args,
+            project_root=resolved_root,
+            transport=resolved_transport,
+        )
+
+    if tool_name == "jikuo.apply_policy_evolution_write":
+        return _apply_policy_evolution_write_response(
             arguments=args,
             project_root=resolved_root,
             transport=resolved_transport,

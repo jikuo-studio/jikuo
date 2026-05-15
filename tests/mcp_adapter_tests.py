@@ -28,14 +28,53 @@ def copy_fixture(source: Path, tmp: str, name: str = "project") -> Path:
     return target
 
 
+def policy_evolution_args(
+    project_root: Path,
+    *,
+    proposal_ref: str | None = None,
+    approve: bool = False,
+) -> dict[str, object]:
+    args: dict[str, object] = {
+        "project_root": str(project_root),
+        "policy_ref": "POLICY-three-phase-audit",
+        "policy_evolution_operation": "supersede_policy",
+        "feedback_type": "needs_scope_narrowing",
+        "summary": "Replace with a narrower policy through MCP B2.",
+        "policy_source_ref": "User approved MCP B2 supersession for the broad policy.",
+        "replacement_policy_ref": "POLICY-three-phase-audit-mcp-v2",
+        "replacement_title": "Three-phase task audit MCP v2",
+        "replacement_task_type": "work_order_delivery",
+        "replacement_jikuo_layer": "testing_governance",
+        "replacement_changed_path_pattern": "docs/jikuo/**",
+    }
+    if proposal_ref is not None:
+        args["proposal_ref"] = proposal_ref
+    if approve:
+        args["confirm_apply"] = True
+        args["approval_phrase"] = "I approve MCP B2 applying this policy supersession."
+    return args
+
+
+def policy_evolution_proposal_ref(response: dict[str, object]) -> str:
+    data = response["data_details"]
+    assert isinstance(data, dict)
+    for card in data.get("cards", []):
+        if not isinstance(card, dict):
+            continue
+        plan = card.get("policy_evolution_plan")
+        if isinstance(plan, dict):
+            return str(plan["proposal_ref"])
+    raise AssertionError("policy evolution proposal ref not found")
+
+
 class MCPStageAAdapterTests(unittest.TestCase):
-    def test_tool_list_exposes_stage_a_plus_stage_b1_only(self):
+    def test_tool_list_exposes_stage_a_plus_accepted_stage_b_tools_only(self):
         tools = adapter.list_tools()
         names = [tool["name"] for tool in tools]
 
         self.assertEqual(names, list(schemas.EXPOSED_TOOL_NAMES))
         self.assertIn("jikuo.apply_task_session_evidence_update", names)
-        self.assertNotIn("jikuo.apply_policy_evolution_write", names)
+        self.assertIn("jikuo.apply_policy_evolution_write", names)
         self.assertNotIn("jikuo.apply_policy_template_activation", names)
         by_name = {tool["name"]: tool for tool in tools}
         for name in schemas.STAGE_A_TOOL_NAMES:
@@ -47,6 +86,11 @@ class MCPStageAAdapterTests(unittest.TestCase):
         )
         self.assertEqual(
             by_name["jikuo.apply_task_session_evidence_update"]["write_mode"],
+            "guarded-write",
+        )
+        self.assertEqual(by_name["jikuo.apply_policy_evolution_write"]["stage"], "B2")
+        self.assertEqual(
+            by_name["jikuo.apply_policy_evolution_write"]["write_mode"],
             "guarded-write",
         )
 
@@ -290,14 +334,78 @@ class MCPStageAAdapterTests(unittest.TestCase):
             self.assertEqual(project_state_file.read_text(encoding="utf-8"), before_state)
             self.assertFalse((project_root / ".jikuo" / "policies").exists())
 
-    def test_stage_b2_and_stage_b3_tools_remain_unsupported(self):
-        for tool_name in (
-            "jikuo.apply_policy_evolution_write",
-            "jikuo.apply_policy_template_activation",
-        ):
-            with self.subTest(tool_name=tool_name):
-                with self.assertRaises(ValueError):
-                    adapter.call_tool(tool_name, {})
+    def test_stage_b2_policy_evolution_refuses_without_approval(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = copy_fixture(POLICY_ACTIVE_PROJECT, tmp)
+            manifest_file = project_root / ".jikuo" / "policies" / "manifest.yaml"
+            before_text = manifest_file.read_text(encoding="utf-8")
+
+            response = adapter.call_tool(
+                "jikuo.apply_policy_evolution_write",
+                policy_evolution_args(project_root),
+            )
+
+            self.assertEqual(response["tool_name"], "jikuo.apply_policy_evolution_write")
+            self.assertEqual(response["stage"], "B2")
+            self.assertEqual(response["write_mode"], "guarded-write")
+            self.assertEqual(response["status"], "refused")
+            self.assertFalse(response["write_performed"])
+            self.assertIn("missing_confirmation_flag", response["refusal_reasons"])
+            self.assertIn("approval_evidence_missing", response["refusal_reasons"])
+            self.assertIn(
+                "proposal_ref_required_for_policy_evolution_apply",
+                response["refusal_reasons"],
+            )
+            self.assertEqual(response["proposal_binding"]["status"], "missing")
+            self.assertIn("# JIKUO Agent Flow Apply Result", response["card_markdown"])
+            self.assertTrue((project_root / ".jikuo" / "runtime" / "last_card.md").is_file())
+            self.assertEqual(manifest_file.read_text(encoding="utf-8"), before_text)
+
+    def test_stage_b2_policy_evolution_writes_after_proposal_bound_approval(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = copy_fixture(POLICY_ACTIVE_PROJECT, tmp)
+            manifest_file = project_root / ".jikuo" / "policies" / "manifest.yaml"
+
+            plan = adapter.call_tool(
+                "jikuo.propose_policy_evolution_plan",
+                policy_evolution_args(project_root),
+            )
+            proposal_ref = policy_evolution_proposal_ref(plan)
+            response = adapter.call_tool(
+                "jikuo.apply_policy_evolution_write",
+                policy_evolution_args(
+                    project_root,
+                    proposal_ref=proposal_ref,
+                    approve=True,
+                ),
+                transport=schemas.LOCAL_STDIO_TRANSPORT,
+            )
+
+            self.assertEqual(response["status"], "applied")
+            self.assertTrue(response["write_performed"])
+            self.assertEqual(response["proposal_binding"]["status"], "ok")
+            self.assertEqual(response["proposal_binding"]["provided_ref"], proposal_ref)
+            self.assertEqual(response["proposal_binding"]["expected_ref"], proposal_ref)
+            self.assertEqual(response["target_result_schema"], "jikuo.policy_write_result.v0")
+            target = response["target_result"]
+            self.assertEqual(target["status"], "written")
+            self.assertEqual(target["operation"], "supersede_policy")
+            self.assertEqual(target["replacement_policy_ref"], "POLICY-three-phase-audit-mcp-v2")
+            self.assertTrue(target["post_write_verification"]["target_policy_superseded"])
+            self.assertTrue(target["post_write_verification"]["replacement_policy_active"])
+            self.assertNotIn(
+                "I approve MCP B2 applying this policy supersession.",
+                json.dumps(response),
+            )
+            tool = schemas.tool_definition("jikuo.apply_policy_evolution_write")
+            self.assertEqual(tool["input_fields"]["approval_phrase"], schemas.REDACT_REQUIRED)
+            self.assertIn("superseded_policy_refs:", manifest_file.read_text(encoding="utf-8"))
+            self.assertFalse((project_root / ".jikuo" / "task_sessions").exists())
+            self.assertTrue((project_root / ".jikuo" / "runtime" / "last_card.md").is_file())
+
+    def test_stage_b3_tool_remains_unsupported(self):
+        with self.assertRaises(ValueError):
+            adapter.call_tool("jikuo.apply_policy_template_activation", {})
 
 
 if __name__ == "__main__":

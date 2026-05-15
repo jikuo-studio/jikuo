@@ -2,6 +2,7 @@
 /tmp/
 /.jikuo/runtime/
 /.claude/
+/.mcp.json
 
 # Python bytecode
 __pycache__/

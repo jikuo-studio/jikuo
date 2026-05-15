@@ -18,6 +18,34 @@ def copy_fixture(source: Path, tmp: str, name: str = "project") -> Path:
     return target
 
 
+def policy_evolution_args(project_root: Path) -> dict[str, object]:
+    return {
+        "project_root": str(project_root),
+        "policy_ref": "POLICY-three-phase-audit",
+        "policy_evolution_operation": "supersede_policy",
+        "feedback_type": "needs_scope_narrowing",
+        "summary": "Replace with a narrower policy through MCP server B2.",
+        "policy_source_ref": "User approved MCP server B2 supersession.",
+        "replacement_policy_ref": "POLICY-three-phase-audit-server-v2",
+        "replacement_title": "Three-phase task audit server v2",
+        "replacement_task_type": "work_order_delivery",
+        "replacement_jikuo_layer": "testing_governance",
+        "replacement_changed_path_pattern": "docs/jikuo/**",
+    }
+
+
+def policy_evolution_proposal_ref(response: dict[str, object]) -> str:
+    data = response["data_details"]
+    assert isinstance(data, dict)
+    for card in data.get("cards", []):
+        if not isinstance(card, dict):
+            continue
+        plan = card.get("policy_evolution_plan")
+        if isinstance(plan, dict):
+            return str(plan["proposal_ref"])
+    raise AssertionError("policy evolution proposal ref not found")
+
+
 class FakeFastMCP:
     def __init__(self, name, instructions=None):
         self.name = name
@@ -40,13 +68,13 @@ class FakeFastMCP:
 
 
 class MCPServerWrapperTests(unittest.TestCase):
-    def test_create_server_registers_stage_a_plus_stage_b1_tools_only(self):
+    def test_create_server_registers_stage_a_plus_accepted_stage_b_tools_only(self):
         fake = server.create_server(fastmcp_cls=FakeFastMCP)
 
         self.assertEqual(fake.name, server.SERVER_NAME)
         self.assertEqual(list(fake.tools), list(schemas.EXPOSED_TOOL_NAMES))
         self.assertIn("jikuo.apply_task_session_evidence_update", fake.tools)
-        self.assertNotIn("jikuo.apply_policy_evolution_write", fake.tools)
+        self.assertIn("jikuo.apply_policy_evolution_write", fake.tools)
         self.assertNotIn("jikuo.apply_policy_template_activation", fake.tools)
 
     def test_card_tool_descriptions_include_display_contract(self):
@@ -102,6 +130,33 @@ class MCPServerWrapperTests(unittest.TestCase):
                 "I approve this task-session evidence append.",
                 str(response),
             )
+
+    def test_stage_b2_registered_tool_delegates_guarded_apply(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = copy_fixture(POLICY_ACTIVE_PROJECT, tmp)
+            fake = server.create_server(fastmcp_cls=FakeFastMCP)
+            plan = fake.tools["jikuo.propose_policy_evolution_plan"]["function"](
+                **policy_evolution_args(project_root),
+            )
+            proposal_ref = policy_evolution_proposal_ref(plan)
+
+            response = fake.tools["jikuo.apply_policy_evolution_write"]["function"](
+                **policy_evolution_args(project_root),
+                proposal_ref=proposal_ref,
+                confirm_apply=True,
+                approval_phrase="I approve MCP server B2 applying this policy supersession.",
+            )
+
+            self.assertEqual(response["tool_name"], "jikuo.apply_policy_evolution_write")
+            self.assertEqual(response["status"], "applied")
+            self.assertTrue(response["write_performed"])
+            self.assertEqual(response["proposal_binding"]["status"], "ok")
+            self.assertIn("# JIKUO Agent Flow Apply Result", response["card_markdown"])
+            self.assertNotIn(
+                "I approve MCP server B2 applying this policy supersession.",
+                str(response),
+            )
+            self.assertFalse((project_root / ".jikuo" / "task_sessions").exists())
 
     def test_main_uses_stdio_run_by_default(self):
         created = []
