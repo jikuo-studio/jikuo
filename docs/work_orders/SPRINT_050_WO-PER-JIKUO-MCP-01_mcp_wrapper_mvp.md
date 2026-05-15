@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-MCP-01: MCP Wrapper MVP
 
-> **Status**: Stage A adapter boundary in progress; SDK-free adapter and schemas implemented, MCP server wrapper not started
+> **Status**: Stage A adapter boundary in progress; SDK-free adapter and schemas implemented, MCP server wrapper blocked on official SDK availability / dependency decision
 > **Product meaning**: formally move the next phase from more kernel expansion to an MCP wrapper MVP, so desktop Agents can call JIKUO through a stable tool surface while users remain in their desktop AI client.
 > **Scope rule**: wrap stable atoms only; do not add new governance capability in this slice.
 
@@ -219,8 +219,18 @@ Stage A implementation progress:
 - [x] Card-producing Stage A adapter responses include `card_markdown`, display directives, `runtime_snapshot_ref`, and `display_verification`.
 - [x] Unknown / non-local transports sanitize local project paths from returned payloads; explicit `local_stdio` may return `local_paths`.
 - [x] Unit coverage verifies Stage A tool listing, no hidden task-session / policy writes, runtime-only visibility updates, card-only runtime status output, latest-card retrieval, and privacy sanitization.
-- [ ] `server.py` MCP protocol wrapper using the official Python SDK is not started.
+- [x] Local SDK availability was checked on 2026-05-15: neither `mcp` nor `modelcontextprotocol` is importable in the current Python environment.
+- [ ] `server.py` MCP protocol wrapper using the official Python SDK is blocked until the user decides whether to add / install the official `mcp` Python SDK dependency.
 - [ ] Real MCP client smoke tests and two-client release gate are not started.
+
+SDK dependency decision record:
+
+- official reference used for dependency posture: `https://modelcontextprotocol.io/docs/sdk`
+- official Python SDK package / import path to verify before `server.py`: `mcp`
+- expected server wrapper import path from official Python SDK examples: `mcp.server.fastmcp.FastMCP`
+- current local environment result: `importlib.util.find_spec("mcp") == None`
+- current decision: do not hand-roll an MCP protocol server; keep Stage A stopped at the SDK-free adapter boundary until dependency installation is explicitly approved
+- pyproject status: no runtime or optional MCP dependency is declared yet
 
 Field-level response privacy requirements for the implementation slice:
 

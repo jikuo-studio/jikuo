@@ -1,0 +1,98 @@
+schema: "jikuo.task_session.v0"
+session:
+  session_id: "task_20260515T062721Z_record_mcp_sdk_availability_decision_fe1266a2"
+  task_title: "Record MCP SDK availability decision"
+  owner_agent: "codex"
+  created_at: "2026-05-15T06:27:21Z"
+  updated_at: "2026-05-15T06:31:26Z"
+  lifecycle_status: "ready_for_review"
+scenario:
+  scenario_chain_id: "engineering_governance.task_session_start"
+  scenario_package: "engineering_governance"
+changed_surfaces: []
+rule_results: []
+document_mounts: []
+evidence_snapshots:
+  -
+    evidence_id: "patch_evidence_8b92a465"
+    evidence_kind: "main_document_mount_maintenance_evidence"
+    source_ref: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-MCP-01_mcp_wrapper_mvp.md; docs/governance/jikuo_productization_task_map.md; docs/governance/jikuo_execution_mounts.md"
+    summary: "Recorded local official MCP SDK availability check: Python package mcp is not importable, pyproject has no MCP dependency, and server.py remains blocked on explicit dependency installation/declaration instead of hand-rolling the protocol server."
+    status: "ok"
+    recorded_at: "2026-05-15T06:29:25Z"
+    recorded_by: "codex"
+verification:
+  -
+    verification_id: "patch_verification_66c4f501"
+    command: "python -B -m unittest discover -s tests -p *_tests.py"
+    summary: "Ran 135 tests; all passed after MCP SDK availability documentation update."
+    status: "ok"
+    exit_code: 0
+    layer: "unit_tests"
+    recorded_at: "2026-05-15T06:29:35Z"
+    recorded_by: "codex"
+  -
+    verification_id: "patch_verification_465c1855"
+    command: "git diff --check"
+    summary: "Checked working diff for whitespace errors; no errors reported."
+    status: "ok"
+    exit_code: 0
+    layer: "diff_check"
+    recorded_at: "2026-05-15T06:29:43Z"
+    recorded_by: "codex"
+user_decisions:
+  -
+    decision_id: "task_session_start_approval"
+    decision_target: "JIKUO task-session file creation"
+    decision_effect: "create one compact task-session sidecar record"
+    decision_noneffect: "do not capture raw chat transcript"
+    exact_user_phrase: "\u597d\u7684\uff0c\u8bf7\u68b3\u7406\u8fdb\u5ea6\uff0c\u7ee7\u7eed\u4efb\u52a1"
+    recorded_at: "2026-05-15T06:27:21Z"
+    surface: "desktop_agent_or_cli_bridge"
+  -
+    decision_id: "patch_completion_fa0e6b36"
+    decision_target: "JIKUO task-session completion update"
+    decision_effect: "set task-session completion to ready_for_review"
+    decision_noneffect: "do not capture raw chat transcript or judge product output quality"
+    exact_user_phrase: "\u597d\u7684\uff0c\u8bf7\u68b3\u7406\u8fdb\u5ea6\uff0c\u7ee7\u7eed\u4efb\u52a1"
+    recorded_at: "2026-05-15T06:31:26Z"
+    surface: "desktop_agent_or_cli_bridge"
+completion:
+  status: "ready_for_review"
+  summary: "Recorded that the official MCP Python SDK package mcp is not locally importable, pyproject declares no MCP dependency yet, and JIKUO-MCP-01 server.py remains blocked on explicit dependency installation/declaration rather than a handwritten protocol server."
+  updated_at: "2026-05-15T06:31:26Z"
+handoff:
+  summary: null
+audit_trail:
+  -
+    action: "task_session_started"
+    actor: "codex"
+    recorded_at: "2026-05-15T06:27:21Z"
+    effect: "create one compact task-session sidecar record"
+  -
+    action: "task_session_evidence_updated"
+    actor: "codex"
+    recorded_at: "2026-05-15T06:29:25Z"
+    patch_id: "patch_evidence_8b92a465"
+  -
+    action: "task_session_verification_updated"
+    actor: "codex"
+    recorded_at: "2026-05-15T06:29:35Z"
+    patch_id: "patch_verification_66c4f501"
+  -
+    action: "task_session_verification_updated"
+    actor: "codex"
+    recorded_at: "2026-05-15T06:29:43Z"
+    patch_id: "patch_verification_465c1855"
+  -
+    action: "task_session_completion_updated"
+    actor: "codex"
+    recorded_at: "2026-05-15T06:31:26Z"
+    patch_id: "patch_completion_fa0e6b36"
+supersession:
+  supersedes: []
+  superseded_by: null
+capture_policy:
+  raw_chat_transcript: "disallowed"
+  exact_user_phrase: "decision_only_with_target_and_effect"
+  product_output_quality_judgement: "out_of_scope"
