@@ -17,6 +17,7 @@ JIKUO now uses this standalone repository as its active product-development home
 
 - `docs/work_orders/`: JIKUO product work orders and implementation slices.
 - `docs/governance/`: JIKUO product maps, execution mounts, kernel/skeleton boundaries, policy contracts, and agent instruction contracts.
+- `docs/integrations/`: JIKUO integration examples, client configuration notes, and smoke-test companion artifacts.
 - `docs/schemas/`: JIKUO-owned schema and view-model contracts.
 - `docs/insights/`: captured development insights and their registry.
 
@@ -60,6 +61,7 @@ When a future task creates JIKUO-owned docs:
 
 - put work orders under `docs/work_orders/`
 - put durable contracts under `docs/governance/`
+- put integration examples and client-specific setup notes under `docs/integrations/`
 - put schemas under `docs/schemas/`
 - put development insights under `docs/insights/`
 - update references in code, tests, sidecar state, fixtures, indexes, and checker rules

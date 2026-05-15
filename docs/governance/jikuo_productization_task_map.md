@@ -2662,7 +2662,7 @@ Accepted precondition:
 Open items:
 
 1. Review the implemented Stage A server wrapper: `src/jikuo/integrations/mcp/server.py`, `adapter.py`, `schemas.py`, `tests/mcp_server_tests.py`, and `tests/mcp_adapter_tests.py`.
-2. Run real MCP desktop-client configuration smoke for `jikuo-mcp` in at least two available MCP-compatible clients, or record unavailable client access explicitly.
+2. Run real MCP desktop-client configuration smoke for `jikuo-mcp` in at least two available MCP-compatible clients using `docs/integrations/mcp_client_configuration_examples.md`, or record unavailable client access explicitly.
 3. Review release-readiness follow-ups before external users: product-facing root README, license decision, minimal CI, pytest/dev extras.
 4. Keep Stage B guarded write tools blocked until Stage A server / client smoke / release gates are accepted.
 5. Keep the decision about whether new self-bootstrap policies enter built-in starter templates suspended until explicit user approval.
@@ -2688,6 +2688,7 @@ MCP MVP scope freeze:
 - Stage A checked: official MCP Python SDK import / module-entry smoke passed after user-environment dependency install (`mcp 1.27.1`)
 - Stage A checked: official Python SDK `ClientSession` stdio smoke passed in an external Codex window; the server listed 8 Stage A tools and called `jikuo.get_runtime_status_card`
 - Stage A fixed: external smoke found `jikuo.get_runtime_status_card.card_markdown` was a single card while runtime last-card output was the full proposal; the card-only tool now persists the same single-card Markdown to `.jikuo/runtime/last_card.md`
+- Stage A recorded: client configuration examples live at `docs/integrations/mcp_client_configuration_examples.md` for Claude Code, Claude Desktop, Cursor, and Codex-style stdio setup notes
 - Stage A require: selected fixture is `src/jikuo/fixtures/policy_store_active_project`
 - Stage A require: adapter core is importable and testable without the MCP SDK; official SDK is isolated to `server.py`
 - Stage A require: card-producing responses include `display_verification` with user-verifiable relative runtime paths / commands

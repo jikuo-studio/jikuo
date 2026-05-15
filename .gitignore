@@ -1,6 +1,7 @@
 # Local scratch output
 /tmp/
 /.jikuo/runtime/
+/.claude/
 
 # Python bytecode
 __pycache__/

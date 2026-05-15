@@ -228,6 +228,7 @@ Stage A implementation progress:
 - [x] Official Python SDK `ClientSession` stdio smoke passed in an external Codex window: `python -B -m jikuo.integrations.mcp.server` listed the 8 Stage A tools and called `jikuo.get_runtime_status_card`.
 - [x] External smoke found that `get_runtime_status_card.card_markdown` returned a single policy card while `.jikuo/runtime/last_card.md` and `jikuo show --last-card` showed the full proposal; fixed by making the card-only tool persist the same single-card Markdown to runtime visibility.
 - [x] Unit coverage verifies `jikuo.get_runtime_status_card.card_markdown`, `.jikuo/runtime/last_card.md`, and `runtime_visibility.load_last_card()` are byte-for-byte equal for the card-only runtime status call.
+- [x] Stage A client configuration examples are recorded in `docs/integrations/mcp_client_configuration_examples.md`.
 - [ ] Real desktop-client configuration smoke and two-client release gate remain pending; current Codex desktop did not expose a hot-loadable MCP client configuration surface during the external smoke.
 
 SDK dependency decision record:
@@ -297,6 +298,7 @@ Smoke tests:
 - card-producing no-write tools update only the `.jikuo/runtime/` visibility channel when runtime visibility is enabled
 - the same no-write call yields matching policy runtime status through chat, `.jikuo/runtime/last_card.md`, and `jikuo show --last-card`
 - no-write tool latency is recorded; local desktop target is `< 3s`
+- client configuration examples are available for users to reproduce local stdio setup without depending on this development machine's environment
 
 Human semantic review:
 

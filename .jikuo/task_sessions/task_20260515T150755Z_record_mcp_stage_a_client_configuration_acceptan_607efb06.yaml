@@ -1,0 +1,124 @@
+schema: "jikuo.task_session.v0"
+session:
+  session_id: "task_20260515T150755Z_record_mcp_stage_a_client_configuration_acceptan_607efb06"
+  task_title: "Record MCP Stage A client configuration acceptance artifacts"
+  owner_agent: "codex"
+  created_at: "2026-05-15T15:07:55Z"
+  updated_at: "2026-05-15T15:09:30Z"
+  lifecycle_status: "ready_for_review"
+scenario:
+  scenario_chain_id: "engineering_governance.task_session_start"
+  scenario_package: "engineering_governance"
+changed_surfaces: []
+rule_results: []
+document_mounts: []
+evidence_snapshots:
+  -
+    evidence_id: "patch_evidence_706b6e48"
+    evidence_kind: "implementation_evidence"
+    source_ref: "docs/integrations/mcp_client_configuration_examples.md"
+    summary: "Added reusable MCP client configuration examples and Stage A smoke checklist for Claude Code, Claude Desktop, Cursor, and Codex-style stdio clients."
+    status: "present"
+    recorded_at: "2026-05-15T15:08:07Z"
+    recorded_by: "codex"
+  -
+    evidence_id: "patch_evidence_5b2acb52"
+    evidence_kind: "main_document_mount_maintenance_evidence"
+    source_ref: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-MCP-01_mcp_wrapper_mvp.md"
+    summary: "Updated MCP-01, taskmap, execution mounts, and docs README to register docs/integrations/ and the remaining desktop-client configuration smoke gate."
+    status: "present"
+    recorded_at: "2026-05-15T15:08:12Z"
+    recorded_by: "codex"
+  -
+    evidence_id: "patch_evidence_260aef64"
+    evidence_kind: "policy_evidence:main_document_mount_maintenance_evidence"
+    source_ref: "docs/governance/jikuo_productization_task_map.md"
+    summary: "Main development documents checked and updated for this slice: MCP-01 work order, taskmap, execution mounts, and docs README now point to the integration examples and remaining desktop smoke gate."
+    status: "present"
+    recorded_at: "2026-05-15T15:08:53Z"
+    recorded_by: "codex"
+verification:
+  -
+    verification_id: "patch_verification_8d7e8633"
+    command: "python -B -m unittest discover -s tests -p *_tests.py"
+    summary: "Full unittest discovery passed: 139 tests OK."
+    status: "ok"
+    exit_code: 0
+    layer: "unit_tests"
+    recorded_at: "2026-05-15T15:08:17Z"
+    recorded_by: "codex"
+  -
+    verification_id: "patch_verification_a30399b2"
+    command: "git diff --check"
+    summary: "git diff --check passed; only line-ending warnings were reported."
+    status: "ok"
+    exit_code: 0
+    layer: "diff_hygiene"
+    recorded_at: "2026-05-15T15:08:22Z"
+    recorded_by: "codex"
+user_decisions:
+  -
+    decision_id: "task_session_start_approval"
+    decision_target: "JIKUO task-session file creation"
+    decision_effect: "create one compact task-session sidecar record"
+    decision_noneffect: "do not capture raw chat transcript"
+    exact_user_phrase: "\u9a8c\u6536\u901a\u8fc7\uff0c\u8bf7\u7ee7\u7eed\u4efb\u52a1"
+    recorded_at: "2026-05-15T15:07:55Z"
+    surface: "desktop_agent_or_cli_bridge"
+  -
+    decision_id: "patch_completion_55965e99"
+    decision_target: "JIKUO task-session completion update"
+    decision_effect: "set task-session completion to ready_for_review"
+    decision_noneffect: "do not capture raw chat transcript or judge product output quality"
+    exact_user_phrase: "\u9a8c\u6536\u901a\u8fc7\uff0c\u8bf7\u7ee7\u7eed\u4efb\u52a1"
+    recorded_at: "2026-05-15T15:09:30Z"
+    surface: "desktop_agent_or_cli_bridge"
+completion:
+  status: "ready_for_review"
+  summary: "Recorded MCP Stage A client configuration examples and acceptance artifacts after SDK client smoke passed."
+  updated_at: "2026-05-15T15:09:30Z"
+handoff:
+  summary: null
+audit_trail:
+  -
+    action: "task_session_started"
+    actor: "codex"
+    recorded_at: "2026-05-15T15:07:55Z"
+    effect: "create one compact task-session sidecar record"
+  -
+    action: "task_session_evidence_updated"
+    actor: "codex"
+    recorded_at: "2026-05-15T15:08:07Z"
+    patch_id: "patch_evidence_706b6e48"
+  -
+    action: "task_session_evidence_updated"
+    actor: "codex"
+    recorded_at: "2026-05-15T15:08:12Z"
+    patch_id: "patch_evidence_5b2acb52"
+  -
+    action: "task_session_verification_updated"
+    actor: "codex"
+    recorded_at: "2026-05-15T15:08:17Z"
+    patch_id: "patch_verification_8d7e8633"
+  -
+    action: "task_session_verification_updated"
+    actor: "codex"
+    recorded_at: "2026-05-15T15:08:22Z"
+    patch_id: "patch_verification_a30399b2"
+  -
+    action: "task_session_evidence_updated"
+    actor: "codex"
+    recorded_at: "2026-05-15T15:08:53Z"
+    patch_id: "patch_evidence_260aef64"
+  -
+    action: "task_session_completion_updated"
+    actor: "codex"
+    recorded_at: "2026-05-15T15:09:30Z"
+    patch_id: "patch_completion_55965e99"
+supersession:
+  supersedes: []
+  superseded_by: null
+capture_policy:
+  raw_chat_transcript: "disallowed"
+  exact_user_phrase: "decision_only_with_target_and_effect"
+  product_output_quality_judgement: "out_of_scope"
