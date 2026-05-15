@@ -191,6 +191,7 @@ Already created in `WORKTREE-05` or incubated from it:
 - `JIKUO-ARCH-02`: integration neutrality and `src/jikuo/integrations/` layout, accepted on 2026-05-14 as the immediate pre-MCP architecture contract; anchors protocol / SDK / client adapters outside the kernel before MCP implementation
 - `JIKUO-ARCH-03`: MCP pre-implementation API neutrality review, completed and accepted on 2026-05-15; confirms the first MCP adapter can wrap structured core functions without calling CLI `main()` or adding MCP-specific kernel behavior, while keeping revised `MCP-01` acceptance visible as the remaining pre-implementation blocker
 - `JIKUO-SDK-01`: Agent SDK and agentic platform adapter exploration, accepted on 2026-05-14 as a pre-MCP / MCP-adjacent architecture posture; compares OpenAI Agents SDK, Claude Agent SDK, Google ADK, Google Antigravity, and Vercel AI SDK while preserving future orchestration extensibility without replacing the JIKUO kernel, MCP wrapper, or local runtime evidence authority
+- `JIKUO-REL-01`: external release license decision brief, drafted on 2026-05-16 and ready for user review; records MIT / Apache-2.0 / Proprietary / open-core options without changing `pyproject.toml` or granting a license before explicit user decision
 - `JIKUO-PKG-00`: package boundary and extraction plan, drafted and ready for user review; separates JIKUO tool-owned package assets from user-project-local `.jikuo/` state before CORE-20 or MCP implementation
 - `JIKUO-CORE-20`: project context binding and policy template portability, draft contract ready for user review; separates reusable policy templates from project-specific document / directory bindings
 - `JIKUO-SEC-01`: trust, privacy, provenance, namespace, principal, telemetry, and timestamp baseline, draft contract ready for user review
@@ -2661,7 +2662,7 @@ Accepted precondition:
 
 Open items:
 
-1. Decide the external release license; current package metadata remains `Proprietary` until explicit user decision.
+1. Decide the external release license using `docs/work_orders/SPRINT_050_WO-PER-JIKUO-REL-01_external_release_license_decision.md`; current package metadata remains `Proprietary` until explicit user decision.
 2. Keep Stage B3 guarded policy-template activation blocked until the user explicitly accepts template activation through MCP.
 3. Keep the decision about whether new self-bootstrap policies enter built-in starter templates suspended until explicit user approval.
 4. Plan `JIKUO-STUDIO-01` dashboard as a post-MCP product architecture slice; it is deferred from MCP-01 scope and current Stage B work relies on card markdown plus runtime card links instead.
