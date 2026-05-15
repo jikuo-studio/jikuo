@@ -1,0 +1,111 @@
+schema: "jikuo.task_session.v0"
+session:
+  session_id: "task_20260515T050849Z_implement_mcp_stage_a_sdk_free_adapter_boundary_c3443f83"
+  task_title: "Implement MCP Stage A SDK-free adapter boundary"
+  owner_agent: "codex"
+  created_at: "2026-05-15T05:08:49Z"
+  updated_at: "2026-05-15T05:11:16Z"
+  lifecycle_status: "ready_for_review"
+scenario:
+  scenario_chain_id: "engineering_governance.task_session_start"
+  scenario_package: "engineering_governance"
+changed_surfaces: []
+rule_results: []
+document_mounts: []
+evidence_snapshots:
+  -
+    evidence_id: "patch_evidence_65526ba0"
+    evidence_kind: "implementation_intent_routing_evidence"
+    source_ref: "src/jikuo/integrations/mcp/adapter.py; src/jikuo/integrations/mcp/schemas.py; tests/mcp_adapter_tests.py"
+    summary: "Classified this slice as implementation/code change: implement the already accepted JIKUO-MCP-01 Stage A SDK-free adapter boundary and tests, without adding policy or expanding MCP server scope."
+    status: "ok"
+    recorded_at: "2026-05-15T05:09:47Z"
+    recorded_by: "codex"
+  -
+    evidence_id: "patch_evidence_9c50dca4"
+    evidence_kind: "main_document_mount_maintenance_evidence"
+    source_ref: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-MCP-01_mcp_wrapper_mvp.md; docs/governance/jikuo_productization_task_map.md; docs/governance/jikuo_execution_mounts.md; docs/insights/INSIGHT-2026-05-15-task-session-concurrent-write-guard.md"
+    summary: "Updated mounted main documents for Stage A adapter progress and recorded the task-session concurrent-write race as a task_candidate insight instead of expanding this slice."
+    status: "ok"
+    recorded_at: "2026-05-15T05:10:03Z"
+    recorded_by: "codex"
+verification:
+  -
+    verification_id: "patch_verification_9c59f148"
+    command: "python -B -m unittest discover -s tests -p *_tests.py"
+    summary: "Ran 135 tests; all passed after adding MCP Stage A adapter tests."
+    status: "ok"
+    exit_code: 0
+    layer: "unit_tests"
+    recorded_at: "2026-05-15T05:10:34Z"
+    recorded_by: "codex"
+  -
+    verification_id: "patch_verification_aee61b75"
+    command: "git diff --check"
+    summary: "Checked working diff for whitespace errors; no errors reported."
+    status: "ok"
+    exit_code: 0
+    layer: "diff_check"
+    recorded_at: "2026-05-15T05:10:45Z"
+    recorded_by: "codex"
+user_decisions:
+  -
+    decision_id: "task_session_start_approval"
+    decision_target: "JIKUO task-session file creation"
+    decision_effect: "create one compact task-session sidecar record"
+    decision_noneffect: "do not capture raw chat transcript"
+    exact_user_phrase: "\u662f\u7684\uff0c\u6211\u63a5\u53d7\u4efb\u52a1\u8303\u56f4\uff0c\u8bf7\u7ee7\u7eed\u5de5\u4f5c"
+    recorded_at: "2026-05-15T05:08:49Z"
+    surface: "desktop_agent_or_cli_bridge"
+  -
+    decision_id: "patch_completion_ec335ae1"
+    decision_target: "JIKUO task-session completion update"
+    decision_effect: "set task-session completion to ready_for_review"
+    decision_noneffect: "do not capture raw chat transcript or judge product output quality"
+    exact_user_phrase: "\u662f\u7684\uff0c\u6211\u63a5\u53d7\u4efb\u52a1\u8303\u56f4\uff0c\u8bf7\u7ee7\u7eed\u5de5\u4f5c"
+    recorded_at: "2026-05-15T05:11:16Z"
+    surface: "desktop_agent_or_cli_bridge"
+completion:
+  status: "ready_for_review"
+  summary: "Implemented the JIKUO-MCP-01 Stage A SDK-free adapter boundary: schemas and adapter expose the 8 no-write/card/proposal tools, return display_verification and field classifications, sanitize local paths unless transport is explicit local_stdio, and keep server.py/client smoke/Stage B guarded writes pending."
+  updated_at: "2026-05-15T05:11:16Z"
+handoff:
+  summary: null
+audit_trail:
+  -
+    action: "task_session_started"
+    actor: "codex"
+    recorded_at: "2026-05-15T05:08:49Z"
+    effect: "create one compact task-session sidecar record"
+  -
+    action: "task_session_evidence_updated"
+    actor: "codex"
+    recorded_at: "2026-05-15T05:09:47Z"
+    patch_id: "patch_evidence_65526ba0"
+  -
+    action: "task_session_evidence_updated"
+    actor: "codex"
+    recorded_at: "2026-05-15T05:10:03Z"
+    patch_id: "patch_evidence_9c50dca4"
+  -
+    action: "task_session_verification_updated"
+    actor: "codex"
+    recorded_at: "2026-05-15T05:10:34Z"
+    patch_id: "patch_verification_9c59f148"
+  -
+    action: "task_session_verification_updated"
+    actor: "codex"
+    recorded_at: "2026-05-15T05:10:45Z"
+    patch_id: "patch_verification_aee61b75"
+  -
+    action: "task_session_completion_updated"
+    actor: "codex"
+    recorded_at: "2026-05-15T05:11:16Z"
+    patch_id: "patch_completion_ec335ae1"
+supersession:
+  supersedes: []
+  superseded_by: null
+capture_policy:
+  raw_chat_transcript: "disallowed"
+  exact_user_phrase: "decision_only_with_target_and_effect"
+  product_output_quality_judgement: "out_of_scope"

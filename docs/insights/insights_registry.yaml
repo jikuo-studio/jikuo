@@ -54,3 +54,12 @@ entries:
     related_task_refs:
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-18_previous_latest_todo_snapshot_posture.md"
     summary: "The standalone repository disables previous_todo_map in v0 and defers real latest-vs-previous todo comparison until a guarded snapshot rotation capability exists."
+  - insight_id: "INSIGHT-2026-05-15-task-session-concurrent-write-guard"
+    title: "Task-session concurrent write guard"
+    classification: "task_candidate"
+    status: "open"
+    file: "docs/insights/INSIGHT-2026-05-15-task-session-concurrent-write-guard.md"
+    related_task_refs:
+      - "src/jikuo/task_session.py"
+      - "tests/task_session_tests.py"
+    summary: "Parallel guarded updates to the same task-session file can race on Windows; future task-session hardening should add per-session write serialization or explicit concurrent-update refusal."

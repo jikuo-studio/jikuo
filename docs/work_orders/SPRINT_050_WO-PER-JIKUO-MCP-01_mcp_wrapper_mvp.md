@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-MCP-01: MCP Wrapper MVP
 
-> **Status**: Draft, blocked until pre-MCP portability / security / package / visibility foundation is accepted
+> **Status**: Stage A adapter boundary in progress; SDK-free adapter and schemas implemented, MCP server wrapper not started
 > **Product meaning**: formally move the next phase from more kernel expansion to an MCP wrapper MVP, so desktop Agents can call JIKUO through a stable tool surface while users remain in their desktop AI client.
 > **Scope rule**: wrap stable atoms only; do not add new governance capability in this slice.
 
@@ -207,10 +207,20 @@ MCP implementation must not start until each item is checked, accepted, or expli
 - [x] `JIKUO-LIVE-18` disables fake previous/latest todo snapshot binding.
 - [x] `JIKUO-LIVE-19` backfills official starter policy provenance.
 - [x] `JIKUO-SEC-02` defines field-level MCP response privacy classification.
-- [ ] User accepts the revised `JIKUO-MCP-01` scope as the implementation scope.
+- [x] User accepts the revised `JIKUO-MCP-01` Stage A scope as the implementation scope.
 - [x] First fixture project for Stage A MCP integration tests is selected: `src/jikuo/fixtures/policy_store_active_project`.
 - [x] MCP SDK dependency posture is decided: keep `adapter.py` SDK-free, use the official SDK only in `server.py` if locally available, and stop at the adapter boundary if unavailable.
-- [ ] First implementation PR/slice confirms it will create code under `src/jikuo/integrations/mcp/` only.
+- [x] First implementation slice created code under `src/jikuo/integrations/mcp/` only.
+
+Stage A implementation progress:
+
+- [x] `src/jikuo/integrations/mcp/schemas.py` defines the 8 Stage A tools, Stage B non-exposed guarded tools, display directives, and response field classifications.
+- [x] `src/jikuo/integrations/mcp/adapter.py` dispatches Stage A tool calls to structured core APIs without importing an MCP SDK or calling CLI `main()`.
+- [x] Card-producing Stage A adapter responses include `card_markdown`, display directives, `runtime_snapshot_ref`, and `display_verification`.
+- [x] Unknown / non-local transports sanitize local project paths from returned payloads; explicit `local_stdio` may return `local_paths`.
+- [x] Unit coverage verifies Stage A tool listing, no hidden task-session / policy writes, runtime-only visibility updates, card-only runtime status output, latest-card retrieval, and privacy sanitization.
+- [ ] `server.py` MCP protocol wrapper using the official Python SDK is not started.
+- [ ] Real MCP client smoke tests and two-client release gate are not started.
 
 Field-level response privacy requirements for the implementation slice:
 
