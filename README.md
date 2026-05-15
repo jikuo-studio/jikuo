@@ -8,8 +8,9 @@ are active, which ones triggered, what evidence is missing, which task-session
 is being worked, and where the user can independently verify the runtime card.
 
 JIKUO is currently an early standalone package. Stage A MCP support is
-implemented for no-write status, card, and proposal tools. Guarded-write MCP
-tools remain blocked until explicitly accepted.
+implemented for no-write status, card, and proposal tools. Stage B1 adds one
+guarded-write MCP tool for task-session evidence updates after explicit user
+approval. Policy evolution and template activation MCP writes remain blocked.
 
 ## What JIKUO Provides
 
@@ -65,6 +66,13 @@ Stage A exposes eight no-write tools:
 - `jikuo.propose_policy_write_plan`
 - `jikuo.propose_policy_evolution_plan`
 - `jikuo.propose_policy_template_import_plan`
+
+Stage B1 exposes one guarded-write tool:
+
+- `jikuo.apply_task_session_evidence_update`
+
+This tool still requires explicit confirmation and an approval phrase, and it
+may only append one evidence item to an explicit task-session.
 
 Client configuration examples live in
 [`docs/integrations/mcp_client_configuration_examples.md`](docs/integrations/mcp_client_configuration_examples.md).

@@ -9,6 +9,7 @@ from jikuo.integrations.mcp import schemas, server
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "src" / "jikuo" / "fixtures"
 POLICY_ACTIVE_PROJECT = FIXTURES / "policy_store_active_project"
+POLICY_EVIDENCE_SESSION_PROJECT = FIXTURES / "policy_evidence_session_project"
 
 
 def copy_fixture(source: Path, tmp: str, name: str = "project") -> Path:
@@ -39,13 +40,14 @@ class FakeFastMCP:
 
 
 class MCPServerWrapperTests(unittest.TestCase):
-    def test_create_server_registers_stage_a_tools_only(self):
+    def test_create_server_registers_stage_a_plus_stage_b1_tools_only(self):
         fake = server.create_server(fastmcp_cls=FakeFastMCP)
 
         self.assertEqual(fake.name, server.SERVER_NAME)
-        self.assertEqual(list(fake.tools), list(schemas.STAGE_A_TOOL_NAMES))
-        for guarded_tool in schemas.STAGE_B_TOOL_NAMES:
-            self.assertNotIn(guarded_tool, fake.tools)
+        self.assertEqual(list(fake.tools), list(schemas.EXPOSED_TOOL_NAMES))
+        self.assertIn("jikuo.apply_task_session_evidence_update", fake.tools)
+        self.assertNotIn("jikuo.apply_policy_evolution_write", fake.tools)
+        self.assertNotIn("jikuo.apply_policy_template_activation", fake.tools)
 
     def test_card_tool_descriptions_include_display_contract(self):
         fake = server.create_server(fastmcp_cls=FakeFastMCP)
@@ -73,6 +75,33 @@ class MCPServerWrapperTests(unittest.TestCase):
             self.assertIn("## Policy runtime status", response["card_markdown"])
             self.assertNotIn(str(project_root.resolve()), str(response))
             self.assertTrue((project_root / ".jikuo" / "runtime" / "last_card.md").is_file())
+
+    def test_stage_b1_registered_tool_delegates_guarded_apply(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = copy_fixture(POLICY_EVIDENCE_SESSION_PROJECT, tmp)
+            fake = server.create_server(fastmcp_cls=FakeFastMCP)
+
+            response = fake.tools["jikuo.apply_task_session_evidence_update"]["function"](
+                project_root=str(project_root),
+                session_id="task_policy_evidence_probe",
+                evidence_kind="policy_feedback:not_applicable",
+                evidence_ref="policy_ref=POLICY-real-test-data-and-chain",
+                summary="User marked this policy not applicable through MCP server.",
+                confirm_apply=True,
+                approval_phrase="I approve this task-session evidence append.",
+            )
+
+            self.assertEqual(
+                response["tool_name"],
+                "jikuo.apply_task_session_evidence_update",
+            )
+            self.assertEqual(response["status"], "applied")
+            self.assertTrue(response["write_performed"])
+            self.assertIn("# JIKUO Agent Flow Apply Result", response["card_markdown"])
+            self.assertNotIn(
+                "I approve this task-session evidence append.",
+                str(response),
+            )
 
     def test_main_uses_stdio_run_by_default(self):
         created = []

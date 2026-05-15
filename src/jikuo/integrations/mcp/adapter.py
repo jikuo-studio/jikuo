@@ -11,7 +11,7 @@ from . import schemas
 
 
 def list_tools() -> list[dict[str, Any]]:
-    """Return Stage A MCP tool metadata without importing an MCP SDK."""
+    """Return accepted MCP tool metadata without importing an MCP SDK."""
 
     return schemas.build_tool_list()
 
@@ -86,6 +86,31 @@ def _sanitize_for_transport(
             for key, item in value.items()
         }
     return value
+
+
+def _redact_required_fields(value: Any) -> Any:
+    if isinstance(value, list):
+        return [_redact_required_fields(item) for item in value]
+    if isinstance(value, tuple):
+        return [_redact_required_fields(item) for item in value]
+    if isinstance(value, dict):
+        output: dict[str, Any] = {}
+        for key, item in value.items():
+            key_text = str(key)
+            if key_text in {"approval_phrase", "exact_user_phrase", "phrase"}:
+                output[key_text] = "<REDACTED>"
+            else:
+                output[key_text] = _redact_required_fields(item)
+        return output
+    return value
+
+
+def _bool_arg(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
 
 
 def _runtime_report_from(data: dict[str, Any]) -> dict[str, Any]:
@@ -192,8 +217,9 @@ def _base_response(
         )
         if local_paths is not None:
             response["local_paths"] = local_paths
+    redacted = _redact_required_fields(response)
     return _sanitize_for_transport(
-        response,
+        redacted,
         project_root=project_root,
         transport=transport,
     )
@@ -302,6 +328,73 @@ def _runtime_status_card_response(
     )
 
 
+def _apply_task_session_evidence_update_response(
+    *,
+    arguments: dict[str, Any],
+    project_root: Path | None,
+    transport: str,
+) -> dict[str, Any]:
+    report, _exit_code = agent_flow.build_apply_result(
+        operation="task_session_evidence_update",
+        project_root=project_root,
+        task_title=None,
+        session_id=arguments.get("session_id"),
+        evidence_kind=arguments.get("evidence_kind"),
+        evidence_ref=arguments.get("evidence_ref"),
+        summary=arguments.get("summary"),
+        evidence_status=str(arguments.get("evidence_status") or "ok"),
+        owner_agent=str(arguments.get("owner_agent") or "codex"),
+        confirmed=_bool_arg(arguments.get("confirm_apply")),
+        approval_phrase=arguments.get("approval_phrase"),
+    )
+    with_markdown = agent_flow.apply_result_with_chat_ready_markdown(report)
+    markdown = str(with_markdown.get("chat_ready_markdown") or "")
+    runtime_report = runtime_visibility.persist_agent_flow_snapshot(
+        project_root=project_root,
+        proposal=with_markdown,
+        card_markdown=markdown,
+    )
+    with_markdown["runtime_visibility"] = runtime_report
+    with_markdown["client_display_links"] = runtime_visibility.build_client_display_links(
+        runtime_report
+    )
+    atom_trace = with_markdown.get("atom_trace")
+    if isinstance(atom_trace, list) and runtime_report.get("write_performed"):
+        atom_trace.append(
+            agent_flow.atom_trace(
+                loop_step_id="DPL-06",
+                atom_id="CAP-RUNTIME-VISIBILITY-CHANNEL-01",
+                mode="runtime-projection",
+                status="ok",
+                summary="wrote guarded apply result snapshot to .jikuo/runtime",
+            )
+        )
+    response = _base_response(
+        tool_name="jikuo.apply_task_session_evidence_update",
+        status=str(with_markdown.get("status") or "unknown"),
+        data_details=with_markdown,
+        project_root=project_root,
+        transport=transport,
+        card_markdown=markdown,
+        chat_ready_markdown=markdown,
+        runtime_report=runtime_report,
+    )
+    response["write_performed"] = bool(with_markdown.get("write_performed"))
+    response["target_result_schema"] = with_markdown.get("target_result_schema")
+    response["target_result"] = _redact_required_fields(
+        with_markdown.get("target_result")
+    )
+    response["approval_boundary"] = _redact_required_fields(
+        with_markdown.get("approval_boundary")
+    )
+    response["refusal_reasons"] = list(with_markdown.get("refusal_reasons") or [])
+    return _sanitize_for_transport(
+        response,
+        project_root=project_root,
+        transport=transport,
+    )
+
+
 def call_tool(
     tool_name: str,
     arguments: dict[str, Any] | None = None,
@@ -309,7 +402,7 @@ def call_tool(
     project_root: Path | str | None = None,
     transport: str | None = None,
 ) -> dict[str, Any]:
-    """Call a Stage A JIKUO MCP tool through structured core APIs.
+    """Call an accepted JIKUO MCP tool through structured core APIs.
 
     This function intentionally does not import or require an MCP SDK. The future
     protocol server should call this adapter and then wrap the returned shape.
@@ -459,4 +552,11 @@ def call_tool(
             template_path=_path_or_none(args.get("template")),
         )
 
-    raise ValueError(f"unsupported MCP Stage A tool: {tool_name}")
+    if tool_name == "jikuo.apply_task_session_evidence_update":
+        return _apply_task_session_evidence_update_response(
+            arguments=args,
+            project_root=resolved_root,
+            transport=resolved_transport,
+        )
+
+    raise ValueError(f"unsupported MCP tool: {tool_name}")

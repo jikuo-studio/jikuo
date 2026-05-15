@@ -1,4 +1,4 @@
-"""MCP Stage A tool schemas and response privacy classifications."""
+"""MCP tool schemas and response privacy classifications."""
 
 from __future__ import annotations
 
@@ -41,6 +41,10 @@ STAGE_B_TOOL_NAMES = (
     "jikuo.apply_policy_template_activation",
 )
 
+STAGE_B1_TOOL_NAMES = ("jikuo.apply_task_session_evidence_update",)
+
+EXPOSED_TOOL_NAMES = STAGE_A_TOOL_NAMES + STAGE_B1_TOOL_NAMES
+
 
 def _tool(
     *,
@@ -49,6 +53,8 @@ def _tool(
     input_fields: dict[str, str],
     output_fields: dict[str, str] | None = None,
     card_returning: bool = False,
+    stage: str = "A",
+    write_mode: str = "no-write",
 ) -> dict[str, Any]:
     fields = {
         "schema": RETURN,
@@ -76,8 +82,8 @@ def _tool(
         fields.update(output_fields)
     return {
         "name": name,
-        "stage": "A",
-        "write_mode": "no-write",
+        "stage": stage,
+        "write_mode": write_mode,
         "card_returning": card_returning,
         "description": description,
         "input_fields": dict(input_fields),
@@ -164,6 +170,35 @@ TOOL_DEFINITIONS: dict[str, dict[str, Any]] = {
         },
         card_returning=True,
     ),
+    "jikuo.apply_task_session_evidence_update": _tool(
+        name="jikuo.apply_task_session_evidence_update",
+        description=(
+            "Append one explicitly approved evidence item to an existing JIKUO "
+            "task-session through the guarded agent_flow apply boundary. Requires "
+            "confirm_apply=true and an approval_phrase."
+        ),
+        input_fields={
+            "project_root": LOCAL_ONLY,
+            "session_id": RETURN,
+            "evidence_kind": RETURN,
+            "evidence_ref": REDACT_OPTIONAL,
+            "summary": REDACT_OPTIONAL,
+            "evidence_status": RETURN,
+            "owner_agent": RETURN,
+            "confirm_apply": RETURN,
+            "approval_phrase": REDACT_REQUIRED,
+        },
+        output_fields={
+            "write_performed": RETURN,
+            "target_result_schema": RETURN,
+            "target_result": RETURN,
+            "approval_boundary": RETURN,
+            "refusal_reasons": RETURN,
+        },
+        card_returning=True,
+        stage="B1",
+        write_mode="guarded-write",
+    ),
 }
 
 
@@ -172,14 +207,14 @@ def stage_a_tool_names() -> tuple[str, ...]:
 
 
 def build_tool_list() -> list[dict[str, Any]]:
-    return [deepcopy(TOOL_DEFINITIONS[name]) for name in STAGE_A_TOOL_NAMES]
+    return [deepcopy(TOOL_DEFINITIONS[name]) for name in EXPOSED_TOOL_NAMES]
 
 
 def tool_definition(tool_name: str) -> dict[str, Any]:
     try:
         return deepcopy(TOOL_DEFINITIONS[tool_name])
     except KeyError as exc:
-        raise ValueError(f"unsupported MCP Stage A tool: {tool_name}") from exc
+        raise ValueError(f"unsupported MCP tool: {tool_name}") from exc
 
 
 def build_display_directives() -> dict[str, Any]:

@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-MCP-01: MCP Wrapper MVP
 
-> **Status**: Stage A server wrapper implemented; SDK-free adapter, schemas, official `mcp` dependency declaration, `server.py`, SDK client smoke, and user-verified Codex Desktop / Claude Desktop smoke passed; Stage B guarded writes remain blocked until explicit user acceptance
+> **Status**: Stage A server wrapper accepted; Stage B1 task-session evidence guarded-write tool implemented after explicit user approval; Stage B2 policy evolution and Stage B3 template activation remain blocked until separate acceptance
 > **Product meaning**: formally move the next phase from more kernel expansion to an MCP wrapper MVP, so desktop Agents can call JIKUO through a stable tool surface while users remain in their desktop AI client.
 > **Scope rule**: wrap stable atoms only; do not add new governance capability in this slice.
 
@@ -86,6 +86,8 @@ Stage A exposes only no-write / card-returning operations. These tools may updat
 | `jikuo.propose_policy_template_import_plan` | `CAP-AGENT-FLOW-POLICY-TEMPLATE-IMPORT-PLAN-01` | no governance write; may update `.jikuo/runtime/` | return resolved template binding data plus card refs / display directives |
 
 Stage B exposes guarded write operations only after Stage A acceptance gates pass.
+Stage B1 is accepted for the task-session evidence write only; the remaining
+Stage B tools are still blocked.
 
 | Stage B MCP tool | Wrapped atom | Write mode | Product role |
 |---|---|---|---|
@@ -230,6 +232,12 @@ Stage A implementation progress:
 - [x] Unit coverage verifies `jikuo.get_runtime_status_card.card_markdown`, `.jikuo/runtime/last_card.md`, and `runtime_visibility.load_last_card()` are byte-for-byte equal for the card-only runtime status call.
 - [x] Stage A client configuration examples are recorded in `docs/integrations/mcp_client_configuration_examples.md`.
 - [x] Real desktop-client configuration smoke and two-client release gate passed by user verification in Codex Desktop and Claude Desktop on 2026-05-15; local temporary directories may remain under ignored project paths such as `.claude/` and `tmp/`.
+- [x] Stage B1 user approval recorded on 2026-05-15: implement only `jikuo.apply_task_session_evidence_update`; do not implement policy evolution or policy-template activation tools in this slice.
+- [x] `src/jikuo/integrations/mcp/schemas.py` exposes the 8 Stage A tools plus the single accepted Stage B1 guarded-write tool; `jikuo.apply_policy_evolution_write` and `jikuo.apply_policy_template_activation` remain absent from the MCP tool list.
+- [x] `src/jikuo/integrations/mcp/adapter.py` wraps `agent_flow.build_apply_result(operation="task_session_evidence_update")`, preserves the guarded confirmation / approval phrase boundary, writes only the target task-session on success, and updates runtime visibility for the returned apply card.
+- [x] `src/jikuo/integrations/mcp/server.py` registers `jikuo.apply_task_session_evidence_update` through the official FastMCP wrapper while continuing to delegate behavior to the SDK-free adapter.
+- [x] Unit coverage verifies Stage B1 refusal without confirmation / approval phrase, success after approval, no policy-store or project-state writes, approval phrase non-disclosure, runtime visibility projection, and continued refusal / non-registration for Stage B2 and Stage B3.
+- [x] Official Python SDK `ClientSession` stdio smoke passed for Stage B1: server listed 9 tools, exposed `jikuo.apply_task_session_evidence_update`, did not expose Stage B2 / B3 tools, and successfully appended one task-session evidence item without returning the approval phrase.
 
 Stage A desktop-client acceptance log:
 
@@ -292,7 +300,9 @@ Integration tests:
 - starter policy tools refuse or omit missing-provenance records
 - `jikuo.propose_policy_write_plan` returns a no-write card
 - `jikuo.propose_policy_evolution_plan` returns a proposal ref
-- `jikuo.apply_policy_evolution_write` succeeds only in a copied temporary fixture with matching proposal ref
+- `jikuo.apply_task_session_evidence_update` refuses without confirmation / approval phrase and succeeds only against an explicit task-session after approval
+- official SDK stdio smoke verifies the Stage B1 tool through a real MCP `ClientSession`
+- `jikuo.apply_policy_evolution_write` remains blocked until Stage B2 is separately accepted; future Stage B2 tests must require a copied temporary fixture with matching proposal ref
 
 Smoke tests:
 

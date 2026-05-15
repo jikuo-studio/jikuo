@@ -11,6 +11,7 @@ from jikuo.integrations.mcp import adapter, schemas
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "src" / "jikuo" / "fixtures"
 POLICY_ACTIVE_PROJECT = FIXTURES / "policy_store_active_project"
+POLICY_EVIDENCE_SESSION_PROJECT = FIXTURES / "policy_evidence_session_project"
 POLICY_TEMPLATE = (
     ROOT
     / "src"
@@ -28,15 +29,26 @@ def copy_fixture(source: Path, tmp: str, name: str = "project") -> Path:
 
 
 class MCPStageAAdapterTests(unittest.TestCase):
-    def test_tool_list_exposes_stage_a_without_guarded_writes(self):
+    def test_tool_list_exposes_stage_a_plus_stage_b1_only(self):
         tools = adapter.list_tools()
         names = [tool["name"] for tool in tools]
 
-        self.assertEqual(names, list(schemas.STAGE_A_TOOL_NAMES))
-        for guarded_tool in schemas.STAGE_B_TOOL_NAMES:
-            self.assertNotIn(guarded_tool, names)
-        self.assertTrue(all(tool["stage"] == "A" for tool in tools))
-        self.assertTrue(all(tool["write_mode"] == "no-write" for tool in tools))
+        self.assertEqual(names, list(schemas.EXPOSED_TOOL_NAMES))
+        self.assertIn("jikuo.apply_task_session_evidence_update", names)
+        self.assertNotIn("jikuo.apply_policy_evolution_write", names)
+        self.assertNotIn("jikuo.apply_policy_template_activation", names)
+        by_name = {tool["name"]: tool for tool in tools}
+        for name in schemas.STAGE_A_TOOL_NAMES:
+            self.assertEqual(by_name[name]["stage"], "A")
+            self.assertEqual(by_name[name]["write_mode"], "no-write")
+        self.assertEqual(
+            by_name["jikuo.apply_task_session_evidence_update"]["stage"],
+            "B1",
+        )
+        self.assertEqual(
+            by_name["jikuo.apply_task_session_evidence_update"]["write_mode"],
+            "guarded-write",
+        )
 
     def test_status_wraps_policy_store_without_runtime_write(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -195,6 +207,97 @@ class MCPStageAAdapterTests(unittest.TestCase):
             self.assertFalse(
                 (project_root / ".jikuo" / "policies" / "approved" / "POLICY-mcp-adapter-smoke.yaml").exists()
             )
+
+    def test_stage_b1_task_session_evidence_refuses_without_approval(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = copy_fixture(POLICY_EVIDENCE_SESSION_PROJECT, tmp)
+            session_file = (
+                project_root
+                / ".jikuo"
+                / "task_sessions"
+                / "task_policy_evidence_probe.yaml"
+            )
+            before_text = session_file.read_text(encoding="utf-8")
+
+            response = adapter.call_tool(
+                "jikuo.apply_task_session_evidence_update",
+                {
+                    "project_root": str(project_root),
+                    "session_id": "task_policy_evidence_probe",
+                    "evidence_kind": "policy_feedback:not_applicable",
+                    "evidence_ref": "policy_ref=POLICY-real-test-data-and-chain",
+                    "summary": "User marked this policy not applicable.",
+                },
+            )
+
+            self.assertEqual(response["tool_name"], "jikuo.apply_task_session_evidence_update")
+            self.assertEqual(response["stage"], "B1")
+            self.assertEqual(response["write_mode"], "guarded-write")
+            self.assertEqual(response["status"], "refused")
+            self.assertFalse(response["write_performed"])
+            self.assertIn("missing_confirmation_flag", response["refusal_reasons"])
+            self.assertIn("approval_evidence_missing", response["refusal_reasons"])
+            self.assertIn("# JIKUO Agent Flow Apply Result", response["card_markdown"])
+            self.assertTrue((project_root / ".jikuo" / "runtime" / "last_card.md").is_file())
+            self.assertEqual(session_file.read_text(encoding="utf-8"), before_text)
+
+    def test_stage_b1_task_session_evidence_writes_after_approval_only_to_session(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = copy_fixture(POLICY_EVIDENCE_SESSION_PROJECT, tmp)
+            session_file = (
+                project_root
+                / ".jikuo"
+                / "task_sessions"
+                / "task_policy_evidence_probe.yaml"
+            )
+            project_state_file = project_root / ".jikuo" / "project_state.yaml"
+            before_state = project_state_file.read_text(encoding="utf-8")
+
+            response = adapter.call_tool(
+                "jikuo.apply_task_session_evidence_update",
+                {
+                    "project_root": str(project_root),
+                    "session_id": "task_policy_evidence_probe",
+                    "evidence_kind": "policy_feedback:not_applicable",
+                    "evidence_ref": "policy_ref=POLICY-real-test-data-and-chain",
+                    "summary": "User marked this policy not applicable through MCP B1.",
+                    "confirm_apply": True,
+                    "approval_phrase": "I approve this task-session evidence append.",
+                },
+                transport=schemas.LOCAL_STDIO_TRANSPORT,
+            )
+
+            self.assertEqual(response["status"], "applied")
+            self.assertTrue(response["write_performed"])
+            self.assertEqual(
+                response["target_result_schema"],
+                "jikuo.task_session_update_result.v0",
+            )
+            self.assertIn("local_paths", response)
+            self.assertEqual(
+                response["display_verification"]["runtime_snapshot_path_relative"],
+                ".jikuo/runtime/last_card.md",
+            )
+            self.assertNotIn("I approve this task-session evidence append.", json.dumps(response))
+            tool = schemas.tool_definition("jikuo.apply_task_session_evidence_update")
+            self.assertEqual(
+                tool["input_fields"]["approval_phrase"],
+                schemas.REDACT_REQUIRED,
+            )
+            updated = session_file.read_text(encoding="utf-8")
+            self.assertIn("policy_feedback:not_applicable", updated)
+            self.assertIn("User marked this policy not applicable through MCP B1.", updated)
+            self.assertEqual(project_state_file.read_text(encoding="utf-8"), before_state)
+            self.assertFalse((project_root / ".jikuo" / "policies").exists())
+
+    def test_stage_b2_and_stage_b3_tools_remain_unsupported(self):
+        for tool_name in (
+            "jikuo.apply_policy_evolution_write",
+            "jikuo.apply_policy_template_activation",
+        ):
+            with self.subTest(tool_name=tool_name):
+                with self.assertRaises(ValueError):
+                    adapter.call_tool(tool_name, {})
 
 
 if __name__ == "__main__":

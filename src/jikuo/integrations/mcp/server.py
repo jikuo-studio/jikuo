@@ -1,4 +1,4 @@
-"""Official Python MCP SDK server wrapper for JIKUO Stage A tools."""
+"""Official Python MCP SDK server wrapper for JIKUO MCP tools."""
 
 from __future__ import annotations
 
@@ -240,12 +240,57 @@ def register_stage_a_tools(
     return server
 
 
+def register_stage_b1_tools(
+    server: Any,
+    *,
+    default_transport: str = schemas.LOCAL_STDIO_TRANSPORT,
+) -> Any:
+    """Register accepted Stage B1 guarded-write MCP tools."""
+
+    tool_definitions = {tool["name"]: tool for tool in adapter.list_tools()}
+
+    @server.tool(
+        name="jikuo.apply_task_session_evidence_update",
+        description=tool_description(
+            tool_definitions["jikuo.apply_task_session_evidence_update"]
+        ),
+    )
+    def jikuo_apply_task_session_evidence_update(
+        project_root: str | None = None,
+        session_id: str | None = None,
+        evidence_kind: str | None = None,
+        evidence_ref: str | None = None,
+        summary: str | None = None,
+        evidence_status: str | None = None,
+        owner_agent: str | None = None,
+        confirm_apply: bool = False,
+        approval_phrase: str | None = None,
+    ) -> dict[str, Any]:
+        return _call(
+            "jikuo.apply_task_session_evidence_update",
+            {
+                "project_root": project_root,
+                "session_id": session_id,
+                "evidence_kind": evidence_kind,
+                "evidence_ref": evidence_ref,
+                "summary": summary,
+                "evidence_status": evidence_status,
+                "owner_agent": owner_agent,
+                "confirm_apply": confirm_apply,
+                "approval_phrase": approval_phrase,
+            },
+            default_transport=default_transport,
+        )
+
+    return server
+
+
 def create_server(
     *,
     fastmcp_cls: FastMCPFactory | None = None,
     default_transport: str = schemas.LOCAL_STDIO_TRANSPORT,
 ) -> Any:
-    """Create a FastMCP server and register JIKUO Stage A tools."""
+    """Create a FastMCP server and register accepted JIKUO MCP tools."""
 
     factory = fastmcp_cls if fastmcp_cls is not None else load_fastmcp_class()
     server = factory(
@@ -256,7 +301,8 @@ def create_server(
             "verification paths."
         ),
     )
-    return register_stage_a_tools(server, default_transport=default_transport)
+    register_stage_a_tools(server, default_transport=default_transport)
+    return register_stage_b1_tools(server, default_transport=default_transport)
 
 
 def _adapter_transport_for_run(run_transport: str) -> str:
@@ -267,7 +313,7 @@ def _adapter_transport_for_run(run_transport: str) -> str:
 
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Run the JIKUO Stage A MCP server with the official Python SDK.",
+        description="Run the JIKUO MCP server with the official Python SDK.",
     )
     parser.add_argument(
         "--transport",

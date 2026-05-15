@@ -1,7 +1,9 @@
 # JIKUO MCP Client Configuration Examples
 
 > Status: Stage A configuration examples and smoke-log companion.
-> Scope: local stdio MCP clients only; no Stage B guarded-write tools are enabled.
+> Scope: local stdio MCP clients only; Stage B1 task-session evidence guarded
+> write is enabled after explicit user approval. Stage B2 / B3 policy-store
+> writes remain blocked.
 
 ## Purpose
 
@@ -95,14 +97,26 @@ Record the exact Codex configuration path or command in `JIKUO-MCP-01` when a st
 
 For a configured client:
 
-1. Tool discovery lists exactly the 8 Stage A tools.
+1. Tool discovery includes the 8 Stage A no-write tools.
 2. `jikuo.get_runtime_status_card` returns `status=ok`.
 3. `card_markdown` begins with `## Policy runtime status`.
 4. `.jikuo/runtime/last_card.md` contains the same single-card Markdown for `jikuo.get_runtime_status_card`.
 5. `jikuo show --last-card` shows the same card.
 6. No `.jikuo/policies/`, `.jikuo/task_sessions/`, or `.jikuo/project_state.yaml` write is caused by the no-write Stage A call.
 
-Stage B guarded-write tools remain blocked until Stage A release gates are accepted.
+## Stage B1 Smoke Checklist
+
+For `jikuo.apply_task_session_evidence_update`:
+
+1. Tool discovery lists the 8 Stage A tools plus `jikuo.apply_task_session_evidence_update`.
+2. `jikuo.apply_policy_evolution_write` and `jikuo.apply_policy_template_activation` are not listed.
+3. Calling the tool without `confirm_apply=true` is refused and does not modify the target task-session file.
+4. Calling the tool without `approval_phrase` is refused and does not modify the target task-session file.
+5. Calling the tool with a valid `session_id`, evidence fields, `confirm_apply=true`, and approval phrase appends exactly one evidence item to the target task-session.
+6. The success path does not write `.jikuo/policies/` and does not update `.jikuo/project_state.yaml`.
+7. The returned `card_markdown` and `.jikuo/runtime/last_card.md` surface the guarded apply result.
+
+Stage B2 / B3 guarded policy-store writes remain blocked until separately accepted.
 
 ## Verified So Far
 
@@ -111,4 +125,6 @@ Stage B guarded-write tools remain blocked until Stage A release gates are accep
 - User verified real desktop-client smoke from Codex Desktop on 2026-05-15.
 - User verified real desktop-client smoke from Claude Desktop on 2026-05-15.
 - Local client and test byproducts may remain under ignored project paths such as `.claude/` and `tmp/`; they are not Stage A source artifacts.
-- Stage B guarded-write tools remain blocked until explicitly accepted after Stage A.
+- Stage B1 `jikuo.apply_task_session_evidence_update` was implemented after explicit user approval.
+- Official Python MCP SDK `ClientSession` stdio smoke listed 9 tools, called the Stage B1 tool successfully, and confirmed Stage B2 / B3 tools were not exposed.
+- Stage B2 / B3 guarded policy-store writes remain blocked until separately accepted.
