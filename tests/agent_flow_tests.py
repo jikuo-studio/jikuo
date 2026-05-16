@@ -152,6 +152,68 @@ def write_taskmap_distinction_policy_store(root: Path) -> None:
     )
 
 
+def write_conversation_policy_suggestion_store(root: Path) -> None:
+    store = root / ".jikuo" / "policies"
+    approved = store / "approved"
+    approved.mkdir(parents=True, exist_ok=True)
+    policy_id = "POLICY-jikuo-conversation-level-proactive-policy-suggestion"
+    (approved / f"{policy_id}.yaml").write_text(
+        "\n".join(
+            [
+                'schema_version: "jikuo.configurable_rule_policy.v0"',
+                f'policy_id: "{policy_id}"',
+                "version: 1",
+                'status: "active_report_only"',
+                'title: "Conversation-level proactive policy suggestion from user interaction patterns"',
+                'scenario_package: "engineering_governance"',
+                "source_refs:",
+                '  - type: "test_fixture"',
+                '    ref: "tests:conversation_policy_suggestion"',
+                "triggers:",
+                '  - trigger_id: "TRG-conversation-turn"',
+                '    type: "task_lifecycle_event"',
+                '    event: "conversation_turn"',
+                "conditions:",
+                "  []",
+                "required_actions:",
+                '  - action_id: "ACT-review-repeated-user-interaction-patterns-for-policy-candidates"',
+                '    type: "review_repeated_user_interaction_patterns_for_policy_candidates"',
+                "required_evidence:",
+                '  - evidence_id: "EVD-proactive-policy-suggestion-review-evidence"',
+                '    type: "proactive_policy_suggestion_review_evidence"',
+                '    satisfies_action: "ACT-review-repeated-user-interaction-patterns-for-policy-candidates"',
+                "enforcement:",
+                '  phase: "report_only"',
+                '  level: "review_required"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (store / "manifest.yaml").write_text(
+        "\n".join(
+            [
+                'schema_version: "jikuo.policy_store_manifest.v0"',
+                'project_id: "agent_flow_conversation_policy_suggestion_fixture"',
+                'store_root: ".jikuo/policies"',
+                "active_policy_refs:",
+                f'  - policy_id: "{policy_id}"',
+                "    version: 1",
+                f'    path: ".jikuo/policies/approved/{policy_id}.yaml"',
+                "proposal_refs: []",
+                "deprecated_policy_refs: []",
+                "superseded_policy_refs: []",
+                'last_updated_at: "2026-05-16T00:00:00Z"',
+                "compatibility:",
+                '  unknown_fields: "preserve"',
+                '  writer: "test_fixture"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+
 def write_main_doc_mount_policy_store(root: Path) -> None:
     store = root / ".jikuo" / "policies"
     approved = store / "approved"
@@ -455,9 +517,14 @@ class AgentFlowProposalTests(unittest.TestCase):
             "jikuo.propose_task_start",
             router["required_followup_tools"],
         )
-        self.assertIn(
-            "jikuo.propose_policy_suggestions",
-            router["required_followup_tools"],
+        cards = {card["card_kind"]: card for card in proposal["cards"]}
+        self.assertIn("policy_suggestion_review", cards)
+        self.assertEqual(cards["policy_suggestion_review"]["status"], "review")
+        self.assertEqual(
+            cards["policy_suggestion_review"]["policy_suggestion_review"][
+                "candidate_count"
+            ],
+            1,
         )
         self.assertIn("policy_suggestion_review", proposal["chat_ready_markdown"])
         self.assertIn("trigger_mode: mounted", proposal["chat_ready_markdown"])
@@ -499,6 +566,112 @@ class AgentFlowProposalTests(unittest.TestCase):
         self.assertFalse(proposal["write_effect"]["writes_performed"])
         self.assertFalse((READY_PROJECT / ".jikuo" / "task_sessions").exists())
         self.assertFalse((READY_PROJECT / ".jikuo" / "policies").exists())
+
+    def test_conversation_turn_policy_suggestion_review_satisfies_evidence(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            write_conversation_policy_suggestion_store(project_root)
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "propose",
+                    "--event",
+                    "conversation_turn",
+                    "--trigger-mode",
+                    "mounted",
+                    "--user-phrase",
+                    (
+                        "I keep asking for progress, todo, and business meaning "
+                        "because this repeated need should become reviewable."
+                    ),
+                    "--project-root",
+                    str(project_root),
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            proposal = json.loads(completed.stdout)
+            obligation_kinds = {
+                obligation["kind"]
+                for obligation in proposal["conversation_router"][
+                    "classified_obligations"
+                ]
+            }
+            self.assertIn("policy_suggestion_review", obligation_kinds)
+            self.assertNotIn("completion_review", obligation_kinds)
+            cards = {card["card_kind"]: card for card in proposal["cards"]}
+            self.assertIn("policy_suggestion_review", cards)
+            review = cards["policy_suggestion_review"]["policy_suggestion_review"]
+            self.assertEqual(review["schema"], "jikuo.proactive_policy_suggestion_review.v0")
+            self.assertEqual(review["review_status"], "candidate_detected")
+            self.assertEqual(review["candidate_count"], 1)
+            self.assertFalse(review["privacy"]["raw_transcript_captured"])
+            atom_ids = {trace["atom_id"] for trace in proposal["atom_trace"]}
+            self.assertIn("CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01", atom_ids)
+            self.assertEqual(len(proposal["triggered_policies"]), 1)
+            self.assertEqual(proposal["missing_evidence_reports"], [])
+            evidence = proposal["evidence_status"][0]
+            self.assertEqual(evidence["current_status"], "ok")
+            self.assertEqual(
+                evidence["required_type"],
+                "proactive_policy_suggestion_review_evidence",
+            )
+            self.assertIn(
+                "proactive_policy_suggestion_review_evidence",
+                proposal["chat_ready_markdown"],
+            )
+            self.assertFalse(proposal["write_effect"]["writes_performed"])
+            self.assertFalse((project_root / ".jikuo" / "task_sessions").exists())
+
+    def test_conversation_turn_policy_suggestion_review_records_no_candidate(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            write_conversation_policy_suggestion_store(project_root)
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "propose",
+                    "--event",
+                    "conversation_turn",
+                    "--user-phrase",
+                    "thanks for the update",
+                    "--project-root",
+                    str(project_root),
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            proposal = json.loads(completed.stdout)
+            cards = {card["card_kind"]: card for card in proposal["cards"]}
+            review = cards["policy_suggestion_review"]["policy_suggestion_review"]
+            self.assertEqual(review["review_status"], "reviewed_no_candidate")
+            self.assertEqual(review["candidate_count"], 0)
+            self.assertEqual(proposal["missing_evidence_reports"], [])
+            self.assertEqual(proposal["evidence_status"][0]["current_status"], "ok")
+            self.assertFalse(proposal["write_effect"]["writes_performed"])
+            self.assertFalse((project_root / ".jikuo" / "task_sessions").exists())
 
     def test_missing_project_status_markdown_remains_no_write(self):
         completed = subprocess.run(

@@ -113,7 +113,12 @@ phrasing." It should introduce a conversation-level routing layer:
   candidates without storing raw chat transcripts
 
 The conversation-turn event and router contract now exist, and the task-start
-policy has been superseded by a conversation-level policy. The remaining product
-gap is `CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01`: every triggered
-conversation-turn check still needs compact review evidence and candidate cards
-instead of relying on final prose.
+policy has been superseded by a conversation-level policy. The core product gap
+for policy evidence has been closed by `CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01`:
+every `conversation_turn` proposal now emits compact
+`proactive_policy_suggestion_review_evidence` and a candidate/no-candidate card
+without relying on final prose or raw transcript capture.
+
+The remaining gap is product surfacing: MCP, SDK, and mounted-harness adapters
+still need first-class router / policy-suggestion tools so clients can call this
+path consistently.

@@ -442,7 +442,7 @@ Loop composition policy:
 | `CAP-POLICY-PRE-CODE-CLASSIFICATION-01` | Pre-code-change governance classification principle | implemented report-only policy carrier | `python -B -m jikuo.policy_store evaluate --event task_start --task-type code_change --jikuo-layer implementation_governance --changed-path src/jikuo/policy_store.py ...` | makes the "policy/governance first, code/implementation first, or mixed/unclear" decision explicit before implementation edits; this is a governance principle, not a standalone feature | none | evidence required: `governance_vs_implementation_classification_evidence` |
 | `CAP-JIKUO-TRIGGER-MODE-01` | JIKUO trigger-mode contract | planned contract | future `JIKUO-ROUTER-01`; future instruction / MCP / SDK entry docs | distinguishes natural-language semantic triggering from mounted harness triggering, so users can choose lightweight invocation or strict pre-turn harness execution | none | user approval required before any strict mounted default |
 | `CAP-CONVERSATION-TURN-ROUTER-01` | Conversation-turn router | implemented core no-write router | `python -B -m jikuo.agent_flow propose --event conversation_turn --user-phrase ... --trigger-mode semantic|mounted`; future `jikuo.route_user_request` MCP tool | classifies ordinary user turns into JIKUO obligations, including task start, completion, policy suggestion review, insight / follow-up routing, clarification, and explicit no-op, instead of relying only on task-specific events | none beyond runtime visibility projection | MCP / mounted adapters remain future work |
-| `CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01` | Proactive policy-suggestion review | planned no-write proposal | future `jikuo.propose_policy_suggestions`; future `agent_flow.py` policy-suggestion proposal event | produces `proactive_policy_suggestion_review_evidence` and reviewable candidate cards from repeated user needs / corrections / preferences without raw transcript capture | none | policy activation remains guarded and requires explicit approval |
+| `CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01` | Proactive policy-suggestion review | implemented core no-write review | `python -B -m jikuo.agent_flow propose --event conversation_turn --user-phrase ...`; future `jikuo.propose_policy_suggestions` MCP surface | produces `proactive_policy_suggestion_review_evidence` and reviewable candidate cards from repeated user needs / corrections / preferences without raw transcript capture | none beyond runtime visibility projection | policy activation remains guarded and requires explicit approval |
 | `CAP-PROGRESS-SUMMARY-BUSINESS-MEANING-POLICY-01` | Progress-summary business-meaning policy candidate | planned policy candidate | future approved `POLICY-jikuo-progress-summary-business-meaning` | makes progress, todo, taskmap, and acceptance summaries understandable by requiring the business / product meaning of major items, not only implementation mechanics | policy record only if approved | user approval required before activation |
 | `CAP-LIVE-DESKTOP-POLICY-EVAL-01` | Policy evaluation in desktop chat | implemented no-write proposal | `python -B -m jikuo.agent_flow propose ...` | makes active policy evaluation visible in the same desktop proposal card, including triggered policies, missing evidence, inline evidence status, and lightweight feedback options | none | no persistence; feedback is report-only |
 | `CAP-POLICY-RUNTIME-STATUS-CARD-01` | Policy runtime status card | implemented no-write card projection | `python -B -m jikuo.agent_flow propose ...` | appends a visible `policy_runtime_status` card so active, triggered, non-triggered, required-action, and missing-evidence status is not hidden in structured fields | none | no persistence; card projection only |
@@ -504,7 +504,6 @@ Known missing atoms:
 - `CAP-AGENTS-SDK-ADAPTER-EXPLORATION-01`: Agent SDK and agentic platform optional orchestration adapter posture, accepted by `JIKUO-SDK-01` before MCP implementation hardens
 - `CAP-JIKUO-TRIGGER-MODE-01`: trigger-mode contract that lets a project choose semantic invocation or strict mounted harness execution
 - `CAP-CONVERSATION-TURN-ROUTER-01`: core no-write router is implemented in `agent_flow.py`; MCP / mounted harness adapter surfaces remain future work
-- `CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01`: no-write policy-suggestion review that turns repeated user interaction patterns into reviewable candidates and compact evidence
 - `CAP-PROGRESS-SUMMARY-BUSINESS-MEANING-POLICY-01`: concrete policy candidate requiring progress / todo summaries to include product or business meaning
 - `CAP-CLAUDE-AGENT-SDK-INTEGRATION-01`: future Claude Agent SDK plugin / hook adapter after MCP stabilizes
 - `CAP-OPENAI-AGENTS-SDK-INTEGRATION-01`: future OpenAI Agents SDK adapter after MCP stabilizes
@@ -2670,21 +2669,23 @@ Accepted precondition:
 - `JIKUO-LIVE-19` starter policy provenance backfill implemented on 2026-05-15: `starter_policies.py plan-init` exposes provenance and guarded init writes `verified_jikuo_official` provenance into approved starter policies.
 - `JIKUO-SEC-02` MCP response privacy classification baseline accepted on 2026-05-15: SEC-01 defines field-level response privacy classes and MCP-01 lists them in startup checklist / test requirements.
 
+Recently completed:
+
+- `CAP-CONVERSATION-TURN-ROUTER-01` core no-write router is implemented and accepted; current CLI entry is `python -B -m jikuo.agent_flow propose --event conversation_turn --user-phrase ...`.
+- `POLICY-jikuo-proactive-policy-suggestion-metapolicy` has been superseded by `POLICY-jikuo-conversation-level-proactive-policy-suggestion`, which triggers on `conversation_turn`.
+- `CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01` is implemented: conversation-turn proposals now produce compact `proactive_policy_suggestion_review_evidence` plus candidate/no-candidate cards without raw transcript capture.
+
 Open items:
 
-1. Submit the current proactive policy-suggestion metapolicy, insight, execution-mount, and taskmap updates as a separate governed documentation / policy slice.
-2. Review / accept the implemented `CAP-CONVERSATION-TURN-ROUTER-01` core no-write router; current CLI entry is `python -B -m jikuo.agent_flow propose --event conversation_turn --user-phrase ...`.
-3. Accepted policy update: `POLICY-jikuo-proactive-policy-suggestion-metapolicy` is superseded by `POLICY-jikuo-conversation-level-proactive-policy-suggestion`, which triggers on `conversation_turn`.
-4. Implement `CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01` so repeated user needs, corrections, and preferences produce compact `proactive_policy_suggestion_review_evidence` plus reviewable candidate cards without raw transcript capture. This is now the direct blocker for clearing conversation-turn missing evidence.
-5. Propose and, only after approval, activate `POLICY-jikuo-progress-summary-business-meaning`, requiring progress / todo / acceptance summaries to include product or business meaning for major items.
-6. Add MCP router surfaces after the core router is accepted: `jikuo.route_user_request` and `jikuo.propose_policy_suggestions` belong in a follow-on MCP slice, not the already accepted MVP body.
-7. Update universal instruction distribution so semantic-mode clients are told to call the router first when a turn may carry JIKUO obligations; mounted-harness behavior remains an explicit opt-in.
-8. Plan strict mounted harness entry after the router exists, using Agent SDK wrappers, local proxy / Studio entry, or client hooks as adapters rather than kernel logic.
-9. Decide the external release license using `docs/work_orders/SPRINT_050_WO-PER-JIKUO-REL-01_external_release_license_decision.md`; current package metadata remains `Proprietary` until explicit user decision.
-10. Keep the decision about whether new self-bootstrap policies enter built-in starter templates suspended until explicit user approval.
-11. Plan `JIKUO-STUDIO-01` dashboard as a post-MCP product architecture slice; it is deferred from MCP-01 scope and current Stage B work relies on card markdown plus runtime card links instead. Mount `docs/insights/INSIGHT-2026-05-16-studio-dashboard-frontend-architecture.md` before that slice.
-12. Keep per-client hooks/packs and Agent SDK / platform adapters as planned post-MCP work, not current MCP blockers.
-13. Defer OS notifications, rollback, broader conditions, UI beyond Studio, Plugin, and gates unless explicitly promoted by user approval.
+1. Propose and, only after approval, activate `POLICY-jikuo-progress-summary-business-meaning`, requiring progress / todo / acceptance summaries to include product or business meaning for major items.
+2. Add MCP router surfaces after the core router is accepted: `jikuo.route_user_request` and `jikuo.propose_policy_suggestions` belong in a follow-on MCP slice, not the already accepted MVP body.
+3. Update universal instruction distribution so semantic-mode clients are told to call the router first when a turn may carry JIKUO obligations; mounted-harness behavior remains an explicit opt-in.
+4. Plan strict mounted harness entry after the router exists, using Agent SDK wrappers, local proxy / Studio entry, or client hooks as adapters rather than kernel logic.
+5. Decide the external release license using `docs/work_orders/SPRINT_050_WO-PER-JIKUO-REL-01_external_release_license_decision.md`; current package metadata remains `Proprietary` until explicit user decision.
+6. Keep the decision about whether new self-bootstrap policies enter built-in starter templates suspended until explicit user approval.
+7. Plan `JIKUO-STUDIO-01` dashboard as a post-MCP product architecture slice; it is deferred from MCP-01 scope and current Stage B work relies on card markdown plus runtime card links instead. Mount `docs/insights/INSIGHT-2026-05-16-studio-dashboard-frontend-architecture.md` before that slice.
+8. Keep per-client hooks/packs and Agent SDK / platform adapters as planned post-MCP work, not current MCP blockers.
+9. Defer OS notifications, rollback, broader conditions, UI beyond Studio, Plugin, and gates unless explicitly promoted by user approval.
 
 MCP MVP scope freeze:
 

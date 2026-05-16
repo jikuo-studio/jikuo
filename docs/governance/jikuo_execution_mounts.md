@@ -579,8 +579,8 @@ Accepted target for the current pre-MCP visibility review:
 - policy evolution proposal/apply surfaces now preserve non-default replacement triggers through `--replacement-trigger-event`, so a reviewed supersession can target `conversation_turn` without silently falling back to `task_start`
 - dashboard / Studio UI, OS notifications, per-client hook packs, rollback, broader conditions, UI, Plugin, and gates remain deferred; current MCP visibility relies on card markdown plus runtime card links
 - `INSIGHT-2026-05-16-studio-dashboard-frontend-architecture` records the current frontend architecture posture for future `JIKUO-STUDIO-01`: projection-first view models, panel registration, guarded action registration, and canonical `.jikuo/` state remain the change-friendly boundary
-- `POLICY-jikuo-conversation-level-proactive-policy-suggestion` is active report-only: repeated user needs, corrections, or preferences should be reviewed as policy candidates at `conversation_turn` before they remain hidden chat behavior; automatic policy mining and activation remain deferred.
-- current limitation: the policy now triggers at the correct conversation level, but `CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01` is still unimplemented, so missing `proactive_policy_suggestion_review_evidence` is expected until that review proposal path exists.
+- `POLICY-jikuo-conversation-level-proactive-policy-suggestion` is active report-only: repeated user needs, corrections, or preferences are reviewed as policy candidates at `conversation_turn` before they remain hidden chat behavior; automatic policy mining and activation remain deferred.
+- `CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01` is implemented in the core conversation-turn proposal path: it produces compact candidate/no-candidate `proactive_policy_suggestion_review_evidence` without storing raw transcripts. Remaining work is adapter-facing MCP / SDK / mounted-harness surfacing, not kernel policy evidence production.
 
 Accepted result:
 

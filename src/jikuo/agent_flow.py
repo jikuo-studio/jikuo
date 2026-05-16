@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -48,11 +49,13 @@ POLICY_FEEDBACK_OPTIONS_SCHEMA = "jikuo.policy_feedback_options.v0"
 POLICY_RUNTIME_STATUS_SCHEMA = "jikuo.policy_runtime_status.v0"
 DISPLAY_DIRECTIVES_SCHEMA = "jikuo.display_directives.v0"
 CONVERSATION_ROUTER_SCHEMA = "jikuo.conversation_turn_router.v0"
+POLICY_SUGGESTION_REVIEW_SCHEMA = "jikuo.proactive_policy_suggestion_review.v0"
 POLICY_FEEDBACK_TYPES = {"not_applicable", "defer", "needs_scope_narrowing"}
 TRIGGER_MODES = {"mounted", "semantic"}
 CARD_PRIORITY_ORDER = [
     "policy_runtime_status",
     "conversation_turn_router",
+    "policy_suggestion_review",
     "task_session_completion_acceptance",
     "task_session_start_preview",
     "task_session_binding",
@@ -167,6 +170,7 @@ NO_WRITE_ATOMS = {
     "CAP-POLICY-TEMPLATE-IMPORT-PLAN-01",
     "CAP-AGENT-FLOW-POLICY-TEMPLATE-IMPORT-PLAN-01",
     "CAP-CONVERSATION-TURN-ROUTER-01",
+    "CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01",
 }
 
 
@@ -528,12 +532,66 @@ def task_session_binding_evidence_for(
     }
 
 
+def proactive_policy_suggestion_evidence_for(
+    *,
+    event: str,
+    card: dict[str, Any],
+) -> dict[str, Any]:
+    review = dict(card.get("policy_suggestion_review") or {})
+    card_id = str(card.get("card_id") or "policy_suggestion_review")
+    review_status = str(review.get("review_status") or "unknown")
+    candidate_count = int(review.get("candidate_count") or 0)
+    return {
+        "evidence_id": stable_id(
+            "evidence",
+            "|".join(
+                [
+                    event,
+                    card_id,
+                    "review_repeated_user_interaction_patterns_for_policy_candidates",
+                ]
+            ),
+        ),
+        "evidence_type": "proactive_policy_suggestion_review_evidence",
+        "action_type": "review_repeated_user_interaction_patterns_for_policy_candidates",
+        "source": {
+            "kind": "agent_flow_card",
+            "ref": card_id,
+        },
+        "producer": {
+            "actor": "agent",
+            "tool": "python -B -m jikuo.agent_flow",
+        },
+        "status": "ok",
+        "summary": (
+            "agent_flow reviewed this conversation turn for repeated user needs "
+            f"and found {candidate_count} policy candidate(s); "
+            f"review_status={review_status}"
+        ),
+        "proactive_policy_suggestion_review": review,
+    }
+
+
 def produced_policy_evidence_for(
     *,
     event: str | None,
     cards: list[dict[str, Any]],
     work_routing: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
+    if event == "conversation_turn":
+        evidence: list[dict[str, Any]] = []
+        for card in cards:
+            if card.get("status") == "refused":
+                continue
+            if card.get("card_kind") == "policy_suggestion_review":
+                evidence.append(
+                    proactive_policy_suggestion_evidence_for(
+                        event=event,
+                        card=card,
+                    )
+                )
+        return evidence
+
     if event != "task_start":
         return []
 
@@ -970,6 +1028,13 @@ def normalize_trigger_mode(trigger_mode: str | None) -> str:
     return mode
 
 
+def keyword_matches(text: str, keyword: str) -> bool:
+    if keyword.isascii():
+        pattern = rf"(?<![A-Za-z0-9_]){re.escape(keyword)}(?![A-Za-z0-9_])"
+        return re.search(pattern, text) is not None
+    return keyword in text
+
+
 def classify_conversation_turn(
     *,
     trigger_mode: str,
@@ -1081,7 +1146,7 @@ def classify_conversation_turn(
                 },
                 "reason": "user turn appears to contain a repeated need, preference, or policy candidate",
                 "target_event": "policy_suggestion_review",
-                "tool": "jikuo.propose_policy_suggestions",
+                "tool": None,
             },
         ),
         (
@@ -1109,10 +1174,12 @@ def classify_conversation_turn(
     obligations: list[dict[str, Any]] = []
     followup_tools: list[str] = []
     for kind, spec in obligation_specs:
-        matched = sorted(keyword for keyword in spec["keywords"] if keyword in text)
+        matched = sorted(
+            keyword for keyword in spec["keywords"] if keyword_matches(text, keyword)
+        )
         if not matched:
             continue
-        tool = str(spec["tool"])
+        tool = spec["tool"]
         obligations.append(
             {
                 "kind": kind,
@@ -1123,8 +1190,8 @@ def classify_conversation_turn(
                 "matched_terms": matched,
             }
         )
-        if tool not in followup_tools:
-            followup_tools.append(tool)
+        if tool and tool not in followup_tools:
+            followup_tools.append(str(tool))
 
     if not obligations:
         obligations.append(
@@ -1166,6 +1233,144 @@ def classify_conversation_turn(
         ],
     }
     return router, []
+
+
+def build_policy_suggestion_review(
+    *, router: dict[str, Any]
+) -> dict[str, Any]:
+    obligations = list(router.get("classified_obligations") or [])
+    candidate_obligations = [
+        obligation
+        for obligation in obligations
+        if obligation.get("kind") == "policy_suggestion_review"
+        and obligation.get("status") == "required"
+    ]
+    input_summary = str(router.get("input_summary") or "")
+    candidates: list[dict[str, Any]] = []
+    for obligation in candidate_obligations:
+        matched_terms = list(obligation.get("matched_terms") or [])
+        candidate_id = stable_id(
+            "policy_candidate",
+            "|".join(
+                [
+                    input_summary,
+                    ",".join(matched_terms),
+                    "conversation_level_policy_suggestion",
+                ]
+            ),
+        )
+        candidates.append(
+            {
+                "candidate_id": candidate_id,
+                "candidate_type": "policy_candidate",
+                "title": "Conversation-level user need review",
+                "trigger_event": "conversation_turn",
+                "action_type": (
+                    "review_repeated_user_interaction_patterns_for_policy_candidates"
+                ),
+                "evidence_type": "proactive_policy_suggestion_review_evidence",
+                "intended_scope": (
+                    "future turns in this project after explicit user approval"
+                ),
+                "benefit": (
+                    "turn repeated user needs into explicit, reviewable governance"
+                ),
+                "overreach_risk": (
+                    "a one-off preference could be over-promoted if accepted without review"
+                ),
+                "matched_terms": matched_terms,
+                "confidence": "heuristic_keyword_signal",
+                "recommended_routing": "policy_candidate_review",
+                "available_user_decisions": [
+                    "approve_as_policy_plan",
+                    "revise",
+                    "defer",
+                    "record_as_insight",
+                    "ignore",
+                ],
+            }
+        )
+
+    review_status = "candidate_detected" if candidates else "reviewed_no_candidate"
+    return {
+        "schema": POLICY_SUGGESTION_REVIEW_SCHEMA,
+        "review_status": review_status,
+        "candidate_count": len(candidates),
+        "candidates": candidates,
+        "review_basis": router.get("classification_basis"),
+        "source_router_status": router.get("router_status"),
+        "source_obligation_kinds": [
+            obligation.get("kind") for obligation in obligations
+        ],
+        "evidence_type": "proactive_policy_suggestion_review_evidence",
+        "action_type": (
+            "review_repeated_user_interaction_patterns_for_policy_candidates"
+        ),
+        "recommended_routing": (
+            "review_candidate_with_user" if candidates else "no_policy_change"
+        ),
+        "privacy": {
+            "raw_transcript_captured": False,
+            "stored_input": "compact_user_supplied_turn_only",
+        },
+    }
+
+
+def build_policy_suggestion_review_card(
+    *, router: dict[str, Any]
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    review = build_policy_suggestion_review(router=router)
+    candidates = list(review["candidates"])
+    card_status_value = "review" if candidates else "ok"
+    shown_outputs = [
+        f"review_status: {review['review_status']}",
+        f"candidate_count: {review['candidate_count']}",
+        f"recommended_routing: {review['recommended_routing']}",
+        f"evidence_type: {review['evidence_type']}",
+    ]
+    for candidate in candidates:
+        shown_outputs.append(
+            "policy_candidate: "
+            f"{candidate['candidate_id']} / {candidate['title']} / "
+            f"routing={candidate['recommended_routing']}"
+        )
+
+    next_actions = (
+        [
+            "ask the user whether to approve, revise, defer, record as insight, or ignore the policy candidate"
+        ]
+        if candidates
+        else [
+            "continue; this turn was reviewed and no policy candidate needs user action"
+        ]
+    )
+    card = generic_card(
+        card_kind="policy_suggestion_review",
+        status=card_status_value,
+        title="Proactive policy-suggestion review",
+        summary=(
+            "JIKUO reviewed this conversation turn for repeated user needs "
+            "without writing policy files or storing raw transcripts."
+        ),
+        shown_inputs=[
+            f"source_router_status: {review['source_router_status']}",
+            f"review_basis: {review['review_basis']}",
+        ],
+        shown_outputs=shown_outputs,
+        next_actions=next_actions,
+    )
+    card["policy_suggestion_review"] = review
+    trace = atom_trace(
+        loop_step_id="DPL-05",
+        atom_id="CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01",
+        mode="no-write",
+        status=card_status_value,
+        summary=(
+            "reviewed conversation turn for policy candidates and produced "
+            "compact evidence without writing policy files"
+        ),
+    )
+    return card, trace
 
 
 def build_conversation_turn_cards(
@@ -1212,6 +1417,13 @@ def build_conversation_turn_cards(
         next_actions = [
             "call the listed follow-up tool(s) before continuing user-visible work"
         ]
+    elif any(
+        obligation.get("kind") == "policy_suggestion_review"
+        for obligation in obligations
+    ):
+        next_actions = [
+            "review the policy-suggestion card before continuing user-visible work"
+        ]
     else:
         next_actions = [
             "continue; no JIKUO follow-up tool is required for this turn"
@@ -1242,7 +1454,13 @@ def build_conversation_turn_cards(
         status=card_status_value,
         summary="classified a user turn into JIKUO obligations without writing files",
     )
-    return [card], [trace], refusals
+    cards = [card]
+    traces = [trace]
+    if not refusals:
+        review_card, review_trace = build_policy_suggestion_review_card(router=router)
+        cards.append(review_card)
+        traces.append(review_trace)
+    return cards, traces, refusals
 
 
 def card_status(card: dict[str, Any]) -> str:

@@ -123,17 +123,18 @@ The router is no-write. Runtime visibility files may update.
 
 ## 5. Policy-Suggestion Review Contract
 
-Future capability:
+Implemented core capability:
 
 - `CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01`
 
-Future MCP tool:
+Future MCP surface:
 
 ```text
 jikuo.propose_policy_suggestions
 ```
 
-The policy-suggestion review should produce compact evidence:
+The conversation-turn proposal now includes a no-write policy-suggestion review
+card. The review produces compact evidence:
 
 - repeated user pattern summary
 - proposed policy candidate
@@ -162,11 +163,11 @@ It has now been superseded by
 Current rule:
 
 - keep the conversation-level policy active and report-only
-- show missing `proactive_policy_suggestion_review_evidence` honestly until the
-  review proposal feature exists
-- implement `CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01` next so every
-  `conversation_turn` can produce compact review evidence instead of remaining a
-  visible missing-evidence state
+- every `conversation_turn` now produces compact
+  `proactive_policy_suggestion_review_evidence` through
+  `CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01`
+- candidate detection remains review-only; approved policy activation still
+  requires a separate guarded policy-write or policy-evolution flow
 
 ## 7. Scenario-Chain-Atom Registration Evidence
 
@@ -192,14 +193,17 @@ Current rule:
 - Added event aliases: `conversation_turn`, `conversation`, `turn`, `route_user_request`
 - Added trigger modes: `semantic`, `mounted`
 - Added card kind: `conversation_turn_router`
+- Added card kind: `policy_suggestion_review`
 - Current deterministic classifier: keyword router v0, intended as an auditable
   baseline before later policy-suggestion analysis.
 - Current obligations: task start, completion review, policy-suggestion review,
   insight / follow-up routing, no-op, and clarification-required.
+- Policy-suggestion review evidence is produced inline for `conversation_turn`
+  proposals and clears the conversation-level policy evidence requirement
+  without durable writes.
 
 Remaining follow-on work:
 
-- implement `CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01`
 - add MCP router surfaces after the core router is accepted
 - add mounted harness adapters after MCP / SDK / Studio integration posture is
   selected
