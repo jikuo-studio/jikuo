@@ -68,6 +68,13 @@ when to use them. Neither one alone is a strict mounted harness unless the
 client also has a pre-turn hook / plugin / SDK wrapper / Studio entry / local
 proxy.
 
+If `.jikuo/activation_settings.yaml` is missing, the project is callable but not
+configured. `jikuo.get_activation_settings` reports
+`strict_mount_status=not_configured`, and `jikuo.route_user_request` should
+surface a `configuration_review` obligation before normal task work. If mounted
+mode is configured without a host pre-turn adapter, the status is
+`degraded_instruction_only`, not strict mounted execution.
+
 Use `jikuo configure` first when the user needs to understand the current
 setup state and meaning. Use `jikuo settings` to persist the project default
 before generating client instructions:

@@ -428,6 +428,8 @@ class AgentFlowProposalTests(unittest.TestCase):
                 "propose",
                 "--event",
                 "conversation_turn",
+                "--trigger-mode",
+                "semantic",
                 "--user-phrase",
                 "thanks for the update",
                 "--project-root",

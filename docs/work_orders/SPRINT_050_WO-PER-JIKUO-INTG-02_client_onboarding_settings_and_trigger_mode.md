@@ -60,6 +60,13 @@ ask the user before the first governed turn. If `--trigger-mode` is omitted,
 `jikuo install` reads `.jikuo/activation_settings.yaml` and falls back to `ask`
 when that file is missing.
 
+When `.jikuo/activation_settings.yaml` is missing, JIKUO must not let users
+believe the project is strictly mounted. The status surface reports
+`strict_mount_status=not_configured`, and the conversation-turn router injects a
+`configuration_review` obligation before ordinary task execution. This remains
+no-write: the file is created only by guarded `jikuo settings apply` or MCP
+`jikuo.apply_activation_settings_update` after explicit approval.
+
 ## 3. Client Support Matrix
 
 | Client | Current support | Trigger-mode specification | Strict mounted status |
@@ -89,6 +96,9 @@ follow-up action is required.
 - `jikuo show`: includes activation settings status.
 - `jikuo install`: reads project activation settings when `--trigger-mode` is omitted.
 - `agent_flow.py propose --event conversation_turn`: reads project activation settings when `--trigger-mode` is omitted; `ask` resolves to semantic behavior until a strict adapter asks the user.
+- When activation settings are missing, `conversation_turn` returns a visible
+  configuration obligation before task execution, so the Agent cannot treat MCP
+  availability as equivalent to configured activation.
 - MCP router tools: `jikuo.route_user_request` and
   `jikuo.propose_policy_suggestions` expose the same no-write routing and
   policy-candidate review inside desktop AI clients.

@@ -67,8 +67,16 @@ def build_activation_item(project_root: Path) -> dict[str, Any]:
     available = report.get("status") in {"available", "review"}
     trigger_mode = str(report.get("desired_trigger_mode") or "ask")
     enforcement = str(report.get("effective_enforcement_level") or "instruction_only")
-    status = "ok" if available else "review"
-    next_actions = []
+    strict_mount_status = str(report.get("strict_mount_status") or "unknown")
+    status = (
+        "missing"
+        if not available
+        else "review"
+        if report.get("onboarding_required")
+        or strict_mount_status == "degraded_instruction_only"
+        else "ok"
+    )
+    next_actions = list(report.get("next_actions") or [])
     if not available:
         next_actions.append(
             "run `jikuo settings plan --trigger-mode ask` and review the activation defaults"
@@ -82,7 +90,12 @@ def build_activation_item(project_root: Path) -> dict[str, Any]:
         title="Activation settings",
         status=status,
         meaning="The project-level source for semantic vs mounted behavior and enforcement posture.",
-        current=f"trigger_mode={trigger_mode}; enforcement={enforcement}; source={report.get('status')}",
+        current=(
+            f"trigger_mode={trigger_mode}; enforcement={enforcement}; "
+            f"strict_mount_status={strict_mount_status}; "
+            f"onboarding_required={str(report.get('onboarding_required')).lower()}; "
+            f"source={report.get('status')}"
+        ),
         evidence_refs=[activation_settings.SETTINGS_REF],
         next_actions=next_actions,
         details=report,

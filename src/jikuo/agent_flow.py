@@ -1453,6 +1453,64 @@ def build_conversation_turn_cards(
         task_title=task_title,
         summary=summary,
     )
+    router["trigger_mode_source"] = trigger_mode_source
+    router["activation_settings"] = {
+        "status": settings_status.get("status"),
+        "desired_trigger_mode": settings_status.get("desired_trigger_mode"),
+        "effective_enforcement_level": settings_status.get(
+            "effective_enforcement_level"
+        ),
+        "strict_mount_status": settings_status.get("strict_mount_status"),
+        "onboarding_required": bool(settings_status.get("onboarding_required")),
+        "required_user_decision_count": len(
+            settings_status.get("required_user_decisions") or []
+        ),
+        "configuration_required": bool(settings_status.get("configuration_required")),
+    }
+    should_prompt_activation_settings = (
+        bool(settings_status.get("onboarding_required"))
+        and trigger_mode is None
+        and not refusals
+    )
+    if should_prompt_activation_settings and not any(
+        obligation.get("kind") == "configuration_review"
+        for obligation in router.get("classified_obligations") or []
+    ):
+        router["classified_obligations"] = [
+            obligation
+            for obligation in router.get("classified_obligations") or []
+            if obligation.get("kind")
+            not in {"mounted_idle_tick", "no_jikuo_action_required"}
+        ]
+        obligation = {
+            "kind": "configuration_review",
+            "status": "required",
+            "reason": (
+                "project activation settings still use implicit or unreviewed "
+                "values; review configuration before assuming JIKUO is mounted "
+                "or strict"
+            ),
+            "target_event": "configuration_review",
+            "required_followup_tool": (
+                "python -B -m jikuo.agent_flow propose --event configuration_review"
+            ),
+            "matched_terms": ["activation_settings_missing"],
+        }
+        router["classified_obligations"].insert(0, obligation)
+        tools = list(router.get("required_followup_tools") or [])
+        if obligation["required_followup_tool"] not in tools:
+            tools.insert(0, obligation["required_followup_tool"])
+        router["required_followup_tools"] = tools
+        router["router_status"] = "requires_action"
+    elif settings_status.get("strict_mount_status") == "degraded_instruction_only":
+        router["mount_degradation"] = {
+            "status": "degraded_instruction_only",
+            "reason": (
+                "mounted mode is configured but the project is still instruction-only "
+                "until a host pre-turn adapter is available"
+            ),
+            "strict_pre_turn_guaranteed": False,
+        }
     router_status = str(router["router_status"])
     card_status_value = (
         "refused"

@@ -8,6 +8,7 @@ require explicit confirmation plus an approval phrase.
 from __future__ import annotations
 
 import argparse
+from datetime import datetime, timezone
 import json
 import sys
 from pathlib import Path
@@ -34,6 +35,8 @@ KNOWN_TOP_LEVEL_KEYS = {
     "desired_trigger_mode",
     "effective_enforcement_level",
     "strict_mounted_requires_adapter",
+    "configuration_review",
+    "field_provenance",
     "enabled_clients",
     "runtime_visibility",
     "guarded_writes",
@@ -47,6 +50,44 @@ CLIENT_INSTRUCTION_REFS = {
     "continue": ".continuerules",
     "jikuo": "JIKUO.md",
 }
+REVIEWABLE_FIELDS = (
+    "desired_trigger_mode",
+    "effective_enforcement_level",
+    "strict_mounted_requires_adapter",
+)
+DEFAULT_FIELD_VALUES = {
+    "desired_trigger_mode": "ask",
+    "effective_enforcement_level": "instruction_only",
+    "strict_mounted_requires_adapter": True,
+}
+FIELD_MEANINGS = {
+    "desired_trigger_mode": (
+        "Controls whether JIKUO is invoked semantically, asks first, or expects "
+        "mounted pre-turn execution."
+    ),
+    "effective_enforcement_level": (
+        "Describes whether activation is instruction-only, MCP-only, or backed "
+        "by a strict pre-turn adapter."
+    ),
+    "strict_mounted_requires_adapter": (
+        "Prevents mounted mode from being treated as strict unless a host "
+        "adapter actually calls JIKUO before each turn."
+    ),
+}
+TRIGGER_MODE_DECISIONS = [
+    {
+        "value": "ask",
+        "meaning": "Ask before the first governed turn; safest default.",
+    },
+    {
+        "value": "semantic",
+        "meaning": "Agent calls JIKUO when user intent appears governed.",
+    },
+    {
+        "value": "mounted",
+        "meaning": "Project requests every-turn JIKUO routing; strictness still needs a host adapter.",
+    },
+]
 
 
 def quote_yaml(value: Any) -> str:
@@ -55,6 +96,15 @@ def quote_yaml(value: Any) -> str:
     if value is None:
         return "null"
     return json.dumps(str(value), ensure_ascii=True)
+
+
+def utc_now_iso() -> str:
+    return (
+        datetime.now(timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
 
 
 def parse_scalar(value: str) -> Any:
@@ -142,6 +192,11 @@ def load_existing_settings(path: Path) -> tuple[dict[str, Any] | None, list[str]
     warnings: list[str] = []
     if scalars.get("schema") != SETTINGS_SCHEMA:
         warnings.append("unsupported activation settings schema")
+    nested = read_nested_mapping_sections(
+        text,
+        sections={"configuration_review", "field_provenance"},
+    )
+    enabled_clients = read_list_mapping_section(text, section="enabled_clients")
     settings = {
         "schema": scalars.get("schema"),
         "desired_trigger_mode": normalize_trigger_mode(
@@ -153,8 +208,216 @@ def load_existing_settings(path: Path) -> tuple[dict[str, Any] | None, list[str]
         "strict_mounted_requires_adapter": bool(
             scalars.get("strict_mounted_requires_adapter", True)
         ),
+        "configuration_review": nested.get("configuration_review") or {},
+        "field_provenance": nested.get("field_provenance") or {},
+        "enabled_clients": enabled_clients,
     }
     return settings, warnings, preserved_unknown_blocks(text)
+
+
+def read_nested_mapping_sections(
+    text: str,
+    *,
+    sections: set[str],
+) -> dict[str, dict[str, Any]]:
+    result: dict[str, dict[str, Any]] = {section: {} for section in sections}
+    current_section: str | None = None
+    current_child: str | None = None
+    for raw_line in text.splitlines():
+        if not raw_line.strip() or raw_line.lstrip().startswith("#"):
+            continue
+        indent = len(raw_line) - len(raw_line.lstrip(" "))
+        line = raw_line.strip()
+        if indent == 0:
+            key = line.split(":", 1)[0].strip() if ":" in line else None
+            current_section = key if key in sections and line.endswith(":") else None
+            current_child = None
+            continue
+        if current_section is None or ":" not in line:
+            continue
+        key, raw_value = line.split(":", 1)
+        key = key.strip()
+        raw_value = raw_value.strip()
+        if indent == 2 and raw_value == "":
+            result[current_section][key] = {}
+            current_child = key
+            continue
+        if indent == 2:
+            result[current_section][key] = parse_scalar(raw_value)
+            current_child = None
+            continue
+        if indent == 4 and current_child:
+            child = result[current_section].setdefault(current_child, {})
+            if isinstance(child, dict):
+                child[key] = parse_scalar(raw_value)
+    return result
+
+
+def read_list_mapping_section(text: str, *, section: str) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+    in_section = False
+    current: dict[str, Any] | None = None
+    for raw_line in text.splitlines():
+        if not raw_line.strip() or raw_line.lstrip().startswith("#"):
+            continue
+        indent = len(raw_line) - len(raw_line.lstrip(" "))
+        line = raw_line.strip()
+        if indent == 0:
+            in_section = line == f"{section}:"
+            current = None
+            continue
+        if not in_section:
+            continue
+        if indent == 2 and line.startswith("- "):
+            current = {}
+            items.append(current)
+            remainder = line[2:].strip()
+            if ":" in remainder:
+                key, raw_value = remainder.split(":", 1)
+                current[key.strip()] = parse_scalar(raw_value.strip())
+            continue
+        if indent == 4 and current is not None and ":" in line:
+            key, raw_value = line.split(":", 1)
+            current[key.strip()] = parse_scalar(raw_value.strip())
+    return items
+
+
+def field_source_for_value(field: str, value: Any) -> str:
+    return (
+        "user_reviewed_default"
+        if value == DEFAULT_FIELD_VALUES.get(field)
+        else "user_configured"
+    )
+
+
+def build_field_provenance(
+    settings: dict[str, Any],
+    *,
+    reviewed_at_utc: str | None,
+) -> dict[str, dict[str, Any]]:
+    provenance: dict[str, dict[str, Any]] = {}
+    for field in REVIEWABLE_FIELDS:
+        value = settings.get(field)
+        provenance[field] = {
+            "value": value,
+            "source": field_source_for_value(field, value),
+            "review_status": "approved",
+            "reviewed_at_utc": reviewed_at_utc,
+            "requires_user_review": False,
+            "meaning": FIELD_MEANINGS[field],
+        }
+    return provenance
+
+
+def implicit_field_provenance() -> dict[str, dict[str, Any]]:
+    return {
+        field: {
+            "value": value,
+            "source": "implicit_default",
+            "review_status": "unreviewed",
+            "reviewed_at_utc": None,
+            "requires_user_review": True,
+            "meaning": FIELD_MEANINGS[field],
+        }
+        for field, value in DEFAULT_FIELD_VALUES.items()
+    }
+
+
+def unreviewed_file_field_provenance(settings: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    return {
+        field: {
+            "value": settings.get(field),
+            "source": "legacy_file_without_review_metadata",
+            "review_status": "unreviewed",
+            "reviewed_at_utc": None,
+            "requires_user_review": True,
+            "meaning": FIELD_MEANINGS[field],
+        }
+        for field in REVIEWABLE_FIELDS
+    }
+
+
+def normalize_loaded_field_provenance(settings: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    raw = settings.get("field_provenance")
+    if not isinstance(raw, dict) or not raw:
+        return unreviewed_file_field_provenance(settings)
+    normalized: dict[str, dict[str, Any]] = {}
+    for field in REVIEWABLE_FIELDS:
+        record = raw.get(field)
+        if not isinstance(record, dict):
+            normalized[field] = unreviewed_file_field_provenance(settings)[field]
+            continue
+        normalized[field] = {
+            "value": settings.get(field),
+            "source": str(record.get("source") or "legacy_file_without_review_metadata"),
+            "review_status": str(record.get("review_status") or "unreviewed"),
+            "reviewed_at_utc": record.get("reviewed_at_utc"),
+            "requires_user_review": bool(
+                record.get("requires_user_review", record.get("review_status") != "approved")
+            ),
+            "meaning": str(record.get("meaning") or FIELD_MEANINGS[field]),
+        }
+    return normalized
+
+
+def required_user_decisions_for(
+    field_provenance: dict[str, dict[str, Any]],
+) -> list[dict[str, Any]]:
+    decisions: list[dict[str, Any]] = []
+    trigger_record = field_provenance.get("desired_trigger_mode") or {}
+    if trigger_record.get("requires_user_review"):
+        decisions.append(
+            {
+                "field": "desired_trigger_mode",
+                "current_value": trigger_record.get("value", "ask"),
+                "source": trigger_record.get("source", "implicit_default"),
+                "review_status": trigger_record.get("review_status", "unreviewed"),
+                "choices": TRIGGER_MODE_DECISIONS,
+                "recommended_next_tool": "jikuo.plan_activation_settings_update",
+                "meaning": FIELD_MEANINGS["desired_trigger_mode"],
+            }
+        )
+    enforcement_record = field_provenance.get("effective_enforcement_level") or {}
+    if enforcement_record.get("requires_user_review"):
+        decisions.append(
+            {
+                "field": "effective_enforcement_level",
+                "current_value": enforcement_record.get(
+                    "value",
+                    "instruction_only",
+                ),
+                "source": enforcement_record.get("source", "implicit_default"),
+                "review_status": enforcement_record.get("review_status", "unreviewed"),
+                "choices": list(ENFORCEMENT_LEVELS),
+                "recommended_next_tool": "jikuo.plan_activation_settings_update",
+                "meaning": FIELD_MEANINGS["effective_enforcement_level"],
+            }
+        )
+    strict_adapter_record = field_provenance.get("strict_mounted_requires_adapter") or {}
+    if strict_adapter_record.get("requires_user_review"):
+        decisions.append(
+            {
+                "field": "strict_mounted_requires_adapter",
+                "current_value": strict_adapter_record.get("value", True),
+                "source": strict_adapter_record.get("source", "implicit_default"),
+                "review_status": strict_adapter_record.get(
+                    "review_status",
+                    "unreviewed",
+                ),
+                "choices": [
+                    {
+                        "value": True,
+                        "meaning": (
+                            "Recommended: mounted mode is not strict unless a host "
+                            "adapter actually calls JIKUO before each turn."
+                        ),
+                    }
+                ],
+                "recommended_next_tool": "jikuo.plan_activation_settings_update",
+                "meaning": FIELD_MEANINGS["strict_mounted_requires_adapter"],
+            }
+        )
+    return decisions
 
 
 def client_record(client: str) -> dict[str, str]:
@@ -171,9 +434,10 @@ def build_settings_draft(
     trigger_mode: str,
     effective_enforcement_level: str,
     clients: list[str] | None,
+    reviewed_at_utc: str | None = None,
 ) -> dict[str, Any]:
     selected_clients = list(dict.fromkeys(clients or []))
-    return {
+    settings: dict[str, Any] = {
         "schema": SETTINGS_SCHEMA,
         "desired_trigger_mode": normalize_trigger_mode(trigger_mode),
         "effective_enforcement_level": normalize_enforcement_level(
@@ -195,6 +459,21 @@ def build_settings_draft(
             "writer": "jikuo.activation_settings",
         },
     }
+    settings["configuration_review"] = {
+        "review_status": "approved" if reviewed_at_utc else "pending_user_review",
+        "reviewed_at_utc": reviewed_at_utc,
+        "reviewed_by": "local_user" if reviewed_at_utc else None,
+        "source": "guarded_activation_settings_apply" if reviewed_at_utc else "plan_only",
+    }
+    settings["field_provenance"] = build_field_provenance(
+        settings,
+        reviewed_at_utc=reviewed_at_utc,
+    )
+    if not reviewed_at_utc:
+        for record in settings["field_provenance"].values():
+            record["review_status"] = "pending_user_review"
+            record["requires_user_review"] = True
+    return settings
 
 
 def render_settings_yaml(settings: dict[str, Any], preserved_blocks: list[str] | None = None) -> str:
@@ -203,8 +482,27 @@ def render_settings_yaml(settings: dict[str, Any], preserved_blocks: list[str] |
         f"desired_trigger_mode: {quote_yaml(settings['desired_trigger_mode'])}",
         f"effective_enforcement_level: {quote_yaml(settings['effective_enforcement_level'])}",
         f"strict_mounted_requires_adapter: {quote_yaml(settings['strict_mounted_requires_adapter'])}",
-        "enabled_clients:",
+        "configuration_review:",
+        f"  review_status: {quote_yaml(settings['configuration_review']['review_status'])}",
+        f"  reviewed_at_utc: {quote_yaml(settings['configuration_review']['reviewed_at_utc'])}",
+        f"  reviewed_by: {quote_yaml(settings['configuration_review']['reviewed_by'])}",
+        f"  source: {quote_yaml(settings['configuration_review']['source'])}",
+        "field_provenance:",
     ]
+    for field in REVIEWABLE_FIELDS:
+        record = settings["field_provenance"][field]
+        lines.extend(
+            [
+                f"  {field}:",
+                f"    value: {quote_yaml(record['value'])}",
+                f"    source: {quote_yaml(record['source'])}",
+                f"    review_status: {quote_yaml(record['review_status'])}",
+                f"    reviewed_at_utc: {quote_yaml(record['reviewed_at_utc'])}",
+                f"    requires_user_review: {quote_yaml(record['requires_user_review'])}",
+                f"    meaning: {quote_yaml(record['meaning'])}",
+            ]
+        )
+    lines.append("enabled_clients:")
     for item in settings.get("enabled_clients", []):
         lines.append(f"  - client: {quote_yaml(item['client'])}")
         lines.append(f"    instruction_ref: {quote_yaml(item['instruction_ref'])}")
@@ -235,6 +533,8 @@ def build_status_report(*, project_root: Path | None = None) -> dict[str, Any]:
     path = settings_path(resolved_root)
     existing, warnings, _preserved = load_existing_settings(path)
     if existing is None:
+        field_provenance = implicit_field_provenance()
+        required_user_decisions = required_user_decisions_for(field_provenance)
         return {
             "schema": SETTINGS_STATUS_SCHEMA,
             "status": "missing",
@@ -243,20 +543,72 @@ def build_status_report(*, project_root: Path | None = None) -> dict[str, Any]:
             "desired_trigger_mode": "ask",
             "effective_enforcement_level": "instruction_only",
             "strict_mounted_requires_adapter": True,
+            "adapter_status": "not_available",
+            "strict_mount_status": "not_configured",
+            "configuration_required": True,
+            "onboarding_required": True,
+            "field_provenance": field_provenance,
+            "required_user_decisions": required_user_decisions,
+            "recommended_next_tool": "jikuo.plan_activation_settings_update",
             "reason": "activation settings file is missing; defaults are in effect",
             "warnings": warnings,
+            "next_actions": [
+                "review activation settings before assuming JIKUO is mounted",
+                "use jikuo.plan_activation_settings_update, then guarded apply after approval",
+            ],
         }
-    status = "available" if not warnings else "review"
+    field_provenance = normalize_loaded_field_provenance(existing)
+    required_user_decisions = required_user_decisions_for(field_provenance)
+    onboarding_required = bool(required_user_decisions)
+    status = "available" if not warnings and not onboarding_required else "review"
+    desired_trigger_mode = existing["desired_trigger_mode"]
+    enforcement_level = existing["effective_enforcement_level"]
+    strict_mount_status = (
+        "strict_pre_turn_adapter"
+        if desired_trigger_mode == "mounted" and enforcement_level == "pre_turn_adapter"
+        else "degraded_instruction_only"
+        if desired_trigger_mode == "mounted"
+        else "not_requested"
+    )
+    configuration_required = status == "review" or strict_mount_status == "degraded_instruction_only"
     return {
         "schema": SETTINGS_STATUS_SCHEMA,
         "status": status,
         "project_root": str(resolved_root),
         "settings_ref": SETTINGS_REF,
-        "desired_trigger_mode": existing["desired_trigger_mode"],
-        "effective_enforcement_level": existing["effective_enforcement_level"],
+        "desired_trigger_mode": desired_trigger_mode,
+        "effective_enforcement_level": enforcement_level,
         "strict_mounted_requires_adapter": existing["strict_mounted_requires_adapter"],
+        "enabled_clients": existing.get("enabled_clients") or [],
+        "adapter_status": "not_available"
+        if enforcement_level != "pre_turn_adapter"
+        else "configured_by_host",
+        "strict_mount_status": strict_mount_status,
+        "configuration_required": configuration_required,
+        "onboarding_required": onboarding_required,
+        "configuration_review": existing.get("configuration_review") or {},
+        "field_provenance": field_provenance,
+        "required_user_decisions": required_user_decisions,
+        "recommended_next_tool": (
+            "jikuo.plan_activation_settings_update"
+            if onboarding_required
+            else None
+        ),
         "reason": "activation settings loaded",
         "warnings": warnings,
+        "next_actions": (
+            [
+                "review activation settings provenance before continuing governed work",
+                "use jikuo.plan_activation_settings_update, then guarded apply after approval",
+            ]
+            if onboarding_required
+            else [
+                "mounted mode is configured but not strict without a pre-turn adapter",
+                "install or verify a host adapter before treating mounted mode as guaranteed",
+            ]
+            if strict_mount_status == "degraded_instruction_only"
+            else []
+        ),
     }
 
 
@@ -304,14 +656,29 @@ def build_plan(
     resolved_root = project_state.discover_project_root(project_root=project_root)
     path = settings_path(resolved_root)
     existing, warnings, preserved = load_existing_settings(path)
+    status_before = build_status_report(project_root=resolved_root)
     draft = build_settings_draft(
         trigger_mode=trigger_mode,
         effective_enforcement_level=effective_enforcement_level,
         clients=clients,
     )
     planned_text = render_settings_yaml(draft, preserved)
-    existing_text = path.read_text(encoding="utf-8") if path.is_file() else None
-    operation = "noop" if existing_text == planned_text else "update" if existing else "create"
+    if existing:
+        values_match = (
+            existing.get("desired_trigger_mode") == draft["desired_trigger_mode"]
+            and existing.get("effective_enforcement_level")
+            == draft["effective_enforcement_level"]
+            and existing.get("strict_mounted_requires_adapter")
+            == draft["strict_mounted_requires_adapter"]
+            and existing.get("enabled_clients") == draft["enabled_clients"]
+        )
+        operation = (
+            "noop"
+            if values_match and not status_before.get("onboarding_required")
+            else "update"
+        )
+    else:
+        operation = "create"
     return {
         "schema": SETTINGS_PLAN_SCHEMA,
         "status": "ok" if operation == "noop" else "review",
@@ -324,10 +691,14 @@ def build_plan(
         "approval_required": operation != "noop",
         "approval_target": APPROVAL_TARGET,
         "approval_effect": APPROVAL_EFFECT,
-        "existing_settings_status": "available" if existing else "missing",
+        "existing_settings_status": str(status_before.get("status") or "missing"),
+        "onboarding_required_before": bool(status_before.get("onboarding_required")),
+        "field_provenance_before": status_before.get("field_provenance") or {},
+        "required_user_decisions": status_before.get("required_user_decisions") or [],
         "desired_trigger_mode": draft["desired_trigger_mode"],
         "effective_enforcement_level": draft["effective_enforcement_level"],
         "strict_mounted_requires_adapter": True,
+        "planned_field_provenance": draft["field_provenance"],
         "enabled_clients": draft["enabled_clients"],
         "planned_size_bytes": len(planned_text.encode("utf-8")),
         "warnings": warnings,
@@ -380,13 +751,17 @@ def apply_plan(
     resolved_root = Path(plan["project_root"]).resolve()
     path = settings_path(resolved_root)
     _existing, _warnings, preserved = load_existing_settings(path)
+    reviewed_at_utc = utc_now_iso()
     draft = build_settings_draft(
         trigger_mode=trigger_mode,
         effective_enforcement_level=effective_enforcement_level,
         clients=clients,
+        reviewed_at_utc=reviewed_at_utc,
     )
     planned_text = render_settings_yaml(draft, preserved)
-    write_performed = plan["operation"] != "noop"
+    write_performed = plan["operation"] != "noop" or bool(
+        plan.get("onboarding_required_before")
+    )
     if write_performed:
         write_text_atomic(path, planned_text)
     result = dict(plan)
@@ -401,6 +776,8 @@ def apply_plan(
         "approval_phrase_recorded": True,
         "phrase": "<REDACTED>",
     }
+    result["review_record"] = draft["configuration_review"]
+    result["field_provenance"] = draft["field_provenance"]
     result["post_write_verification"] = build_status_report(project_root=resolved_root)
     result["next_actions"] = [
         "run jikuo show to verify effective activation settings",
@@ -419,7 +796,13 @@ def format_report(report: dict[str, Any]) -> str:
         f"- Desired trigger mode: `{report.get('desired_trigger_mode')}`",
         f"- Effective enforcement: `{report.get('effective_enforcement_level')}`",
         f"- Strict mounted requires adapter: `{str(report.get('strict_mounted_requires_adapter')).lower()}`",
+        f"- Strict mounted status: `{report.get('strict_mount_status')}`",
+        f"- Adapter status: `{report.get('adapter_status')}`",
     ]
+    if report.get("onboarding_required") is not None:
+        lines.append(f"- Onboarding required: `{str(report.get('onboarding_required')).lower()}`")
+    if report.get("recommended_next_tool"):
+        lines.append(f"- Recommended next tool: `{report.get('recommended_next_tool')}`")
     if report.get("operation"):
         lines.append(f"- Operation: `{report.get('operation')}`")
     if report.get("writes_performed") is not None:
@@ -435,6 +818,20 @@ def format_report(report: dict[str, Any]) -> str:
     if report.get("warnings"):
         lines.extend(["", "## Warnings", ""])
         lines.extend(f"- {item}" for item in report["warnings"])
+    if report.get("required_user_decisions"):
+        lines.extend(["", "## Required User Decisions", ""])
+        for decision in report["required_user_decisions"]:
+            lines.append(
+                f"- `{decision.get('field')}`: current=`{decision.get('current_value')}`, "
+                f"source=`{decision.get('source')}`, review=`{decision.get('review_status')}`"
+            )
+            choices = decision.get("choices")
+            if choices:
+                if isinstance(choices[0], dict):
+                    choice_values = [str(item.get("value")) for item in choices]
+                else:
+                    choice_values = [str(item) for item in choices]
+                lines.append(f"  choices: {', '.join(f'`{item}`' for item in choice_values)}")
     if report.get("refusal_reasons"):
         lines.extend(["", "## Refusal Reasons", ""])
         lines.extend(f"- `{item}`" for item in report["refusal_reasons"])

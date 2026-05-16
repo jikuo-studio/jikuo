@@ -274,6 +274,11 @@ class MCPStageAAdapterTests(unittest.TestCase):
 
             self.assertEqual(status_response["tool_name"], "jikuo.get_activation_settings")
             self.assertEqual(status_response["activation_settings"]["status"], "missing")
+            self.assertTrue(status_response["activation_settings"]["onboarding_required"])
+            self.assertEqual(
+                status_response["activation_settings"]["required_user_decisions"][0]["field"],
+                "desired_trigger_mode",
+            )
             self.assertIn("# JIKUO Activation Settings", status_response["card_markdown"])
             self.assertEqual(
                 plan_response["tool_name"],
@@ -370,6 +375,37 @@ class MCPStageAAdapterTests(unittest.TestCase):
             self.assertFalse((project_root / ".jikuo" / "policies").exists())
             self.assertFalse((project_root / ".jikuo" / "task_sessions").exists())
             self.assertFalse((project_root / ".jikuo" / "project_state.yaml").exists())
+
+    def test_route_user_request_prompts_activation_configuration_when_missing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+
+            response = adapter.call_tool(
+                "jikuo.route_user_request",
+                {
+                    "project_root": str(project_root),
+                    "user_phrase": "continue the NarrativeSystem cleanup",
+                },
+            )
+
+            router = response["conversation_router"]
+            self.assertEqual(router["activation_settings"]["status"], "missing")
+            self.assertTrue(router["activation_settings"]["onboarding_required"])
+            self.assertEqual(
+                router["activation_settings"]["strict_mount_status"],
+                "not_configured",
+            )
+            self.assertEqual(
+                response["classified_obligations"][0]["kind"],
+                "configuration_review",
+            )
+            self.assertIn("task_start", {
+                item["kind"] for item in response["classified_obligations"]
+            })
+            self.assertIn("jikuo.get_configuration_status", response["mcp_followup_tools"])
+            self.assertIn("JIKUO Runtime Links", response["card_markdown"])
+            self.assertFalse((project_root / ".jikuo" / "activation_settings.yaml").exists())
 
     def test_propose_policy_suggestions_returns_candidates_without_policy_write(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -30,6 +30,12 @@ the host environment.
 The core must remain integration-neutral. It should not import or depend on a
 specific desktop client, IDE, hook system, or Agent SDK.
 
+MCP availability is not enough to make a host strict. If activation settings
+are missing, JIKUO reports `strict_mount_status=not_configured`. If mounted mode
+is configured without a pre-turn adapter, JIKUO reports
+`strict_mount_status=degraded_instruction_only`. In both cases the user must see
+that JIKUO is callable but not guaranteed to run before every turn.
+
 ## 3. Adapter Contract
 
 A strict mounted adapter must:
@@ -68,6 +74,11 @@ A strict mounted adapter must:
 
 - The adapter reads `.jikuo/activation_settings.yaml` and respects `ask`,
   `semantic`, and `mounted`.
+- If `.jikuo/activation_settings.yaml` is missing, the adapter or router
+  surfaces a configuration review instead of silently falling back to normal
+  task execution.
+- If mounted mode is requested but no pre-turn adapter is active, the client
+  surfaces a degraded / non-strict status.
 - In mounted mode, a user turn with no obligation still produces a visible
   `mounted_idle_tick`.
 - The same runtime card is visible through chat, `.jikuo/runtime/last_card.md`,
