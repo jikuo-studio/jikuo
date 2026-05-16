@@ -242,6 +242,31 @@ def register_stage_a_tools(
     return server
 
 
+def register_configuration_tools(
+    server: Any,
+    *,
+    default_transport: str = schemas.LOCAL_STDIO_TRANSPORT,
+) -> Any:
+    """Register no-write configuration review MCP tools."""
+
+    tool_definitions = {tool["name"]: tool for tool in adapter.list_tools()}
+
+    @server.tool(
+        name="jikuo.get_configuration_status",
+        description=tool_description(tool_definitions["jikuo.get_configuration_status"]),
+    )
+    def jikuo_get_configuration_status(
+        project_root: str | None = None,
+    ) -> dict[str, Any]:
+        return _call(
+            "jikuo.get_configuration_status",
+            {"project_root": project_root},
+            default_transport=default_transport,
+        )
+
+    return server
+
+
 def register_stage_b1_tools(
     server: Any,
     *,
@@ -406,6 +431,7 @@ def create_server(
         ),
     )
     register_stage_a_tools(server, default_transport=default_transport)
+    register_configuration_tools(server, default_transport=default_transport)
     register_stage_b1_tools(server, default_transport=default_transport)
     register_stage_b2_tools(server, default_transport=default_transport)
     return register_stage_b3_tools(server, default_transport=default_transport)

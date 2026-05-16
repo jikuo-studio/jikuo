@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-INIT-01: First-use Configuration Review
 
-> **Status**: Core no-write review implemented; MCP tools and strict client adapters remain planned.
+> **Status**: Core no-write review implemented; MCP read-only configuration status tool implemented; strict client adapters remain planned.
 > **Product meaning**: when a user first enables JIKUO, the user should see the key initialization settings, what each one means, and what can be changed before governed work continues.
 > **Boundary**: this slice aggregates and explains existing state; it does not write activation settings, instruction files, starter policies, project context, or client MCP config.
 
@@ -62,7 +62,7 @@ The review currently emits one item per setup concern:
 
 ## 4. Remaining Work
 
-- expose this review through MCP as `jikuo.get_configuration_status`.
+- add no-write configuration update planning through MCP.
 - add no-write configuration update planning through MCP.
 - add guarded configuration update apply through MCP, reusing activation settings
   and instruction install writers rather than adding hidden writes.
@@ -76,6 +76,8 @@ The review currently emits one item per setup concern:
 - `jikuo configure status --format json` returns `jikuo.configuration_review.v0`.
 - `agent_flow propose --event configuration_review` returns a
   `configuration_review` card and `CAP-CONFIGURATION-REVIEW-01` atom trace.
+- MCP `jikuo.get_configuration_status` returns `configuration_review.schema =
+  jikuo.configuration_review.v0` and display-ready card markdown.
 - conversation-turn routing can classify setup/settings language as a
   configuration-review obligation.
 - no `.jikuo/**` durable governance state is written by the review itself.

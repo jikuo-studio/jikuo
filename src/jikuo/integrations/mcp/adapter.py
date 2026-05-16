@@ -717,6 +717,29 @@ def call_tool(
             template_path=_path_or_none(args.get("template")),
         )
 
+    if tool_name == "jikuo.get_configuration_status":
+        response = _proposal_response(
+            tool_name=tool_name,
+            raw_event="configuration_review",
+            arguments=args,
+            project_root=resolved_root,
+            transport=resolved_transport,
+        )
+        review = None
+        data_details = response.get("data_details")
+        if isinstance(data_details, dict):
+            for card in data_details.get("cards") or []:
+                if not isinstance(card, dict):
+                    continue
+                candidate = card.get("configuration_review")
+                if isinstance(candidate, dict):
+                    review = candidate
+                    break
+        if isinstance(review, dict):
+            response["configuration_status"] = review.get("status")
+            response["configuration_review"] = review
+        return response
+
     if tool_name == "jikuo.apply_task_session_evidence_update":
         return _apply_task_session_evidence_update_response(
             arguments=args,

@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-MCP-01: MCP Wrapper MVP
 
-> **Status**: MCP MVP body implemented and release-smoked; Stage A server wrapper accepted; Stage B1 task-session evidence guarded-write tool implemented after explicit user approval; Stage B2 policy evolution guarded-write tool implemented and externally smoke-accepted; Stage B3 policy-template activation guarded-write tool implemented and externally smoke-accepted
+> **Status**: MCP MVP body implemented and release-smoked; Stage A server wrapper accepted; Stage B1 task-session evidence guarded-write tool implemented after explicit user approval; Stage B2 policy evolution guarded-write tool implemented and externally smoke-accepted; Stage B3 policy-template activation guarded-write tool implemented and externally smoke-accepted; post-MVP read-only configuration status tool implemented
 > **Product meaning**: formally move the next phase from more kernel expansion to an MCP wrapper MVP, so desktop Agents can call JIKUO through a stable tool surface while users remain in their desktop AI client.
 > **Scope rule**: wrap stable atoms only; do not add new governance capability in this slice.
 
@@ -72,9 +72,13 @@ MVP protocol posture:
 
 Expose these stable operations through a narrow MCP surface:
 
-Stage A exposes only no-write / card-returning operations. These tools may update `.jikuo/runtime/` when they produce runtime visibility, but they must not create `.jikuo/policies/`, create `.jikuo/task_sessions/`, or update `.jikuo/project_state.yaml`.
+Stage A exposes only no-write / card-returning operations. Post-MVP read-only
+configuration status uses the same no-governance-write boundary. These tools
+may update `.jikuo/runtime/` when they produce runtime visibility, but they must
+not create `.jikuo/policies/`, create `.jikuo/task_sessions/`, or update
+`.jikuo/project_state.yaml`.
 
-| Stage A MCP tool | Wrapped atom | Write mode | Product role |
+| No-write MCP tool | Wrapped atom | Write mode | Product role |
 |---|---|---|---|
 | `jikuo.status` | `CAP-POLICY-STORE-STATUS-01` | no-write | inspect whether project-local policy store is active / missing / stale / conflict |
 | `jikuo.get_runtime_status` | `CAP-POLICY-STORE-STATUS-01`; `CAP-POLICY-RUNTIME-STATUS-CARD-01` | no governance write | return current policy runtime status as structured data |
@@ -84,6 +88,7 @@ Stage A exposes only no-write / card-returning operations. These tools may updat
 | `jikuo.propose_policy_write_plan` | `CAP-POLICY-STORE-WRITE-PROPOSE-01` | no governance write; may update `.jikuo/runtime/` | return proposed policy-store write data plus card refs / display directives before any durable policy write |
 | `jikuo.propose_policy_evolution_plan` | `CAP-POLICY-EVOLUTION-PLAN-PROPOSE-01` | no governance write; may update `.jikuo/runtime/` | return refinement / deprecation / supersession plan data, including replacement trigger event, plus card refs / display directives before any durable write |
 | `jikuo.propose_policy_template_import_plan` | `CAP-AGENT-FLOW-POLICY-TEMPLATE-IMPORT-PLAN-01` | no governance write; may update `.jikuo/runtime/` | return resolved template binding data plus card refs / display directives |
+| `jikuo.get_configuration_status` | `CAP-CONFIGURATION-REVIEW-01` | no governance write; may update `.jikuo/runtime/` | return first-use configuration review state plus card refs / display directives |
 
 Stage B exposes guarded write operations only after Stage A acceptance gates pass.
 Stage B1 is accepted for task-session evidence writes. Stage B2 is accepted for
@@ -255,6 +260,7 @@ Stage A implementation progress:
 - [x] External Claude Code GUI acceptance on 2026-05-16 passed: adapter and FastMCP wrapper both listed 11 tools, `jikuo.apply_policy_template_activation` refused unapproved calls without creating `.jikuo/policies/`, activated one resolved template after approval, wrote proposal snapshot / approved policy / decision record / manifest, did not create `.jikuo/task_sessions/`, did not leak the raw approval phrase, wrote `.jikuo/runtime/last_card.md` in the fixture project, and showed no GUI MCP client tool-list cache issue.
 - [x] MCP client configuration examples were updated after Stage B3 to describe the current 11-tool MVP surface, Stage B2 / B3 smoke checks, guarded write boundaries, approval phrase redaction checks, and fixture-first apply-path guidance.
 - [x] Final local official SDK release smoke passed on 2026-05-16: a Python MCP `ClientSession` launched `python -B -m jikuo.integrations.mcp.server`, listed all 11 MVP tools, called `jikuo.get_runtime_status_card` against a temporary fixture project, and confirmed returned `card_markdown` matched `.jikuo/runtime/last_card.md`.
+- [x] Post-MVP configuration status read surface implemented: `jikuo.get_configuration_status` wraps `agent_flow propose --event configuration_review`, returns `jikuo.configuration_review.v0`, writes only runtime visibility, and expands current tool discovery to 12 tools.
 
 Stage A desktop-client acceptance log:
 

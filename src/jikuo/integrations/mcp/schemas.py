@@ -20,6 +20,7 @@ UNKNOWN_TRANSPORT = "unknown"
 
 CARD_PRIORITY_ORDER = (
     "policy_runtime_status",
+    "configuration_review",
     "task_session_completion_acceptance",
     "task_session_start_preview",
 )
@@ -45,8 +46,11 @@ STAGE_B1_TOOL_NAMES = ("jikuo.apply_task_session_evidence_update",)
 STAGE_B2_TOOL_NAMES = ("jikuo.apply_policy_evolution_write",)
 STAGE_B3_TOOL_NAMES = ("jikuo.apply_policy_template_activation",)
 
+CONFIGURATION_TOOL_NAMES = ("jikuo.get_configuration_status",)
+
 EXPOSED_TOOL_NAMES = (
     STAGE_A_TOOL_NAMES
+    + CONFIGURATION_TOOL_NAMES
     + STAGE_B1_TOOL_NAMES
     + STAGE_B2_TOOL_NAMES
     + STAGE_B3_TOOL_NAMES
@@ -185,6 +189,21 @@ TOOL_DEFINITIONS: dict[str, dict[str, Any]] = {
             "template": RETURN,
         },
         card_returning=True,
+    ),
+    "jikuo.get_configuration_status": _tool(
+        name="jikuo.get_configuration_status",
+        description=(
+            "Return the first-use and ongoing JIKUO configuration review as "
+            "structured data plus a chat-ready governance card."
+        ),
+        input_fields={"project_root": LOCAL_ONLY},
+        output_fields={
+            "configuration_status": RETURN,
+            "configuration_review": RETURN,
+        },
+        card_returning=True,
+        stage="C1",
+        write_mode="no-write",
     ),
     "jikuo.apply_task_session_evidence_update": _tool(
         name="jikuo.apply_task_session_evidence_update",

@@ -106,10 +106,16 @@ class MCPStageAAdapterTests(unittest.TestCase):
         self.assertIn("jikuo.apply_task_session_evidence_update", names)
         self.assertIn("jikuo.apply_policy_evolution_write", names)
         self.assertIn("jikuo.apply_policy_template_activation", names)
+        self.assertIn("jikuo.get_configuration_status", names)
         by_name = {tool["name"]: tool for tool in tools}
         for name in schemas.STAGE_A_TOOL_NAMES:
             self.assertEqual(by_name[name]["stage"], "A")
             self.assertEqual(by_name[name]["write_mode"], "no-write")
+        self.assertEqual(by_name["jikuo.get_configuration_status"]["stage"], "C1")
+        self.assertEqual(
+            by_name["jikuo.get_configuration_status"]["write_mode"],
+            "no-write",
+        )
         self.assertEqual(
             by_name["jikuo.apply_task_session_evidence_update"]["stage"],
             "B1",
@@ -201,6 +207,27 @@ class MCPStageAAdapterTests(unittest.TestCase):
                 response["local_paths"]["last_card"],
                 str((project_root / ".jikuo" / "runtime" / "last_card.md").resolve()),
             )
+
+    def test_get_configuration_status_returns_review_and_runtime_card(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = copy_fixture(POLICY_ACTIVE_PROJECT, tmp)
+
+            response = adapter.call_tool(
+                "jikuo.get_configuration_status",
+                {"project_root": str(project_root)},
+            )
+
+            self.assertEqual(response["tool_name"], "jikuo.get_configuration_status")
+            self.assertEqual(response["write_mode"], "no-write")
+            self.assertIn(response["configuration_status"], {"ok", "review", "blocked"})
+            self.assertEqual(
+                response["configuration_review"]["schema"],
+                "jikuo.configuration_review.v0",
+            )
+            self.assertIn("## jikuo configuration review", response["card_markdown"].lower())
+            self.assertTrue((project_root / ".jikuo" / "runtime" / "last_card.md").is_file())
+            serialized = json.dumps(response, ensure_ascii=False)
+            self.assertNotIn(str(project_root.resolve()), serialized)
 
     def test_get_display_card_reads_latest_runtime_card(self):
         with tempfile.TemporaryDirectory() as tmp:

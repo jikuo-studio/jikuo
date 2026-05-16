@@ -111,6 +111,7 @@ class MCPServerWrapperTests(unittest.TestCase):
 
         self.assertEqual(fake.name, server.SERVER_NAME)
         self.assertEqual(list(fake.tools), list(schemas.EXPOSED_TOOL_NAMES))
+        self.assertIn("jikuo.get_configuration_status", fake.tools)
         self.assertIn("jikuo.apply_task_session_evidence_update", fake.tools)
         self.assertIn("jikuo.apply_policy_evolution_write", fake.tools)
         self.assertIn("jikuo.apply_policy_template_activation", fake.tools)
@@ -119,10 +120,12 @@ class MCPServerWrapperTests(unittest.TestCase):
         fake = server.create_server(fastmcp_cls=FakeFastMCP)
 
         card_description = fake.tools["jikuo.get_runtime_status_card"]["description"]
+        config_description = fake.tools["jikuo.get_configuration_status"]["description"]
         plain_description = fake.tools["jikuo.status"]["description"]
 
         self.assertIn("CRITICAL DISPLAY CONTRACT", card_description)
         self.assertIn("card_markdown", card_description)
+        self.assertIn("CRITICAL DISPLAY CONTRACT", config_description)
         self.assertNotIn("CRITICAL DISPLAY CONTRACT", plain_description)
 
     def test_registered_tool_calls_adapter_without_mcp_sdk(self):
@@ -141,6 +144,22 @@ class MCPServerWrapperTests(unittest.TestCase):
             self.assertIn("## Policy runtime status", response["card_markdown"])
             self.assertNotIn(str(project_root.resolve()), str(response))
             self.assertTrue((project_root / ".jikuo" / "runtime" / "last_card.md").is_file())
+
+    def test_configuration_status_registered_tool_delegates_adapter(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = copy_fixture(POLICY_ACTIVE_PROJECT, tmp)
+            fake = server.create_server(fastmcp_cls=FakeFastMCP)
+
+            response = fake.tools["jikuo.get_configuration_status"]["function"](
+                project_root=str(project_root),
+            )
+
+            self.assertEqual(response["tool_name"], "jikuo.get_configuration_status")
+            self.assertEqual(
+                response["configuration_review"]["schema"],
+                "jikuo.configuration_review.v0",
+            )
+            self.assertIn("card_markdown", response)
 
     def test_stage_b1_registered_tool_delegates_guarded_apply(self):
         with tempfile.TemporaryDirectory() as tmp:

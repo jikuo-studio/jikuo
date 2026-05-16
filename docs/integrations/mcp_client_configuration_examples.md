@@ -1,8 +1,8 @@
 # JIKUO MCP Client Configuration Examples
 
 > Status: MCP MVP local stdio configuration examples and smoke-log companion.
-> Scope: local stdio MCP clients only. Current MVP exposes 11 tools: 8 Stage A
-> no-write / card / proposal tools plus Stage B1 / B2 / B3 guarded-write tools.
+> Scope: local stdio MCP clients only. Current surface exposes 12 tools: 8 Stage A
+> no-write / card / proposal tools, one configuration-review tool, plus Stage B1 / B2 / B3 guarded-write tools.
 
 ## Purpose
 
@@ -187,7 +187,7 @@ For a configured client:
 
 ## Current MVP Tool Discovery Checklist
 
-For the current MVP, tool discovery should list exactly 11 tools:
+For the current surface, tool discovery should list exactly 12 tools:
 
 1. `jikuo.status`
 2. `jikuo.get_runtime_status`
@@ -197,12 +197,22 @@ For the current MVP, tool discovery should list exactly 11 tools:
 6. `jikuo.propose_policy_write_plan`
 7. `jikuo.propose_policy_evolution_plan`
 8. `jikuo.propose_policy_template_import_plan`
-9. `jikuo.apply_task_session_evidence_update`
-10. `jikuo.apply_policy_evolution_write`
-11. `jikuo.apply_policy_template_activation`
+9. `jikuo.get_configuration_status`
+10. `jikuo.apply_task_session_evidence_update`
+11. `jikuo.apply_policy_evolution_write`
+12. `jikuo.apply_policy_template_activation`
 
 If a GUI client shows fewer tools after updating JIKUO, start a new client
 session or restart the desktop application so it respawns the MCP server.
+
+## Configuration Status Smoke Checklist
+
+For `jikuo.get_configuration_status`:
+
+1. Calling the tool returns `configuration_review.schema = jikuo.configuration_review.v0`.
+2. The response includes `card_markdown` and a `display_verification` block.
+3. `.jikuo/runtime/last_card.md` is updated with the configuration review proposal.
+4. The tool does not create `.jikuo/policies/`, `.jikuo/task_sessions/`, or `.jikuo/project_state.yaml`.
 
 ## Stage B1 Smoke Checklist
 
@@ -257,5 +267,6 @@ intentionally approving a real project policy-template activation.
 - Official Python MCP SDK `ClientSession` stdio smoke listed 9 tools, called the Stage B1 tool successfully, and confirmed Stage B2 / B3 tools were not exposed.
 - Stage B2 `jikuo.apply_policy_evolution_write` was implemented after explicit user approval and externally smoke-accepted on 2026-05-16.
 - Stage B3 `jikuo.apply_policy_template_activation` was implemented after explicit user approval and externally smoke-accepted in Claude Code GUI on 2026-05-16.
-- Current GUI MCP smoke observed 11 tools and did not show a client tool-list cache issue after starting a fresh session.
+- Current GUI MCP smoke observed 11 tools during the Stage B3 slice and did not show a client tool-list cache issue after starting a fresh session.
 - Final local official SDK release smoke passed on 2026-05-16 using `tmp/mcp-stage-a-venv/Scripts/python.exe`: `ClientSession` listed the 11-tool MVP surface and `jikuo.get_runtime_status_card` returned card Markdown matching `.jikuo/runtime/last_card.md` in a temporary fixture project.
+- After `JIKUO-INIT-01`, the read-only `jikuo.get_configuration_status` tool expands the current surface to 12 tools; repeat tool discovery before publishing client proof docs.
