@@ -121,6 +121,15 @@ Implemented output fields:
 
 The router is no-write. Runtime visibility files may update.
 
+Mode behavior:
+
+- `semantic` with no matching obligation returns `no_jikuo_action_required`
+- `mounted` with no matching obligation returns `mounted_idle_tick`
+
+This makes the difference visible: semantic mode can mean "the Agent found no
+reason to route further," while mounted mode means "the harness ran for this
+turn and found no required JIKUO action."
+
 ## 5. Policy-Suggestion Review Contract
 
 Implemented core capability:
@@ -182,7 +191,7 @@ Current rule:
 - execution mounts describe semantic mode and mounted harness mode honestly
 - no active policy is presented as solving conversation-level extraction before router support exists
 - `agent_flow.py propose --event conversation_turn` has a no-write router path before any guarded write path
-- tests cover explicit no-op, mounted-mode obligation routing, and missing user-turn refusal
+- tests cover explicit semantic no-op, mounted idle tick, mounted-mode obligation routing, and missing user-turn refusal
 - future MCP router tools preserve display directives, runtime links, and SEC-02 privacy classification
 - future mounted harness adapters remain integration-specific and do not become kernel dependencies
 
@@ -194,6 +203,7 @@ Current rule:
 - Added trigger modes: `semantic`, `mounted`
 - Added card kind: `conversation_turn_router`
 - Added card kind: `policy_suggestion_review`
+- Added mounted no-op obligation: `mounted_idle_tick`
 - Current deterministic classifier: keyword router v0, intended as an auditable
   baseline before later policy-suggestion analysis.
 - Current obligations: task start, completion review, policy-suggestion review,

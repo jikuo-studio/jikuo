@@ -22,6 +22,7 @@ MANAGED_END = "# END JIKUO MANAGED INSTRUCTIONS"
 CANONICAL_CLIENT = "jikuo"
 APPROVAL_TARGET = "JIKUO universal instruction distribution"
 APPROVAL_EFFECT = "create or update JIKUO instruction files"
+TRIGGER_MODE_CHOICES = ("ask", "semantic", "mounted")
 
 CLIENT_TARGETS: dict[str, dict[str, str]] = {
     CANONICAL_CLIENT: {
@@ -43,6 +44,11 @@ CLIENT_TARGETS: dict[str, dict[str, str]] = {
         "label": "Cursor project rules",
         "path": ".cursorrules",
         "purpose": "Cursor project rule sync target",
+    },
+    "vscode-copilot": {
+        "label": "VS Code Copilot project instructions",
+        "path": ".github/copilot-instructions.md",
+        "purpose": "VS Code GitHub Copilot Agent mode instruction sync target",
     },
     "continue": {
         "label": "Continue project rules",
@@ -86,7 +92,40 @@ def common_instruction_lines() -> list[str]:
     ]
 
 
-def render_managed_block(client_key: str) -> str:
+def activation_setting_lines(trigger_mode: str) -> list[str]:
+    mode = trigger_mode if trigger_mode in TRIGGER_MODE_CHOICES else "ask"
+    lines = [
+        "When JIKUO is first enabled for this project, ask the user to review activation settings before governed work continues.",
+        "Activation settings to review: trigger mode, MCP server availability, card-display contract, runtime visibility links, guarded-write approval boundary, starter policy initialization, and project-context bindings.",
+    ]
+    if mode == "ask":
+        lines.extend(
+            [
+                "Trigger mode is not fixed in this instruction block.",
+                "Ask the user to choose `semantic` mode or `mounted` mode before the first governed turn.",
+                "`semantic` mode means the Agent calls JIKUO when the turn appears to carry JIKUO obligations.",
+                "`mounted` mode means a supported hook, plugin, SDK wrapper, Studio entry, or local proxy calls JIKUO before every user turn and records idle ticks when nothing is required.",
+            ]
+        )
+    elif mode == "semantic":
+        lines.extend(
+            [
+                "Configured trigger mode for this client: `semantic`.",
+                "Call JIKUO when the user asks for governed work, progress/todo meaning, policy changes, task-session work, acceptance, handoff, or when repeated user needs may become policy candidates.",
+            ]
+        )
+    else:
+        lines.extend(
+            [
+                "Configured trigger mode for this client: `mounted`.",
+                "Before every user turn is handled, call JIKUO conversation routing with `--trigger-mode mounted` when this client has a supported pre-turn hook, plugin, SDK wrapper, Studio entry, or local proxy.",
+                "If this client has only MCP plus instruction files, tell the user that mounted mode is requested but not strictly enforceable until a pre-turn adapter is installed; use the JIKUO router at the start of governed turns and surface the runtime card link.",
+            ]
+        )
+    return lines
+
+
+def render_managed_block(client_key: str, *, trigger_mode: str = "ask") -> str:
     spec = CLIENT_TARGETS[client_key]
     lines = [
         MANAGED_BEGIN,
@@ -100,6 +139,14 @@ def render_managed_block(client_key: str) -> str:
         "",
     ]
     lines.extend(f"- {line}" for line in common_instruction_lines())
+    lines.extend(
+        [
+            "",
+            "Activation settings:",
+            "",
+        ]
+    )
+    lines.extend(f"- {line}" for line in activation_setting_lines(trigger_mode))
     if client_key != CANONICAL_CLIENT:
         lines.extend(
             [
@@ -177,6 +224,7 @@ def build_install_plan(
     project_root: Path | None = None,
     clients: list[str] | None = None,
     all_clients: bool = False,
+    trigger_mode: str = "ask",
 ) -> dict[str, Any]:
     resolved_root = project_state.discover_project_root(project_root=project_root)
     selected_clients, warnings = select_clients(
@@ -191,7 +239,7 @@ def build_install_plan(
         existing = target.read_text(encoding="utf-8") if target.is_file() else None
         merged, operation, managed_block_present = merge_managed_block(
             existing,
-            render_managed_block(client),
+            render_managed_block(client, trigger_mode=trigger_mode),
         )
         targets.append(
             {
@@ -218,6 +266,13 @@ def build_install_plan(
         "approval_required": write_needed,
         "approval_target": APPROVAL_TARGET,
         "approval_effect": APPROVAL_EFFECT,
+        "activation_settings": {
+            "schema": "jikuo.client_activation_settings.v0",
+            "trigger_mode": trigger_mode,
+            "trigger_mode_choices": list(TRIGGER_MODE_CHOICES),
+            "strict_mounted_requires_adapter": True,
+            "client_prompt_required": trigger_mode == "ask",
+        },
         "warnings": warnings,
         "refusal_reasons": [],
         "next_actions": (
@@ -243,11 +298,13 @@ def apply_install_plan(
     all_clients: bool = False,
     confirm_install: bool = False,
     approval_phrase: str | None = None,
+    trigger_mode: str = "ask",
 ) -> tuple[dict[str, Any], int]:
     plan = build_install_plan(
         project_root=project_root,
         clients=clients,
         all_clients=all_clients,
+        trigger_mode=trigger_mode,
     )
     refusals: list[str] = []
     if not confirm_install:
@@ -276,7 +333,7 @@ def apply_install_plan(
         existing = target.read_text(encoding="utf-8") if target.is_file() else None
         merged, operation, managed_block_present = merge_managed_block(
             existing,
-            render_managed_block(str(target_info["client"])),
+            render_managed_block(str(target_info["client"]), trigger_mode=trigger_mode),
         )
         applied = operation != "noop"
         if applied:
@@ -342,6 +399,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--project-root", type=Path, default=None)
     parser.add_argument("--client", choices=SYNC_CLIENTS, action="append", default=[])
     parser.add_argument("--all", action="store_true")
+    parser.add_argument("--trigger-mode", choices=TRIGGER_MODE_CHOICES, default="ask")
     parser.add_argument("--write", action="store_true")
     parser.add_argument("--confirm-install", action="store_true")
     parser.add_argument("--approval-phrase", default=None)
@@ -359,12 +417,14 @@ def main(argv: list[str] | None = None) -> int:
             all_clients=args.all,
             confirm_install=args.confirm_install,
             approval_phrase=args.approval_phrase,
+            trigger_mode=args.trigger_mode,
         )
     else:
         report = build_install_plan(
             project_root=args.project_root,
             clients=args.client,
             all_clients=args.all,
+            trigger_mode=args.trigger_mode,
         )
         exit_code = 0
     if args.format == "json":

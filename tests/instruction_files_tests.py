@@ -27,6 +27,8 @@ class InstructionFilesTests(unittest.TestCase):
             self.assertTrue(report["approval_required"])
             self.assertEqual(report["targets"][0]["path_ref"], "JIKUO.md")
             self.assertEqual(report["targets"][0]["operation"], "create")
+            self.assertEqual(report["activation_settings"]["trigger_mode"], "ask")
+            self.assertTrue(report["activation_settings"]["client_prompt_required"])
             self.assertFalse((project_root / "JIKUO.md").exists())
 
     def test_write_requires_confirmation_and_approval_phrase(self):
@@ -76,7 +78,32 @@ class InstructionFilesTests(unittest.TestCase):
             self.assertIn(instruction_files.MANAGED_BEGIN, agents_text)
             self.assertIn(instruction_files.MANAGED_END, agents_text)
             self.assertIn("Show returned governance card Markdown verbatim", agents_text)
+            self.assertIn("Activation settings:", agents_text)
+            self.assertIn("Ask the user to choose `semantic` mode or `mounted` mode", agents_text)
             self.assertIn("Keep this managed block aligned with `JIKUO.md`", agents_text)
+
+    def test_install_plan_can_pin_mounted_mode_for_vscode_copilot(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+
+            report = instruction_files.build_install_plan(
+                project_root=project_root,
+                clients=["vscode-copilot"],
+                trigger_mode="mounted",
+            )
+
+            self.assertEqual(report["selected_clients"], ["jikuo", "vscode-copilot"])
+            self.assertEqual(report["activation_settings"]["trigger_mode"], "mounted")
+            target_refs = {target["path_ref"] for target in report["targets"]}
+            self.assertEqual(target_refs, {"JIKUO.md", ".github/copilot-instructions.md"})
+
+            block = instruction_files.render_managed_block(
+                "vscode-copilot",
+                trigger_mode="mounted",
+            )
+            self.assertIn("Configured trigger mode for this client: `mounted`", block)
+            self.assertIn("not strictly enforceable until a pre-turn adapter is installed", block)
 
     def test_install_all_detects_existing_client_instruction_files(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -113,6 +140,8 @@ class InstructionFilesTests(unittest.TestCase):
                     str(project_root),
                     "--client",
                     "continue",
+                    "--trigger-mode",
+                    "semantic",
                     "--write",
                     "--confirm-install",
                     "--approval-phrase",
@@ -131,6 +160,7 @@ class InstructionFilesTests(unittest.TestCase):
             report = json.loads(completed.stdout)
             self.assertEqual(report["schema"], instruction_files.INSTALL_RESULT_SCHEMA)
             self.assertEqual(report["status"], "ok")
+            self.assertEqual(report["activation_settings"]["trigger_mode"], "semantic")
             self.assertEqual(set(report["written_refs"]), {"JIKUO.md", ".continuerules"})
             self.assertTrue((project_root / "JIKUO.md").is_file())
             self.assertTrue((project_root / ".continuerules").is_file())

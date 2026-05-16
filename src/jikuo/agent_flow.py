@@ -1193,6 +1193,21 @@ def classify_conversation_turn(
         if tool and tool not in followup_tools:
             followup_tools.append(str(tool))
 
+    if not obligations and trigger_mode == "mounted":
+        obligations.append(
+            {
+                "kind": "mounted_idle_tick",
+                "status": "ok",
+                "reason": (
+                    "mounted harness checked this turn and found no configured "
+                    "JIKUO obligation"
+                ),
+                "target_event": None,
+                "required_followup_tool": None,
+                "matched_terms": [],
+            }
+        )
+
     if not obligations:
         obligations.append(
             {
@@ -1210,7 +1225,10 @@ def classify_conversation_turn(
         if any(item["status"] == "required" for item in obligations)
         else "ok"
     )
-    if obligations and obligations[0]["kind"] == "no_jikuo_action_required":
+    if obligations and obligations[0]["kind"] in {
+        "mounted_idle_tick",
+        "no_jikuo_action_required",
+    }:
         router_status = "ok"
 
     router = {

@@ -57,6 +57,10 @@ document_roles:
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-INTG-01_universal_instruction_file_distribution.md"
     required: true
     note: "Pre-MCP cross-client instruction file distribution contract and implementation record."
+  client_onboarding_settings_work_order:
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-INTG-02_client_onboarding_settings_and_trigger_mode.md"
+    required: true
+    note: "Client activation settings, trigger-mode selection, and strict mounted-vs-semantic onboarding contract."
   trigger_mode_conversation_router_work_order:
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-ROUTER-01_trigger_mode_and_conversation_turn_router.md"
     required: true

@@ -35,6 +35,30 @@ Prefer an explicit Python executable from a project virtual environment when con
 - `<PROJECT_ROOT>`: absolute path to the project using JIKUO, for example `D:\personal_project\Jikuo`
 - `<PYTHON_EXE>`: Python executable with `jikuo` and `mcp` installed, for example `<PROJECT_ROOT>\tmp\mcp-stage-a-venv\Scripts\python.exe`
 
+## Trigger Mode And Client Onboarding
+
+JIKUO has two trigger modes:
+
+- `semantic`: the Agent calls JIKUO when a user turn appears to carry governed work.
+- `mounted`: a supported client adapter calls JIKUO before every user turn and shows an auditable result, including `mounted_idle_tick` when nothing is required.
+
+MCP configuration makes JIKUO tools available. Instruction files tell the Agent
+when to use them. Neither one alone is a strict mounted harness unless the
+client also has a pre-turn hook / plugin / SDK wrapper / Studio entry / local
+proxy.
+
+Use `jikuo install` to write the client-facing mode into instruction files:
+
+```powershell
+jikuo install --client codex --trigger-mode ask
+jikuo install --client claude-code --trigger-mode semantic
+jikuo install --client cursor --trigger-mode mounted
+jikuo install --client vscode-copilot --trigger-mode ask
+```
+
+`ask` is the safest default: the client must ask the user to choose semantic or
+mounted mode before the first governed turn.
+
 ## Claude Code
 
 Claude Code supports adding stdio MCP servers from the CLI. Use a local or project scope depending on whether the configuration should stay private or be shared.
@@ -82,6 +106,42 @@ Cursor supports project-level MCP configuration in `.cursor/mcp.json`.
 
 Keep `.cursor/mcp.json` uncommitted unless the team explicitly agrees to share the MCP server configuration.
 
+Instruction target:
+
+```powershell
+jikuo install --client cursor --trigger-mode ask
+```
+
+Review `.cursorrules` after guarded install.
+
+## VS Code + GitHub Copilot Agent Mode
+
+VS Code / GitHub Copilot Agent mode can use MCP servers through VS Code MCP
+configuration. For local stdio JIKUO use a project `.vscode/mcp.json`:
+
+```json
+{
+  "servers": {
+    "jikuo": {
+      "type": "stdio",
+      "command": "<PYTHON_EXE>",
+      "args": ["-B", "-m", "jikuo.integrations.mcp.server"],
+      "cwd": "<PROJECT_ROOT>"
+    }
+  }
+}
+```
+
+Instruction target:
+
+```powershell
+jikuo install --client vscode-copilot --trigger-mode ask
+```
+
+Review `.github/copilot-instructions.md` after guarded install. Copilot Agent
+mode should be asked to call `jikuo.get_runtime_status_card` first to verify the
+tool surface.
+
 ## Codex Desktop / Codex CLI
 
 Use the same stdio command and arguments when Codex exposes an MCP settings UI or CLI configuration surface:
@@ -93,6 +153,14 @@ cwd = "<PROJECT_ROOT>"
 ```
 
 Record the exact Codex configuration path or command in `JIKUO-MCP-01` when a stable shareable Codex configuration surface is identified.
+
+Instruction target:
+
+```powershell
+jikuo install --client codex --trigger-mode ask
+```
+
+Review `AGENTS.md` after guarded install.
 
 ## Stage A Smoke Checklist
 

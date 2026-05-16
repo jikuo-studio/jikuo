@@ -476,6 +476,45 @@ class AgentFlowProposalTests(unittest.TestCase):
         self.assertFalse((READY_PROJECT / ".jikuo" / "task_sessions").exists())
         self.assertFalse((READY_PROJECT / ".jikuo" / "policies").exists())
 
+    def test_conversation_turn_mounted_idle_tick_is_auditable(self):
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-B",
+                str(TOOL),
+                "propose",
+                "--event",
+                "conversation_turn",
+                "--trigger-mode",
+                "mounted",
+                "--user-phrase",
+                "thanks for the update",
+                "--project-root",
+                str(READY_PROJECT),
+                "--format",
+                "json",
+            ],
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        proposal = json.loads(completed.stdout)
+        router = proposal["conversation_router"]
+        self.assertEqual(router["trigger_mode"], "mounted")
+        self.assertEqual(router["router_status"], "ok")
+        self.assertEqual(
+            router["classified_obligations"][0]["kind"],
+            "mounted_idle_tick",
+        )
+        self.assertIn("mounted_idle_tick", proposal["chat_ready_markdown"])
+        self.assertFalse(proposal["write_effect"]["writes_performed"])
+        self.assertFalse((READY_PROJECT / ".jikuo" / "task_sessions").exists())
+        self.assertFalse((READY_PROJECT / ".jikuo" / "policies").exists())
+
     def test_conversation_turn_router_detects_policy_and_task_obligations(self):
         completed = subprocess.run(
             [

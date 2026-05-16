@@ -29,8 +29,10 @@ Create and maintain:
 - `jikuo install --client codex`: sync compatible content into `AGENTS.md`
 - `jikuo install --client claude-code`: sync compatible content into `CLAUDE.md`
 - `jikuo install --client cursor`: sync compatible content into `.cursorrules`
+- `jikuo install --client vscode-copilot`: sync compatible content into `.github/copilot-instructions.md`
 - `jikuo install --client continue`: sync compatible content into `.continuerules`
 - `jikuo install --all`: detect known client files and propose/sync supported instruction targets
+- `jikuo install --trigger-mode ask|semantic|mounted`: write the client-facing JIKUO activation mode into the managed instruction block
 
 ## 4. Required Instruction Content
 
@@ -41,6 +43,7 @@ The canonical instruction file must include:
 - Returned governance card markdown must be shown verbatim before commentary.
 - Runtime visibility files and `jikuo show` are user verification channels.
 - Guarded writes require explicit approval phrases and technical confirmation.
+- First-use activation settings must be visible: trigger mode, MCP availability, card display, runtime links, guarded-write approval boundary, starter policy initialization, and project-context bindings.
 
 ## 5. Out Of Scope
 
@@ -70,8 +73,10 @@ Implementation:
 - write mode requires `--write`, `--confirm-install`, and `--approval-phrase`.
 - generated files use managed blocks bounded by `# BEGIN JIKUO MANAGED INSTRUCTIONS` and `# END JIKUO MANAGED INSTRUCTIONS`, preserving unrelated existing content.
 - `--all` detects existing supported client instruction files and always includes canonical `JIKUO.md`.
+- generated instructions now include activation settings and can pin `ask`, `semantic`, or `mounted` trigger mode per client.
+- `vscode-copilot` is supported as a client target through `.github/copilot-instructions.md`.
 
 Verification:
 
-- `tests/instruction_files_tests.py` covers no-write planning, guarded write refusal, content-preserving sync, `--all` detection, and top-level CLI JSON output.
+- `tests/instruction_files_tests.py` covers no-write planning, guarded write refusal, content-preserving sync, trigger-mode managed-block content, VS Code Copilot target selection, `--all` detection, and top-level CLI JSON output.
 - This slice does not implement MCP, client hooks, plugins, dashboard UI, or Agent SDK runners.

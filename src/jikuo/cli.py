@@ -35,6 +35,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=[],
     )
     install.add_argument("--all", action="store_true")
+    install.add_argument(
+        "--trigger-mode",
+        choices=instruction_files.TRIGGER_MODE_CHOICES,
+        default="ask",
+        help="Instruction-file activation mode to write or preview.",
+    )
     install.add_argument("--write", action="store_true")
     install.add_argument("--confirm-install", action="store_true")
     install.add_argument("--approval-phrase", default=None)
@@ -61,6 +67,7 @@ def main(argv: list[str] | None = None) -> int:
             install_args.extend(["--client", client])
         if args.all:
             install_args.append("--all")
+        install_args.extend(["--trigger-mode", args.trigger_mode])
         if args.write:
             install_args.append("--write")
         if args.confirm_install:
