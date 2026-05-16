@@ -47,10 +47,12 @@ when to use them. Neither one alone is a strict mounted harness unless the
 client also has a pre-turn hook / plugin / SDK wrapper / Studio entry / local
 proxy.
 
-Use `jikuo settings` to persist the project default before generating client
-instructions:
+Use `jikuo configure` first when the user needs to understand the current
+setup state and meaning. Use `jikuo settings` to persist the project default
+before generating client instructions:
 
 ```powershell
+jikuo configure status
 jikuo settings plan --trigger-mode mounted --client claude-code
 jikuo settings apply --trigger-mode mounted --client claude-code --confirm-apply --approval-phrase "<exact user phrase>"
 ```

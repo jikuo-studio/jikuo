@@ -7,11 +7,11 @@ import sys
 from pathlib import Path
 
 if __package__:
-    from . import activation_settings, runtime_visibility
+    from . import activation_settings, configuration_review, runtime_visibility
     from .integrations import instruction_files
 else:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    from jikuo import activation_settings, runtime_visibility
+    from jikuo import activation_settings, configuration_review, runtime_visibility
     from jikuo.integrations import instruction_files
 
 
@@ -65,6 +65,13 @@ def build_parser() -> argparse.ArgumentParser:
     settings.add_argument("--confirm-apply", action="store_true")
     settings.add_argument("--approval-phrase", default=None)
     settings.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    configure = subparsers.add_parser(
+        "configure",
+        help="Review JIKUO first-use and ongoing configuration status.",
+    )
+    configure.add_argument("configure_command", choices=("status", "review"))
+    configure.add_argument("--project-root", type=Path, default=None)
+    configure.add_argument("--format", choices=("markdown", "json"), default="markdown")
     return parser
 
 
@@ -115,6 +122,12 @@ def main(argv: list[str] | None = None) -> int:
                 settings_args.extend(["--approval-phrase", args.approval_phrase])
         settings_args.extend(["--format", args.format])
         return activation_settings.main(settings_args)
+    if args.command == "configure":
+        configure_args = [args.configure_command]
+        if args.project_root is not None:
+            configure_args.extend(["--project-root", str(args.project_root)])
+        configure_args.extend(["--format", args.format])
+        return configuration_review.main(configure_args)
     parser.error(f"unsupported command: {args.command}")
     return 2
 

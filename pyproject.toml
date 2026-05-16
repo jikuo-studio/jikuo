@@ -19,6 +19,7 @@ dev = ["pytest>=8"]
 jikuo = "jikuo.cli:main"
 jikuo-activation-settings = "jikuo.activation_settings:main"
 jikuo-agent-flow = "jikuo.agent_flow:main"
+jikuo-configuration-review = "jikuo.configuration_review:main"
 jikuo-mcp = "jikuo.integrations.mcp.server:main"
 jikuo-policy-store = "jikuo.policy_store:main"
 jikuo-policy-templates = "jikuo.policy_templates:main"

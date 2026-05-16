@@ -17,6 +17,7 @@ from typing import Any
 if __package__:
     from . import (
         activation_settings,
+        configuration_review,
         policy_store,
         policy_templates,
         project_state,
@@ -28,6 +29,7 @@ if __package__:
 else:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     import activation_settings
+    import configuration_review
     import policy_templates
     import project_state
     import policy_store
@@ -57,6 +59,7 @@ TRIGGER_MODES = {"mounted", "semantic"}
 CARD_PRIORITY_ORDER = [
     "policy_runtime_status",
     "conversation_turn_router",
+    "configuration_review",
     "policy_suggestion_review",
     "task_session_completion_acceptance",
     "task_session_start_preview",
@@ -107,6 +110,11 @@ EVENT_ALIASES = {
     "conversation": "conversation_turn",
     "conversation_turn": "conversation_turn",
     "route_user_request": "conversation_turn",
+    "configuration_review": "configuration_review",
+    "configure": "configuration_review",
+    "configure_status": "configuration_review",
+    "init_review": "configuration_review",
+    "setup_review": "configuration_review",
     "status": "project_status",
     "project_status": "project_status",
     "start": "task_start",
@@ -172,6 +180,7 @@ NO_WRITE_ATOMS = {
     "CAP-POLICY-TEMPLATE-IMPORT-PLAN-01",
     "CAP-AGENT-FLOW-POLICY-TEMPLATE-IMPORT-PLAN-01",
     "CAP-CONVERSATION-TURN-ROUTER-01",
+    "CAP-CONFIGURATION-REVIEW-01",
     "CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01",
 }
 
@@ -1087,6 +1096,27 @@ def classify_conversation_turn(
 
     text = input_text.lower()
     obligation_specs = [
+        (
+            "configuration_review",
+            {
+                "keywords": {
+                    "activation",
+                    "configure",
+                    "configuration",
+                    "init",
+                    "initialize",
+                    "onboarding",
+                    "semantic",
+                    "setup",
+                    "settings",
+                    "trigger mode",
+                    "mounted",
+                },
+                "reason": "user turn appears to request JIKUO setup or activation configuration review",
+                "target_event": "configuration_review",
+                "tool": "python -B -m jikuo.agent_flow propose --event configuration_review",
+            },
+        ),
         (
             "task_start",
             {
@@ -2611,6 +2641,49 @@ def build_audit_cards() -> tuple[list[dict[str, Any]], list[dict[str, Any]], lis
     return [card], traces, []
 
 
+def build_configuration_review_cards(
+    *, project_root: Path | None
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]:
+    review = configuration_review.build_configuration_review(project_root=project_root)
+    summary = review.get("summary") or {}
+    shown_outputs = [
+        f"configuration_status: {review.get('status')}",
+        f"ok_count: {summary.get('ok_count')}",
+        f"review_count: {summary.get('review_count')}",
+        f"blocked_count: {summary.get('blocked_count')}",
+    ]
+    for entry in review.get("items") or []:
+        shown_outputs.append(
+            f"{entry.get('key')}: {entry.get('status')} - {entry.get('current')}"
+        )
+    card = generic_card(
+        card_kind="configuration_review",
+        status=str(review.get("status") or "review"),
+        title="JIKUO configuration review",
+        summary=(
+            "JIKUO checked first-use and ongoing configuration state without "
+            "performing durable writes."
+        ),
+        shown_inputs=[
+            f"project_root: {review.get('project_root')}",
+            "review_scope: activation, instructions, runtime, MCP, project context, starter policies, guarded writes",
+        ],
+        shown_outputs=shown_outputs,
+        next_actions=review.get("next_actions") or [],
+    )
+    card["configuration_review"] = review
+    traces = [
+        atom_trace(
+            loop_step_id="DPL-05",
+            atom_id="CAP-CONFIGURATION-REVIEW-01",
+            mode="no-write",
+            status=str(review.get("status") or "review"),
+            summary="aggregated first-use JIKUO configuration state for user review",
+        )
+    ]
+    return [card], traces, []
+
+
 def build_proposal(
     *,
     raw_event: str,
@@ -2690,6 +2763,10 @@ def build_proposal(
             user_phrase=user_phrase,
             task_title=task_title,
             summary=summary,
+            project_root=project_root,
+        )
+    elif event == "configuration_review":
+        cards, traces, refusals = build_configuration_review_cards(
             project_root=project_root,
         )
     elif event == "task_start":
