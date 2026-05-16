@@ -88,10 +88,10 @@ entries:
     classification: "promoted_to_policy"
     status: "resolved"
     file: "docs/insights/INSIGHT-2026-05-16-proactive-policy-suggestion-metapolicy.md"
-    related_policy_ref: ".jikuo/policies/approved/POLICY-jikuo-proactive-policy-suggestion-metapolicy.yaml"
+    related_policy_ref: ".jikuo/policies/approved/POLICY-jikuo-conversation-level-proactive-policy-suggestion.yaml"
     related_task_refs:
       - "CAP-JIKUO-TRIGGER-MODE-01"
       - "CAP-CONVERSATION-TURN-ROUTER-01"
       - "CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01"
       - "CAP-PROGRESS-SUMMARY-BUSINESS-MEANING-POLICY-01"
-    summary: "Repeated user needs, corrections, or preferences should be surfaced as explicit policy candidates for user review instead of remaining implicit chat behavior or being auto-written without approval; the first active metapolicy is task-start-only and the product mechanism still requires conversation-turn routing."
+    summary: "Repeated user needs, corrections, or preferences should be surfaced as explicit policy candidates for user review instead of remaining implicit chat behavior or being auto-written without approval; the active report-only policy now triggers on conversation_turn and still needs proactive policy-suggestion review evidence implementation."

@@ -2,7 +2,7 @@
 
 > **Classification**: promoted_to_policy
 > **Status**: resolved
-> **Related policy**: `.jikuo/policies/approved/POLICY-jikuo-proactive-policy-suggestion-metapolicy.yaml`
+> **Related policy**: `.jikuo/policies/approved/POLICY-jikuo-conversation-level-proactive-policy-suggestion.yaml`
 
 ## Observation
 
@@ -74,13 +74,18 @@ avoid only reporting implementation mechanics.
 
 ## Routing Decision
 
-This insight has been promoted into an active report-only self-bootstrap policy:
+This insight was first promoted into an active report-only self-bootstrap policy:
 
 - `POLICY-jikuo-proactive-policy-suggestion-metapolicy`
 
-The current policy is intentionally report-only. It makes the review obligation
-visible at task start, but it does not implement automatic session mining,
-background polling, or policy activation.
+That first policy made the review obligation visible at task start. It was later
+superseded by:
+
+- `POLICY-jikuo-conversation-level-proactive-policy-suggestion`
+
+The current policy is intentionally report-only and now triggers on
+`conversation_turn`. It does not implement automatic session mining, background
+polling, or policy activation.
 
 Future product work may add a structured policy-suggestion feature, but that is
 separate from this policy activation.
@@ -107,7 +112,8 @@ phrasing." It should introduce a conversation-level routing layer:
 - policy-suggestion review: creates compact evidence and reviewable policy
   candidates without storing raw chat transcripts
 
-The current active policy should be revised or superseded only after the
-conversation-turn event and router contract exist. Until then, it should be
-reported honestly as an accepted governance principle with a narrow trigger,
-not as the completed product mechanism.
+The conversation-turn event and router contract now exist, and the task-start
+policy has been superseded by a conversation-level policy. The remaining product
+gap is `CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01`: every triggered
+conversation-turn check still needs compact review evidence and candidate cards
+instead of relying on final prose.

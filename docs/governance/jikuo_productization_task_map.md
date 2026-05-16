@@ -2674,8 +2674,8 @@ Open items:
 
 1. Submit the current proactive policy-suggestion metapolicy, insight, execution-mount, and taskmap updates as a separate governed documentation / policy slice.
 2. Review / accept the implemented `CAP-CONVERSATION-TURN-ROUTER-01` core no-write router; current CLI entry is `python -B -m jikuo.agent_flow propose --event conversation_turn --user-phrase ...`.
-3. Revise `POLICY-jikuo-proactive-policy-suggestion-metapolicy` positioning: the first active version is task-start-only and therefore useful as a report-only carrier, but insufficient for the user's stated need that policy extraction can arise during any user interaction. Now that router behavior and replacement-trigger pass-through exist, the next policy slice can propose a conversation-level supersession.
-4. Implement `CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01` so repeated user needs, corrections, and preferences produce compact `proactive_policy_suggestion_review_evidence` plus reviewable candidate cards without raw transcript capture.
+3. Accepted policy update: `POLICY-jikuo-proactive-policy-suggestion-metapolicy` is superseded by `POLICY-jikuo-conversation-level-proactive-policy-suggestion`, which triggers on `conversation_turn`.
+4. Implement `CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01` so repeated user needs, corrections, and preferences produce compact `proactive_policy_suggestion_review_evidence` plus reviewable candidate cards without raw transcript capture. This is now the direct blocker for clearing conversation-turn missing evidence.
 5. Propose and, only after approval, activate `POLICY-jikuo-progress-summary-business-meaning`, requiring progress / todo / acceptance summaries to include product or business meaning for major items.
 6. Add MCP router surfaces after the core router is accepted: `jikuo.route_user_request` and `jikuo.propose_policy_suggestions` belong in a follow-on MCP slice, not the already accepted MVP body.
 7. Update universal instruction distribution so semantic-mode clients are told to call the router first when a turn may carry JIKUO obligations; mounted-harness behavior remains an explicit opt-in.

@@ -1,0 +1,18 @@
+schema_version: "jikuo.policy_decision.v0"
+decision_id: "POLICYDECISION-d1c874a565"
+proposal_ref: ".jikuo/policies/proposals/POLICYEVOPROPOSAL-d95092446e.yaml"
+policy_ref: "POLICY-jikuo-proactive-policy-suggestion-metapolicy"
+decision: "supersede"
+target:
+  kind: "approved_policy_supersession"
+  ref: "POLICY-jikuo-proactive-policy-suggestion-metapolicy"
+  replacement_ref: "POLICY-jikuo-conversation-level-proactive-policy-suggestion"
+effect: "supersede_policy POLICY-jikuo-proactive-policy-suggestion-metapolicy and update policy-store manifest lifecycle refs"
+non_effect: "does not execute policy actions, persist evidence, or promote gates"
+approval_phrase: "好的，请继续"
+created_at: "2026-05-16T04:58:40Z"
+source_plan_ref: "POLICYEVO-def241fdb9"
+source_plan_schema: "jikuo.policy_evolution_plan.v0"
+storage:
+  path: ".jikuo/policies/decisions/POLICYDECISION-d1c874a565.yaml"
+  policy_store_ref: ".jikuo/policies"

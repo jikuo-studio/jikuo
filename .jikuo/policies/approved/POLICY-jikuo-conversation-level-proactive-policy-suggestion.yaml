@@ -1,0 +1,31 @@
+schema_version: "jikuo.configurable_rule_policy.v0"
+policy_id: "POLICY-jikuo-conversation-level-proactive-policy-suggestion"
+version: 1
+status: "active_report_only"
+title: "Conversation-level proactive policy suggestion from user interaction patterns"
+scenario_package: "engineering_governance"
+source_refs:
+  - type: "policy_supersession"
+    ref: "<exact user phrase as spoken>"
+triggers:
+  - trigger_id: "TRG-conversation-turn"
+    type: "task_lifecycle_event"
+    event: "conversation_turn"
+conditions:
+  []
+required_actions:
+  - action_id: "ACT-review-repeated-user-interaction-patterns-for-policy-candidates"
+    type: "review_repeated_user_interaction_patterns_for_policy_candidates"
+required_evidence:
+  - evidence_id: "EVD-proactive-policy-suggestion-review-evidence"
+    type: "proactive_policy_suggestion_review_evidence"
+    satisfies_action: "ACT-review-repeated-user-interaction-patterns-for-policy-candidates"
+enforcement:
+  phase: "report_only"
+  level: "review_required"
+revision:
+  version: 1
+  supersedes:
+    - policy_id: "POLICY-jikuo-proactive-policy-suggestion-metapolicy"
+      version: 1
+  superseded_by: null

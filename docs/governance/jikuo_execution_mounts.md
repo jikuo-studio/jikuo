@@ -532,8 +532,8 @@ Plugin:
 
 Current next task:
 
-- current dependency update: promote the conversation-level policy extraction discussion into taskmap / insight / execution-mount records, then submit that governed slice
-- after that commit, keep the proactive policy-suggestion metapolicy honest as a task-start-only evidence hook; a no-write supersession plan can target `conversation_turn`, but guarded apply is blocked until router behavior exists
+- current dependency update: `POLICY-jikuo-proactive-policy-suggestion-metapolicy` has been superseded by `POLICY-jikuo-conversation-level-proactive-policy-suggestion`; the active policy now triggers on `conversation_turn`
+- next dependency: implement proactive policy-suggestion review evidence so conversation-turn policy checks produce compact review evidence instead of remaining visibly missing
 - next implementation: build the no-write `conversation_turn` router from accepted `JIKUO-ROUTER-01` before adding mounted-harness adapters
 - accepted `JIKUO-LIVE-12` Phase 1 out-of-band runtime visibility
 - accepted `JIKUO-LIVE-14` completion review policy-only surfacing
@@ -579,8 +579,8 @@ Accepted target for the current pre-MCP visibility review:
 - policy evolution proposal/apply surfaces now preserve non-default replacement triggers through `--replacement-trigger-event`, so a reviewed supersession can target `conversation_turn` without silently falling back to `task_start`
 - dashboard / Studio UI, OS notifications, per-client hook packs, rollback, broader conditions, UI, Plugin, and gates remain deferred; current MCP visibility relies on card markdown plus runtime card links
 - `INSIGHT-2026-05-16-studio-dashboard-frontend-architecture` records the current frontend architecture posture for future `JIKUO-STUDIO-01`: projection-first view models, panel registration, guarded action registration, and canonical `.jikuo/` state remain the change-friendly boundary
-- `POLICY-jikuo-proactive-policy-suggestion-metapolicy` is active report-only: repeated user needs, corrections, or preferences should be reviewed as policy candidates before they remain hidden chat behavior; automatic policy mining and activation remain deferred.
-- current limitation: that policy is task-start-only, so it is not yet sufficient for the user's intended conversation-level policy extraction. Now that `conversation_turn` core router support exists, the next policy slice should supersede / revise it to the conversation level after review.
+- `POLICY-jikuo-conversation-level-proactive-policy-suggestion` is active report-only: repeated user needs, corrections, or preferences should be reviewed as policy candidates at `conversation_turn` before they remain hidden chat behavior; automatic policy mining and activation remain deferred.
+- current limitation: the policy now triggers at the correct conversation level, but `CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01` is still unimplemented, so missing `proactive_policy_suggestion_review_evidence` is expected until that review proposal path exists.
 
 Accepted result:
 

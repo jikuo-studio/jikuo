@@ -1,0 +1,101 @@
+schema: "jikuo.policy_evolution_plan.v0"
+schema_version: "jikuo.policy_evolution_plan.v0"
+report_only: true
+plan_id: "POLICYEVO-def241fdb9"
+operation: "supersede_policy"
+status: "review"
+proposal_ref: ".jikuo/policies/proposals/POLICYEVOPROPOSAL-d95092446e.yaml"
+decision_record_ref: ".jikuo/policies/decisions/POLICYDECISION-d1c874a565.yaml"
+project_root: "D:\\personal_project\\Jikuo"
+policy_store_status: "active"
+target_policy_ref: "POLICY-jikuo-proactive-policy-suggestion-metapolicy"
+target_policy_snapshot:
+  policy_id: "POLICY-jikuo-proactive-policy-suggestion-metapolicy"
+  version: 1
+  path: ".jikuo/policies/approved/POLICY-jikuo-proactive-policy-suggestion-metapolicy.yaml"
+  title: "Proactive policy suggestion from repeated user interaction patterns"
+  status: "active_report_only"
+replacement_policy_ref: "POLICY-jikuo-conversation-level-proactive-policy-suggestion"
+replacement_policy_path: ".jikuo/policies/approved/POLICY-jikuo-conversation-level-proactive-policy-suggestion.yaml"
+replacement_policy:
+  schema_version: "jikuo.configurable_rule_policy.v0"
+  policy_id: "POLICY-jikuo-conversation-level-proactive-policy-suggestion"
+  version: 1
+  status: "active_report_only"
+  title: "Conversation-level proactive policy suggestion from user interaction patterns"
+  scenario_package: "engineering_governance"
+  source_refs:
+    - type: "policy_supersession"
+      ref: "<exact user phrase as spoken>"
+  triggers:
+    - trigger_id: "TRG-conversation-turn"
+      type: "task_lifecycle_event"
+      event: "conversation_turn"
+  conditions:
+    []
+  required_actions:
+    - action_id: "ACT-review-repeated-user-interaction-patterns-for-policy-candidates"
+      type: "review_repeated_user_interaction_patterns_for_policy_candidates"
+  required_evidence:
+    - evidence_id: "EVD-proactive-policy-suggestion-review-evidence"
+      type: "proactive_policy_suggestion_review_evidence"
+      satisfies_action: "ACT-review-repeated-user-interaction-patterns-for-policy-candidates"
+  enforcement:
+    phase: "report_only"
+    level: "review_required"
+  revision:
+    version: 1
+    supersedes:
+      - policy_id: "POLICY-jikuo-proactive-policy-suggestion-metapolicy"
+        version: 1
+    superseded_by: null
+write_set:
+  - path: ".jikuo/policies/proposals/POLICYEVOPROPOSAL-d95092446e.yaml"
+    effect: "create policy evolution proposal snapshot"
+    operation: "create"
+  - path: ".jikuo/policies/approved/POLICY-jikuo-conversation-level-proactive-policy-suggestion.yaml"
+    effect: "create replacement approved policy file"
+    operation: "create"
+  - path: ".jikuo/policies/decisions/POLICYDECISION-d1c874a565.yaml"
+    effect: "create policy evolution decision record"
+    operation: "create"
+  - path: ".jikuo/policies/manifest.yaml"
+    effect: "update policy-store manifest lifecycle refs"
+    operation: "update"
+preflight:
+  replacement_policy_collision: false
+feedback:
+  feedback_type: null
+  summary: "Supersede the current task-start-only proactive policy-suggestion metapolicy with a conversation_turn-triggered policy now that the core no-write conversation_turn router exists."
+  source_ref: "<exact user phrase as spoken>"
+recommended_changes:
+  - "name the replacement policy and the policy/version it supersedes"
+  - "review the guarded supersession write command before approval"
+  - "keep the superseded policy available for audit instead of overwriting it"
+future_write_boundary:
+  requires_new_proposal: true
+  requires_decision_record: true
+  requires_guarded_writer: true
+  writer_implemented: true
+non_effects:
+  - "does not write policy files"
+  - "does not update manifest.yaml"
+  - "does not deprecate or supersede active policies"
+  - "does not execute policy actions"
+  - "does not promote gates"
+write_allowed_by_command: false
+writes_performed: false
+guarded_apply_available: false
+refusal_reasons:
+  []
+warnings:
+  []
+source_refs:
+  - "pkg://jikuo/governance/jikuo_policy_store_configuration_flow.md"
+  - "pkg://jikuo/governance/jikuo_configurable_rule_trigger_policy.md"
+  - "pkg://jikuo/governance/jikuo_rule_action_evidence_model.md"
+  - "pkg://jikuo/governance/jikuo_policy_aware_agent_flow_contract.md"
+status_reason: "policy evolution plan is ready for desktop review; no durable write was performed"
+next_actions:
+  - "review the proposed policy evolution path in chat"
+  - "if accepted, approve the generated guarded evolution write command"

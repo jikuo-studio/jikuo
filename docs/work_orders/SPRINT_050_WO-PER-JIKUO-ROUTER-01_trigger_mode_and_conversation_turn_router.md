@@ -151,21 +151,22 @@ It must not:
 
 ## 6. Current Proactive Metapolicy Position
 
-`POLICY-jikuo-proactive-policy-suggestion-metapolicy` is accepted as an active
-report-only governance principle, but its current `task_start` trigger is too
+`POLICY-jikuo-proactive-policy-suggestion-metapolicy` was accepted as the first
+active report-only governance carrier, but its `task_start` trigger was too
 narrow.
 
-The router contract and no-write path now exist. The current policy remains
-task-start-only until a separate supersession slice updates it to the
-conversation level with user approval.
+It has now been superseded by
+`POLICY-jikuo-conversation-level-proactive-policy-suggestion`, which triggers on
+`conversation_turn`.
 
-Interim rule:
+Current rule:
 
-- keep the current policy active and honest as a narrow evidence hook
-- use runtime cards and taskmap docs to show that the product mechanism remains
-  planned, not complete
-- next, supersede with a conversation-level policy through a reviewed
-  policy-evolution plan
+- keep the conversation-level policy active and report-only
+- show missing `proactive_policy_suggestion_review_evidence` honestly until the
+  review proposal feature exists
+- implement `CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01` next so every
+  `conversation_turn` can produce compact review evidence instead of remaining a
+  visible missing-evidence state
 
 ## 7. Scenario-Chain-Atom Registration Evidence
 
@@ -198,8 +199,6 @@ Interim rule:
 
 Remaining follow-on work:
 
-- revise / supersede `POLICY-jikuo-proactive-policy-suggestion-metapolicy` so it
-  can trigger on `conversation_turn`
 - implement `CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01`
 - add MCP router surfaces after the core router is accepted
 - add mounted harness adapters after MCP / SDK / Studio integration posture is
