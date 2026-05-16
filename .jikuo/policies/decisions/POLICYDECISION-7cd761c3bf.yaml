@@ -1,0 +1,17 @@
+schema_version: "jikuo.policy_decision.v0"
+decision_id: "POLICYDECISION-7cd761c3bf"
+proposal_ref: ".jikuo/policies/proposals/POLICYPROPOSAL-7ea4a368ac.yaml"
+policy_ref: "POLICY-jikuo-progress-summary-business-meaning"
+decision: "approve_write"
+target:
+  kind: "approved_policy"
+  ref: "POLICY-jikuo-progress-summary-business-meaning"
+effect: "append_policy POLICY-jikuo-progress-summary-business-meaning and update policy-store manifest active refs"
+non_effect: "does not execute policy actions, persist evidence, or promote gates"
+approval_phrase: "是的，上述任务均被接受，请按照顺序执行，应该到补齐客户端 proof有需要我手动工作的地方了，你可以停下来"
+created_at: "2026-05-16T08:09:22Z"
+source_plan_ref: "POLICYWRITEPLAN-d048573754"
+source_plan_schema: "jikuo.policy_write_plan.v0"
+storage:
+  path: ".jikuo/policies/decisions/POLICYDECISION-7cd761c3bf.yaml"
+  policy_store_ref: ".jikuo/policies"

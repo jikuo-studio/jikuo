@@ -1,0 +1,25 @@
+schema_version: "jikuo.configurable_rule_policy.v0"
+policy_id: "POLICY-jikuo-progress-summary-business-meaning"
+version: 1
+status: "active_report_only"
+title: "Progress and todo summaries include business meaning"
+scenario_package: "engineering_governance"
+source_refs:
+  - type: "user_natural_language"
+    ref: "user_repeated_need_progress_todo_business_meaning"
+triggers:
+  - trigger_id: "TRG-completion-review"
+    type: "task_lifecycle_event"
+    event: "completion_review"
+conditions:
+  []
+required_actions:
+  - action_id: "ACT-include-business-meaning-in-progress-todo-summary"
+    type: "include_business_meaning_in_progress_todo_summary"
+required_evidence:
+  - evidence_id: "EVD-progress-summary-business-meaning-evidence"
+    type: "progress_summary_business_meaning_evidence"
+    satisfies_action: "ACT-include-business-meaning-in-progress-todo-summary"
+enforcement:
+  phase: "report_only"
+  level: "review_required"

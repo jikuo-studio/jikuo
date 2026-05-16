@@ -210,6 +210,28 @@ For the current surface, tool discovery should list exactly 17 tools:
 If a GUI client shows fewer tools after updating JIKUO, start a new client
 session or restart the desktop application so it respawns the MCP server.
 
+## Client Proof Artifacts
+
+For each GUI client proof, keep enough evidence for a later user to trust the
+compatibility claim without reading source code:
+
+1. Client name, version if visible, date, OS, and JIKUO commit hash.
+2. The exact MCP server configuration path or GUI settings screen used.
+3. The Python executable path used to launch `jikuo.integrations.mcp.server`.
+4. A tool-discovery result showing exactly the current 17 tools.
+5. One no-write card call, preferably `jikuo.get_runtime_status_card`, with the
+   card displayed in the client.
+6. One router call, preferably `jikuo.route_user_request` with a setup/settings
+   phrase, showing follow-up tool suggestions.
+7. A runtime visibility check: `.jikuo/runtime/last_card.md` or
+   `jikuo show --last-card` matches the latest card.
+8. A note on whether the client can support strict pre-turn mounted execution,
+   or only MCP + instruction-guided semantic execution for now.
+
+Store durable proof notes under `docs/integrations/` when a client is accepted.
+Keep screenshots or temporary smoke scripts under ignored local paths unless the
+user explicitly approves adding them.
+
 ## Configuration Status Smoke Checklist
 
 For `jikuo.get_configuration_status`, `jikuo.get_activation_settings`,

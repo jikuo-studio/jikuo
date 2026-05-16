@@ -61,6 +61,10 @@ document_roles:
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-INTG-02_client_onboarding_settings_and_trigger_mode.md"
     required: true
     note: "Client activation settings, trigger-mode selection, and strict mounted-vs-semantic onboarding contract."
+  strict_mounted_harness_adapter_work_order:
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-INTG-03_strict_mounted_harness_adapter_contract.md"
+    required: true
+    note: "Contract for host adapters that turn mounted mode from instruction-only behavior into pre-turn JIKUO execution."
   trigger_mode_conversation_router_work_order:
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-ROUTER-01_trigger_mode_and_conversation_turn_router.md"
     required: true

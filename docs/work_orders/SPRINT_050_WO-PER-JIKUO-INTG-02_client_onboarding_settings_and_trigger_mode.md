@@ -99,5 +99,10 @@ follow-up action is required.
 - MCP router surfaces are now implemented: `jikuo.route_user_request` and
   `jikuo.propose_policy_suggestions`.
 - MCP activation settings tools are now implemented: `jikuo.get_activation_settings`, `jikuo.plan_activation_settings_update`, and guarded `jikuo.apply_activation_settings_update`.
-- Implement the first strict mounted adapter, likely Claude Code `UserPromptSubmit`, after user approval.
+- Strict mounted adapter boundaries are recorded in
+  `SPRINT_050_WO-PER-JIKUO-INTG-03_strict_mounted_harness_adapter_contract.md`.
+- Complete client proof for Codex, Claude Code GUI, Cursor, and VS Code +
+  GitHub Copilot Agent mode before choosing the first strict adapter host.
+- Implement the first strict mounted adapter after client proof and explicit
+  user approval.
 - Update client proof docs as each client is verified.
