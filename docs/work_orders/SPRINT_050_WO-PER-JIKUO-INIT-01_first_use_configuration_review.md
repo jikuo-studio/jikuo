@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-INIT-01: First-use Configuration Review
 
-> **Status**: Core no-write review implemented; MCP read-only configuration status tool implemented; strict client adapters remain planned.
+> **Status**: Core no-write review implemented; MCP read-only configuration status and activation settings read / plan tools implemented; guarded apply and strict client adapters remain planned.
 > **Product meaning**: when a user first enables JIKUO, the user should see the key initialization settings, what each one means, and what can be changed before governed work continues.
 > **Boundary**: this slice aggregates and explains existing state; it does not write activation settings, instruction files, starter policies, project context, or client MCP config.
 
@@ -63,9 +63,9 @@ The review currently emits one item per setup concern:
 ## 4. Remaining Work
 
 - add no-write configuration update planning through MCP.
-- add no-write configuration update planning through MCP.
-- add guarded configuration update apply through MCP, reusing activation settings
-  and instruction install writers rather than adding hidden writes.
+- add guarded configuration update apply through MCP after explicit user
+  approval, reusing activation settings and instruction install writers rather
+  than adding hidden writes.
 - improve natural-language routing for non-English setup phrases after the
   router encoding posture is cleaned up.
 - make future Studio / dashboard consume this same review object instead of
@@ -78,6 +78,9 @@ The review currently emits one item per setup concern:
   `configuration_review` card and `CAP-CONFIGURATION-REVIEW-01` atom trace.
 - MCP `jikuo.get_configuration_status` returns `configuration_review.schema =
   jikuo.configuration_review.v0` and display-ready card markdown.
+- MCP `jikuo.get_activation_settings` and
+  `jikuo.plan_activation_settings_update` return activation settings status /
+  plan shapes and do not write `.jikuo/activation_settings.yaml`.
 - conversation-turn routing can classify setup/settings language as a
   configuration-review obligation.
 - no `.jikuo/**` durable governance state is written by the review itself.

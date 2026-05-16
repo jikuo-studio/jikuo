@@ -46,7 +46,11 @@ STAGE_B1_TOOL_NAMES = ("jikuo.apply_task_session_evidence_update",)
 STAGE_B2_TOOL_NAMES = ("jikuo.apply_policy_evolution_write",)
 STAGE_B3_TOOL_NAMES = ("jikuo.apply_policy_template_activation",)
 
-CONFIGURATION_TOOL_NAMES = ("jikuo.get_configuration_status",)
+CONFIGURATION_TOOL_NAMES = (
+    "jikuo.get_configuration_status",
+    "jikuo.get_activation_settings",
+    "jikuo.plan_activation_settings_update",
+)
 
 EXPOSED_TOOL_NAMES = (
     STAGE_A_TOOL_NAMES
@@ -201,6 +205,34 @@ TOOL_DEFINITIONS: dict[str, dict[str, Any]] = {
             "configuration_status": RETURN,
             "configuration_review": RETURN,
         },
+        card_returning=True,
+        stage="C1",
+        write_mode="no-write",
+    ),
+    "jikuo.get_activation_settings": _tool(
+        name="jikuo.get_activation_settings",
+        description=(
+            "Return current project activation settings status without writing files."
+        ),
+        input_fields={"project_root": LOCAL_ONLY},
+        output_fields={"activation_settings": RETURN},
+        card_returning=True,
+        stage="C1",
+        write_mode="no-write",
+    ),
+    "jikuo.plan_activation_settings_update": _tool(
+        name="jikuo.plan_activation_settings_update",
+        description=(
+            "Build a no-write activation settings update plan for user review. "
+            "This does not write .jikuo/activation_settings.yaml."
+        ),
+        input_fields={
+            "project_root": LOCAL_ONLY,
+            "trigger_mode": RETURN,
+            "effective_enforcement_level": RETURN,
+            "clients": RETURN,
+        },
+        output_fields={"activation_settings_plan": RETURN},
         card_returning=True,
         stage="C1",
         write_mode="no-write",

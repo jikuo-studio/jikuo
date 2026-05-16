@@ -112,6 +112,8 @@ class MCPServerWrapperTests(unittest.TestCase):
         self.assertEqual(fake.name, server.SERVER_NAME)
         self.assertEqual(list(fake.tools), list(schemas.EXPOSED_TOOL_NAMES))
         self.assertIn("jikuo.get_configuration_status", fake.tools)
+        self.assertIn("jikuo.get_activation_settings", fake.tools)
+        self.assertIn("jikuo.plan_activation_settings_update", fake.tools)
         self.assertIn("jikuo.apply_task_session_evidence_update", fake.tools)
         self.assertIn("jikuo.apply_policy_evolution_write", fake.tools)
         self.assertIn("jikuo.apply_policy_template_activation", fake.tools)
@@ -159,7 +161,35 @@ class MCPServerWrapperTests(unittest.TestCase):
                 response["configuration_review"]["schema"],
                 "jikuo.configuration_review.v0",
             )
-            self.assertIn("card_markdown", response)
+        self.assertIn("card_markdown", response)
+
+    def test_activation_settings_registered_tools_delegate_adapter(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            fake = server.create_server(fastmcp_cls=FakeFastMCP)
+
+            status_response = fake.tools["jikuo.get_activation_settings"]["function"](
+                project_root=str(project_root),
+            )
+            plan_response = fake.tools[
+                "jikuo.plan_activation_settings_update"
+            ]["function"](
+                project_root=str(project_root),
+                trigger_mode="semantic",
+                effective_enforcement_level="instruction_only",
+                clients=["codex"],
+            )
+
+            self.assertEqual(
+                status_response["activation_settings"]["schema"],
+                "jikuo.activation_settings_status.v0",
+            )
+            self.assertEqual(
+                plan_response["activation_settings_plan"]["schema"],
+                "jikuo.activation_settings_plan.v0",
+            )
+            self.assertFalse((project_root / ".jikuo" / "activation_settings.yaml").exists())
 
     def test_stage_b1_registered_tool_delegates_guarded_apply(self):
         with tempfile.TemporaryDirectory() as tmp:

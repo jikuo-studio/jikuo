@@ -264,6 +264,42 @@ def register_configuration_tools(
             default_transport=default_transport,
         )
 
+    @server.tool(
+        name="jikuo.get_activation_settings",
+        description=tool_description(tool_definitions["jikuo.get_activation_settings"]),
+    )
+    def jikuo_get_activation_settings(
+        project_root: str | None = None,
+    ) -> dict[str, Any]:
+        return _call(
+            "jikuo.get_activation_settings",
+            {"project_root": project_root},
+            default_transport=default_transport,
+        )
+
+    @server.tool(
+        name="jikuo.plan_activation_settings_update",
+        description=tool_description(
+            tool_definitions["jikuo.plan_activation_settings_update"]
+        ),
+    )
+    def jikuo_plan_activation_settings_update(
+        project_root: str | None = None,
+        trigger_mode: str | None = None,
+        effective_enforcement_level: str | None = None,
+        clients: list[str] | None = None,
+    ) -> dict[str, Any]:
+        return _call(
+            "jikuo.plan_activation_settings_update",
+            {
+                "project_root": project_root,
+                "trigger_mode": trigger_mode,
+                "effective_enforcement_level": effective_enforcement_level,
+                "clients": clients or [],
+            },
+            default_transport=default_transport,
+        )
+
     return server
 
 

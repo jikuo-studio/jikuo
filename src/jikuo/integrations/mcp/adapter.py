@@ -6,7 +6,7 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
-from ... import agent_flow, policy_store, runtime_visibility
+from ... import activation_settings, agent_flow, policy_store, runtime_visibility
 from . import schemas
 
 
@@ -111,6 +111,14 @@ def _bool_arg(value: Any) -> bool:
     if value is None:
         return False
     return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _string_list_arg(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, (list, tuple)):
+        return [str(item) for item in value if item is not None]
+    return [str(value)]
 
 
 def _runtime_report_from(data: dict[str, Any]) -> dict[str, Any]:
@@ -326,6 +334,59 @@ def _runtime_status_card_response(
         chat_ready_markdown=card_markdown,
         runtime_report=runtime_report,
     )
+
+
+def _activation_settings_card_response(
+    *,
+    tool_name: str,
+    report: dict[str, Any],
+    project_root: Path | None,
+    transport: str,
+    output_key: str,
+) -> dict[str, Any]:
+    markdown = activation_settings.format_report(report)
+    projection = {
+        "schema": "jikuo.mcp_activation_settings_projection.v0",
+        "proposal_id": tool_name.replace(".", "_"),
+        "runner_mode": "mcp",
+        "status": report.get("status"),
+        "cards": [],
+        "write_effect": {
+            "writes_performed": False,
+            "write_allowed_by_command": False,
+            "non_effects": [
+                "does not create .jikuo/activation_settings.yaml",
+                "does not create .jikuo/policies/",
+                "does not create .jikuo/task_sessions/",
+                "does not update .jikuo/project_state.yaml",
+            ],
+        },
+    }
+    runtime_report = runtime_visibility.persist_agent_flow_snapshot(
+        project_root=project_root,
+        proposal=projection,
+        card_markdown=markdown,
+    )
+    projection["runtime_visibility"] = runtime_report
+    projection["client_display_links"] = runtime_visibility.build_client_display_links(
+        runtime_report
+    )
+    response = _base_response(
+        tool_name=tool_name,
+        status=str(report.get("status") or "review"),
+        data_details=projection,
+        project_root=project_root,
+        transport=transport,
+        card_markdown=markdown,
+        chat_ready_markdown=markdown,
+        runtime_report=runtime_report,
+    )
+    response[output_key] = _sanitize_for_transport(
+        _redact_required_fields(report),
+        project_root=project_root,
+        transport=transport,
+    )
+    return response
 
 
 def _apply_task_session_evidence_update_response(
@@ -739,6 +800,35 @@ def call_tool(
             response["configuration_status"] = review.get("status")
             response["configuration_review"] = review
         return response
+
+    if tool_name == "jikuo.get_activation_settings":
+        report = activation_settings.build_status_report(project_root=resolved_root)
+        root = Path(str(report["project_root"]))
+        return _activation_settings_card_response(
+            tool_name=tool_name,
+            report=report,
+            project_root=root,
+            transport=resolved_transport,
+            output_key="activation_settings",
+        )
+
+    if tool_name == "jikuo.plan_activation_settings_update":
+        report = activation_settings.build_plan(
+            project_root=resolved_root,
+            trigger_mode=str(args.get("trigger_mode") or "ask"),
+            effective_enforcement_level=str(
+                args.get("effective_enforcement_level") or "instruction_only"
+            ),
+            clients=_string_list_arg(args.get("clients")),
+        )
+        root = Path(str(report["project_root"]))
+        return _activation_settings_card_response(
+            tool_name=tool_name,
+            report=report,
+            project_root=root,
+            transport=resolved_transport,
+            output_key="activation_settings_plan",
+        )
 
     if tool_name == "jikuo.apply_task_session_evidence_update":
         return _apply_task_session_evidence_update_response(
