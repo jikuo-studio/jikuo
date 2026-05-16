@@ -2695,13 +2695,14 @@ Recently completed:
 
 Open items:
 
-1. Capture client proof for Codex Desktop, Claude Code GUI, Cursor, and VS Code + GitHub Copilot Agent mode; stop for user-assisted GUI testing where required.
+1. Capture client proof for Codex Desktop, Claude Code GUI, Cursor, and VS Code + GitHub Copilot Agent mode using `docs/integrations/mcp_client_proof_playbook.md`; current private GitHub preview remote is `https://github.com/jikuo-studio/jikuo.git`, so the next proof should start from a clean private clone instead of the local development checkout; stop for user-assisted GUI testing where required.
 2. Decide the first strict mounted adapter host after client proof shows the most reliable pre-turn boundary.
-3. Decide the external release license using `docs/work_orders/SPRINT_050_WO-PER-JIKUO-REL-01_external_release_license_decision.md`; current package metadata remains `Proprietary` until explicit user decision.
-4. Keep the decision about whether new self-bootstrap policies enter built-in starter templates suspended until explicit user approval.
-5. Plan `JIKUO-STUDIO-01` dashboard as a post-MCP product architecture slice; it is deferred from MCP-01 scope and current Stage B work relies on card markdown plus runtime card links instead. Mount `docs/insights/INSIGHT-2026-05-16-studio-dashboard-frontend-architecture.md` before that slice.
-6. Keep per-client hooks/packs and Agent SDK / platform adapters as planned post-MCP work, not current MCP blockers.
-7. Defer OS notifications, rollback, broader conditions, UI beyond Studio, Plugin, and gates unless explicitly promoted by user approval.
+3. Plan `JIKUO-ONBOARD-01` package-first non-engineer onboarding: install package -> run CLI setup -> configure client MCP -> verify runtime card, without making Python `import` the user entry.
+4. Decide the external release license using `docs/work_orders/SPRINT_050_WO-PER-JIKUO-REL-01_external_release_license_decision.md`; current package metadata remains `Proprietary` until explicit user decision.
+5. Keep the decision about whether new self-bootstrap policies enter built-in starter templates suspended until explicit user approval.
+6. Plan `JIKUO-STUDIO-01` dashboard as a post-MCP product architecture slice; it is deferred from MCP-01 scope and current Stage B work relies on card markdown plus runtime card links instead. Mount `docs/insights/INSIGHT-2026-05-16-studio-dashboard-frontend-architecture.md` before that slice.
+7. Keep per-client hooks/packs and Agent SDK / platform adapters as planned post-MCP work, not current MCP blockers.
+8. Defer OS notifications, rollback, broader conditions, UI beyond Studio, Plugin, and gates unless explicitly promoted by user approval.
 
 MCP MVP scope freeze:
 
@@ -2721,7 +2722,7 @@ MCP MVP scope freeze:
 - Stage A checked: official MCP Python SDK import / module-entry smoke passed after user-environment dependency install (`mcp 1.27.1`)
 - Stage A checked: official Python SDK `ClientSession` stdio smoke passed in an external Codex window; the server listed 8 Stage A tools and called `jikuo.get_runtime_status_card`
 - Stage A fixed: external smoke found `jikuo.get_runtime_status_card.card_markdown` was a single card while runtime last-card output was the full proposal; the card-only tool now persists the same single-card Markdown to `.jikuo/runtime/last_card.md`
-- MCP client configuration examples live at `docs/integrations/mcp_client_configuration_examples.md` for Claude Code, Claude Desktop, Cursor, and Codex-style stdio setup notes; they now describe the current 17-tool surface, including configuration / activation settings read-plan / guarded-apply tools, no-write router tools, plus B1 / B2 / B3 guarded-write smoke checks
+- MCP client configuration examples live at `docs/integrations/mcp_client_configuration_examples.md`, and the user-facing proof workflow lives at `docs/integrations/mcp_client_proof_playbook.md`; use the playbook for Claude Code GUI, Codex, Cursor, and VS Code + GitHub Copilot Agent mode proof before claiming cross-client support. Private GitHub proof should clone from `https://github.com/jikuo-studio/jikuo.git` while the repo remains private.
 - Stage A accepted: user verified real desktop-client smoke in Codex Desktop and Claude Desktop on 2026-05-15; local client/test temporary directories are expected under ignored paths such as `.claude/` and `tmp/`
 - Release-readiness implemented: root `README.md` is product-facing, `.github/workflows/test.yml` runs CI tests, and `pyproject.toml` exposes `.[dev]` plus pytest discovery; external release license remains a user decision
 - Stage B1 implemented and SDK-smoked: `jikuo.apply_task_session_evidence_update` refuses without confirmation / approval phrase and writes only one explicit task-session evidence item on success; official SDK `ClientSession` smoke listed 9 tools during the B1 slice and confirmed Stage B2 / B3 were not exposed before later Stage B2 approval

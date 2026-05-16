@@ -107,6 +107,14 @@ document_roles:
     path: "docs/insights/INSIGHT-2026-05-16-studio-dashboard-frontend-architecture.md"
     required: false
     note: "Mount before future JIKUO-STUDIO-01 dashboard / Studio architecture or implementation slices."
+  mcp_client_configuration_examples:
+    path: "docs/integrations/mcp_client_configuration_examples.md"
+    required: true
+    note: "Reusable local stdio MCP configuration examples and smoke checklist for supported desktop clients."
+  mcp_client_proof_playbook:
+    path: "docs/integrations/mcp_client_proof_playbook.md"
+    required: true
+    note: "Manual user-facing proof workflow for Claude Code GUI, Codex, Cursor, and VS Code Copilot MCP support; current private GitHub preview remote is https://github.com/jikuo-studio/jikuo.git."
   policy_manifest:
     path: ".jikuo/policies/manifest.yaml"
     required: true

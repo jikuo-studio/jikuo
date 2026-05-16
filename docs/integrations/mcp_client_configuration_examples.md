@@ -10,6 +10,10 @@ This file records reusable client configuration examples for the JIKUO MCP MVP
 server and the smoke checks needed to verify a desktop client is seeing the
 current tool surface.
 
+For a step-by-step, user-facing proof workflow across Claude Code GUI, Codex,
+Cursor, and VS Code + GitHub Copilot Agent mode, use
+`docs/integrations/mcp_client_proof_playbook.md`.
+
 Source references:
 
 - Claude Code MCP docs: `https://code.claude.com/docs/en/mcp`
@@ -21,6 +25,22 @@ Use these examples after installing JIKUO in the Python environment that will la
 ```powershell
 python -m pip install -e .
 ```
+
+For private GitHub preview proof, clone from the owner-controlled private repo
+first:
+
+```powershell
+git clone https://github.com/jikuo-studio/jikuo.git Jikuo_private_preview
+cd Jikuo_private_preview
+py -3 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -e .
+```
+
+This private repo is a realistic user-entry proof path, not a public release.
+
+JIKUO is distributed as a Python package, but normal users should start from
+CLI commands and client configuration rather than Python `import`. Python import
+is an integration surface for plugin, Agent SDK, Studio, or adapter developers.
 
 The server entry point is:
 
@@ -34,6 +54,7 @@ Prefer an explicit Python executable from a project virtual environment when con
 
 - `<PROJECT_ROOT>`: absolute path to the project using JIKUO, for example `D:\personal_project\Jikuo`
 - `<PYTHON_EXE>`: Python executable with `jikuo` and `mcp` installed, for example `<PROJECT_ROOT>\tmp\mcp-stage-a-venv\Scripts\python.exe`
+- `<JIKUO_REPO_URL>`: current private preview repository, `https://github.com/jikuo-studio/jikuo.git`
 
 ## Trigger Mode And Client Onboarding
 

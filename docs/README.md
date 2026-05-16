@@ -55,6 +55,12 @@ The following remain outside this repository's active documentation mount unless
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-18_previous_latest_todo_snapshot_posture.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-19_starter_policy_provenance_backfill.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-SEC-02_mcp_response_privacy_classification_baseline.md`
+- `docs/integrations/mcp_client_configuration_examples.md`
+- `docs/integrations/mcp_client_proof_playbook.md`
+
+Current private GitHub preview remote for realistic clone/download proof:
+`https://github.com/jikuo-studio/jikuo.git`. Keep it private until the
+license, privacy sweep, and public-review IP gate are accepted.
 
 ---
 
