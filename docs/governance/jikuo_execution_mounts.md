@@ -439,6 +439,12 @@ Role:
 
 JIKUO should use a dual-trigger model for activation discovery, followed by deterministic harness execution.
 
+Current implementation note:
+
+- today, JIKUO still depends on the active desktop Agent or MCP client choosing to call the tool / command; a normal user message does not automatically enter the JIKUO runtime
+- this means active policies can be correct but still invisible if the client does not invoke JIKUO
+- policy extraction from repeated user needs should not be narrowed to `task_start`, `completion`, or any other work-order-only event; it can arise during any ordinary user turn
+
 Explicit user trigger:
 
 - low learning cost
@@ -472,6 +478,9 @@ Rule:
 - explicit trigger phrase and tool-backed invocation should be available for every critical loop
 - once a flow is inside JIKUO coverage, card return is a harness obligation rather than a style choice
 - governed execution is incomplete if triggered policies, non-triggered policies, missing evidence, approval boundaries, write effects, or atom trace are hidden from the same-chat result
+- semantic trigger mode is allowed as a lightweight adoption path, but it must be described honestly as client / agent mediated
+- mounted harness mode is the stricter product direction: once selected, JIKUO should run before every user turn and return an explicit router / policy status result, even when the result is "no JIKUO action required"
+- strict mounted harness behavior should be implemented through integration adapters such as MCP router tools, Agent SDK wrappers, a local proxy / Studio entry, or per-client hooks; the JIKUO kernel should remain integration-neutral
 
 ---
 
@@ -523,15 +532,18 @@ Plugin:
 
 Current next task:
 
+- current dependency update: promote the conversation-level policy extraction discussion into taskmap / insight / execution-mount records, then submit that governed slice
+- after that commit, fix the proactive policy-suggestion metapolicy shape so it no longer looks complete while it only triggers at task start
+- next implementation contract: draft `JIKUO-ROUTER-01` for trigger modes and `conversation_turn` routing before adding new mounted-harness adapters
 - accepted `JIKUO-LIVE-12` Phase 1 out-of-band runtime visibility
 - accepted `JIKUO-LIVE-14` completion review policy-only surfacing
 - accepted `JIKUO-LIVE-15` self-bootstrap task-session binding
 - `JIKUO-ARCH-03` MCP pre-implementation API neutrality review is complete and accepted
-- next review / accept revised integration-neutral `JIKUO-MCP-01` card-only tool and display-directive scope
+- `JIKUO-MCP-01` MVP body Stage A / B1 / B2 / B3 is implemented and externally smoke-accepted; remaining MCP work is release proof / client compatibility / future router expansion, not the original MVP body
 
 Task goal:
 
-- make JIKUO visibility universal rather than dependent on one desktop client, and keep future agent orchestration extensible without replacing the JIKUO kernel: every critical card should have a chat-ready channel and a user-accessible out-of-band channel.
+- make JIKUO trigger coverage explicit rather than hidden in agent judgment: semantic mode remains available, but the roadmap now needs a conversation-turn router and a future mounted harness path that can run before every user turn.
 
 Accepted target for the current pre-MCP visibility review:
 
@@ -564,6 +576,8 @@ Accepted target for the current pre-MCP visibility review:
 - `JIKUO-MCP-01` prerequisites for Stage A, Stage B1, Stage B2, and Stage B3 are accepted, and MCP MVP body release smoke has passed; product-surface expansion remains a separate approval point
 - dashboard / Studio UI, OS notifications, per-client hook packs, rollback, broader conditions, UI, Plugin, and gates remain deferred; current MCP visibility relies on card markdown plus runtime card links
 - `INSIGHT-2026-05-16-studio-dashboard-frontend-architecture` records the current frontend architecture posture for future `JIKUO-STUDIO-01`: projection-first view models, panel registration, guarded action registration, and canonical `.jikuo/` state remain the change-friendly boundary
+- `POLICY-jikuo-proactive-policy-suggestion-metapolicy` is active report-only: repeated user needs, corrections, or preferences should be reviewed as policy candidates before they remain hidden chat behavior; automatic policy mining and activation remain deferred.
+- current limitation: that policy is task-start-only, so it is not yet sufficient for the user's intended conversation-level policy extraction. Treat it as an accepted governance principle and evidence hook, then supersede / revise it after `conversation_turn` and router support exist.
 
 Accepted result:
 

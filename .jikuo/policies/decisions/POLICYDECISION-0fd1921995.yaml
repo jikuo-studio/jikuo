@@ -1,0 +1,17 @@
+schema_version: "jikuo.policy_decision.v0"
+decision_id: "POLICYDECISION-0fd1921995"
+proposal_ref: ".jikuo/policies/proposals/POLICYPROPOSAL-748849db0a.yaml"
+policy_ref: "POLICY-jikuo-proactive-policy-suggestion-metapolicy"
+decision: "approve_write"
+target:
+  kind: "approved_policy"
+  ref: "POLICY-jikuo-proactive-policy-suggestion-metapolicy"
+effect: "append_policy POLICY-jikuo-proactive-policy-suggestion-metapolicy and update policy-store manifest active refs"
+non_effect: "does not execute policy actions, persist evidence, or promote gates"
+approval_phrase: "user_approved_add_proactive_policy_suggestion_metapolicy_2026-05-16"
+created_at: "2026-05-16T02:54:39Z"
+source_plan_ref: "POLICYWRITEPLAN-0d4f4d94fb"
+source_plan_schema: "jikuo.policy_write_plan.v0"
+storage:
+  path: ".jikuo/policies/decisions/POLICYDECISION-0fd1921995.yaml"
+  policy_store_ref: ".jikuo/policies"

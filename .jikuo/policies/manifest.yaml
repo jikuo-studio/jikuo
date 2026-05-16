@@ -23,6 +23,9 @@ active_policy_refs:
   - policy_id: "POLICY-jikuo-task-session-binding-at-slice-start"
     version: 1
     path: ".jikuo/policies/approved/POLICY-jikuo-task-session-binding-at-slice-start.yaml"
+  - policy_id: "POLICY-jikuo-proactive-policy-suggestion-metapolicy"
+    version: 1
+    path: ".jikuo/policies/approved/POLICY-jikuo-proactive-policy-suggestion-metapolicy.yaml"
 proposal_refs:
   - proposal_id: "POLICYPROPOSAL-5e2821fa41"
     policy_id: "POLICY-jikuo-self-bootstrap-workflow"
@@ -64,6 +67,10 @@ proposal_refs:
     policy_id: "POLICY-jikuo-main-doc-mount-maintenance"
     path: ".jikuo/policies/proposals/POLICYPROPOSAL-5bc90d6b85.yaml"
     status: "approved_for_write"
+  - proposal_id: "POLICYPROPOSAL-748849db0a"
+    policy_id: "POLICY-jikuo-proactive-policy-suggestion-metapolicy"
+    path: ".jikuo/policies/proposals/POLICYPROPOSAL-748849db0a.yaml"
+    status: "approved_for_write"
 deprecated_policy_refs:
   []
   - policy_id: "POLICY-jikuo-policy-vs-code-before-implementation"
@@ -80,7 +87,7 @@ deprecated_policy_refs:
     deprecated_at: "2026-05-14T03:53:14Z"
 superseded_policy_refs:
   []
-last_updated_at: "2026-05-14T12:55:31Z"
+last_updated_at: "2026-05-16T02:54:39Z"
 compatibility:
   unknown_fields: "preserve"
   writer: "policy_store_write_mode"
