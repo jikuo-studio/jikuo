@@ -72,6 +72,7 @@ def policy_evolution_args(
         "policy_source_ref": "User approved MCP B2 supersession for the broad policy.",
         "replacement_policy_ref": "POLICY-three-phase-audit-mcp-v2",
         "replacement_title": "Three-phase task audit MCP v2",
+        "replacement_trigger_event": "conversation_turn",
         "replacement_task_type": "work_order_delivery",
         "replacement_jikuo_layer": "testing_governance",
         "replacement_changed_path_pattern": "docs/jikuo/**",
@@ -428,6 +429,14 @@ class MCPStageAAdapterTests(unittest.TestCase):
             self.assertEqual(target["status"], "written")
             self.assertEqual(target["operation"], "supersede_policy")
             self.assertEqual(target["replacement_policy_ref"], "POLICY-three-phase-audit-mcp-v2")
+            replacement_policy = (
+                project_root
+                / ".jikuo"
+                / "policies"
+                / "approved"
+                / "POLICY-three-phase-audit-mcp-v2.yaml"
+            ).read_text(encoding="utf-8")
+            self.assertIn('event: "conversation_turn"', replacement_policy)
             self.assertTrue(target["post_write_verification"]["target_policy_superseded"])
             self.assertTrue(target["post_write_verification"]["replacement_policy_active"])
             self.assertNotIn(

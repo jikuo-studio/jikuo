@@ -420,6 +420,9 @@ def _apply_policy_evolution_write_response(
         policy_source_ref=arguments.get("policy_source_ref"),
         replacement_policy_ref=arguments.get("replacement_policy_ref"),
         replacement_title=arguments.get("replacement_title"),
+        replacement_trigger_event=str(
+            arguments.get("replacement_trigger_event") or "task_start"
+        ),
         replacement_task_type=arguments.get("replacement_task_type"),
         replacement_jikuo_layer=arguments.get("replacement_jikuo_layer"),
         replacement_changed_path_pattern=arguments.get(
@@ -689,6 +692,9 @@ def call_tool(
             policy_source_ref=args.get("policy_source_ref"),
             replacement_policy_ref=args.get("replacement_policy_ref"),
             replacement_title=args.get("replacement_title"),
+            replacement_trigger_event=str(
+                args.get("replacement_trigger_event") or "task_start"
+            ),
             replacement_task_type=args.get("replacement_task_type"),
             replacement_jikuo_layer=args.get("replacement_jikuo_layer"),
             replacement_changed_path_pattern=args.get("replacement_changed_path_pattern"),

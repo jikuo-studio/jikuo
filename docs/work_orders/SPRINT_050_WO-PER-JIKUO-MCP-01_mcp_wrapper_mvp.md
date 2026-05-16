@@ -82,7 +82,7 @@ Stage A exposes only no-write / card-returning operations. These tools may updat
 | `jikuo.get_display_card` | `CAP-DESKTOP-CHAT-HARNESS-SURFACE-01`; `CAP-RUNTIME-VISIBILITY-CHANNEL-01` | no governance write | return the latest or requested display card markdown only |
 | `jikuo.propose_task_start` | `CAP-AGENT-FLOW-01` plus live policy evaluation atoms | no governance write; may update `.jikuo/runtime/` | return structured task-start proposal data plus card refs / display directives |
 | `jikuo.propose_policy_write_plan` | `CAP-POLICY-STORE-WRITE-PROPOSE-01` | no governance write; may update `.jikuo/runtime/` | return proposed policy-store write data plus card refs / display directives before any durable policy write |
-| `jikuo.propose_policy_evolution_plan` | `CAP-POLICY-EVOLUTION-PLAN-PROPOSE-01` | no governance write; may update `.jikuo/runtime/` | return refinement / deprecation / supersession plan data plus card refs / display directives before any durable write |
+| `jikuo.propose_policy_evolution_plan` | `CAP-POLICY-EVOLUTION-PLAN-PROPOSE-01` | no governance write; may update `.jikuo/runtime/` | return refinement / deprecation / supersession plan data, including replacement trigger event, plus card refs / display directives before any durable write |
 | `jikuo.propose_policy_template_import_plan` | `CAP-AGENT-FLOW-POLICY-TEMPLATE-IMPORT-PLAN-01` | no governance write; may update `.jikuo/runtime/` | return resolved template binding data plus card refs / display directives |
 
 Stage B exposes guarded write operations only after Stage A acceptance gates pass.
@@ -94,7 +94,7 @@ reviews the template import plan and supplies confirmation plus approval phrase.
 | Stage B MCP tool | Wrapped atom | Write mode | Product role |
 |---|---|---|---|
 | `jikuo.apply_task_session_evidence_update` | `CAP-AGENT-FLOW-APPLY-TASK-EVIDENCE-01` | guarded write | append one explicitly approved task-session evidence item |
-| `jikuo.apply_policy_evolution_write` | `CAP-POLICY-EVOLUTION-APPLY-BINDING-01` and `CAP-AGENT-FLOW-APPLY-POLICY-EVOLUTION-01` | guarded write | apply one approved policy deprecation / supersession only when proposal ref, confirmation, and approval phrase match |
+| `jikuo.apply_policy_evolution_write` | `CAP-POLICY-EVOLUTION-APPLY-BINDING-01` and `CAP-AGENT-FLOW-APPLY-POLICY-EVOLUTION-01` | guarded write | apply one approved policy deprecation / supersession only when proposal ref, replacement trigger event, confirmation, and approval phrase match |
 | `jikuo.apply_policy_template_activation` | `CAP-AGENT-FLOW-APPLY-POLICY-TEMPLATE-ACTIVATION-01` | guarded write | activate one approved resolved template only after bindings, confirmation, and approval phrase match |
 
 Display response contract for card-returning tools:
@@ -154,7 +154,7 @@ This slice must not implement:
 | Display latest card | Agent calls `jikuo.get_display_card` or `jikuo.get_runtime_status_card`; Agent outputs `card_markdown` verbatim | `CAP-DESKTOP-CHAT-HARNESS-SURFACE-01`, `CAP-RUNTIME-VISIBILITY-CHANNEL-01` | no governance write; card can be verified out of band |
 | Start governed work | Agent calls `jikuo.propose_task_start`; result includes proposal data, policy context, triggered policies, missing evidence, display directives, and runtime card refs | `CAP-AGENT-FLOW-01`, `CAP-LIVE-DESKTOP-POLICY-EVAL-01`, condition / evidence atoms, `CAP-DESKTOP-CHAT-HARNESS-SURFACE-01`, `CAP-RUNTIME-VISIBILITY-CHANNEL-01` | no governance write; runtime snapshot may update |
 | Configure a new rule | Agent calls `jikuo.propose_policy_write_plan`; user reviews generated policy and write effects through a display card | `CAP-POLICY-STORE-WRITE-PROPOSE-01`, `CAP-RUNTIME-VISIBILITY-CHANNEL-01` | no governance write; runtime snapshot may update |
-| Evolve an existing rule | Agent calls `jikuo.propose_policy_evolution_plan`; user reviews deprecation / supersession effect through a display card | `CAP-POLICY-EVOLUTION-PLAN-PROPOSE-01`, `CAP-RUNTIME-VISIBILITY-CHANNEL-01` | no governance write; runtime snapshot may update |
+| Evolve an existing rule | Agent calls `jikuo.propose_policy_evolution_plan`; user reviews deprecation / supersession effect and replacement trigger event through a display card | `CAP-POLICY-EVOLUTION-PLAN-PROPOSE-01`, `CAP-RUNTIME-VISIBILITY-CHANNEL-01` | no governance write; runtime snapshot may update |
 | Adopt a reusable policy template | Agent calls `jikuo.propose_policy_template_import_plan`; user reviews resolved bindings, write targets, and generated activation command | `CAP-AGENT-FLOW-POLICY-TEMPLATE-IMPORT-PLAN-01`, `CAP-POLICY-TEMPLATE-IMPORT-PLAN-01`, `CAP-RUNTIME-VISIBILITY-CHANNEL-01` | no governance write; runtime snapshot may update |
 | Persist approved evidence | Agent calls `jikuo.apply_task_session_evidence_update` with confirmation and approval phrase | `CAP-AGENT-FLOW-APPLY-TASK-EVIDENCE-01` | guarded write to explicit task-session only |
 | Apply approved rule evolution | Agent calls `jikuo.apply_policy_evolution_write` with proposal ref, confirmation, and approval phrase | `CAP-POLICY-EVOLUTION-APPLY-BINDING-01`, `CAP-AGENT-FLOW-APPLY-POLICY-EVOLUTION-01` | guarded write only after proposal binding passes |
@@ -299,7 +299,7 @@ Unit tests:
 - `adapter.py` imports and runs without the MCP SDK installed
 - no-write proposal calls do not write
 - guarded apply calls refuse without confirmation and approval phrase
-- policy evolution apply refuses mismatched proposal refs
+- policy evolution apply refuses mismatched proposal refs, including mismatches caused by a different replacement trigger event
 - every response field is classified as `return`, `local_only`, `redact_required`, or `redact_optional`
 - `redact_required` fields replace raw values before return
 - `local_only` fields are omitted for non-local or unknown transports

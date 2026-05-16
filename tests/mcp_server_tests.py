@@ -65,6 +65,7 @@ def policy_evolution_args(project_root: Path) -> dict[str, object]:
         "policy_source_ref": "User approved MCP server B2 supersession.",
         "replacement_policy_ref": "POLICY-three-phase-audit-server-v2",
         "replacement_title": "Three-phase task audit server v2",
+        "replacement_trigger_event": "conversation_turn",
         "replacement_task_type": "work_order_delivery",
         "replacement_jikuo_layer": "testing_governance",
         "replacement_changed_path_pattern": "docs/jikuo/**",
@@ -188,6 +189,14 @@ class MCPServerWrapperTests(unittest.TestCase):
             self.assertEqual(response["status"], "applied")
             self.assertTrue(response["write_performed"])
             self.assertEqual(response["proposal_binding"]["status"], "ok")
+            replacement_policy = (
+                project_root
+                / ".jikuo"
+                / "policies"
+                / "approved"
+                / "POLICY-three-phase-audit-server-v2.yaml"
+            ).read_text(encoding="utf-8")
+            self.assertIn('event: "conversation_turn"', replacement_policy)
             self.assertIn("# JIKUO Agent Flow Apply Result", response["card_markdown"])
             self.assertNotIn(
                 "I approve MCP server B2 applying this policy supersession.",

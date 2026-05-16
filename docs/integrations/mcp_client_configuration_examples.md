@@ -141,10 +141,11 @@ For `jikuo.apply_policy_evolution_write`:
 1. Calling the tool without `confirm_apply=true` is refused.
 2. Calling the tool without `approval_phrase` is refused.
 3. Calling the tool without a matching `proposal_ref` is refused.
-4. Calling the tool with the proposal ref reviewed by the user, `confirm_apply=true`, and an approval phrase applies exactly one approved deprecation or supersession.
-5. The success path does not create `.jikuo/task_sessions/`.
-6. The response does not contain the raw approval phrase.
-7. The returned `card_markdown` and `.jikuo/runtime/last_card.md` surface the guarded apply result.
+4. Supersession smoke should include `replacement_trigger_event` when the replacement policy must move away from the default `task_start` trigger.
+5. Calling the tool with the proposal ref reviewed by the user, matching replacement fields, `confirm_apply=true`, and an approval phrase applies exactly one approved deprecation or supersession.
+6. The success path does not create `.jikuo/task_sessions/`.
+7. The response does not contain the raw approval phrase.
+8. The returned `card_markdown` and `.jikuo/runtime/last_card.md` surface the guarded apply result.
 
 Run B2 apply-path smoke against a copied temporary fixture unless the user is
 intentionally approving a real project policy evolution.

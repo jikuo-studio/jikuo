@@ -1329,6 +1329,8 @@ class AgentFlowProposalTests(unittest.TestCase):
                     "POLICY-three-phase-audit-agent-flow-v2",
                     "--replacement-title",
                     "Three-phase task audit agent-flow v2",
+                    "--replacement-trigger-event",
+                    "conversation_turn",
                     "--replacement-task-type",
                     "work_order_delivery",
                     "--replacement-jikuo-layer",
@@ -1393,6 +1395,8 @@ class AgentFlowProposalTests(unittest.TestCase):
                     "POLICY-three-phase-audit-agent-flow-v2",
                     "--replacement-title",
                     "Three-phase task audit agent-flow v2",
+                    "--replacement-trigger-event",
+                    "conversation_turn",
                     "--replacement-task-type",
                     "work_order_delivery",
                     "--replacement-jikuo-layer",
@@ -1459,6 +1463,8 @@ class AgentFlowProposalTests(unittest.TestCase):
                     "POLICY-three-phase-audit-agent-flow-v2",
                     "--replacement-title",
                     "Three-phase task audit agent-flow v2",
+                    "--replacement-trigger-event",
+                    "conversation_turn",
                     "--replacement-task-type",
                     "work_order_delivery",
                     "--replacement-jikuo-layer",
@@ -1502,6 +1508,8 @@ class AgentFlowProposalTests(unittest.TestCase):
                     "POLICY-three-phase-audit-agent-flow-v2",
                     "--replacement-title",
                     "Three-phase task audit agent-flow v2",
+                    "--replacement-trigger-event",
+                    "conversation_turn",
                     "--replacement-task-type",
                     "work_order_delivery",
                     "--replacement-jikuo-layer",
@@ -1545,6 +1553,14 @@ class AgentFlowProposalTests(unittest.TestCase):
             )
             self.assertTrue(target["post_write_verification"]["target_policy_superseded"])
             self.assertTrue(target["post_write_verification"]["replacement_policy_active"])
+            replacement_policy = (
+                project_copy
+                / ".jikuo"
+                / "policies"
+                / "approved"
+                / "POLICY-three-phase-audit-agent-flow-v2.yaml"
+            ).read_text(encoding="utf-8")
+            self.assertIn('event: "conversation_turn"', replacement_policy)
 
             status = subprocess.run(
                 [
@@ -1581,7 +1597,7 @@ class AgentFlowProposalTests(unittest.TestCase):
                     str(POLICY_STORE_TOOL),
                     "evaluate",
                     "--event",
-                    "task_start",
+                    "conversation_turn",
                     "--project-root",
                     str(project_copy),
                     "--task-type",
@@ -2412,6 +2428,8 @@ class AgentFlowProposalTests(unittest.TestCase):
                 "POLICY-three-phase-audit-v2",
                 "--replacement-title",
                 "Three-phase task audit v2",
+                "--replacement-trigger-event",
+                "conversation_turn",
                 "--replacement-task-type",
                 "work_order_delivery",
                 "--replacement-jikuo-layer",
@@ -2437,6 +2455,10 @@ class AgentFlowProposalTests(unittest.TestCase):
         plan = card["policy_evolution_plan"]
         self.assertEqual(plan["operation"], "supersede_policy")
         self.assertEqual(plan["replacement_policy_ref"], "POLICY-three-phase-audit-v2")
+        self.assertEqual(
+            plan["replacement_policy"]["triggers"][0]["event"],
+            "conversation_turn",
+        )
         self.assertTrue(plan["future_write_boundary"]["writer_implemented"])
         self.assertIn(
             ".jikuo/policies/approved/POLICY-three-phase-audit-v2.yaml",
@@ -2451,6 +2473,7 @@ class AgentFlowProposalTests(unittest.TestCase):
         self.assertIn("--operation \"supersede_policy\"", command["command_preview"])
         self.assertIn("--replacement-policy-id \"POLICY-three-phase-audit-v2\"", command["command_preview"])
         self.assertIn("--replacement-title \"Three-phase task audit v2\"", command["command_preview"])
+        self.assertIn("--replacement-trigger-event \"conversation_turn\"", command["command_preview"])
         self.assertIn("--confirm-write-evolution", command["command_preview"])
         self.assertIn(
             ".jikuo/policies/approved/POLICY-three-phase-audit-v2.yaml",
