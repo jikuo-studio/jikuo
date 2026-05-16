@@ -57,6 +57,10 @@ document_roles:
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-INTG-01_universal_instruction_file_distribution.md"
     required: true
     note: "Pre-MCP cross-client instruction file distribution contract and implementation record."
+  trigger_mode_conversation_router_work_order:
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-ROUTER-01_trigger_mode_and_conversation_turn_router.md"
+    required: true
+    note: "Conversation-level trigger-mode and router contract required before implementing mounted harness or policy-suggestion router surfaces."
   completion_review_policy_only_work_order:
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-14_completion_review_policy_only_surfacing.md"
     required: true

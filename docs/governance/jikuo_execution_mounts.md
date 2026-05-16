@@ -533,8 +533,8 @@ Plugin:
 Current next task:
 
 - current dependency update: promote the conversation-level policy extraction discussion into taskmap / insight / execution-mount records, then submit that governed slice
-- after that commit, fix the proactive policy-suggestion metapolicy shape so it no longer looks complete while it only triggers at task start
-- next implementation contract: draft `JIKUO-ROUTER-01` for trigger modes and `conversation_turn` routing before adding new mounted-harness adapters
+- after that commit, keep the proactive policy-suggestion metapolicy honest as a task-start-only evidence hook; a no-write supersession plan can target `conversation_turn`, but guarded apply is blocked until router behavior exists
+- next review: accept or revise drafted `JIKUO-ROUTER-01` for trigger modes and `conversation_turn` routing before adding new mounted-harness adapters
 - accepted `JIKUO-LIVE-12` Phase 1 out-of-band runtime visibility
 - accepted `JIKUO-LIVE-14` completion review policy-only surfacing
 - accepted `JIKUO-LIVE-15` self-bootstrap task-session binding
@@ -572,6 +572,7 @@ Accepted target for the current pre-MCP visibility review:
 - `JIKUO-REL-01` drafts the external release license decision brief; use it before changing `pyproject.toml`, adding a `LICENSE` file, or publishing outside the private workspace
 - `JIKUO-INTG-01` is accepted and implements canonical `JIKUO.md` plus guarded client instruction sync without making client hooks mandatory
 - `JIKUO-SDK-01` is accepted and defines OpenAI Agents SDK, Claude Agent SDK, Google ADK, Vercel AI SDK, and Google Antigravity-style agentic platforms as optional orchestration / client-environment adapters that consume JIKUO through MCP / CLI / public adapter APIs while local policy, evidence, approvals, and runtime visibility remain authoritative
+- `JIKUO-ROUTER-01` is drafted and should be reviewed before implementation: it defines semantic mode, mounted harness mode, the `conversation_turn` event, a no-write router output shape, and future MCP / Agent SDK / Studio adapter expectations
 - `JIKUO-LIVE-15` adds a self-bootstrap requirement that governed JIKUO development slices bind, create, or explicitly defer a task-session at task start; `.jikuo/project_state.yaml latest_task_session_refs` refresh remains a separate guarded action unless promoted later
 - `JIKUO-MCP-01` prerequisites for Stage A, Stage B1, Stage B2, and Stage B3 are accepted, and MCP MVP body release smoke has passed; product-surface expansion remains a separate approval point
 - dashboard / Studio UI, OS notifications, per-client hook packs, rollback, broader conditions, UI, Plugin, and gates remain deferred; current MCP visibility relies on card markdown plus runtime card links
