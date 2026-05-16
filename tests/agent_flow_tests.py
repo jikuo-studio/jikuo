@@ -357,6 +357,149 @@ class AgentFlowProposalTests(unittest.TestCase):
         self.assertFalse((READY_PROJECT / ".jikuo" / "task_sessions").exists())
         self.assertFalse((READY_PROJECT / ".jikuo" / "policies").exists())
 
+    def test_conversation_turn_router_noop_is_no_write_and_auditable(self):
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-B",
+                str(TOOL),
+                "propose",
+                "--event",
+                "conversation_turn",
+                "--user-phrase",
+                "thanks for the update",
+                "--project-root",
+                str(READY_PROJECT),
+                "--format",
+                "json",
+            ],
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        proposal = json.loads(completed.stdout)
+        self.assertEqual(
+            proposal["trigger_decision"]["invocation_scenario"],
+            "conversation_turn",
+        )
+        self.assertEqual(
+            proposal["trigger_decision"]["trigger_source"],
+            "conversation_turn_router",
+        )
+        self.assertEqual(
+            proposal["trigger_decision"]["intent_classification"]["confidence"],
+            "heuristic_router",
+        )
+        router = proposal["conversation_router"]
+        self.assertEqual(router["schema"], "jikuo.conversation_turn_router.v0")
+        self.assertEqual(router["trigger_mode"], "semantic")
+        self.assertEqual(router["router_status"], "ok")
+        self.assertEqual(router["required_followup_tools"], [])
+        self.assertFalse(router["privacy"]["raw_transcript_captured"])
+        self.assertEqual(
+            router["classified_obligations"][0]["kind"],
+            "no_jikuo_action_required",
+        )
+        cards = {card["card_kind"]: card for card in proposal["cards"]}
+        self.assertIn("conversation_turn_router", cards)
+        self.assertEqual(cards["conversation_turn_router"]["status"], "ok")
+        atom_ids = {trace["atom_id"] for trace in proposal["atom_trace"]}
+        self.assertIn("CAP-CONVERSATION-TURN-ROUTER-01", atom_ids)
+        self.assertIn("Conversation-turn router", proposal["chat_ready_markdown"])
+        self.assertFalse(proposal["write_effect"]["writes_performed"])
+        self.assertFalse((READY_PROJECT / ".jikuo" / "task_sessions").exists())
+        self.assertFalse((READY_PROJECT / ".jikuo" / "policies").exists())
+
+    def test_conversation_turn_router_detects_policy_and_task_obligations(self):
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-B",
+                str(TOOL),
+                "propose",
+                "--event",
+                "conversation_turn",
+                "--trigger-mode",
+                "mounted",
+                "--user-phrase",
+                "以后列出进度和代办时请说明业务意义，并继续实现 router",
+                "--project-root",
+                str(READY_PROJECT),
+                "--format",
+                "json",
+            ],
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        proposal = json.loads(completed.stdout)
+        self.assertEqual(proposal["status"], "review")
+        router = proposal["conversation_router"]
+        self.assertEqual(router["trigger_mode"], "mounted")
+        self.assertEqual(router["router_status"], "requires_action")
+        obligation_kinds = {
+            obligation["kind"]
+            for obligation in router["classified_obligations"]
+        }
+        self.assertIn("task_start", obligation_kinds)
+        self.assertIn("policy_suggestion_review", obligation_kinds)
+        self.assertIn(
+            "jikuo.propose_task_start",
+            router["required_followup_tools"],
+        )
+        self.assertIn(
+            "jikuo.propose_policy_suggestions",
+            router["required_followup_tools"],
+        )
+        self.assertIn("policy_suggestion_review", proposal["chat_ready_markdown"])
+        self.assertIn("trigger_mode: mounted", proposal["chat_ready_markdown"])
+        self.assertFalse(proposal["write_effect"]["writes_performed"])
+        self.assertFalse((READY_PROJECT / ".jikuo" / "task_sessions").exists())
+        self.assertFalse((READY_PROJECT / ".jikuo" / "policies").exists())
+
+    def test_conversation_turn_router_requires_user_phrase(self):
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-B",
+                str(TOOL),
+                "propose",
+                "--event",
+                "conversation_turn",
+                "--project-root",
+                str(READY_PROJECT),
+                "--format",
+                "json",
+            ],
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+
+        self.assertEqual(completed.returncode, 2, completed.stderr)
+        proposal = json.loads(completed.stdout)
+        router = proposal["conversation_router"]
+        self.assertEqual(router["router_status"], "clarification_required")
+        self.assertIn(
+            "user_phrase_required_for_conversation_turn_router",
+            proposal["trigger_decision"]["required_clarification"],
+        )
+        cards = {card["card_kind"]: card for card in proposal["cards"]}
+        self.assertEqual(cards["conversation_turn_router"]["status"], "refused")
+        self.assertFalse(proposal["write_effect"]["writes_performed"])
+        self.assertFalse((READY_PROJECT / ".jikuo" / "task_sessions").exists())
+        self.assertFalse((READY_PROJECT / ".jikuo" / "policies").exists())
+
     def test_missing_project_status_markdown_remains_no_write(self):
         completed = subprocess.run(
             [

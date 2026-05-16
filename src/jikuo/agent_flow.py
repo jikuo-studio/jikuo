@@ -47,9 +47,12 @@ POLICY_CONDITION_EVAL_STATUS_NOT_EVALUATED = "not_evaluated"
 POLICY_FEEDBACK_OPTIONS_SCHEMA = "jikuo.policy_feedback_options.v0"
 POLICY_RUNTIME_STATUS_SCHEMA = "jikuo.policy_runtime_status.v0"
 DISPLAY_DIRECTIVES_SCHEMA = "jikuo.display_directives.v0"
+CONVERSATION_ROUTER_SCHEMA = "jikuo.conversation_turn_router.v0"
 POLICY_FEEDBACK_TYPES = {"not_applicable", "defer", "needs_scope_narrowing"}
+TRIGGER_MODES = {"mounted", "semantic"}
 CARD_PRIORITY_ORDER = [
     "policy_runtime_status",
+    "conversation_turn_router",
     "task_session_completion_acceptance",
     "task_session_start_preview",
     "task_session_binding",
@@ -95,6 +98,10 @@ WORK_ROUTING_CATEGORY_ALIASES = {
 }
 
 EVENT_ALIASES = {
+    "turn": "conversation_turn",
+    "conversation": "conversation_turn",
+    "conversation_turn": "conversation_turn",
+    "route_user_request": "conversation_turn",
     "status": "project_status",
     "project_status": "project_status",
     "start": "task_start",
@@ -159,6 +166,7 @@ NO_WRITE_ATOMS = {
     "CAP-PROJECT-CONTEXT-RESOLVER-01",
     "CAP-POLICY-TEMPLATE-IMPORT-PLAN-01",
     "CAP-AGENT-FLOW-POLICY-TEMPLATE-IMPORT-PLAN-01",
+    "CAP-CONVERSATION-TURN-ROUTER-01",
 }
 
 
@@ -893,6 +901,34 @@ def trigger_decision_for(
         if event
         else "unsupported"
     )
+    if event == "conversation_turn":
+        return {
+            "schema": TRIGGER_DECISION_SCHEMA,
+            "trigger_source": "conversation_turn_router",
+            "user_phrase": user_phrase or raw_event,
+            "invocation_scenario": event,
+            "confidence": "event_match",
+            "confidence_basis": "canonical_event_mapping",
+            "trigger_match": {
+                "status": trigger_match_status,
+                "basis": "canonical_event_mapping",
+                "raw_event": raw_event,
+                "normalized_event": event,
+            },
+            "intent_classification": {
+                "confidence": "heuristic_router",
+                "basis": "deterministic_keyword_router_v0",
+                "note": (
+                    "agent_flow.py routes the supplied user turn into auditable "
+                    "JIKUO obligations without storing raw chat transcript"
+                ),
+            },
+            "execution_readiness": execution_readiness,
+            "may_call_no_write_atoms": True,
+            "may_request_guarded_write": bool(not refusals),
+            "durable_write_approved": False,
+            "required_clarification": refusals,
+        }
     return {
         "schema": TRIGGER_DECISION_SCHEMA,
         "trigger_source": "explicit_user_shortcut"
@@ -919,6 +955,294 @@ def trigger_decision_for(
         "durable_write_approved": False,
         "required_clarification": refusals,
     }
+
+
+def normalize_trigger_mode(trigger_mode: str | None) -> str:
+    mode = (trigger_mode or "semantic").strip().lower().replace("_", "-")
+    aliases = {
+        "mounted-harness": "mounted",
+        "natural": "semantic",
+        "natural-language": "semantic",
+    }
+    mode = aliases.get(mode, mode)
+    if mode not in TRIGGER_MODES:
+        return "semantic"
+    return mode
+
+
+def classify_conversation_turn(
+    *,
+    trigger_mode: str,
+    user_phrase: str | None,
+    task_title: str | None,
+    summary: str | None,
+) -> tuple[dict[str, Any], list[str]]:
+    input_text = (user_phrase or summary or task_title or "").strip()
+    if not input_text:
+        router = {
+            "schema": CONVERSATION_ROUTER_SCHEMA,
+            "trigger_mode": trigger_mode,
+            "router_status": "clarification_required",
+            "input_summary": "",
+            "classification_basis": "missing_user_turn",
+            "classified_obligations": [
+                {
+                    "kind": "clarification_required",
+                    "status": "required",
+                    "reason": "conversation_turn requires --user-phrase, --summary, or --task-title",
+                    "target_event": None,
+                    "required_followup_tool": None,
+                }
+            ],
+            "required_followup_tools": [],
+            "privacy": {
+                "raw_transcript_captured": False,
+                "stored_input": "compact_user_supplied_turn_only",
+            },
+            "non_effects": [
+                "does not create .jikuo/task_sessions/",
+                "does not create .jikuo/policies/",
+                "does not update .jikuo/project_state.yaml",
+                "does not capture raw chat transcript",
+            ],
+        }
+        return router, ["user_phrase_required_for_conversation_turn_router"]
+
+    text = input_text.lower()
+    obligation_specs = [
+        (
+            "task_start",
+            {
+                "keywords": {
+                    "start",
+                    "continue",
+                    "implement",
+                    "build",
+                    "fix",
+                    "submit",
+                    "commit",
+                    "next task",
+                    "继续",
+                    "开始",
+                    "执行",
+                    "实现",
+                    "修复",
+                    "提交",
+                    "推进",
+                    "开发",
+                },
+                "reason": "user turn appears to request active task execution",
+                "target_event": "task_start",
+                "tool": "jikuo.propose_task_start",
+            },
+        ),
+        (
+            "completion_review",
+            {
+                "keywords": {
+                    "complete",
+                    "completion",
+                    "acceptance",
+                    "verify",
+                    "review",
+                    "验收",
+                    "完成",
+                    "检查",
+                    "接受",
+                },
+                "reason": "user turn appears to request acceptance or completion review",
+                "target_event": "completion_review",
+                "tool": "python -B -m jikuo.agent_flow propose --event completion_review",
+            },
+        ),
+        (
+            "policy_suggestion_review",
+            {
+                "keywords": {
+                    "policy",
+                    "rule",
+                    "principle",
+                    "repeated",
+                    "preference",
+                    "need",
+                    "每次",
+                    "反复",
+                    "多次",
+                    "规则",
+                    "原则",
+                    "偏好",
+                    "需求",
+                    "应该",
+                    "需要",
+                    "以后",
+                    "业务意义",
+                    "进度",
+                    "代办",
+                },
+                "reason": "user turn appears to contain a repeated need, preference, or policy candidate",
+                "target_event": "policy_suggestion_review",
+                "tool": "jikuo.propose_policy_suggestions",
+            },
+        ),
+        (
+            "insight_or_follow_up_routing",
+            {
+                "keywords": {
+                    "idea",
+                    "insight",
+                    "follow-up",
+                    "followup",
+                    "defer",
+                    "想法",
+                    "洞察",
+                    "后续",
+                    "暂缓",
+                    "挂起",
+                },
+                "reason": "user turn appears to require taskmap / insight / follow-up classification",
+                "target_event": "task_start",
+                "tool": "jikuo.propose_task_start",
+            },
+        ),
+    ]
+
+    obligations: list[dict[str, Any]] = []
+    followup_tools: list[str] = []
+    for kind, spec in obligation_specs:
+        matched = sorted(keyword for keyword in spec["keywords"] if keyword in text)
+        if not matched:
+            continue
+        tool = str(spec["tool"])
+        obligations.append(
+            {
+                "kind": kind,
+                "status": "required",
+                "reason": spec["reason"],
+                "target_event": spec["target_event"],
+                "required_followup_tool": tool,
+                "matched_terms": matched,
+            }
+        )
+        if tool not in followup_tools:
+            followup_tools.append(tool)
+
+    if not obligations:
+        obligations.append(
+            {
+                "kind": "no_jikuo_action_required",
+                "status": "ok",
+                "reason": "no configured router keyword matched this turn",
+                "target_event": None,
+                "required_followup_tool": None,
+                "matched_terms": [],
+            }
+        )
+
+    router_status = (
+        "requires_action"
+        if any(item["status"] == "required" for item in obligations)
+        else "ok"
+    )
+    if obligations and obligations[0]["kind"] == "no_jikuo_action_required":
+        router_status = "ok"
+
+    router = {
+        "schema": CONVERSATION_ROUTER_SCHEMA,
+        "trigger_mode": trigger_mode,
+        "router_status": router_status,
+        "input_summary": input_text,
+        "classification_basis": "deterministic_keyword_router_v0",
+        "classified_obligations": obligations,
+        "required_followup_tools": followup_tools,
+        "privacy": {
+            "raw_transcript_captured": False,
+            "stored_input": "compact_user_supplied_turn_only",
+        },
+        "non_effects": [
+            "does not create .jikuo/task_sessions/",
+            "does not create .jikuo/policies/",
+            "does not update .jikuo/project_state.yaml",
+            "does not capture raw chat transcript",
+        ],
+    }
+    return router, []
+
+
+def build_conversation_turn_cards(
+    *,
+    trigger_mode: str,
+    user_phrase: str | None,
+    task_title: str | None,
+    summary: str | None,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]:
+    normalized_mode = normalize_trigger_mode(trigger_mode)
+    router, refusals = classify_conversation_turn(
+        trigger_mode=normalized_mode,
+        user_phrase=user_phrase,
+        task_title=task_title,
+        summary=summary,
+    )
+    router_status = str(router["router_status"])
+    card_status_value = (
+        "refused"
+        if refusals
+        else "review"
+        if router_status == "requires_action"
+        else "ok"
+    )
+    obligations = list(router["classified_obligations"])
+    followup_tools = list(router["required_followup_tools"])
+    shown_outputs = [
+        f"router_status: {router_status}",
+        f"obligation_count: {len(obligations)}",
+        f"classification_basis: {router['classification_basis']}",
+    ]
+    for obligation in obligations:
+        shown_outputs.append(
+            "obligation: "
+            f"{obligation['kind']} / {obligation['status']} / "
+            f"target={obligation.get('target_event')}"
+        )
+    for tool in followup_tools:
+        shown_outputs.append(f"required_followup_tool: {tool}")
+
+    if refusals:
+        next_actions = ["provide --user-phrase or a compact user-turn summary"]
+    elif followup_tools:
+        next_actions = [
+            "call the listed follow-up tool(s) before continuing user-visible work"
+        ]
+    else:
+        next_actions = [
+            "continue; no JIKUO follow-up tool is required for this turn"
+        ]
+
+    card = generic_card(
+        card_kind="conversation_turn_router",
+        status=card_status_value,
+        title="Conversation-turn router",
+        summary=(
+            "JIKUO classified this user turn without writing durable project files."
+        ),
+        shown_inputs=[
+            f"trigger_mode: {normalized_mode}",
+            f"user_phrase_provided: {str(bool(user_phrase)).lower()}",
+            f"summary_provided: {str(bool(summary)).lower()}",
+            f"task_title_provided: {str(bool(task_title)).lower()}",
+        ],
+        shown_outputs=shown_outputs,
+        refusal_reasons=refusals,
+        next_actions=next_actions,
+    )
+    card["conversation_router"] = router
+    trace = atom_trace(
+        loop_step_id="DPL-05",
+        atom_id="CAP-CONVERSATION-TURN-ROUTER-01",
+        mode="no-write",
+        status=card_status_value,
+        summary="classified a user turn into JIKUO obligations without writing files",
+    )
+    return [card], [trace], refusals
 
 
 def card_status(card: dict[str, Any]) -> str:
@@ -2067,6 +2391,7 @@ def build_proposal(
     owner_agent: str = "codex",
     project_root: Path | None = None,
     user_phrase: str | None = None,
+    trigger_mode: str = "semantic",
     produced_evidence: list[dict[str, Any]] | None = None,
     work_routing_category: str | None = None,
     work_routing_summary: str | None = None,
@@ -2086,7 +2411,7 @@ def build_proposal(
                 summary="The local runner cannot map this event to a known JIKUO loop.",
                 refusal_reasons=[refusal],
                 next_actions=[
-                    "retry with status, task_start, task_continue, index, evidence, policy_template_import_plan, verification, completion, handoff, or audit"
+                    "retry with conversation_turn, status, task_start, task_continue, index, evidence, policy_template_import_plan, verification, completion, handoff, or audit"
                 ],
             )
         ]
@@ -2094,6 +2419,13 @@ def build_proposal(
         refusals = [refusal]
     elif event == "project_status":
         cards, traces, refusals = build_project_status_cards(project_root=project_root)
+    elif event == "conversation_turn":
+        cards, traces, refusals = build_conversation_turn_cards(
+            trigger_mode=trigger_mode,
+            user_phrase=user_phrase,
+            task_title=task_title,
+            summary=summary,
+        )
     elif event == "task_start":
         cards, traces, refusals = build_task_start_cards(
             project_root=project_root,
@@ -2285,6 +2617,14 @@ def build_proposal(
     status = "refused" if "refused" in statuses else "review" if "review" in statuses else "ok"
     atom_ids = [trace["atom_id"] for trace in traces]
     unsafe_atoms = sorted(set(atom_ids) - NO_WRITE_ATOMS - {"CAP-AGENT-FLOW-01"})
+    conversation_router = next(
+        (
+            card.get("conversation_router")
+            for card in cards
+            if card.get("card_kind") == "conversation_turn_router"
+        ),
+        None,
+    )
     guarded_apply_available = not refusals and event in {
         "policy_evolution_plan",
         "policy_evidence_record",
@@ -2318,6 +2658,7 @@ def build_proposal(
         "evidence_status": policy_sections["evidence_status"],
         "missing_evidence_reports": policy_sections["missing_evidence_reports"],
         "policy_feedback_options": policy_feedback_options,
+        "conversation_router": conversation_router,
         "work_routing": work_routing,
         "atom_trace": traces,
         "cards": cards,
@@ -2346,6 +2687,8 @@ def next_actions_for(*, status: str, event: str | None) -> list[str]:
         return ["retry with a supported event"]
     if status == "refused":
         return ["resolve refusal reasons before asking for a guarded action"]
+    if event == "conversation_turn":
+        return ["follow the conversation router obligations before continuing"]
     if event == "task_start":
         return ["review the task-start card in chat before approving any task-session write"]
     if event == "project_status":
@@ -3193,6 +3536,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     propose.add_argument("--project-root", type=Path, default=None)
     propose.add_argument("--user-phrase", default=None)
+    propose.add_argument("--trigger-mode", choices=sorted(TRIGGER_MODES), default="semantic")
     propose.add_argument("--format", choices=("markdown", "json"), default="markdown")
 
     apply = subparsers.add_parser("apply")
@@ -3352,6 +3696,7 @@ def main(argv: list[str] | None = None) -> int:
         owner_agent=args.owner_agent,
         project_root=args.project_root,
         user_phrase=args.user_phrase,
+        trigger_mode=args.trigger_mode,
         produced_evidence=produced_evidence,
         work_routing_category=args.work_routing_category,
         work_routing_summary=args.work_routing_summary,

@@ -1,6 +1,6 @@
 # SPRINT 050 WO-PER-JIKUO-ROUTER-01: Trigger Mode And Conversation-Turn Router
 
-> **Status**: Accepted
+> **Status**: Core no-write router implemented
 > **Layer**: Process governance / product architecture
 > **Depends on**: `JIKUO-MCP-01` MVP body, `JIKUO-INTG-01`, `JIKUO-SDK-01`, `POLICY-jikuo-proactive-policy-suggestion-metapolicy`
 > **Blocks**: `CAP-CONVERSATION-TURN-ROUTER-01`, `CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01`, MCP router tools, mounted harness adapters
@@ -25,8 +25,8 @@ The product must therefore support two explicit trigger modes:
 
 ## 2. Scope
 
-This work order defines the accepted contract only. It does not implement the
-router.
+This work order defines the accepted contract and now includes the first
+SDK-neutral core implementation of the no-write router in `agent_flow.py`.
 
 In scope:
 
@@ -36,6 +36,10 @@ In scope:
 - define how policy-suggestion review is requested
 - define how no-op results remain visible and auditable
 - define future MCP / Agent SDK / Studio adapter expectations
+- implement `conversation_turn` as a no-write `agent_flow.py propose` event
+- render a `conversation_turn_router` card with no-op / required-obligation /
+  clarification results
+- preserve runtime visibility output and policy runtime status for router calls
 
 Out of scope:
 
@@ -84,15 +88,15 @@ entry, or client hooks. It must not make the core kernel depend on one client.
 
 ## 4. Conversation-Turn Router Contract
 
-Future capability:
+Implemented core capability:
 
 - `CAP-CONVERSATION-TURN-ROUTER-01`
 
-Future event:
+Implemented event:
 
 - `conversation_turn`
 
-Future CLI / core entry:
+Implemented CLI / core entry:
 
 ```powershell
 python -B -m jikuo.agent_flow propose --event conversation_turn --user-phrase "<user turn summary>" --format json
@@ -104,20 +108,18 @@ Future MCP tool:
 jikuo.route_user_request
 ```
 
-Required output fields:
+Implemented output fields:
 
 - `schema`
 - `trigger_mode`
 - `router_status`
 - `classified_obligations`
-- `policy_runtime_status`
 - `required_followup_tools`
-- `display_verification`
 - `chat_ready_markdown`
 - `write_effect`
 - `non_effects`
 
-The router must be no-write. Runtime visibility files may update.
+The router is no-write. Runtime visibility files may update.
 
 ## 5. Policy-Suggestion Review Contract
 
@@ -153,16 +155,17 @@ It must not:
 report-only governance principle, but its current `task_start` trigger is too
 narrow.
 
-Do not apply the supersession to a `conversation_turn` policy until the router
-contract and at least a no-write router path exist. Otherwise the replacement
-policy would still depend on clients remembering to call the right event.
+The router contract and no-write path now exist. The current policy remains
+task-start-only until a separate supersession slice updates it to the
+conversation level with user approval.
 
 Interim rule:
 
 - keep the current policy active and honest as a narrow evidence hook
 - use runtime cards and taskmap docs to show that the product mechanism remains
   planned, not complete
-- when the router exists, supersede with a conversation-level policy
+- next, supersede with a conversation-level policy through a reviewed
+  policy-evolution plan
 
 ## 7. Scenario-Chain-Atom Registration Evidence
 
@@ -176,11 +179,33 @@ Interim rule:
 - taskmap registers `CAP-JIKUO-TRIGGER-MODE-01`, `CAP-CONVERSATION-TURN-ROUTER-01`, and `CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01`
 - execution mounts describe semantic mode and mounted harness mode honestly
 - no active policy is presented as solving conversation-level extraction before router support exists
-- future implementation has a no-write router path before any guarded write path
+- `agent_flow.py propose --event conversation_turn` has a no-write router path before any guarded write path
+- tests cover explicit no-op, mounted-mode obligation routing, and missing user-turn refusal
 - future MCP router tools preserve display directives, runtime links, and SEC-02 privacy classification
 - future mounted harness adapters remain integration-specific and do not become kernel dependencies
 
-## 9. Business Meaning
+## 9. Implementation Notes
+
+- Core implementation: `src/jikuo/agent_flow.py`
+- Tests: `tests/agent_flow_tests.py`
+- Added event aliases: `conversation_turn`, `conversation`, `turn`, `route_user_request`
+- Added trigger modes: `semantic`, `mounted`
+- Added card kind: `conversation_turn_router`
+- Current deterministic classifier: keyword router v0, intended as an auditable
+  baseline before later policy-suggestion analysis.
+- Current obligations: task start, completion review, policy-suggestion review,
+  insight / follow-up routing, no-op, and clarification-required.
+
+Remaining follow-on work:
+
+- revise / supersede `POLICY-jikuo-proactive-policy-suggestion-metapolicy` so it
+  can trigger on `conversation_turn`
+- implement `CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01`
+- add MCP router surfaces after the core router is accepted
+- add mounted harness adapters after MCP / SDK / Studio integration posture is
+  selected
+
+## 10. Business Meaning
 
 This slice protects JIKUO's core product promise: policies should be visible,
 auditable, and hard to accidentally skip.
