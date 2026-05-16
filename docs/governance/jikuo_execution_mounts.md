@@ -180,6 +180,7 @@ For future starter policy pack / first-use initialization work, also mount:
 
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-22_starter_policy_pack_first_use_initialization.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-19_starter_policy_provenance_backfill.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-POLICY-CATALOG-01_self_bootstrap_policy_promotion_review.md`
 - `src/jikuo/starter_policy_packs/engineering_governance/manifest.yaml`
 - `src/jikuo/policy_templates/engineering_governance/*.yaml`
 

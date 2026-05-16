@@ -34,6 +34,7 @@ DEFAULT_PACK_ID = "engineering_governance"
 PACKAGE_ROOT = Path(__file__).resolve().parent
 STARTER_PACKS_ROOT = PACKAGE_ROOT / "starter_policy_packs"
 POLICY_TEMPLATES_ROOT = PACKAGE_ROOT / "policy_templates"
+STARTER_TEMPLATE_REF_PREFIX = "pkg://jikuo/policy_templates/"
 POLICY_STORE_ROOT = policy_store.POLICY_STORE_ROOT
 CONTRACT_REFS = [
     "pkg://jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-22_starter_policy_pack_first_use_initialization.md",
@@ -68,12 +69,32 @@ def display_path(path: Path, project_root: Path) -> str:
     return policy_store.display_path(path, project_root)
 
 
+def pack_id_boundary_warning(pack_id: str) -> str | None:
+    if (
+        not pack_id
+        or pack_id in {".", ".."}
+        or "/" in pack_id
+        or "\\" in pack_id
+        or Path(pack_id).is_absolute()
+        or Path(pack_id).name != pack_id
+    ):
+        return f"starter_pack_id_must_be_package_local:{pack_id}"
+    return None
+
+
 def pack_manifest_path(pack_id: str) -> Path:
     return STARTER_PACKS_ROOT / pack_id / "manifest.yaml"
 
 
 def load_pack_manifest(pack_id: str) -> tuple[dict[str, Any] | None, list[str]]:
+    boundary_warning = pack_id_boundary_warning(pack_id)
+    if boundary_warning:
+        return None, [boundary_warning]
     manifest_path = pack_manifest_path(pack_id)
+    try:
+        manifest_path.resolve().relative_to(STARTER_PACKS_ROOT.resolve())
+    except ValueError:
+        return None, [f"starter_pack_manifest_boundary_violation:{pack_id}"]
     if not manifest_path.is_file():
         return None, [f"starter pack manifest not found: {manifest_path}"]
     manifest = policy_templates.read_yaml_subset(manifest_path)
@@ -89,6 +110,29 @@ def resolve_template_path(template_ref: str) -> Path:
         relative = template_ref[len("pkg://jikuo/") :]
         return PACKAGE_ROOT / relative
     return PACKAGE_ROOT / template_ref
+
+
+def resolve_official_starter_template_path(template_ref: str) -> tuple[Path | None, str | None]:
+    if not template_ref.startswith(STARTER_TEMPLATE_REF_PREFIX):
+        return None, f"starter_template_ref_must_be_pkg_policy_template:{template_ref}"
+
+    relative = template_ref[len("pkg://jikuo/") :]
+    if "\\" in relative:
+        return None, f"starter_template_ref_boundary_violation:{template_ref}"
+    relative_path = Path(relative)
+    if (
+        relative_path.is_absolute()
+        or ".." in relative_path.parts
+        or ".jikuo" in relative_path.parts
+    ):
+        return None, f"starter_template_ref_boundary_violation:{template_ref}"
+
+    template_path = PACKAGE_ROOT / relative_path
+    try:
+        template_path.resolve().relative_to(POLICY_TEMPLATES_ROOT.resolve())
+    except ValueError:
+        return None, f"starter_template_ref_outside_official_policy_templates:{template_ref}"
+    return template_path, None
 
 
 def load_template_policy(
@@ -163,7 +207,11 @@ def load_pack_policies(pack_id: str) -> tuple[list[dict[str, Any]], list[str]]:
         if not isinstance(template_ref, str) or not template_ref:
             warnings.append("starter pack template entry has no template_ref")
             continue
-        template_path = resolve_template_path(template_ref)
+        template_path, template_warning = resolve_official_starter_template_path(template_ref)
+        if template_warning:
+            warnings.append(template_warning)
+            continue
+        assert template_path is not None
         policy, template_warnings = load_template_policy(
             template_path,
             template_ref=template_ref,
@@ -340,6 +388,15 @@ def build_starter_init_plan(
 
     if any(warning.startswith("unsupported ") for warning in warnings):
         refusals.append("starter_pack_schema_not_supported")
+    if any(
+        warning.startswith("starter_pack_id_must_be_package_local:")
+        or warning.startswith("starter_pack_manifest_boundary_violation:")
+        or warning.startswith("starter_template_ref_must_be_pkg_policy_template:")
+        or warning.startswith("starter_template_ref_boundary_violation:")
+        or warning.startswith("starter_template_ref_outside_official_policy_templates:")
+        for warning in warnings
+    ):
+        refusals.append("starter_pack_source_boundary_violation")
 
     registry_path = resolved_root / project_state.REGISTRY_REF
     would_create_registry = not registry_path.exists()

@@ -97,6 +97,10 @@ document_roles:
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-19_starter_policy_provenance_backfill.md"
     required: true
     note: "Pre-MCP follow-up backfilling explicit package provenance onto official starter policies."
+  self_bootstrap_policy_promotion_work_order:
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-POLICY-CATALOG-01_self_bootstrap_policy_promotion_review.md"
+    required: true
+    note: "Code-level boundary preventing JIKUO self-bootstrap policies from becoming an implicit upstream source for user project policies."
   mcp_response_privacy_work_order:
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-SEC-02_mcp_response_privacy_classification_baseline.md"
     required: true
