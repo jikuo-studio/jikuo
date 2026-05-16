@@ -7,11 +7,11 @@ import sys
 from pathlib import Path
 
 if __package__:
-    from . import runtime_visibility
+    from . import activation_settings, runtime_visibility
     from .integrations import instruction_files
 else:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    from jikuo import runtime_visibility
+    from jikuo import activation_settings, runtime_visibility
     from jikuo.integrations import instruction_files
 
 
@@ -38,13 +38,33 @@ def build_parser() -> argparse.ArgumentParser:
     install.add_argument(
         "--trigger-mode",
         choices=instruction_files.TRIGGER_MODE_CHOICES,
-        default="ask",
+        default=None,
         help="Instruction-file activation mode to write or preview.",
     )
     install.add_argument("--write", action="store_true")
     install.add_argument("--confirm-install", action="store_true")
     install.add_argument("--approval-phrase", default=None)
     install.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    settings = subparsers.add_parser(
+        "settings",
+        help="Inspect or update JIKUO activation settings.",
+    )
+    settings.add_argument("settings_command", choices=("status", "plan", "apply"))
+    settings.add_argument("--project-root", type=Path, default=None)
+    settings.add_argument(
+        "--trigger-mode",
+        choices=activation_settings.TRIGGER_MODE_CHOICES,
+        default="ask",
+    )
+    settings.add_argument(
+        "--effective-enforcement-level",
+        choices=activation_settings.ENFORCEMENT_LEVELS,
+        default="instruction_only",
+    )
+    settings.add_argument("--client", action="append", default=[])
+    settings.add_argument("--confirm-apply", action="store_true")
+    settings.add_argument("--approval-phrase", default=None)
+    settings.add_argument("--format", choices=("markdown", "json"), default="markdown")
     return parser
 
 
@@ -67,7 +87,8 @@ def main(argv: list[str] | None = None) -> int:
             install_args.extend(["--client", client])
         if args.all:
             install_args.append("--all")
-        install_args.extend(["--trigger-mode", args.trigger_mode])
+        if args.trigger_mode:
+            install_args.extend(["--trigger-mode", args.trigger_mode])
         if args.write:
             install_args.append("--write")
         if args.confirm_install:
@@ -76,6 +97,24 @@ def main(argv: list[str] | None = None) -> int:
             install_args.extend(["--approval-phrase", args.approval_phrase])
         install_args.extend(["--format", args.format])
         return instruction_files.main(install_args)
+    if args.command == "settings":
+        settings_args = [args.settings_command]
+        if args.project_root is not None:
+            settings_args.extend(["--project-root", str(args.project_root)])
+        if args.settings_command in {"plan", "apply"}:
+            settings_args.extend(["--trigger-mode", args.trigger_mode])
+            settings_args.extend(
+                ["--effective-enforcement-level", args.effective_enforcement_level]
+            )
+            for client in args.client:
+                settings_args.extend(["--client", client])
+        if args.settings_command == "apply":
+            if args.confirm_apply:
+                settings_args.append("--confirm-apply")
+            if args.approval_phrase:
+                settings_args.extend(["--approval-phrase", args.approval_phrase])
+        settings_args.extend(["--format", args.format])
+        return activation_settings.main(settings_args)
     parser.error(f"unsupported command: {args.command}")
     return 2
 

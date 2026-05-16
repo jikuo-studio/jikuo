@@ -47,7 +47,17 @@ when to use them. Neither one alone is a strict mounted harness unless the
 client also has a pre-turn hook / plugin / SDK wrapper / Studio entry / local
 proxy.
 
-Use `jikuo install` to write the client-facing mode into instruction files:
+Use `jikuo settings` to persist the project default before generating client
+instructions:
+
+```powershell
+jikuo settings plan --trigger-mode mounted --client claude-code
+jikuo settings apply --trigger-mode mounted --client claude-code --confirm-apply --approval-phrase "<exact user phrase>"
+```
+
+The guarded apply writes `.jikuo/activation_settings.yaml`. Use `jikuo install`
+to write the client-facing mode into instruction files. If `--trigger-mode` is
+omitted, `jikuo install` reads the project default from activation settings:
 
 ```powershell
 jikuo install --client codex --trigger-mode ask

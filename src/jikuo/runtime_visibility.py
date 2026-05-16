@@ -11,9 +11,10 @@ from pathlib import Path
 from typing import Any
 
 if __package__:
-    from . import project_state, task_session
+    from . import activation_settings, project_state, task_session
 else:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import activation_settings
     import project_state
     import task_session
 
@@ -450,6 +451,18 @@ def attach_task_session_index_status(
     return output
 
 
+def attach_activation_settings_status(
+    summary: dict[str, Any],
+    *,
+    project_root: Path | None = None,
+) -> dict[str, Any]:
+    output = dict(summary)
+    output["activation_settings"] = activation_settings.build_status_report(
+        project_root=project_root,
+    )
+    return output
+
+
 def format_state_summary(summary: dict[str, Any]) -> str:
     status = summary.get("status", "available")
     lines = [
@@ -511,6 +524,24 @@ def format_state_summary(summary: dict[str, Any]) -> str:
                     f"  `{commands['refresh']}`",
                 ]
             )
+    activation = summary.get("activation_settings") or {}
+    if activation:
+        lines.extend(
+            [
+                "",
+                "## Activation Settings",
+                "",
+                f"- Status: `{activation.get('status')}`",
+                f"- Desired trigger mode: `{activation.get('desired_trigger_mode')}`",
+                f"- Effective enforcement: `{activation.get('effective_enforcement_level')}`",
+                (
+                    "- Strict mounted requires adapter: "
+                    f"`{str(activation.get('strict_mounted_requires_adapter')).lower()}`"
+                ),
+            ]
+        )
+        if activation.get("reason"):
+            lines.append(f"- Reason: {activation['reason']}")
     counts = summary.get("counts") or {}
     if counts:
         lines.extend(
@@ -567,8 +598,11 @@ def main(argv: list[str] | None = None) -> int:
             print(format_state_summary(report), end="")
         return 0 if report["status"] == "available" else 2
 
-    summary = attach_task_session_index_status(
-        load_state_summary(project_root=args.project_root),
+    summary = attach_activation_settings_status(
+        attach_task_session_index_status(
+            load_state_summary(project_root=args.project_root),
+            project_root=args.project_root,
+        ),
         project_root=args.project_root,
     )
     if args.format == "json":

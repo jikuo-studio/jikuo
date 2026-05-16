@@ -16,6 +16,7 @@ from typing import Any
 
 if __package__:
     from . import (
+        activation_settings,
         policy_store,
         policy_templates,
         project_state,
@@ -26,6 +27,7 @@ if __package__:
     )
 else:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import activation_settings
     import policy_templates
     import project_state
     import policy_store
@@ -1015,7 +1017,17 @@ def trigger_decision_for(
     }
 
 
-def normalize_trigger_mode(trigger_mode: str | None) -> str:
+def normalize_trigger_mode(
+    trigger_mode: str | None,
+    *,
+    project_root: Path | None = None,
+) -> str:
+    if trigger_mode is None:
+        mode, _source, _status = activation_settings.resolve_conversation_trigger_mode(
+            project_root=project_root,
+            requested_trigger_mode=None,
+        )
+        return mode
     mode = (trigger_mode or "semantic").strip().lower().replace("_", "-")
     aliases = {
         "mounted-harness": "mounted",
@@ -1393,12 +1405,18 @@ def build_policy_suggestion_review_card(
 
 def build_conversation_turn_cards(
     *,
-    trigger_mode: str,
+    trigger_mode: str | None,
     user_phrase: str | None,
     task_title: str | None,
     summary: str | None,
+    project_root: Path | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]:
-    normalized_mode = normalize_trigger_mode(trigger_mode)
+    normalized_mode, trigger_mode_source, settings_status = (
+        activation_settings.resolve_conversation_trigger_mode(
+            project_root=project_root,
+            requested_trigger_mode=trigger_mode,
+        )
+    )
     router, refusals = classify_conversation_turn(
         trigger_mode=normalized_mode,
         user_phrase=user_phrase,
@@ -1456,6 +1474,8 @@ def build_conversation_turn_cards(
         ),
         shown_inputs=[
             f"trigger_mode: {normalized_mode}",
+            f"trigger_mode_source: {trigger_mode_source}",
+            f"activation_settings_status: {settings_status.get('status')}",
             f"user_phrase_provided: {str(bool(user_phrase)).lower()}",
             f"summary_provided: {str(bool(summary)).lower()}",
             f"task_title_provided: {str(bool(task_title)).lower()}",
@@ -2636,7 +2656,7 @@ def build_proposal(
     owner_agent: str = "codex",
     project_root: Path | None = None,
     user_phrase: str | None = None,
-    trigger_mode: str = "semantic",
+    trigger_mode: str | None = None,
     produced_evidence: list[dict[str, Any]] | None = None,
     work_routing_category: str | None = None,
     work_routing_summary: str | None = None,
@@ -2670,6 +2690,7 @@ def build_proposal(
             user_phrase=user_phrase,
             task_title=task_title,
             summary=summary,
+            project_root=project_root,
         )
     elif event == "task_start":
         cards, traces, refusals = build_task_start_cards(
@@ -3786,7 +3807,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     propose.add_argument("--project-root", type=Path, default=None)
     propose.add_argument("--user-phrase", default=None)
-    propose.add_argument("--trigger-mode", choices=sorted(TRIGGER_MODES), default="semantic")
+    propose.add_argument("--trigger-mode", choices=sorted(TRIGGER_MODES), default=None)
     propose.add_argument("--format", choices=("markdown", "json"), default="markdown")
 
     apply = subparsers.add_parser("apply")

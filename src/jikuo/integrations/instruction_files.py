@@ -9,9 +9,10 @@ from pathlib import Path
 from typing import Any
 
 if __package__ == "jikuo.integrations":
-    from .. import project_state
+    from .. import activation_settings, project_state
 else:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    import activation_settings
     import project_state
 
 
@@ -22,7 +23,7 @@ MANAGED_END = "# END JIKUO MANAGED INSTRUCTIONS"
 CANONICAL_CLIENT = "jikuo"
 APPROVAL_TARGET = "JIKUO universal instruction distribution"
 APPROVAL_EFFECT = "create or update JIKUO instruction files"
-TRIGGER_MODE_CHOICES = ("ask", "semantic", "mounted")
+TRIGGER_MODE_CHOICES = activation_settings.TRIGGER_MODE_CHOICES
 
 CLIENT_TARGETS: dict[str, dict[str, str]] = {
     CANONICAL_CLIENT: {
@@ -224,9 +225,16 @@ def build_install_plan(
     project_root: Path | None = None,
     clients: list[str] | None = None,
     all_clients: bool = False,
-    trigger_mode: str = "ask",
+    trigger_mode: str | None = None,
 ) -> dict[str, Any]:
     resolved_root = project_state.discover_project_root(project_root=project_root)
+    resolved_trigger_mode, trigger_mode_source, settings_status = (
+        activation_settings.resolve_trigger_mode(
+            project_root=resolved_root,
+            requested_trigger_mode=trigger_mode,
+            default="ask",
+        )
+    )
     selected_clients, warnings = select_clients(
         project_root=resolved_root,
         clients=clients,
@@ -239,7 +247,7 @@ def build_install_plan(
         existing = target.read_text(encoding="utf-8") if target.is_file() else None
         merged, operation, managed_block_present = merge_managed_block(
             existing,
-            render_managed_block(client, trigger_mode=trigger_mode),
+            render_managed_block(client, trigger_mode=resolved_trigger_mode),
         )
         targets.append(
             {
@@ -268,10 +276,12 @@ def build_install_plan(
         "approval_effect": APPROVAL_EFFECT,
         "activation_settings": {
             "schema": "jikuo.client_activation_settings.v0",
-            "trigger_mode": trigger_mode,
+            "trigger_mode": resolved_trigger_mode,
+            "trigger_mode_source": trigger_mode_source,
+            "project_settings_status": settings_status.get("status"),
             "trigger_mode_choices": list(TRIGGER_MODE_CHOICES),
             "strict_mounted_requires_adapter": True,
-            "client_prompt_required": trigger_mode == "ask",
+            "client_prompt_required": resolved_trigger_mode == "ask",
         },
         "warnings": warnings,
         "refusal_reasons": [],
@@ -298,7 +308,7 @@ def apply_install_plan(
     all_clients: bool = False,
     confirm_install: bool = False,
     approval_phrase: str | None = None,
-    trigger_mode: str = "ask",
+    trigger_mode: str | None = None,
 ) -> tuple[dict[str, Any], int]:
     plan = build_install_plan(
         project_root=project_root,
@@ -333,7 +343,10 @@ def apply_install_plan(
         existing = target.read_text(encoding="utf-8") if target.is_file() else None
         merged, operation, managed_block_present = merge_managed_block(
             existing,
-            render_managed_block(str(target_info["client"]), trigger_mode=trigger_mode),
+            render_managed_block(
+                str(target_info["client"]),
+                trigger_mode=str(plan["activation_settings"]["trigger_mode"]),
+            ),
         )
         applied = operation != "noop"
         if applied:
@@ -399,7 +412,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--project-root", type=Path, default=None)
     parser.add_argument("--client", choices=SYNC_CLIENTS, action="append", default=[])
     parser.add_argument("--all", action="store_true")
-    parser.add_argument("--trigger-mode", choices=TRIGGER_MODE_CHOICES, default="ask")
+    parser.add_argument("--trigger-mode", choices=TRIGGER_MODE_CHOICES, default=None)
     parser.add_argument("--write", action="store_true")
     parser.add_argument("--confirm-install", action="store_true")
     parser.add_argument("--approval-phrase", default=None)
