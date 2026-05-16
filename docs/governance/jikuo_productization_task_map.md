@@ -201,7 +201,7 @@ Already created in `WORKTREE-05` or incubated from it:
 - `JIKUO-CORE-22`: starter policy pack first-use initialization, implemented as a guarded bootstrap path that activates curated report-only starter policies in a project
 - `JIKUO-CORE-23`: project context template activation, implemented and ready for user review; `policy_templates.py` now resolves project-context bindings, rejects unsafe paths, previews `jikuo.resolved_policy.v0`, and guardedly activates one resolved template as an approved project policy
 - `JIKUO-CORE-24`: agent flow template activation bridge, implemented and ready for user review; `agent_flow.py` now renders template import planning as a visible card and applies one approved template activation through `--operation policy_template_activation`
-- `JIKUO-ROUTER-01`: trigger-mode and conversation-turn router contract, drafted on 2026-05-16; separates semantic client-mediated triggering from future mounted harness pre-turn execution
+- `JIKUO-ROUTER-01`: trigger-mode and conversation-turn router contract, accepted on 2026-05-16; separates semantic client-mediated triggering from future mounted harness pre-turn execution
 
 Current scenario-chain registrations:
 
@@ -2674,8 +2674,8 @@ Open items:
 
 1. Submit the current proactive policy-suggestion metapolicy, insight, execution-mount, and taskmap updates as a separate governed documentation / policy slice.
 2. Revise `POLICY-jikuo-proactive-policy-suggestion-metapolicy` positioning: the first active version is task-start-only and therefore useful as a report-only carrier, but insufficient for the user's stated need that policy extraction can arise during any user interaction. A no-write supersession plan exists, but apply is blocked until router behavior exists.
-3. Review / accept `JIKUO-ROUTER-01` trigger-mode and conversation-turn router contract: semantic triggering stays lightweight; mounted harness mode must run before every user turn once explicitly selected.
-4. Implement `CAP-CONVERSATION-TURN-ROUTER-01` as a no-write router that classifies ordinary user turns into JIKUO obligations, including policy-suggestion review and explicit no-op results.
+3. Implement `CAP-CONVERSATION-TURN-ROUTER-01` as a no-write router that classifies ordinary user turns into JIKUO obligations, including policy-suggestion review and explicit no-op results.
+4. Add tests and CLI visibility for `conversation_turn`, including an explicit no-op result so mounted harness mode can remain auditable even when no JIKUO action is required.
 5. Implement `CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01` so repeated user needs, corrections, and preferences produce compact `proactive_policy_suggestion_review_evidence` plus reviewable candidate cards without raw transcript capture.
 6. Propose and, only after approval, activate `POLICY-jikuo-progress-summary-business-meaning`, requiring progress / todo / acceptance summaries to include product or business meaning for major items.
 7. Add MCP router surfaces after the core router exists: `jikuo.route_user_request` and `jikuo.propose_policy_suggestions` belong in a follow-on MCP slice, not the already accepted MVP body.

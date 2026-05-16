@@ -1,6 +1,6 @@
 # SPRINT 050 WO-PER-JIKUO-ROUTER-01: Trigger Mode And Conversation-Turn Router
 
-> **Status**: Draft
+> **Status**: Accepted
 > **Layer**: Process governance / product architecture
 > **Depends on**: `JIKUO-MCP-01` MVP body, `JIKUO-INTG-01`, `JIKUO-SDK-01`, `POLICY-jikuo-proactive-policy-suggestion-metapolicy`
 > **Blocks**: `CAP-CONVERSATION-TURN-ROUTER-01`, `CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01`, MCP router tools, mounted harness adapters
@@ -25,7 +25,8 @@ The product must therefore support two explicit trigger modes:
 
 ## 2. Scope
 
-This work order defines the contract only. It does not implement the router.
+This work order defines the accepted contract only. It does not implement the
+router.
 
 In scope:
 
