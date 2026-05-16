@@ -389,6 +389,82 @@ def _activation_settings_card_response(
     return response
 
 
+def _apply_activation_settings_update_response(
+    *,
+    arguments: dict[str, Any],
+    project_root: Path | None,
+    transport: str,
+) -> dict[str, Any]:
+    report, _exit_code = activation_settings.apply_plan(
+        project_root=project_root,
+        trigger_mode=str(arguments.get("trigger_mode") or "ask"),
+        effective_enforcement_level=str(
+            arguments.get("effective_enforcement_level") or "instruction_only"
+        ),
+        clients=_string_list_arg(arguments.get("clients")),
+        confirm_apply=_bool_arg(arguments.get("confirm_apply")),
+        approval_phrase=arguments.get("approval_phrase"),
+    )
+    root = Path(str(report["project_root"]))
+    markdown = activation_settings.format_report(report)
+    projection = {
+        "schema": "jikuo.mcp_activation_settings_apply_projection.v0",
+        "proposal_id": "jikuo_apply_activation_settings_update",
+        "runner_mode": "mcp",
+        "status": report.get("status"),
+        "cards": [],
+        "write_effect": {
+            "writes_performed": bool(report.get("writes_performed")),
+            "write_allowed_by_command": bool(report.get("write_allowed_by_command")),
+            "durable_write_atoms_called": (
+                ["CAP-CLIENT-ONBOARDING-SETTINGS-01"]
+                if report.get("writes_performed")
+                else []
+            ),
+            "non_effects": [
+                "does not create .jikuo/policies/",
+                "does not create .jikuo/task_sessions/",
+                "does not update .jikuo/project_state.yaml",
+            ],
+        },
+    }
+    runtime_report = runtime_visibility.persist_agent_flow_snapshot(
+        project_root=root,
+        proposal=projection,
+        card_markdown=markdown,
+    )
+    projection["runtime_visibility"] = runtime_report
+    projection["client_display_links"] = runtime_visibility.build_client_display_links(
+        runtime_report
+    )
+    response = _base_response(
+        tool_name="jikuo.apply_activation_settings_update",
+        status=str(report.get("status") or "unknown"),
+        data_details=projection,
+        project_root=root,
+        transport=transport,
+        card_markdown=markdown,
+        chat_ready_markdown=markdown,
+        runtime_report=runtime_report,
+    )
+    redacted_report = _redact_required_fields(report)
+    response["write_performed"] = bool(report.get("writes_performed"))
+    response["target_result_schema"] = report.get("schema")
+    response["activation_settings_result"] = _sanitize_for_transport(
+        redacted_report,
+        project_root=root,
+        transport=transport,
+    )
+    response["approval_record"] = _redact_required_fields(report.get("approval_record"))
+    response["refusal_reasons"] = list(report.get("refusal_reasons") or [])
+    response["written_refs"] = list(report.get("written_refs") or [])
+    return _sanitize_for_transport(
+        response,
+        project_root=root,
+        transport=transport,
+    )
+
+
 def _apply_task_session_evidence_update_response(
     *,
     arguments: dict[str, Any],
@@ -828,6 +904,13 @@ def call_tool(
             project_root=root,
             transport=resolved_transport,
             output_key="activation_settings_plan",
+        )
+
+    if tool_name == "jikuo.apply_activation_settings_update":
+        return _apply_activation_settings_update_response(
+            arguments=args,
+            project_root=resolved_root,
+            transport=resolved_transport,
         )
 
     if tool_name == "jikuo.apply_task_session_evidence_update":

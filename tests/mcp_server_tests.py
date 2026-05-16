@@ -114,6 +114,7 @@ class MCPServerWrapperTests(unittest.TestCase):
         self.assertIn("jikuo.get_configuration_status", fake.tools)
         self.assertIn("jikuo.get_activation_settings", fake.tools)
         self.assertIn("jikuo.plan_activation_settings_update", fake.tools)
+        self.assertIn("jikuo.apply_activation_settings_update", fake.tools)
         self.assertIn("jikuo.apply_task_session_evidence_update", fake.tools)
         self.assertIn("jikuo.apply_policy_evolution_write", fake.tools)
         self.assertIn("jikuo.apply_policy_template_activation", fake.tools)
@@ -190,6 +191,30 @@ class MCPServerWrapperTests(unittest.TestCase):
                 "jikuo.activation_settings_plan.v0",
             )
             self.assertFalse((project_root / ".jikuo" / "activation_settings.yaml").exists())
+
+    def test_apply_activation_settings_registered_tool_delegates_guarded_apply(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            fake = server.create_server(fastmcp_cls=FakeFastMCP)
+
+            response = fake.tools["jikuo.apply_activation_settings_update"]["function"](
+                project_root=str(project_root),
+                trigger_mode="semantic",
+                effective_enforcement_level="instruction_only",
+                clients=["codex"],
+                confirm_apply=True,
+                approval_phrase="I approve MCP activation settings apply.",
+            )
+
+            self.assertEqual(response["tool_name"], "jikuo.apply_activation_settings_update")
+            self.assertEqual(response["status"], "ok")
+            self.assertTrue(response["write_performed"])
+            self.assertTrue((project_root / ".jikuo" / "activation_settings.yaml").is_file())
+            self.assertNotIn(
+                "I approve MCP activation settings apply.",
+                str(response),
+            )
 
     def test_stage_b1_registered_tool_delegates_guarded_apply(self):
         with tempfile.TemporaryDirectory() as tmp:

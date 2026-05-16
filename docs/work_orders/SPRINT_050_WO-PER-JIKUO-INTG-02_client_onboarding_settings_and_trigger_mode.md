@@ -94,6 +94,6 @@ follow-up action is required.
 ## 6. Remaining Work
 
 - Add MCP router surfaces for `jikuo.route_user_request` and policy-suggestion review.
-- Add MCP activation settings tools, such as `jikuo.get_activation_settings`, `jikuo.plan_activation_settings_update`, and `jikuo.apply_activation_settings_update`.
+- MCP activation settings tools are now implemented: `jikuo.get_activation_settings`, `jikuo.plan_activation_settings_update`, and guarded `jikuo.apply_activation_settings_update`.
 - Implement the first strict mounted adapter, likely Claude Code `UserPromptSubmit`, after user approval.
 - Update client proof docs as each client is verified.

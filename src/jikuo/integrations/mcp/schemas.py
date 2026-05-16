@@ -50,6 +50,7 @@ CONFIGURATION_TOOL_NAMES = (
     "jikuo.get_configuration_status",
     "jikuo.get_activation_settings",
     "jikuo.plan_activation_settings_update",
+    "jikuo.apply_activation_settings_update",
 )
 
 EXPOSED_TOOL_NAMES = (
@@ -236,6 +237,33 @@ TOOL_DEFINITIONS: dict[str, dict[str, Any]] = {
         card_returning=True,
         stage="C1",
         write_mode="no-write",
+    ),
+    "jikuo.apply_activation_settings_update": _tool(
+        name="jikuo.apply_activation_settings_update",
+        description=(
+            "Apply one explicitly approved project activation settings update. "
+            "Requires confirm_apply=true and an approval_phrase after the user "
+            "reviews the activation settings plan."
+        ),
+        input_fields={
+            "project_root": LOCAL_ONLY,
+            "trigger_mode": RETURN,
+            "effective_enforcement_level": RETURN,
+            "clients": RETURN,
+            "confirm_apply": RETURN,
+            "approval_phrase": REDACT_REQUIRED,
+        },
+        output_fields={
+            "write_performed": RETURN,
+            "target_result_schema": RETURN,
+            "activation_settings_result": RETURN,
+            "approval_record": RETURN,
+            "refusal_reasons": RETURN,
+            "written_refs": RETURN,
+        },
+        card_returning=True,
+        stage="C2",
+        write_mode="guarded-write",
     ),
     "jikuo.apply_task_session_evidence_update": _tool(
         name="jikuo.apply_task_session_evidence_update",

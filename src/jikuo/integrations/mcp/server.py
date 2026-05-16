@@ -300,6 +300,33 @@ def register_configuration_tools(
             default_transport=default_transport,
         )
 
+    @server.tool(
+        name="jikuo.apply_activation_settings_update",
+        description=tool_description(
+            tool_definitions["jikuo.apply_activation_settings_update"]
+        ),
+    )
+    def jikuo_apply_activation_settings_update(
+        project_root: str | None = None,
+        trigger_mode: str | None = None,
+        effective_enforcement_level: str | None = None,
+        clients: list[str] | None = None,
+        confirm_apply: bool = False,
+        approval_phrase: str | None = None,
+    ) -> dict[str, Any]:
+        return _call(
+            "jikuo.apply_activation_settings_update",
+            {
+                "project_root": project_root,
+                "trigger_mode": trigger_mode,
+                "effective_enforcement_level": effective_enforcement_level,
+                "clients": clients or [],
+                "confirm_apply": confirm_apply,
+                "approval_phrase": approval_phrase,
+            },
+            default_transport=default_transport,
+        )
+
     return server
 
 

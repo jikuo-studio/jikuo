@@ -109,6 +109,7 @@ class MCPStageAAdapterTests(unittest.TestCase):
         self.assertIn("jikuo.get_configuration_status", names)
         self.assertIn("jikuo.get_activation_settings", names)
         self.assertIn("jikuo.plan_activation_settings_update", names)
+        self.assertIn("jikuo.apply_activation_settings_update", names)
         by_name = {tool["name"]: tool for tool in tools}
         for name in schemas.STAGE_A_TOOL_NAMES:
             self.assertEqual(by_name[name]["stage"], "A")
@@ -124,6 +125,11 @@ class MCPStageAAdapterTests(unittest.TestCase):
         self.assertEqual(
             by_name["jikuo.plan_activation_settings_update"]["write_mode"],
             "no-write",
+        )
+        self.assertEqual(by_name["jikuo.apply_activation_settings_update"]["stage"], "C2")
+        self.assertEqual(
+            by_name["jikuo.apply_activation_settings_update"]["write_mode"],
+            "guarded-write",
         )
         self.assertEqual(
             by_name["jikuo.apply_task_session_evidence_update"]["stage"],
@@ -270,6 +276,55 @@ class MCPStageAAdapterTests(unittest.TestCase):
             )
             self.assertFalse((project_root / ".jikuo" / "activation_settings.yaml").exists())
             self.assertTrue((project_root / ".jikuo" / "runtime" / "last_card.md").is_file())
+
+    def test_apply_activation_settings_update_is_guarded_and_redacts_phrase(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+
+            refused = adapter.call_tool(
+                "jikuo.apply_activation_settings_update",
+                {
+                    "project_root": str(project_root),
+                    "trigger_mode": "mounted",
+                    "clients": ["claude-code"],
+                },
+            )
+
+            self.assertEqual(refused["status"], "refused")
+            self.assertFalse(refused["write_performed"])
+            self.assertIn("confirm_apply_required", refused["refusal_reasons"])
+            self.assertFalse((project_root / ".jikuo" / "activation_settings.yaml").exists())
+
+            applied = adapter.call_tool(
+                "jikuo.apply_activation_settings_update",
+                {
+                    "project_root": str(project_root),
+                    "trigger_mode": "mounted",
+                    "effective_enforcement_level": "instruction_only",
+                    "clients": ["claude-code"],
+                    "confirm_apply": True,
+                    "approval_phrase": "I approve activation settings update.",
+                },
+            )
+
+            self.assertEqual(applied["status"], "ok")
+            self.assertTrue(applied["write_performed"])
+            self.assertEqual(
+                applied["target_result_schema"],
+                "jikuo.activation_settings_result.v0",
+            )
+            self.assertEqual(
+                applied["written_refs"],
+                [".jikuo/activation_settings.yaml"],
+            )
+            settings_text = (
+                project_root / ".jikuo" / "activation_settings.yaml"
+            ).read_text(encoding="utf-8")
+            self.assertIn('desired_trigger_mode: "mounted"', settings_text)
+            serialized = json.dumps(applied, ensure_ascii=False)
+            self.assertNotIn("I approve activation settings update.", serialized)
+            self.assertIn("<REDACTED>", serialized)
 
     def test_get_display_card_reads_latest_runtime_card(self):
         with tempfile.TemporaryDirectory() as tmp:

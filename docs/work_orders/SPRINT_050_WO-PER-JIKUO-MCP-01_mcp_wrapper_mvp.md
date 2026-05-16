@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-MCP-01: MCP Wrapper MVP
 
-> **Status**: MCP MVP body implemented and release-smoked; Stage A server wrapper accepted; Stage B1 task-session evidence guarded-write tool implemented after explicit user approval; Stage B2 policy evolution guarded-write tool implemented and externally smoke-accepted; Stage B3 policy-template activation guarded-write tool implemented and externally smoke-accepted; post-MVP read-only configuration status and activation settings read / plan tools implemented
+> **Status**: MCP MVP body implemented and release-smoked; Stage A server wrapper accepted; Stage B1 task-session evidence guarded-write tool implemented after explicit user approval; Stage B2 policy evolution guarded-write tool implemented and externally smoke-accepted; Stage B3 policy-template activation guarded-write tool implemented and externally smoke-accepted; post-MVP configuration status, activation settings read / plan, and activation settings guarded apply tools implemented
 > **Product meaning**: formally move the next phase from more kernel expansion to an MCP wrapper MVP, so desktop Agents can call JIKUO through a stable tool surface while users remain in their desktop AI client.
 > **Scope rule**: wrap stable atoms only; do not add new governance capability in this slice.
 
@@ -103,6 +103,14 @@ reviews the template import plan and supplies confirmation plus approval phrase.
 | `jikuo.apply_task_session_evidence_update` | `CAP-AGENT-FLOW-APPLY-TASK-EVIDENCE-01` | guarded write | append one explicitly approved task-session evidence item |
 | `jikuo.apply_policy_evolution_write` | `CAP-POLICY-EVOLUTION-APPLY-BINDING-01` and `CAP-AGENT-FLOW-APPLY-POLICY-EVOLUTION-01` | guarded write | apply one approved policy deprecation / supersession only when proposal ref, replacement trigger event, confirmation, and approval phrase match |
 | `jikuo.apply_policy_template_activation` | `CAP-AGENT-FLOW-APPLY-POLICY-TEMPLATE-ACTIVATION-01` | guarded write | activate one approved resolved template only after bindings, confirmation, and approval phrase match |
+
+Post-MVP configuration writes expose a separate guarded settings surface. This
+tool is not a Stage A no-write tool; it writes only the reviewed activation
+settings file after explicit user confirmation.
+
+| Configuration guarded-write MCP tool | Wrapped atom | Write mode | Product role |
+|---|---|---|---|
+| `jikuo.apply_activation_settings_update` | `CAP-MCP-ACTIVATION-SETTINGS-APPLY-01` | guarded write | write reviewed activation settings only after confirmation and approval phrase |
 
 Display response contract for card-returning tools:
 
@@ -263,7 +271,8 @@ Stage A implementation progress:
 - [x] MCP client configuration examples were updated after Stage B3 to describe the current 11-tool MVP surface, Stage B2 / B3 smoke checks, guarded write boundaries, approval phrase redaction checks, and fixture-first apply-path guidance.
 - [x] Final local official SDK release smoke passed on 2026-05-16: a Python MCP `ClientSession` launched `python -B -m jikuo.integrations.mcp.server`, listed all 11 MVP tools, called `jikuo.get_runtime_status_card` against a temporary fixture project, and confirmed returned `card_markdown` matched `.jikuo/runtime/last_card.md`.
 - [x] Post-MVP configuration status read surface implemented: `jikuo.get_configuration_status` wraps `agent_flow propose --event configuration_review`, returns `jikuo.configuration_review.v0`, and writes only runtime visibility.
-- [x] Post-MVP activation settings read / plan surface implemented: `jikuo.get_activation_settings` returns `jikuo.activation_settings_status.v0`; `jikuo.plan_activation_settings_update` returns `jikuo.activation_settings_plan.v0`; neither writes `.jikuo/activation_settings.yaml`; current tool discovery expands to 14 tools.
+- [x] Post-MVP activation settings read / plan surface implemented: `jikuo.get_activation_settings` returns `jikuo.activation_settings_status.v0`; `jikuo.plan_activation_settings_update` returns `jikuo.activation_settings_plan.v0`; neither writes `.jikuo/activation_settings.yaml`; this initially expanded tool discovery to 14 tools before the guarded apply surface was accepted.
+- [x] Post-MVP activation settings guarded apply surface implemented after explicit user approval: `jikuo.apply_activation_settings_update` refuses without confirmation / approval phrase, writes only `.jikuo/activation_settings.yaml` on success, redacts the raw approval phrase, and expands current tool discovery to 15 tools.
 
 Stage A desktop-client acceptance log:
 
