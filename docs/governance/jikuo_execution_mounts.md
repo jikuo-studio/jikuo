@@ -176,6 +176,14 @@ For future starter policy pack / first-use initialization work, also mount:
 - `src/jikuo/starter_policy_packs/engineering_governance/manifest.yaml`
 - `src/jikuo/policy_templates/engineering_governance/*.yaml`
 
+For future Dashboard / Studio frontend work, also mount:
+
+- `docs/insights/INSIGHT-2026-05-16-studio-dashboard-frontend-architecture.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-UX-00_user_scenarios_and_atomic_action_map.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-PRD-01_product_definition.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-12_out_of_band_runtime_visibility_channels.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-MCP-01_mcp_wrapper_mvp.md`
+
 ---
 
 ## 3. Accepted Execution Order
@@ -547,13 +555,15 @@ Accepted target for the current pre-MCP visibility review:
 - `JIKUO-MCP-01` Stage B1 official SDK smoke passed during the B1 slice: a Python MCP `ClientSession` listed 9 tools, called `jikuo.apply_task_session_evidence_update`, and confirmed Stage B2 / B3 tools were not exposed before later Stage B2 approval
 - `JIKUO-MCP-01` Stage B2 Claude-assisted acceptance passed with adapter and FastMCP wrapper tool lists showing 10 tools, B2 refusal / apply paths working, no task-session side effects, no raw approval phrase leakage, fixture runtime card written, and Stage B3 still absent during that slice
 - `JIKUO-MCP-01` Stage B3 Claude Code GUI acceptance passed: adapter and FastMCP wrapper expose 11 tools including `jikuo.apply_policy_template_activation`; refusal and approved activation paths work, proposal / decision / approved policy / manifest writes are present, no task-session side effects occur, raw approval phrase is redacted, fixture runtime card output is written, and no GUI MCP client cache issue was observed
+- `JIKUO-MCP-01` MCP MVP body release smoke passed on 2026-05-16: official SDK `ClientSession` discovered all 11 tools and verified `jikuo.get_runtime_status_card` runtime-card parity in a temporary fixture project
 - JIKUO release-readiness baseline now includes a product-facing root `README.md`, `.[dev]` pytest extras in `pyproject.toml`, and `.github/workflows/test.yml`; the external release license remains an explicit user decision
 - `JIKUO-REL-01` drafts the external release license decision brief; use it before changing `pyproject.toml`, adding a `LICENSE` file, or publishing outside the private workspace
 - `JIKUO-INTG-01` is accepted and implements canonical `JIKUO.md` plus guarded client instruction sync without making client hooks mandatory
 - `JIKUO-SDK-01` is accepted and defines OpenAI Agents SDK, Claude Agent SDK, Google ADK, Vercel AI SDK, and Google Antigravity-style agentic platforms as optional orchestration / client-environment adapters that consume JIKUO through MCP / CLI / public adapter APIs while local policy, evidence, approvals, and runtime visibility remain authoritative
 - `JIKUO-LIVE-15` adds a self-bootstrap requirement that governed JIKUO development slices bind, create, or explicitly defer a task-session at task start; `.jikuo/project_state.yaml latest_task_session_refs` refresh remains a separate guarded action unless promoted later
-- `JIKUO-MCP-01` prerequisites for Stage A, Stage B1, Stage B2, and Stage B3 are accepted; product-surface expansion remains a separate approval point
+- `JIKUO-MCP-01` prerequisites for Stage A, Stage B1, Stage B2, and Stage B3 are accepted, and MCP MVP body release smoke has passed; product-surface expansion remains a separate approval point
 - dashboard / Studio UI, OS notifications, per-client hook packs, rollback, broader conditions, UI, Plugin, and gates remain deferred; current MCP visibility relies on card markdown plus runtime card links
+- `INSIGHT-2026-05-16-studio-dashboard-frontend-architecture` records the current frontend architecture posture for future `JIKUO-STUDIO-01`: projection-first view models, panel registration, guarded action registration, and canonical `.jikuo/` state remain the change-friendly boundary
 
 Accepted result:
 

@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-MCP-01: MCP Wrapper MVP
 
-> **Status**: Stage A server wrapper accepted; Stage B1 task-session evidence guarded-write tool implemented after explicit user approval; Stage B2 policy evolution guarded-write tool implemented and externally smoke-accepted; Stage B3 policy-template activation guarded-write tool implemented and externally smoke-accepted
+> **Status**: MCP MVP body implemented and release-smoked; Stage A server wrapper accepted; Stage B1 task-session evidence guarded-write tool implemented after explicit user approval; Stage B2 policy evolution guarded-write tool implemented and externally smoke-accepted; Stage B3 policy-template activation guarded-write tool implemented and externally smoke-accepted
 > **Product meaning**: formally move the next phase from more kernel expansion to an MCP wrapper MVP, so desktop Agents can call JIKUO through a stable tool surface while users remain in their desktop AI client.
 > **Scope rule**: wrap stable atoms only; do not add new governance capability in this slice.
 
@@ -253,6 +253,8 @@ Stage A implementation progress:
 - [x] `src/jikuo/integrations/mcp/server.py` registers `jikuo.apply_policy_template_activation` through the official FastMCP wrapper while continuing to delegate behavior to the SDK-free adapter.
 - [x] Unit coverage verifies Stage B3 refusal without confirmation / approval phrase, success after approval, no task-session writes, approval phrase non-disclosure, runtime visibility projection, and project-local approved policy activation.
 - [x] External Claude Code GUI acceptance on 2026-05-16 passed: adapter and FastMCP wrapper both listed 11 tools, `jikuo.apply_policy_template_activation` refused unapproved calls without creating `.jikuo/policies/`, activated one resolved template after approval, wrote proposal snapshot / approved policy / decision record / manifest, did not create `.jikuo/task_sessions/`, did not leak the raw approval phrase, wrote `.jikuo/runtime/last_card.md` in the fixture project, and showed no GUI MCP client tool-list cache issue.
+- [x] MCP client configuration examples were updated after Stage B3 to describe the current 11-tool MVP surface, Stage B2 / B3 smoke checks, guarded write boundaries, approval phrase redaction checks, and fixture-first apply-path guidance.
+- [x] Final local official SDK release smoke passed on 2026-05-16: a Python MCP `ClientSession` launched `python -B -m jikuo.integrations.mcp.server`, listed all 11 MVP tools, called `jikuo.get_runtime_status_card` against a temporary fixture project, and confirmed returned `card_markdown` matched `.jikuo/runtime/last_card.md`.
 
 Stage A desktop-client acceptance log:
 
@@ -345,6 +347,13 @@ Human semantic review:
 - confirm approval boundaries are visible
 - confirm this slice feels like packaging stable atoms, not expanding the governance kernel
 
+Final MCP MVP body smoke:
+
+- official SDK `ClientSession` can discover all 11 MVP tools
+- `jikuo.get_runtime_status_card` returns the expected compact runtime status card
+- the temporary fixture project's `.jikuo/runtime/last_card.md` matches the returned card Markdown
+- no Stage A no-write call writes policy or task-session state
+
 ## 9. Acceptance Criteria
 
 - The work order, task map, and execution mounts all identify `JIKUO-MCP-01` as the scoped MCP implementation slice, blocked until pre-MCP foundations are accepted.
@@ -357,3 +366,8 @@ Human semantic review:
 - No new governance capability is introduced by this work order.
 - The future implementation has explicit unit / integration / smoke / human review requirements.
 - MCP implementation is blocked until the pre-MCP portability / security / package / visibility foundation is accepted or explicitly deferred.
+
+Post-MVP expansion remains separate:
+
+- no MCP B4 or broader guarded-write tool should be added without explicit user approval
+- dashboard / Studio, Agent SDK adapters, per-client hook packs, Plugin packaging, rollback, broader condition vocabulary, and gates remain outside MCP MVP body scope

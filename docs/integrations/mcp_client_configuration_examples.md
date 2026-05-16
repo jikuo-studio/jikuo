@@ -1,13 +1,14 @@
 # JIKUO MCP Client Configuration Examples
 
-> Status: Stage A configuration examples and smoke-log companion.
-> Scope: local stdio MCP clients only; Stage B1 task-session evidence guarded
-> write is enabled after explicit user approval. Stage B2 / B3 policy-store
-> writes remain blocked.
+> Status: MCP MVP local stdio configuration examples and smoke-log companion.
+> Scope: local stdio MCP clients only. Current MVP exposes 11 tools: 8 Stage A
+> no-write / card / proposal tools plus Stage B1 / B2 / B3 guarded-write tools.
 
 ## Purpose
 
-This file records reusable client configuration examples for the JIKUO MCP Stage A server.
+This file records reusable client configuration examples for the JIKUO MCP MVP
+server and the smoke checks needed to verify a desktop client is seeing the
+current tool surface.
 
 Source references:
 
@@ -104,19 +105,65 @@ For a configured client:
 5. `jikuo show --last-card` shows the same card.
 6. No `.jikuo/policies/`, `.jikuo/task_sessions/`, or `.jikuo/project_state.yaml` write is caused by the no-write Stage A call.
 
+## Current MVP Tool Discovery Checklist
+
+For the current MVP, tool discovery should list exactly 11 tools:
+
+1. `jikuo.status`
+2. `jikuo.get_runtime_status`
+3. `jikuo.get_runtime_status_card`
+4. `jikuo.get_display_card`
+5. `jikuo.propose_task_start`
+6. `jikuo.propose_policy_write_plan`
+7. `jikuo.propose_policy_evolution_plan`
+8. `jikuo.propose_policy_template_import_plan`
+9. `jikuo.apply_task_session_evidence_update`
+10. `jikuo.apply_policy_evolution_write`
+11. `jikuo.apply_policy_template_activation`
+
+If a GUI client shows fewer tools after updating JIKUO, start a new client
+session or restart the desktop application so it respawns the MCP server.
+
 ## Stage B1 Smoke Checklist
 
 For `jikuo.apply_task_session_evidence_update`:
 
-1. Tool discovery lists the 8 Stage A tools plus `jikuo.apply_task_session_evidence_update`.
-2. `jikuo.apply_policy_evolution_write` and `jikuo.apply_policy_template_activation` are not listed.
-3. Calling the tool without `confirm_apply=true` is refused and does not modify the target task-session file.
-4. Calling the tool without `approval_phrase` is refused and does not modify the target task-session file.
-5. Calling the tool with a valid `session_id`, evidence fields, `confirm_apply=true`, and approval phrase appends exactly one evidence item to the target task-session.
-6. The success path does not write `.jikuo/policies/` and does not update `.jikuo/project_state.yaml`.
+1. Calling the tool without `confirm_apply=true` is refused and does not modify the target task-session file.
+2. Calling the tool without `approval_phrase` is refused and does not modify the target task-session file.
+3. Calling the tool with a valid `session_id`, evidence fields, `confirm_apply=true`, and approval phrase appends exactly one evidence item to the target task-session.
+4. The success path does not write `.jikuo/policies/` and does not update `.jikuo/project_state.yaml`.
+5. The returned `card_markdown` and `.jikuo/runtime/last_card.md` surface the guarded apply result.
+
+## Stage B2 Smoke Checklist
+
+For `jikuo.apply_policy_evolution_write`:
+
+1. Calling the tool without `confirm_apply=true` is refused.
+2. Calling the tool without `approval_phrase` is refused.
+3. Calling the tool without a matching `proposal_ref` is refused.
+4. Calling the tool with the proposal ref reviewed by the user, `confirm_apply=true`, and an approval phrase applies exactly one approved deprecation or supersession.
+5. The success path does not create `.jikuo/task_sessions/`.
+6. The response does not contain the raw approval phrase.
 7. The returned `card_markdown` and `.jikuo/runtime/last_card.md` surface the guarded apply result.
 
-Stage B2 / B3 guarded policy-store writes remain blocked until separately accepted.
+Run B2 apply-path smoke against a copied temporary fixture unless the user is
+intentionally approving a real project policy evolution.
+
+## Stage B3 Smoke Checklist
+
+For `jikuo.apply_policy_template_activation`:
+
+1. Calling the tool without `confirm_apply=true` is refused.
+2. Calling the tool without `approval_phrase` is refused.
+3. Calling the tool against unresolved or unsafe project-context bindings is refused.
+4. Calling the tool with a resolved template, `confirm_apply=true`, and an approval phrase writes exactly the approved policy activation artifacts.
+5. The expected write set is limited to `.jikuo/policies/proposals/`, `.jikuo/policies/approved/`, `.jikuo/policies/decisions/`, `.jikuo/policies/manifest.yaml`, and `.jikuo/runtime/`.
+6. The success path does not create `.jikuo/task_sessions/`.
+7. The response does not contain the raw approval phrase.
+8. The returned `card_markdown` and `.jikuo/runtime/last_card.md` surface the guarded apply result.
+
+Run B3 apply-path smoke against a copied temporary fixture unless the user is
+intentionally approving a real project policy-template activation.
 
 ## Verified So Far
 
@@ -127,4 +174,7 @@ Stage B2 / B3 guarded policy-store writes remain blocked until separately accept
 - Local client and test byproducts may remain under ignored project paths such as `.claude/` and `tmp/`; they are not Stage A source artifacts.
 - Stage B1 `jikuo.apply_task_session_evidence_update` was implemented after explicit user approval.
 - Official Python MCP SDK `ClientSession` stdio smoke listed 9 tools, called the Stage B1 tool successfully, and confirmed Stage B2 / B3 tools were not exposed.
-- Stage B2 / B3 guarded policy-store writes remain blocked until separately accepted.
+- Stage B2 `jikuo.apply_policy_evolution_write` was implemented after explicit user approval and externally smoke-accepted on 2026-05-16.
+- Stage B3 `jikuo.apply_policy_template_activation` was implemented after explicit user approval and externally smoke-accepted in Claude Code GUI on 2026-05-16.
+- Current GUI MCP smoke observed 11 tools and did not show a client tool-list cache issue after starting a fresh session.
+- Final local official SDK release smoke passed on 2026-05-16 using `tmp/mcp-stage-a-venv/Scripts/python.exe`: `ClientSession` listed the 11-tool MVP surface and `jikuo.get_runtime_status_card` returned card Markdown matching `.jikuo/runtime/last_card.md` in a temporary fixture project.

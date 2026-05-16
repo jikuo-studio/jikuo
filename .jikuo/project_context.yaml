@@ -91,6 +91,10 @@ document_roles:
   insights_registry:
     path: "docs/insights/insights_registry.yaml"
     required: true
+  studio_dashboard_frontend_architecture_insight:
+    path: "docs/insights/INSIGHT-2026-05-16-studio-dashboard-frontend-architecture.md"
+    required: false
+    note: "Mount before future JIKUO-STUDIO-01 dashboard / Studio architecture or implementation slices."
   policy_manifest:
     path: ".jikuo/policies/manifest.yaml"
     required: true
