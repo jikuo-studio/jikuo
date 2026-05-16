@@ -7,10 +7,14 @@ It helps an AI-assisted project make its working state visible: which policies
 are active, which ones triggered, what evidence is missing, which task-session
 is being worked, and where the user can independently verify the runtime card.
 
-JIKUO is currently an early standalone package. Stage A MCP support is
-implemented for no-write status, card, and proposal tools. Stage B1 adds one
-guarded-write MCP tool for task-session evidence updates after explicit user
-approval. Policy evolution and template activation MCP writes remain blocked.
+JIKUO is currently an early standalone package in private preview. The current
+MCP MVP exposes 17 local stdio tools across no-write status/cards/proposals,
+first-use configuration review, activation settings, conversation routing,
+policy suggestion review, and guarded-write apply paths.
+
+This repository is not a public release yet. The package metadata remains
+`Proprietary` while the external source-available preview license and brand/IP
+gate are being decided.
 
 ## What JIKUO Provides
 
@@ -21,18 +25,26 @@ approval. Policy evolution and template activation MCP writes remain blocked.
 - Task-session records for durable process memory without capturing raw chat
   transcripts.
 - Starter policy templates with provenance for first-use project bootstrap.
-- A Stage A MCP server wrapper around stable no-write JIKUO atoms.
-- Integration docs for desktop clients and future SDK adapters.
+- A local stdio MCP server exposing 17 tools for status, cards, proposals,
+  configuration review, activation settings, routing, and guarded writes.
+- Client proof docs for Claude Code GUI, Codex, Cursor, and VS Code + GitHub
+  Copilot Agent mode.
+- Integration-neutral core APIs reserved for MCP, future Agent SDK wrappers,
+  Studio, plugins, and client adapters.
 
 ## Quickstart
 
-From the repository root:
+For private GitHub preview proof:
 
 ```powershell
-python -m pip install -e ".[dev]"
-python -B -m unittest discover -s tests -p "*_tests.py"
-jikuo show
-jikuo-mcp --help
+cd D:\personal_project
+git clone https://github.com/jikuo-studio/jikuo.git Jikuo_private_preview
+cd D:\personal_project\Jikuo_private_preview
+py -3 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
+.\.venv\Scripts\jikuo.exe --help
+.\.venv\Scripts\jikuo-mcp.exe --help
+.\.venv\Scripts\jikuo.exe show
 ```
 
 For local source-tree development without an editable install:
@@ -42,7 +54,7 @@ $env:PYTHONPATH='src'
 python -B -m unittest discover -s tests -p "*_tests.py"
 ```
 
-## MCP Stage A
+## MCP MVP
 
 The MCP server entry point is:
 
@@ -56,7 +68,9 @@ or, after installation:
 jikuo-mcp
 ```
 
-Stage A exposes eight no-write tools:
+The current MCP surface exposes 17 tools:
+
+Status, cards, and no-write proposals:
 
 - `jikuo.status`
 - `jikuo.get_runtime_status`
@@ -67,18 +81,51 @@ Stage A exposes eight no-write tools:
 - `jikuo.propose_policy_evolution_plan`
 - `jikuo.propose_policy_template_import_plan`
 
-Stage B1 exposes one guarded-write tool:
+First-use configuration and activation settings:
+
+- `jikuo.get_configuration_status`
+- `jikuo.get_activation_settings`
+- `jikuo.plan_activation_settings_update`
+- `jikuo.apply_activation_settings_update`
+
+Conversation routing and policy suggestion review:
+
+- `jikuo.route_user_request`
+- `jikuo.propose_policy_suggestions`
+
+Guarded-write apply tools:
 
 - `jikuo.apply_task_session_evidence_update`
+- `jikuo.apply_policy_evolution_write`
+- `jikuo.apply_policy_template_activation`
 
-This tool still requires explicit confirmation and an approval phrase, and it
-may only append one evidence item to an explicit task-session.
+Guarded-write tools require explicit confirmation and an approval phrase. They
+must not silently create durable `.jikuo/` state without user approval.
 
-Client configuration examples live in
+MCP configuration examples live in
 [`docs/integrations/mcp_client_configuration_examples.md`](docs/integrations/mcp_client_configuration_examples.md).
+
+Manual client proof steps live in
+[`docs/integrations/mcp_client_proof_playbook.md`](docs/integrations/mcp_client_proof_playbook.md).
+
+## Trigger Modes
+
+JIKUO supports three activation postures in user-facing setup:
+
+- `ask`: the client should ask the user to choose before the first governed
+  turn.
+- `semantic`: the agent calls JIKUO when a user turn appears to carry governed
+  work.
+- `mounted`: a host adapter calls JIKUO before every user turn.
+
+MCP plus instruction files makes tools available, but it is not strict mounted
+execution by itself. Strict mounted execution requires a future client hook,
+plugin, Agent SDK wrapper, Studio/local proxy, or other host adapter that calls
+JIKUO before each user turn.
 
 ## Documentation Map
 
+- [`README.md`](README.md): product-facing private preview entry point.
 - [`docs/README.md`](docs/README.md): internal documentation layout and mount
   rules.
 - [`docs/governance/jikuo_productization_task_map.md`](docs/governance/jikuo_productization_task_map.md):
@@ -89,6 +136,8 @@ Client configuration examples live in
   orders.
 - [`docs/insights/`](docs/insights/): captured development insights and their
   registry.
+- [`docs/integrations/mcp_client_proof_playbook.md`](docs/integrations/mcp_client_proof_playbook.md):
+  fresh-clone proof workflow for supported desktop AI clients.
 
 ## Development
 
@@ -107,4 +156,8 @@ pytest
 ## License
 
 The current package metadata is `Proprietary`. The external release license is
-an explicit product decision and has not been changed by the MCP Stage A work.
+an explicit product decision and has not changed yet.
+
+Current product direction is a private GitHub preview followed by a possible
+source-available community preview. Public review should wait until the license,
+brand notice, contribution terms, privacy sweep, and IP gate are accepted.

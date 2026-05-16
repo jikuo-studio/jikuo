@@ -35,6 +35,7 @@ The following remain outside this repository's active documentation mount unless
 
 ## 4. Current Entry Points
 
+- `README.md`
 - `docs/README.md`
 - `docs/governance/jikuo_execution_mounts.md`
 - `docs/governance/jikuo_productization_task_map.md`
@@ -83,6 +84,7 @@ When a future task creates JIKUO-owned docs:
 Before closing each JIKUO development slice, check whether these main documents need updates:
 
 - `.jikuo/project_context.yaml`
+- `README.md`
 - `docs/README.md`
 - `docs/governance/jikuo_execution_mounts.md`
 - `docs/governance/jikuo_productization_task_map.md`

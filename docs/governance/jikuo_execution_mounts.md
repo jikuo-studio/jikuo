@@ -38,6 +38,7 @@ When continuing the JIKUO productization track, read this document first, then m
 
 Always mount:
 
+- `README.md`
 - `docs/README.md`
 - `docs/governance/jikuo_execution_mounts.md`
 - `docs/governance/jikuo_productization_task_map.md`
@@ -55,6 +56,7 @@ Standalone path rule:
 Slice completion main document check:
 
 - Before closing any JIKUO development slice, check `.jikuo/project_context.yaml`.
+- Check `README.md` when the product-facing project status, quickstart, MCP surface, release posture, or GitHub preview path changes.
 - Check `docs/README.md` when document roots, directory roles, or entry points change.
 - Check `docs/governance/jikuo_execution_mounts.md` when required mounts, execution order, command previews, or active context changes.
 - Check `docs/governance/jikuo_productization_task_map.md` when the task map, current snapshot, capability registry, or todo list changes.

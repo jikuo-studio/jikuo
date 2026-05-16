@@ -8,6 +8,10 @@ document_roles:
     path: ".jikuo/project_context.yaml"
     required: true
     note: "Canonical project-local document and directory role bindings."
+  root_readme:
+    path: "README.md"
+    required: true
+    note: "Product-facing repository entry point shown on GitHub private preview and future public review pages."
   docs_entry:
     path: "docs/README.md"
     required: true
@@ -128,6 +132,8 @@ main_document_mounts:
   checked_before_slice_completion:
     - path: ".jikuo/project_context.yaml"
       update_required_when: "document roles, directory roles, mount policy, or completion-check scope changes"
+    - path: "README.md"
+      update_required_when: "product-facing project status, quickstart, MCP surface, release posture, or GitHub preview path changes"
     - path: "docs/README.md"
       update_required_when: "documentation roots, entry points, or directory responsibilities change"
     - path: "docs/governance/jikuo_execution_mounts.md"
