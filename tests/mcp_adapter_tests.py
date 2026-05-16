@@ -110,6 +110,8 @@ class MCPStageAAdapterTests(unittest.TestCase):
         self.assertIn("jikuo.get_activation_settings", names)
         self.assertIn("jikuo.plan_activation_settings_update", names)
         self.assertIn("jikuo.apply_activation_settings_update", names)
+        self.assertIn("jikuo.route_user_request", names)
+        self.assertIn("jikuo.propose_policy_suggestions", names)
         by_name = {tool["name"]: tool for tool in tools}
         for name in schemas.STAGE_A_TOOL_NAMES:
             self.assertEqual(by_name[name]["stage"], "A")
@@ -130,6 +132,13 @@ class MCPStageAAdapterTests(unittest.TestCase):
         self.assertEqual(
             by_name["jikuo.apply_activation_settings_update"]["write_mode"],
             "guarded-write",
+        )
+        self.assertEqual(by_name["jikuo.route_user_request"]["stage"], "R1")
+        self.assertEqual(by_name["jikuo.route_user_request"]["write_mode"], "no-write")
+        self.assertEqual(by_name["jikuo.propose_policy_suggestions"]["stage"], "R1")
+        self.assertEqual(
+            by_name["jikuo.propose_policy_suggestions"]["write_mode"],
+            "no-write",
         )
         self.assertEqual(
             by_name["jikuo.apply_task_session_evidence_update"]["stage"],
@@ -325,6 +334,82 @@ class MCPStageAAdapterTests(unittest.TestCase):
             serialized = json.dumps(applied, ensure_ascii=False)
             self.assertNotIn("I approve activation settings update.", serialized)
             self.assertIn("<REDACTED>", serialized)
+
+    def test_route_user_request_returns_mcp_followup_tools_without_writes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+
+            response = adapter.call_tool(
+                "jikuo.route_user_request",
+                {
+                    "project_root": str(project_root),
+                    "user_phrase": "please show setup settings",
+                    "trigger_mode": "semantic",
+                },
+            )
+
+            self.assertEqual(response["tool_name"], "jikuo.route_user_request")
+            self.assertEqual(response["write_mode"], "no-write")
+            self.assertEqual(
+                response["conversation_router"]["schema"],
+                "jikuo.conversation_turn_router.v0",
+            )
+            kinds = {
+                obligation["kind"]
+                for obligation in response["classified_obligations"]
+            }
+            self.assertIn("configuration_review", kinds)
+            self.assertIn("jikuo.get_configuration_status", response["mcp_followup_tools"])
+            self.assertIn("Conversation-turn router", response["card_markdown"])
+            self.assertEqual(
+                response["display"]["card_priority_order"][1],
+                "conversation_turn_router",
+            )
+            self.assertTrue((project_root / ".jikuo" / "runtime" / "last_card.md").is_file())
+            self.assertFalse((project_root / ".jikuo" / "policies").exists())
+            self.assertFalse((project_root / ".jikuo" / "task_sessions").exists())
+            self.assertFalse((project_root / ".jikuo" / "project_state.yaml").exists())
+
+    def test_propose_policy_suggestions_returns_candidates_without_policy_write(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+
+            response = adapter.call_tool(
+                "jikuo.propose_policy_suggestions",
+                {
+                    "project_root": str(project_root),
+                    "user_phrase": (
+                        "I keep asking for progress, todo, and business meaning "
+                        "because this repeated need should become a policy."
+                    ),
+                    "trigger_mode": "mounted",
+                },
+            )
+
+            self.assertEqual(response["tool_name"], "jikuo.propose_policy_suggestions")
+            self.assertEqual(response["write_mode"], "no-write")
+            self.assertEqual(
+                response["policy_suggestion_review"]["schema"],
+                "jikuo.proactive_policy_suggestion_review.v0",
+            )
+            self.assertEqual(response["policy_candidate_count"], 1)
+            self.assertEqual(
+                response["policy_suggestion_review"]["candidate_count"],
+                1,
+            )
+            self.assertFalse(
+                response["policy_suggestion_review"]["privacy"]["raw_transcript_captured"]
+            )
+            self.assertNotIn(
+                "jikuo.propose_policy_suggestions",
+                response["mcp_followup_tools"],
+            )
+            self.assertIn("Proactive policy-suggestion review", response["card_markdown"])
+            self.assertTrue((project_root / ".jikuo" / "runtime" / "last_card.md").is_file())
+            self.assertFalse((project_root / ".jikuo" / "policies").exists())
+            self.assertFalse((project_root / ".jikuo" / "task_sessions").exists())
 
     def test_get_display_card_reads_latest_runtime_card(self):
         with tempfile.TemporaryDirectory() as tmp:

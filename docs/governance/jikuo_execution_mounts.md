@@ -572,7 +572,7 @@ Accepted target for the current pre-MCP visibility review:
 - `JIKUO-REL-01` drafts the external release license decision brief; use it before changing `pyproject.toml`, adding a `LICENSE` file, or publishing outside the private workspace
 - `JIKUO-INTG-01` is accepted and implements canonical `JIKUO.md` plus guarded client instruction sync without making client hooks mandatory
 - `JIKUO-SDK-01` is accepted and defines OpenAI Agents SDK, Claude Agent SDK, Google ADK, Vercel AI SDK, and Google Antigravity-style agentic platforms as optional orchestration / client-environment adapters that consume JIKUO through MCP / CLI / public adapter APIs while local policy, evidence, approvals, and runtime visibility remain authoritative
-- `JIKUO-ROUTER-01` is accepted: it defines semantic mode, mounted harness mode, the `conversation_turn` event, a no-write router output shape, and future MCP / Agent SDK / Studio adapter expectations
+- `JIKUO-ROUTER-01` is accepted: it defines semantic mode, mounted harness mode, the `conversation_turn` event, a no-write router output shape, implemented MCP router tools, and future Agent SDK / Studio / strict adapter expectations
 - `JIKUO-LIVE-15` adds a self-bootstrap requirement that governed JIKUO development slices bind, create, or explicitly defer a task-session at task start; `.jikuo/project_state.yaml latest_task_session_refs` refresh remains a separate guarded action unless promoted later
 - `JIKUO-MCP-01` prerequisites for Stage A, Stage B1, Stage B2, and Stage B3 are accepted, and MCP MVP body release smoke has passed; product-surface expansion remains a separate approval point
 - `CAP-CONVERSATION-TURN-ROUTER-01` core no-write path is implemented in `agent_flow.py`: `python -B -m jikuo.agent_flow propose --event conversation_turn --user-phrase "<user turn>" --trigger-mode semantic|mounted --format json`
@@ -585,7 +585,7 @@ Accepted target for the current pre-MCP visibility review:
 - dashboard / Studio UI, OS notifications, per-client hook packs, rollback, broader conditions, UI, Plugin, and gates remain deferred; current MCP visibility relies on card markdown plus runtime card links
 - `INSIGHT-2026-05-16-studio-dashboard-frontend-architecture` records the current frontend architecture posture for future `JIKUO-STUDIO-01`: projection-first view models, panel registration, guarded action registration, and canonical `.jikuo/` state remain the change-friendly boundary
 - `POLICY-jikuo-conversation-level-proactive-policy-suggestion` is active report-only: repeated user needs, corrections, or preferences are reviewed as policy candidates at `conversation_turn` before they remain hidden chat behavior; automatic policy mining and activation remain deferred.
-- `CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01` is implemented in the core conversation-turn proposal path: it produces compact candidate/no-candidate `proactive_policy_suggestion_review_evidence` without storing raw transcripts. Remaining work is adapter-facing MCP / SDK / mounted-harness surfacing, not kernel policy evidence production.
+- `CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01` is implemented in the core conversation-turn proposal path and exposed through MCP `jikuo.propose_policy_suggestions`: it produces compact candidate/no-candidate `proactive_policy_suggestion_review_evidence` without storing raw transcripts. Remaining work is strict SDK / mounted-harness surfacing, not kernel policy evidence production.
 
 Accepted result:
 

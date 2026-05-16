@@ -1,8 +1,8 @@
 # JIKUO MCP Client Configuration Examples
 
 > Status: MCP MVP local stdio configuration examples and smoke-log companion.
-> Scope: local stdio MCP clients only. Current surface exposes 15 tools: 8 Stage A
-> no-write / card / proposal tools, three configuration / activation-settings read-plan tools, one activation-settings guarded-write tool, plus Stage B1 / B2 / B3 guarded-write tools.
+> Scope: local stdio MCP clients only. Current surface exposes 17 tools: 8 Stage A
+> no-write / card / proposal tools, three configuration / activation-settings read-plan tools, two no-write router tools, one activation-settings guarded-write tool, plus Stage B1 / B2 / B3 guarded-write tools.
 
 ## Purpose
 
@@ -187,7 +187,7 @@ For a configured client:
 
 ## Current MVP Tool Discovery Checklist
 
-For the current surface, tool discovery should list exactly 15 tools:
+For the current surface, tool discovery should list exactly 17 tools:
 
 1. `jikuo.status`
 2. `jikuo.get_runtime_status`
@@ -201,9 +201,11 @@ For the current surface, tool discovery should list exactly 15 tools:
 10. `jikuo.get_activation_settings`
 11. `jikuo.plan_activation_settings_update`
 12. `jikuo.apply_activation_settings_update`
-13. `jikuo.apply_task_session_evidence_update`
-14. `jikuo.apply_policy_evolution_write`
-15. `jikuo.apply_policy_template_activation`
+13. `jikuo.route_user_request`
+14. `jikuo.propose_policy_suggestions`
+15. `jikuo.apply_task_session_evidence_update`
+16. `jikuo.apply_policy_evolution_write`
+17. `jikuo.apply_policy_template_activation`
 
 If a GUI client shows fewer tools after updating JIKUO, start a new client
 session or restart the desktop application so it respawns the MCP server.
@@ -231,6 +233,25 @@ For `jikuo.get_configuration_status`, `jikuo.get_activation_settings`,
    `.jikuo/activation_settings.yaml`.
 8. The apply response does not contain the raw approval phrase.
 9. The tools do not create `.jikuo/policies/`, `.jikuo/task_sessions/`, or
+   `.jikuo/project_state.yaml`.
+
+## Router Smoke Checklist
+
+For `jikuo.route_user_request` and `jikuo.propose_policy_suggestions`:
+
+1. `jikuo.route_user_request` with a setup/settings phrase returns
+   `conversation_router.schema = jikuo.conversation_turn_router.v0`.
+2. The route response includes `classified_obligations` and
+   `mcp_followup_tools`; setup/settings requests should include
+   `jikuo.get_configuration_status`.
+3. `jikuo.propose_policy_suggestions` with a repeated user-need phrase returns
+   `policy_suggestion_review.schema =
+   jikuo.proactive_policy_suggestion_review.v0`.
+4. Candidate-detected responses expose `policy_candidate_count > 0`.
+5. Both tools include `card_markdown`, `display_verification`, and runtime card
+   links.
+6. Both tools are no-write: they may update `.jikuo/runtime/`, but must not
+   create `.jikuo/policies/`, `.jikuo/task_sessions/`, or
    `.jikuo/project_state.yaml`.
 
 ## Stage B1 Smoke Checklist
@@ -288,4 +309,4 @@ intentionally approving a real project policy-template activation.
 - Stage B3 `jikuo.apply_policy_template_activation` was implemented after explicit user approval and externally smoke-accepted in Claude Code GUI on 2026-05-16.
 - Current GUI MCP smoke observed 11 tools during the Stage B3 slice and did not show a client tool-list cache issue after starting a fresh session.
 - Final local official SDK release smoke passed on 2026-05-16 using `tmp/mcp-stage-a-venv/Scripts/python.exe`: `ClientSession` listed the 11-tool MVP surface and `jikuo.get_runtime_status_card` returned card Markdown matching `.jikuo/runtime/last_card.md` in a temporary fixture project.
-- After `JIKUO-INIT-01`, `jikuo.get_configuration_status`, `jikuo.get_activation_settings`, `jikuo.plan_activation_settings_update`, and guarded `jikuo.apply_activation_settings_update` expand the current surface to 15 tools; repeat tool discovery before publishing client proof docs.
+- After `JIKUO-INIT-01`, `jikuo.get_configuration_status`, `jikuo.get_activation_settings`, `jikuo.plan_activation_settings_update`, guarded `jikuo.apply_activation_settings_update`, and the router tools `jikuo.route_user_request` / `jikuo.propose_policy_suggestions` expand the current surface to 17 tools; repeat tool discovery before publishing client proof docs.

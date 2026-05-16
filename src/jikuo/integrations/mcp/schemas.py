@@ -20,7 +20,9 @@ UNKNOWN_TRANSPORT = "unknown"
 
 CARD_PRIORITY_ORDER = (
     "policy_runtime_status",
+    "conversation_turn_router",
     "configuration_review",
+    "policy_suggestion_review",
     "task_session_completion_acceptance",
     "task_session_start_preview",
 )
@@ -53,9 +55,15 @@ CONFIGURATION_TOOL_NAMES = (
     "jikuo.apply_activation_settings_update",
 )
 
+ROUTER_TOOL_NAMES = (
+    "jikuo.route_user_request",
+    "jikuo.propose_policy_suggestions",
+)
+
 EXPOSED_TOOL_NAMES = (
     STAGE_A_TOOL_NAMES
     + CONFIGURATION_TOOL_NAMES
+    + ROUTER_TOOL_NAMES
     + STAGE_B1_TOOL_NAMES
     + STAGE_B2_TOOL_NAMES
     + STAGE_B3_TOOL_NAMES
@@ -264,6 +272,54 @@ TOOL_DEFINITIONS: dict[str, dict[str, Any]] = {
         card_returning=True,
         stage="C2",
         write_mode="guarded-write",
+    ),
+    "jikuo.route_user_request": _tool(
+        name="jikuo.route_user_request",
+        description=(
+            "Classify one user turn through the JIKUO conversation-turn router. "
+            "Returns required obligations and MCP follow-up tool suggestions without "
+            "writing governance files or storing raw transcripts."
+        ),
+        input_fields={
+            "project_root": LOCAL_ONLY,
+            "user_phrase": REDACT_OPTIONAL,
+            "trigger_mode": RETURN,
+            "task_title": REDACT_OPTIONAL,
+            "summary": REDACT_OPTIONAL,
+        },
+        output_fields={
+            "conversation_router": RETURN,
+            "classified_obligations": RETURN,
+            "required_followup_tools": RETURN,
+            "mcp_followup_tools": RETURN,
+        },
+        card_returning=True,
+        stage="R1",
+        write_mode="no-write",
+    ),
+    "jikuo.propose_policy_suggestions": _tool(
+        name="jikuo.propose_policy_suggestions",
+        description=(
+            "Review one user turn for proactive policy suggestions. Returns "
+            "reviewable candidates and compact evidence without writing policy files "
+            "or storing raw transcripts."
+        ),
+        input_fields={
+            "project_root": LOCAL_ONLY,
+            "user_phrase": REDACT_OPTIONAL,
+            "trigger_mode": RETURN,
+            "task_title": REDACT_OPTIONAL,
+            "summary": REDACT_OPTIONAL,
+        },
+        output_fields={
+            "conversation_router": RETURN,
+            "policy_suggestion_review": RETURN,
+            "policy_candidate_count": RETURN,
+            "mcp_followup_tools": RETURN,
+        },
+        card_returning=True,
+        stage="R1",
+        write_mode="no-write",
     ),
     "jikuo.apply_task_session_evidence_update": _tool(
         name="jikuo.apply_task_session_evidence_update",

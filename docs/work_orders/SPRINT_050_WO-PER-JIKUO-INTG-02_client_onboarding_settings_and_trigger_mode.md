@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-INTG-02: Client Onboarding Settings And Trigger Mode Selection
 
-> **Status**: Implemented core instruction-distribution support and project-level guarded activation settings persistence; MCP router surfaces remain planned.
+> **Status**: Implemented core instruction-distribution support, project-level guarded activation settings persistence, and no-write MCP router surfaces.
 > **Product meaning**: when users enable JIKUO in an AI client, they should be asked to choose the operating mode and other activation settings instead of inheriting hidden defaults.
 > **Boundary**: instruction files can ask and record client-facing mode choices; strict mounted execution still requires a host adapter such as a hook, plugin, SDK wrapper, Studio entry, or local proxy.
 
@@ -89,11 +89,15 @@ follow-up action is required.
 - `jikuo show`: includes activation settings status.
 - `jikuo install`: reads project activation settings when `--trigger-mode` is omitted.
 - `agent_flow.py propose --event conversation_turn`: reads project activation settings when `--trigger-mode` is omitted; `ask` resolves to semantic behavior until a strict adapter asks the user.
+- MCP router tools: `jikuo.route_user_request` and
+  `jikuo.propose_policy_suggestions` expose the same no-write routing and
+  policy-candidate review inside desktop AI clients.
 - `tests/activation_settings_tests.py`: plan/apply/refusal/default-resolution/show coverage.
 
 ## 6. Remaining Work
 
-- Add MCP router surfaces for `jikuo.route_user_request` and policy-suggestion review.
+- MCP router surfaces are now implemented: `jikuo.route_user_request` and
+  `jikuo.propose_policy_suggestions`.
 - MCP activation settings tools are now implemented: `jikuo.get_activation_settings`, `jikuo.plan_activation_settings_update`, and guarded `jikuo.apply_activation_settings_update`.
 - Implement the first strict mounted adapter, likely Claude Code `UserPromptSubmit`, after user approval.
 - Update client proof docs as each client is verified.

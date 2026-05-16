@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-MCP-01: MCP Wrapper MVP
 
-> **Status**: MCP MVP body implemented and release-smoked; Stage A server wrapper accepted; Stage B1 task-session evidence guarded-write tool implemented after explicit user approval; Stage B2 policy evolution guarded-write tool implemented and externally smoke-accepted; Stage B3 policy-template activation guarded-write tool implemented and externally smoke-accepted; post-MVP configuration status, activation settings read / plan, and activation settings guarded apply tools implemented
+> **Status**: MCP MVP body implemented and release-smoked; Stage A server wrapper accepted; Stage B1 task-session evidence guarded-write tool implemented after explicit user approval; Stage B2 policy evolution guarded-write tool implemented and externally smoke-accepted; Stage B3 policy-template activation guarded-write tool implemented and externally smoke-accepted; post-MVP configuration status, activation settings read / plan / apply, and router tools implemented
 > **Product meaning**: formally move the next phase from more kernel expansion to an MCP wrapper MVP, so desktop Agents can call JIKUO through a stable tool surface while users remain in their desktop AI client.
 > **Scope rule**: wrap stable atoms only; do not add new governance capability in this slice.
 
@@ -91,6 +91,8 @@ not create `.jikuo/policies/`, create `.jikuo/task_sessions/`, or update
 | `jikuo.get_configuration_status` | `CAP-CONFIGURATION-REVIEW-01` | no governance write; may update `.jikuo/runtime/` | return first-use configuration review state plus card refs / display directives |
 | `jikuo.get_activation_settings` | `CAP-MCP-ACTIVATION-SETTINGS-READ-PLAN-01` | no governance write; may update `.jikuo/runtime/` | return current project activation settings status |
 | `jikuo.plan_activation_settings_update` | `CAP-MCP-ACTIVATION-SETTINGS-READ-PLAN-01` | no governance write; may update `.jikuo/runtime/` | return a reviewed activation settings update plan without writing `.jikuo/activation_settings.yaml` |
+| `jikuo.route_user_request` | `CAP-CONVERSATION-TURN-ROUTER-01`; `CAP-MCP-CONVERSATION-ROUTER-SURFACE-01` | no governance write; may update `.jikuo/runtime/` | classify one user turn into JIKUO obligations and MCP follow-up tools |
+| `jikuo.propose_policy_suggestions` | `CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01`; `CAP-MCP-CONVERSATION-ROUTER-SURFACE-01` | no governance write; may update `.jikuo/runtime/` | return reviewable policy-candidate suggestions from a user turn without writing policy files |
 
 Stage B exposes guarded write operations only after Stage A acceptance gates pass.
 Stage B1 is accepted for task-session evidence writes. Stage B2 is accepted for
@@ -120,6 +122,9 @@ Display response contract for card-returning tools:
     "must_show_verbatim": ["card_markdown"],
     "card_priority_order": [
       "policy_runtime_status",
+      "conversation_turn_router",
+      "configuration_review",
+      "policy_suggestion_review",
       "task_session_completion_acceptance",
       "task_session_start_preview"
     ],
@@ -272,7 +277,8 @@ Stage A implementation progress:
 - [x] Final local official SDK release smoke passed on 2026-05-16: a Python MCP `ClientSession` launched `python -B -m jikuo.integrations.mcp.server`, listed all 11 MVP tools, called `jikuo.get_runtime_status_card` against a temporary fixture project, and confirmed returned `card_markdown` matched `.jikuo/runtime/last_card.md`.
 - [x] Post-MVP configuration status read surface implemented: `jikuo.get_configuration_status` wraps `agent_flow propose --event configuration_review`, returns `jikuo.configuration_review.v0`, and writes only runtime visibility.
 - [x] Post-MVP activation settings read / plan surface implemented: `jikuo.get_activation_settings` returns `jikuo.activation_settings_status.v0`; `jikuo.plan_activation_settings_update` returns `jikuo.activation_settings_plan.v0`; neither writes `.jikuo/activation_settings.yaml`; this initially expanded tool discovery to 14 tools before the guarded apply surface was accepted.
-- [x] Post-MVP activation settings guarded apply surface implemented after explicit user approval: `jikuo.apply_activation_settings_update` refuses without confirmation / approval phrase, writes only `.jikuo/activation_settings.yaml` on success, redacts the raw approval phrase, and expands current tool discovery to 15 tools.
+- [x] Post-MVP activation settings guarded apply surface implemented after explicit user approval: `jikuo.apply_activation_settings_update` refuses without confirmation / approval phrase, writes only `.jikuo/activation_settings.yaml` on success, redacts the raw approval phrase, and previously expanded tool discovery to 15 tools before router tools were accepted.
+- [x] Post-MVP router surface implemented after configuration acceptance: `jikuo.route_user_request` wraps the no-write `conversation_turn` router and returns MCP follow-up tools; `jikuo.propose_policy_suggestions` exposes `jikuo.proactive_policy_suggestion_review.v0` candidates; both preserve display directives, runtime links, SEC-02 field classification, and no-write boundaries; current tool discovery expands to 17 tools.
 
 Stage A desktop-client acceptance log:
 

@@ -1,9 +1,9 @@
 # SPRINT 050 WO-PER-JIKUO-ROUTER-01: Trigger Mode And Conversation-Turn Router
 
-> **Status**: Core no-write router implemented
+> **Status**: Core no-write router implemented; MCP router surfaces implemented
 > **Layer**: Process governance / product architecture
 > **Depends on**: `JIKUO-MCP-01` MVP body, `JIKUO-INTG-01`, `JIKUO-SDK-01`, `POLICY-jikuo-proactive-policy-suggestion-metapolicy`
-> **Blocks**: `CAP-CONVERSATION-TURN-ROUTER-01`, `CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01`, MCP router tools, mounted harness adapters
+> **Blocks**: mounted harness adapters
 
 ## 1. User Problem
 
@@ -102,7 +102,7 @@ Implemented CLI / core entry:
 python -B -m jikuo.agent_flow propose --event conversation_turn --user-phrase "<user turn summary>" --format json
 ```
 
-Future MCP tool:
+Implemented MCP tool:
 
 ```text
 jikuo.route_user_request
@@ -136,7 +136,7 @@ Implemented core capability:
 
 - `CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01`
 
-Future MCP surface:
+Implemented MCP surface:
 
 ```text
 jikuo.propose_policy_suggestions
@@ -192,13 +192,14 @@ Current rule:
 - no active policy is presented as solving conversation-level extraction before router support exists
 - `agent_flow.py propose --event conversation_turn` has a no-write router path before any guarded write path
 - tests cover explicit semantic no-op, mounted idle tick, mounted-mode obligation routing, and missing user-turn refusal
-- future MCP router tools preserve display directives, runtime links, and SEC-02 privacy classification
+- MCP router tools preserve display directives, runtime links, and SEC-02 privacy classification
 - future mounted harness adapters remain integration-specific and do not become kernel dependencies
 
 ## 9. Implementation Notes
 
 - Core implementation: `src/jikuo/agent_flow.py`
-- Tests: `tests/agent_flow_tests.py`
+- MCP implementation: `src/jikuo/integrations/mcp/adapter.py`, `src/jikuo/integrations/mcp/server.py`
+- Tests: `tests/agent_flow_tests.py`, `tests/mcp_adapter_tests.py`, `tests/mcp_server_tests.py`
 - Added event aliases: `conversation_turn`, `conversation`, `turn`, `route_user_request`
 - Added trigger modes: `semantic`, `mounted`
 - Added card kind: `conversation_turn_router`
@@ -212,9 +213,21 @@ Current rule:
   proposals and clears the conversation-level policy evidence requirement
   without durable writes.
 
+MCP surface implemented:
+
+- `jikuo.route_user_request` wraps `conversation_turn`, returns
+  `conversation_router`, classified obligations, core follow-up refs, and
+  MCP-specific follow-up tools such as `jikuo.get_configuration_status`,
+  `jikuo.propose_task_start`, and `jikuo.propose_policy_suggestions`.
+- `jikuo.propose_policy_suggestions` wraps the same no-write router and exposes
+  the `jikuo.proactive_policy_suggestion_review.v0` review object plus
+  candidate count so clients do not need to dig through raw card payloads.
+- Both tools are no-write; they may update `.jikuo/runtime/` for visibility but
+  must not create `.jikuo/policies/`, `.jikuo/task_sessions/`, or
+  `.jikuo/project_state.yaml`.
+
 Remaining follow-on work:
 
-- add MCP router surfaces after the core router is accepted
 - add mounted harness adapters after MCP / SDK / Studio integration posture is
   selected
 

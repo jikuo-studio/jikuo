@@ -264,6 +264,98 @@ def _proposal_response(
     )
 
 
+def _cards_by_kind(response: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    data_details = response.get("data_details")
+    if not isinstance(data_details, dict):
+        return {}
+    cards = data_details.get("cards")
+    if not isinstance(cards, list):
+        return {}
+    output: dict[str, dict[str, Any]] = {}
+    for card in cards:
+        if not isinstance(card, dict):
+            continue
+        kind = card.get("card_kind")
+        if kind:
+            output[str(kind)] = card
+    return output
+
+
+def _mcp_followup_tools_for(router: dict[str, Any] | None) -> list[str]:
+    if not isinstance(router, dict):
+        return []
+    mapped: list[str] = []
+    by_kind = {
+        "configuration_review": "jikuo.get_configuration_status",
+        "task_start": "jikuo.propose_task_start",
+        "policy_suggestion_review": "jikuo.propose_policy_suggestions",
+        "insight_or_follow_up_routing": "jikuo.propose_task_start",
+    }
+    for obligation in router.get("classified_obligations") or []:
+        if not isinstance(obligation, dict):
+            continue
+        tool = by_kind.get(str(obligation.get("kind") or ""))
+        if tool and tool not in mapped:
+            mapped.append(tool)
+    return mapped
+
+
+def _conversation_turn_response(
+    *,
+    tool_name: str,
+    arguments: dict[str, Any],
+    project_root: Path | None,
+    transport: str,
+) -> dict[str, Any]:
+    response = _proposal_response(
+        tool_name=tool_name,
+        raw_event="conversation_turn",
+        arguments=arguments,
+        project_root=project_root,
+        transport=transport,
+        user_phrase=arguments.get("user_phrase"),
+        trigger_mode=arguments.get("trigger_mode"),
+        task_title=arguments.get("task_title"),
+        summary=arguments.get("summary"),
+    )
+    router = None
+    data_details = response.get("data_details")
+    if isinstance(data_details, dict) and isinstance(
+        data_details.get("conversation_router"),
+        dict,
+    ):
+        router = data_details["conversation_router"]
+
+    mcp_followups = _mcp_followup_tools_for(router)
+    if tool_name == "jikuo.propose_policy_suggestions":
+        mcp_followups = [
+            tool for tool in mcp_followups if tool != "jikuo.propose_policy_suggestions"
+        ]
+    response["conversation_router"] = router
+    response["mcp_followup_tools"] = mcp_followups
+    if isinstance(router, dict):
+        response["classified_obligations"] = list(
+            router.get("classified_obligations") or []
+        )
+        response["required_followup_tools"] = list(
+            router.get("required_followup_tools") or []
+        )
+
+    if tool_name == "jikuo.propose_policy_suggestions":
+        review = None
+        policy_card = _cards_by_kind(response).get("policy_suggestion_review")
+        if isinstance(policy_card, dict) and isinstance(
+            policy_card.get("policy_suggestion_review"),
+            dict,
+        ):
+            review = policy_card["policy_suggestion_review"]
+        response["policy_suggestion_review"] = review
+        response["policy_candidate_count"] = (
+            review.get("candidate_count") if isinstance(review, dict) else 0
+        )
+    return response
+
+
 def _runtime_status_card_response(
     *,
     project_root: Path | None,
@@ -908,6 +1000,14 @@ def call_tool(
 
     if tool_name == "jikuo.apply_activation_settings_update":
         return _apply_activation_settings_update_response(
+            arguments=args,
+            project_root=resolved_root,
+            transport=resolved_transport,
+        )
+
+    if tool_name in {"jikuo.route_user_request", "jikuo.propose_policy_suggestions"}:
+        return _conversation_turn_response(
+            tool_name=tool_name,
             arguments=args,
             project_root=resolved_root,
             transport=resolved_transport,

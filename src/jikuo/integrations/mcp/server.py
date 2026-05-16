@@ -330,6 +330,66 @@ def register_configuration_tools(
     return server
 
 
+def register_router_tools(
+    server: Any,
+    *,
+    default_transport: str = schemas.LOCAL_STDIO_TRANSPORT,
+) -> Any:
+    """Register no-write conversation routing MCP tools."""
+
+    tool_definitions = {tool["name"]: tool for tool in adapter.list_tools()}
+
+    @server.tool(
+        name="jikuo.route_user_request",
+        description=tool_description(tool_definitions["jikuo.route_user_request"]),
+    )
+    def jikuo_route_user_request(
+        project_root: str | None = None,
+        user_phrase: str | None = None,
+        trigger_mode: str | None = None,
+        task_title: str | None = None,
+        summary: str | None = None,
+    ) -> dict[str, Any]:
+        return _call(
+            "jikuo.route_user_request",
+            {
+                "project_root": project_root,
+                "user_phrase": user_phrase,
+                "trigger_mode": trigger_mode,
+                "task_title": task_title,
+                "summary": summary,
+            },
+            default_transport=default_transport,
+        )
+
+    @server.tool(
+        name="jikuo.propose_policy_suggestions",
+        description=tool_description(
+            tool_definitions["jikuo.propose_policy_suggestions"]
+        ),
+    )
+    def jikuo_propose_policy_suggestions(
+        project_root: str | None = None,
+        user_phrase: str | None = None,
+        trigger_mode: str | None = None,
+        task_title: str | None = None,
+        summary: str | None = None,
+    ) -> dict[str, Any]:
+        return _call(
+            "jikuo.propose_policy_suggestions",
+            {
+                "project_root": project_root,
+                "user_phrase": user_phrase,
+                "trigger_mode": trigger_mode,
+                "task_title": task_title,
+                "summary": summary,
+            },
+            default_transport=default_transport,
+        )
+
+    return server
+
+
 def register_stage_b1_tools(
     server: Any,
     *,
@@ -495,6 +555,7 @@ def create_server(
     )
     register_stage_a_tools(server, default_transport=default_transport)
     register_configuration_tools(server, default_transport=default_transport)
+    register_router_tools(server, default_transport=default_transport)
     register_stage_b1_tools(server, default_transport=default_transport)
     register_stage_b2_tools(server, default_transport=default_transport)
     return register_stage_b3_tools(server, default_transport=default_transport)

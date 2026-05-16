@@ -115,6 +115,8 @@ class MCPServerWrapperTests(unittest.TestCase):
         self.assertIn("jikuo.get_activation_settings", fake.tools)
         self.assertIn("jikuo.plan_activation_settings_update", fake.tools)
         self.assertIn("jikuo.apply_activation_settings_update", fake.tools)
+        self.assertIn("jikuo.route_user_request", fake.tools)
+        self.assertIn("jikuo.propose_policy_suggestions", fake.tools)
         self.assertIn("jikuo.apply_task_session_evidence_update", fake.tools)
         self.assertIn("jikuo.apply_policy_evolution_write", fake.tools)
         self.assertIn("jikuo.apply_policy_template_activation", fake.tools)
@@ -215,6 +217,36 @@ class MCPServerWrapperTests(unittest.TestCase):
                 "I approve MCP activation settings apply.",
                 str(response),
             )
+
+    def test_router_registered_tools_delegate_adapter(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            fake = server.create_server(fastmcp_cls=FakeFastMCP)
+
+            route_response = fake.tools["jikuo.route_user_request"]["function"](
+                project_root=str(project_root),
+                user_phrase="please show setup settings",
+                trigger_mode="semantic",
+            )
+            policy_response = fake.tools["jikuo.propose_policy_suggestions"]["function"](
+                project_root=str(project_root),
+                user_phrase=(
+                    "I keep asking for progress, todo, and business meaning "
+                    "because this repeated need should become a policy."
+                ),
+                trigger_mode="mounted",
+            )
+
+            self.assertEqual(route_response["tool_name"], "jikuo.route_user_request")
+            self.assertIn("jikuo.get_configuration_status", route_response["mcp_followup_tools"])
+            self.assertEqual(
+                policy_response["tool_name"],
+                "jikuo.propose_policy_suggestions",
+            )
+            self.assertEqual(policy_response["policy_candidate_count"], 1)
+            self.assertFalse((project_root / ".jikuo" / "policies").exists())
+            self.assertFalse((project_root / ".jikuo" / "task_sessions").exists())
 
     def test_stage_b1_registered_tool_delegates_guarded_apply(self):
         with tempfile.TemporaryDirectory() as tmp:
