@@ -1,0 +1,83 @@
+schema_version: "jikuo.narrativesystem_resource_pool_handoff.v0"
+source_project: "D:\\personal_project\\NarrativeSystem"
+jikuo_repo: "D:\\personal_project\\Jikuo"
+branch: "codex/jikuo-core-20b"
+scan_date: "2026-05-16"
+status: "partial"
+status_reason: "JIKUO-side active runtime and contract references are cleared; NarrativeSystem-side live usage was not scanned or modified."
+active_references_remaining: false
+scanned_patterns:
+  - "D:\\personal_project\\NarrativeSystem"
+  - "D:/personal_project/NarrativeSystem"
+  - "NarrativeSystem"
+  - "docs/jikuo"
+  - "tools/jikuo"
+  - "docs/scenarios/interactive_novel/governance/rule_registry.yaml"
+  - "docs/scenarios/interactive_novel/sprints/SPRINT_050_20260409.md"
+  - "python -B tools/jikuo"
+replacement_posture:
+  commands:
+    - "python -B -m jikuo..."
+    - "jikuo show"
+    - "jikuo configure status"
+  package_refs:
+    - "pkg://jikuo/..."
+remaining_references_by_type:
+  active_runtime_reference: []
+  active_contract_reference: []
+  historical_provenance:
+    - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-*.md"
+    - "docs/governance/jikuo_project_context_binding_and_policy_template_portability.md"
+  fixture_only:
+    - "tests/*_tests.py old-shaped path values"
+    - "src/jikuo/fixtures/*/.jikuo/policies/approved/*.yaml changed-path patterns"
+  no_action_needed:
+    - "protective assertions rejecting tools/jikuo, docs/jikuo, or NarrativeSystem leakage"
+safe_to_archive_paths:
+  - "D:\\personal_project\\NarrativeSystem\\docs\\jikuo\\"
+  - "D:\\personal_project\\NarrativeSystem\\tools\\jikuo\\"
+blocked_paths:
+  - path: "D:\\personal_project\\NarrativeSystem\\docs\\scenarios\\interactive_novel\\governance\\rule_registry.yaml"
+    reason: "No longer a JIKUO-side active dependency, but NarrativeSystem live usage was not assessed."
+  - path: "D:\\personal_project\\NarrativeSystem\\docs\\scenarios\\interactive_novel\\sprints\\SPRINT_050_20260409.md"
+    reason: "No longer a JIKUO-side active dependency, but NarrativeSystem live usage was not assessed."
+changed_files:
+  - "docs/governance/jikuo_policy_aware_agent_flow_contract.md"
+  - "docs/schemas/rule_registry_view_model.schema.md"
+  - "src/jikuo/fixtures/policy_evidence_session_project/.jikuo/project_state.yaml"
+  - "src/jikuo/fixtures/policy_store_active_project/.jikuo/project_state.yaml"
+  - "src/jikuo/fixtures/policy_store_condition_project/.jikuo/project_state.yaml"
+  - "src/jikuo/fixtures/policy_store_conflict_project/.jikuo/project_state.yaml"
+  - "src/jikuo/fixtures/policy_store_initialized_project/.jikuo/project_state.yaml"
+  - "src/jikuo/fixtures/policy_store_real_chain_testing_project/.jikuo/project_state.yaml"
+  - "src/jikuo/fixtures/policy_store_stale_project/.jikuo/project_state.yaml"
+  - "src/jikuo/fixtures/task_session_ready_project/.jikuo/project_state.yaml"
+  - ".jikuo/project_context.yaml"
+  - "docs/README.md"
+  - "docs/governance/jikuo_execution_mounts.md"
+  - "docs/governance/jikuo_productization_task_map.md"
+  - "docs/migration/NARRATIVESYSTEM_RESOURCE_POOL_HANDOFF.md"
+  - "docs/migration/narrativesystem_resource_pool_handoff.yaml"
+notes:
+  - "NarrativeSystem was not modified."
+  - "Historical work orders may still mention old paths as provenance."
+  - "Fixture-only old-shaped changed-path patterns are retained for compatibility and regression behavior; they do not load NarrativeSystem files."
+  - "Before moving NarrativeSystem scenario-level registry or sprint files, run a separate NarrativeSystem-side scan and write plan."
+verification:
+  package_code_scan: "no old NarrativeSystem-era paths found in active src/jikuo code outside fixture directories"
+  unittest_discover: "174 tests passed"
+  diff_check: "passed"
+  completion_review_policy_evidence:
+    main_document_mount_maintenance_evidence: "ok"
+    progress_summary_business_meaning_evidence: "ok"
+    missing_evidence_reports: 0
+recommended_archive_marker_text: |
+  Archived JIKUO incubation resource pool.
+
+  Do not treat this directory as the active JIKUO runtime, CLI, MCP, policy-template, or documentation authority.
+  Use the standalone JIKUO package/repository instead:
+  - commands: python -B -m jikuo..., jikuo show, jikuo configure status, jikuo-mcp
+  - package refs: pkg://jikuo/...
+  - repository docs: D:\personal_project\Jikuo\docs\
+
+  This archive may be used as historical provenance or template-mining input only after privacy/provenance review.

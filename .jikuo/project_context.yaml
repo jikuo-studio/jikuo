@@ -119,6 +119,10 @@ document_roles:
     path: "docs/integrations/mcp_client_proof_playbook.md"
     required: true
     note: "Manual user-facing proof workflow for Claude Code GUI, Codex, Cursor, and VS Code Copilot MCP support; current private GitHub preview remote is https://github.com/jikuo-studio/jikuo.git."
+  narrativesystem_resource_pool_handoff:
+    path: "docs/migration/NARRATIVESYSTEM_RESOURCE_POOL_HANDOFF.md"
+    required: true
+    note: "JIKUO-side handoff proving active references to old NarrativeSystem JIKUO docs/tools have been cleared before archiving the incubation resource pool."
   policy_manifest:
     path: ".jikuo/policies/manifest.yaml"
     required: true
@@ -156,6 +160,10 @@ directory_roles:
   development_insights:
     path: "docs/insights"
     required: true
+  migration_handoffs:
+    path: "docs/migration"
+    required: false
+    note: "Source-project archive and migration handoff records. These are not runtime authority unless a work order explicitly mounts them."
   policy_store:
     path: ".jikuo/policies"
     required: true

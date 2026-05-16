@@ -32,9 +32,9 @@ It does not:
 schema_version: "jikuo.registry_view.v0"
 kind: "jikuo_rule_registry_view_model"
 source_registry:
-  path: "docs/scenarios/interactive_novel/governance/rule_registry.yaml"
+  path: "docs/governance/rule_registry.yaml"
   schema_version: "0.1"
-  registry_id: "interactive_novel_engineering_governance"
+  registry_id: "jikuo_engineering_governance"
 package:
   id: "engineering_governance"
   label: "Engineering Governance"

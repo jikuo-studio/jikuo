@@ -171,6 +171,11 @@ For future policy template extraction / import work, also mount:
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-23_project_context_template_activation.md` for template import planning, resolver, and guarded activation work
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-24_agent_flow_template_activation_bridge.md` for desktop-visible template import planning and guarded `agent_flow.py apply`
 
+For future source-project archive / migration handoff work, also mount:
+
+- `docs/migration/NARRATIVESYSTEM_RESOURCE_POOL_HANDOFF.md`
+- `docs/migration/narrativesystem_resource_pool_handoff.yaml`
+
 For future starter policy pack / first-use initialization work, also mount:
 
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-22_starter_policy_pack_first_use_initialization.md`
@@ -585,6 +590,7 @@ Accepted target for the current pre-MCP visibility review:
 - strict mounted behavior is not achieved by MCP plus instruction files alone; it requires a future pre-turn host adapter such as a Claude Code hook, Agent SDK wrapper, Studio/local proxy, Codex plugin, Cursor extension, or VS Code extension
 - `JIKUO-INTG-03` records the strict mounted adapter contract: host adapters must read `.jikuo/activation_settings.yaml`, call JIKUO before each user turn in mounted mode, surface card markdown or runtime links, and visibly fail rather than silently bypass governance
 - `docs/integrations/mcp_client_proof_playbook.md` is the current manual proof guide for Claude Code GUI, Codex, Cursor, and VS Code + GitHub Copilot Agent mode; use it before claiming cross-client MCP support, and prefer the private GitHub clone path from `https://github.com/jikuo-studio/jikuo.git` for realistic first-user proof
+- `docs/migration/NARRATIVESYSTEM_RESOURCE_POOL_HANDOFF.md` records the 2026-05-16 JIKUO-side active reference migration: `docs/jikuo/` and `tools/jikuo/` in NarrativeSystem are no longer active JIKUO runtime / contract dependencies, while NarrativeSystem scenario registry and sprint index files still require a separate NarrativeSystem-side scan before archive decisions
 - policy evolution proposal/apply surfaces now preserve non-default replacement triggers through `--replacement-trigger-event`, so a reviewed supersession can target `conversation_turn` without silently falling back to `task_start`
 - dashboard / Studio UI, OS notifications, per-client hook packs, rollback, broader conditions, UI, Plugin, and gates remain deferred; current MCP visibility relies on card markdown plus runtime card links
 - `INSIGHT-2026-05-16-studio-dashboard-frontend-architecture` records the current frontend architecture posture for future `JIKUO-STUDIO-01`: projection-first view models, panel registration, guarded action registration, and canonical `.jikuo/` state remain the change-friendly boundary

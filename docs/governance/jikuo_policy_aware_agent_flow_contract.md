@@ -69,7 +69,7 @@ This contract is not allowed to:
 - ingest persisted policy evidence from implicit or broad sources
 - implement advanced condition evaluation beyond explicit task metadata and path conditions
 - execute required actions
-- modify `tools/jikuo/agent_flow.py` beyond read-only status projection, report-only exact lifecycle trigger evaluation, report-only evidence matching, explicit condition evaluation, evidence persistence proposal, explicit evidence ingestion, and proposal-only write-plan cards
+- modify `src/jikuo/agent_flow.py` beyond read-only status projection, report-only exact lifecycle trigger evaluation, report-only evidence matching, explicit condition evaluation, evidence persistence proposal, explicit evidence ingestion, and proposal-only write-plan cards
 - create `.jikuo/policies/`
 - create `.jikuo/task_sessions/`
 - execute durable writes

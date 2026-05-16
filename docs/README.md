@@ -20,6 +20,7 @@ JIKUO now uses this standalone repository as its active product-development home
 - `docs/integrations/`: JIKUO integration examples, client configuration notes, and smoke-test companion artifacts.
 - `docs/schemas/`: JIKUO-owned schema and view-model contracts.
 - `docs/insights/`: captured development insights and their registry.
+- `docs/migration/`: repository migration handoffs and source-project archive transition records.
 
 ---
 
@@ -58,6 +59,7 @@ The following remain outside this repository's active documentation mount unless
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-SEC-02_mcp_response_privacy_classification_baseline.md`
 - `docs/integrations/mcp_client_configuration_examples.md`
 - `docs/integrations/mcp_client_proof_playbook.md`
+- `docs/migration/NARRATIVESYSTEM_RESOURCE_POOL_HANDOFF.md`
 
 Current private GitHub preview remote for realistic clone/download proof:
 `https://github.com/jikuo-studio/jikuo.git`. Keep it private until the
@@ -74,6 +76,7 @@ When a future task creates JIKUO-owned docs:
 - put integration examples and client-specific setup notes under `docs/integrations/`
 - put schemas under `docs/schemas/`
 - put development insights under `docs/insights/`
+- put source-project archive / migration handoffs under `docs/migration/`
 - update references in code, tests, sidecar state, fixtures, indexes, and checker rules
 - keep source-project historical context outside active mounts unless the document itself is promoted as a JIKUO product asset
 
