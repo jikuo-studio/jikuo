@@ -35,6 +35,21 @@ JIKUO unless the assistant chooses to call it. Self-development therefore needs
 a documented and eventually tool-supported workflow that reduces reliance on
 assistant memory.
 
+## 2.1 Deferred Work-Unit Association Insight
+
+`JIKUO-SELF-BOOTSTRAP-02` is the dogfood workflow consumer. It defines how JIKUO
+development should behave before strict host adapters are ready.
+
+`INSIGHT-2026-05-17-work-unit-task-association-boundary` records a heavier
+future data-architecture correction: proposals and lifecycle cards eventually
+need a reliable `work_order_id -> work_unit_id -> proposal/card` association.
+
+That correction is deferred until a Codex / Claude hook or another strict host
+adapter proves that JIKUO can run consistently enough to avoid false task-card
+associations. Until then, JIKUO development slices must manually run completion
+review before commit or final answer and must treat missing completion evidence
+as an unresolved review item, not as a harmless card detail.
+
 ## 3. Strategy Questions For Discussion
 
 Discuss before coding:
@@ -61,4 +76,3 @@ Discuss before coding:
 - Do not claim Codex strict mounted behavior without `JIKUO-CODEX-PLUGIN-01` proof.
 - Do not solve policy dead-zone detection here; that is `JIKUO-LIVE-20`.
 - Do not require new UI / Studio work before the CLI / MCP self-bootstrap path is clear.
-

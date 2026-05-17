@@ -62,7 +62,7 @@ Program-level roadmap anchor:
 - Current program tracks:
   - MCP and client runtime: MCP MVP Stage A / B1 / B2 / B3 are implemented; remaining work is release proof, client compatibility expansion, and future router / adapter surfacing.
   - Strict mounted harness: Codex hook and Claude hook tracks remain the near-term path for true pre-turn execution; MCP plus instruction files remain instruction-level, not strict mounted, until a host adapter proves otherwise.
-  - Policy trigger repair: POLTRIG-01A / 01B / 02 and task context anchors are in place; POLTRIG-03 must review evaluator behavior before policy scopes affect matching.
+  - Policy trigger repair: POLTRIG-01A / 01B / 02 / 03 are implemented; task-to-runtime association remains a deferred data-architecture insight until strict client hooks prove that JIKUO can run reliably before each governed turn and completion.
   - Document registry: DOCREG-01A / B1 / B2 are complete; DOCREG-01B3 policy governance and later generated projections remain.
   - Runtime data and analytics: DATA-01A defines execution-event fixtures and schema direction; runtime event emission, history scanning, dashboard / BI, and support-bundle export remain future slices.
   - Policy catalog and starter packs: official starter policy distribution must remain separate from JIKUO self-bootstrap policies and must never overwrite user-approved local policies.
@@ -624,6 +624,7 @@ Accepted target for the current pre-MCP visibility review:
 - `JIKUO-ROUTER-01` is accepted: it defines semantic mode, mounted harness mode, the `conversation_turn` event, a no-write router output shape, implemented MCP router tools, and future Agent SDK / Studio / strict adapter expectations
 - `JIKUO-LIVE-15` adds a self-bootstrap requirement that governed JIKUO development slices bind, create, or explicitly defer a task-session at task start; `.jikuo/project_state.yaml latest_task_session_refs` refresh remains a separate guarded action unless promoted later
 - `JIKUO-LIVE-21` hardens that requirement so every governed `task_start`, including documentation / registry / data-contract slices, surfaces task-session resolution as `existing_session_bound`, `needs_user_decision`, or `explicitly_deferred`
+- `INSIGHT-2026-05-17-work-unit-task-association-boundary` records the deferred data-architecture boundary: future `work_order_id -> work_unit_id -> proposal/card` links must be explicit and reliable; do not implement heavy association fields before Codex / Claude hook or another strict mounted adapter proves consistent invocation
 - `JIKUO-MCP-01` prerequisites for Stage A, Stage B1, Stage B2, and Stage B3 are accepted, and MCP MVP body release smoke has passed; product-surface expansion remains a separate approval point
 - `CAP-CONVERSATION-TURN-ROUTER-01` core no-write path is implemented in `agent_flow.py`: `python -B -m jikuo.agent_flow propose --event conversation_turn --user-phrase "<user turn>" --trigger-mode semantic|mounted --format json`
 - `CAP-JIKUO-TRIGGER-MODE-01` now has an observable core difference: `semantic` with no matching obligation returns `no_jikuo_action_required`, while `mounted` with no matching obligation returns `mounted_idle_tick`

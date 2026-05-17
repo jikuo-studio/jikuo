@@ -17,6 +17,7 @@ It complements, but does not replace:
 - `docs/governance/jikuo_policy_store_configuration_flow.md`: policy-store lifecycle and guarded write contract.
 - `docs/governance/jikuo_policy_aware_agent_flow_contract.md`: policy-aware proposal and card projection contract.
 - `docs/insights/INSIGHT-2026-05-17-conservative-task-classification-routing.md`: originating insight for conservative task classification.
+- `docs/insights/INSIGHT-2026-05-17-work-unit-task-association-boundary.md`: deferred data-architecture insight for future task-to-runtime execution association.
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-20_policy_dead_zone_detection.md`: policy dead-zone visibility work.
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-POLTRIG-03_policy_scope_evaluator_consumption.md`: registered evaluator-consumption task with dead-zone evidence and stop boundary.
 
@@ -96,6 +97,25 @@ User turn -> conversation_turn -> task_start -> completion_review
 `task_session_start` is a durable evidence-carrier decision inside a governed
 task. It must remain guarded and explicit. It must not be treated as the only
 meaning of `task_start`.
+
+Important distinction:
+
+- `work_profile.lifecycle_event` says where this work unit is in the lifecycle;
+- `work_profile.policy_scopes` says what kind of work is being performed;
+- a governed work unit should traverse the lifecycle, while the scope should
+  remain available to the later completion review.
+
+Current implementation gap and safety boundary:
+
+- today, `agent_flow` and MCP proposal calls evaluate one explicitly requested
+  event at a time;
+- a policy scoped to `completion_review` can therefore be correct but invisible
+  if no completion-review call is made;
+- future `work_order_id -> work_unit_id -> proposal/card` association must not
+  be guessed from recent cards, task titles, or changed paths;
+- `INSIGHT-2026-05-17-work-unit-task-association-boundary` records that this
+  heavier data-architecture correction is deferred until a strict client hook or
+  adapter can prove reliable JIKUO invocation.
 
 Current code still exposes several tool-specific events such as
 `configuration_review`, `policy_evolution_plan`, `policy_template_import_plan`,
