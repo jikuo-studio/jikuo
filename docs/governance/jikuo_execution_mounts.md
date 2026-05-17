@@ -54,12 +54,28 @@ Standalone path rule:
 - Source-project history is not part of the active mount set unless explicitly promoted into this repository.
 - Package-owned command previews should use `python -B -m jikuo...`; source references should point at `src/jikuo/...` or `pkg://jikuo/...` as appropriate.
 
+Program-level roadmap anchor:
+
+- New sessions must keep two context layers visible before making implementation choices: the program-level roadmap below, and the current slice / work-order anchors from `docs/registry/work_orders.yaml`.
+- This anchor is intentionally short. It prevents new sessions from mistaking the current POLTRIG / DOCREG slice for the whole JIKUO roadmap.
+- Do not move this anchor into `docs/governance/jikuo_productization_task_map.md`; that file is a legacy L3 projection, not the source for new task sequencing.
+- Current program tracks:
+  - MCP and client runtime: MCP MVP Stage A / B1 / B2 / B3 are implemented; remaining work is release proof, client compatibility expansion, and future router / adapter surfacing.
+  - Strict mounted harness: Codex hook and Claude hook tracks remain the near-term path for true pre-turn execution; MCP plus instruction files remain instruction-level, not strict mounted, until a host adapter proves otherwise.
+  - Policy trigger repair: POLTRIG-01A / 01B / 02 and task context anchors are in place; POLTRIG-03 must review evaluator behavior before policy scopes affect matching.
+  - Document registry: DOCREG-01A / B1 / B2 are complete; DOCREG-01B3 policy governance and later generated projections remain.
+  - Runtime data and analytics: DATA-01A defines execution-event fixtures and schema direction; runtime event emission, history scanning, dashboard / BI, and support-bundle export remain future slices.
+  - Policy catalog and starter packs: official starter policy distribution must remain separate from JIKUO self-bootstrap policies and must never overwrite user-approved local policies.
+  - Release and assets: GitHub private preview exists; license, trademark / domain posture, packaging, CI, PyPI, and public-review readiness remain explicit release decisions.
+  - Product surfaces: Studio / dashboard, per-client hook packs, Agent SDK / ADK adapters, and OS notifications remain product expansion tracks after the harness and data model stabilize.
+  - Self-bootstrap boundary: the parent harness workspace / child source repository layout is an accepted spike, not an approved source-tree migration.
+
 Slice completion main document check:
 
 - Before closing any JIKUO development slice, check `.jikuo/project_context.yaml`.
 - Check `README.md` when the product-facing project status, quickstart, MCP surface, release posture, or GitHub preview path changes.
 - Check `docs/README.md` when document roots, directory roles, or entry points change.
-- Check `docs/governance/jikuo_execution_mounts.md` when required mounts, execution order, command previews, or active context changes.
+- Check `docs/governance/jikuo_execution_mounts.md` when required mounts, execution order, command previews, program-level roadmap anchor, or active context changes.
 - Check `docs/governance/jikuo_policy_governance_authority.md` when policy lifecycle, source boundaries, trigger routing, task classification, AI hint, deterministic signal priority, fallback expansion, or policy distribution posture changes.
 - Check `docs/governance/jikuo_productization_task_map.md` only when repairing projection text, projection links, frozen-section notices, or an explicitly approved regeneration. New task sequencing, open-item facts, capability metadata, and registry authority belong in the DOCREG work order or `docs/registry/*.yaml`.
 - Check `docs/registry/registry_index.yaml` when registry shard authority, projection metadata, or impact-tag routing changes.

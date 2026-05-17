@@ -20,6 +20,10 @@ document_roles:
     path: "docs/governance/jikuo_execution_mounts.md"
     required: true
     note: "Required active mount set and slice-completion document checks."
+  program_level_roadmap_anchor:
+    path: "docs/governance/jikuo_execution_mounts.md"
+    required: true
+    note: "Short program-level roadmap anchor in the execution mounts document. New sessions should read it alongside current slice / work-order anchors so they do not mistake a local POLTRIG or DOCREG slice for the whole JIKUO roadmap."
   latest_todo_map:
     path: "docs/governance/jikuo_productization_task_map.md"
     required: true
@@ -197,7 +201,7 @@ main_document_mounts:
     - path: "docs/README.md"
       update_required_when: "documentation roots, entry points, or directory responsibilities change"
     - path: "docs/governance/jikuo_execution_mounts.md"
-      update_required_when: "required mounts, execution order, command previews, or active context changes"
+      update_required_when: "required mounts, execution order, command previews, program-level roadmap anchor, or active context changes"
     - path: "docs/governance/jikuo_policy_governance_authority.md"
       update_required_when: "policy lifecycle, source boundary, trigger routing, task classification, AI hint, deterministic signal priority, fallback expansion, or policy distribution posture changes"
     - path: "docs/governance/jikuo_productization_task_map.md"
