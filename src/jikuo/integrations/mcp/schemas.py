@@ -161,6 +161,7 @@ TOOL_DEFINITIONS: dict[str, dict[str, Any]] = {
             "task_session_decision": RETURN,
             "task_session_defer_reason": REDACT_OPTIONAL,
         },
+        output_fields={"work_profile": RETURN},
         card_returning=True,
     ),
     "jikuo.propose_policy_write_plan": _tool(
@@ -172,6 +173,7 @@ TOOL_DEFINITIONS: dict[str, dict[str, Any]] = {
             "policy_title": RETURN,
             "policy_source_ref": REDACT_OPTIONAL,
         },
+        output_fields={"work_profile": RETURN},
         card_returning=True,
     ),
     "jikuo.propose_policy_evolution_plan": _tool(
@@ -194,6 +196,7 @@ TOOL_DEFINITIONS: dict[str, dict[str, Any]] = {
             "replacement_action_type": RETURN,
             "replacement_evidence_type": RETURN,
         },
+        output_fields={"work_profile": RETURN},
         card_returning=True,
     ),
     "jikuo.propose_policy_template_import_plan": _tool(
@@ -203,6 +206,7 @@ TOOL_DEFINITIONS: dict[str, dict[str, Any]] = {
             "project_root": LOCAL_ONLY,
             "template": RETURN,
         },
+        output_fields={"work_profile": RETURN},
         card_returning=True,
     ),
     "jikuo.get_configuration_status": _tool(
@@ -215,6 +219,7 @@ TOOL_DEFINITIONS: dict[str, dict[str, Any]] = {
         output_fields={
             "configuration_status": RETURN,
             "configuration_review": RETURN,
+            "work_profile": RETURN,
         },
         card_returning=True,
         stage="C1",
@@ -294,6 +299,7 @@ TOOL_DEFINITIONS: dict[str, dict[str, Any]] = {
             "classified_obligations": RETURN,
             "required_followup_tools": RETURN,
             "mcp_followup_tools": RETURN,
+            "work_profile": RETURN,
         },
         card_returning=True,
         stage="R1",
@@ -318,6 +324,7 @@ TOOL_DEFINITIONS: dict[str, dict[str, Any]] = {
             "policy_suggestion_review": RETURN,
             "policy_candidate_count": RETURN,
             "mcp_followup_tools": RETURN,
+            "work_profile": RETURN,
         },
         card_returning=True,
         stage="R1",

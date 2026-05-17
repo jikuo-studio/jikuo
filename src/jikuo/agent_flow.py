@@ -25,6 +25,7 @@ if __package__:
         starter_policies,
         task_session,
         task_session_cards,
+        work_profile,
     )
 else:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -37,6 +38,7 @@ else:
     import starter_policies
     import task_session
     import task_session_cards
+    import work_profile
 
 
 PREVIOUS_PROPOSAL_SCHEMA = "jikuo.agent_flow_proposal.v0"
@@ -3176,6 +3178,17 @@ def build_proposal(
         work_routing_category=work_routing_category,
         work_routing_summary=work_routing_summary,
     )
+    work_profile_projection = work_profile.build_work_profile(
+        raw_event=raw_event,
+        normalized_event=event,
+        user_phrase=user_phrase,
+        task_title=task_title,
+        summary=summary,
+        task_type=task_type,
+        jikuo_layer=jikuo_layer,
+        changed_paths=changed_paths,
+        added_paths=added_paths,
+    )
     if work_routing:
         traces.append(
             atom_trace(
@@ -3318,6 +3331,7 @@ def build_proposal(
         "missing_evidence_reports": policy_sections["missing_evidence_reports"],
         "policy_feedback_options": policy_feedback_options,
         "conversation_router": conversation_router,
+        "work_profile": work_profile_projection,
         "work_routing": work_routing,
         "atom_trace": traces,
         "cards": cards,
@@ -3963,6 +3977,28 @@ def render_work_routing(work_routing: dict[str, Any]) -> list[str]:
     return lines
 
 
+def render_work_profile(work_profile_projection: dict[str, Any]) -> list[str]:
+    lines = [
+        "## Work Profile",
+        "",
+        f"- Lifecycle event: `{work_profile_projection.get('lifecycle_event')}`",
+        f"- Intent class: `{work_profile_projection.get('intent_class')}`",
+        f"- Operation class: `{work_profile_projection.get('operation_class')}`",
+        f"- Output class: `{work_profile_projection.get('output_class')}`",
+        f"- Confidence: `{work_profile_projection.get('confidence')}`",
+        "- Fallback expanded: "
+        f"`{str(work_profile_projection.get('fallback_expanded', False)).lower()}`",
+    ]
+    scopes = work_profile_projection.get("policy_scopes") or []
+    lines.append(f"- Policy scopes: `{', '.join(str(scope) for scope in scopes)}`")
+    signals = (work_profile_projection.get("basis") or {}).get(
+        "deterministic_signals"
+    ) or []
+    lines.append(f"- Deterministic signals: `{len(signals)}`")
+    lines.append("")
+    return lines
+
+
 def render_markdown(proposal: dict[str, Any]) -> str:
     policy_context = proposal["policy_context"]
     lines = [
@@ -3997,6 +4033,9 @@ def render_markdown(proposal: dict[str, Any]) -> str:
     if display_links:
         lines.extend([""])
         lines.extend(render_client_display_links(display_links))
+    work_profile_projection = proposal.get("work_profile")
+    if work_profile_projection:
+        lines.extend(render_work_profile(work_profile_projection))
     work_routing = proposal.get("work_routing")
     if work_routing:
         lines.extend(render_work_routing(work_routing))

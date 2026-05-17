@@ -41,7 +41,7 @@ Always mount:
 - `README.md`
 - `docs/README.md`
 - `docs/governance/jikuo_execution_mounts.md`
-- `docs/governance/jikuo_productization_task_map.md`
+- `docs/governance/jikuo_productization_task_map.md` as a legacy L3 projection only; do not treat it as the source of truth for new task sequencing, open-item facts, capability metadata, or registry authority.
 - `docs/governance/jikuo_policy_governance_authority.md`
 - `docs/governance/jikuo_skeleton_kernel_boundary_and_backlog.md`
 - `docs/governance/jikuo_project_context_binding_and_policy_template_portability.md`
@@ -61,7 +61,7 @@ Slice completion main document check:
 - Check `docs/README.md` when document roots, directory roles, or entry points change.
 - Check `docs/governance/jikuo_execution_mounts.md` when required mounts, execution order, command previews, or active context changes.
 - Check `docs/governance/jikuo_policy_governance_authority.md` when policy lifecycle, source boundaries, trigger routing, task classification, AI hint, deterministic signal priority, fallback expansion, or policy distribution posture changes.
-- Check `docs/governance/jikuo_productization_task_map.md` when the task map, current snapshot, capability registry, or todo list changes.
+- Check `docs/governance/jikuo_productization_task_map.md` only when repairing projection text, projection links, frozen-section notices, or an explicitly approved regeneration. New task sequencing, open-item facts, capability metadata, and registry authority belong in the DOCREG work order or `docs/registry/*.yaml`.
 - Check `docs/registry/registry_index.yaml` when registry shard authority, projection metadata, or impact-tag routing changes.
 - Check `docs/work_orders/SPRINT_050_WO-PER-JIKUO-DOCREG-01_layered_document_registry.md` while DOCREG is still in transition and registry scope or sequencing changes.
 - Check `docs/insights/insights_registry.yaml` when a development idea is captured, promoted, resolved, or deferred.
@@ -70,7 +70,7 @@ Slice completion main document check:
 
 Atomic capability registry:
 
-- current registry location: `docs/governance/jikuo_productization_task_map.md` section `Atomic Capability Registry`
+- legacy projection location: `docs/governance/jikuo_productization_task_map.md` section `Atomic Capability Registry`
 - draft structured registry location: `docs/registry/capabilities.yaml`
 - registry index: `docs/registry/registry_index.yaml`
 - `JIKUO-DOCREG-01` remains the transitional authority for DOCREG sequencing while the draft registry is reviewed and stabilized

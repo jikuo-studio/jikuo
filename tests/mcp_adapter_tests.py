@@ -196,6 +196,10 @@ class MCPStageAAdapterTests(unittest.TestCase):
             )
 
             self.assertEqual(response["tool_name"], "jikuo.propose_task_start")
+            self.assertEqual(response["work_profile"]["schema"], "jikuo.work_profile.v0")
+            self.assertEqual(response["work_profile"]["lifecycle_event"], "task_start")
+            self.assertEqual(response["work_profile"]["operation_class"], "write_file")
+            self.assertIn("editing", response["work_profile"]["policy_scopes"])
             self.assertIn("card_markdown", response)
             self.assertEqual(response["display"]["must_show_verbatim"], ["card_markdown"])
             self.assertEqual(
@@ -380,6 +384,12 @@ class MCPStageAAdapterTests(unittest.TestCase):
 
             self.assertEqual(response["tool_name"], "jikuo.route_user_request")
             self.assertEqual(response["write_mode"], "no-write")
+            self.assertEqual(response["work_profile"]["schema"], "jikuo.work_profile.v0")
+            self.assertEqual(
+                response["work_profile"]["lifecycle_event"],
+                "conversation_turn",
+            )
+            self.assertEqual(response["work_profile"]["intent_class"], "configuration")
             self.assertEqual(
                 response["conversation_router"]["schema"],
                 "jikuo.conversation_turn_router.v0",

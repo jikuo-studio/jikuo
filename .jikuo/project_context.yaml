@@ -23,7 +23,7 @@ document_roles:
   latest_todo_map:
     path: "docs/governance/jikuo_productization_task_map.md"
     required: true
-    note: "Current productization task map and latest todo section."
+    note: "Legacy L3 human-readable roadmap projection. Do not add new task sequencing, open-item facts, capability metadata, or registry authority here by default; use the DOCREG transition work order and docs/registry shards unless explicitly regenerating or repairing this projection."
   document_registry_transition_work_order:
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-DOCREG-01_layered_document_registry.md"
     required: true
@@ -197,7 +197,7 @@ main_document_mounts:
     - path: "docs/governance/jikuo_policy_governance_authority.md"
       update_required_when: "policy lifecycle, source boundary, trigger routing, task classification, AI hint, deterministic signal priority, fallback expansion, or policy distribution posture changes"
     - path: "docs/governance/jikuo_productization_task_map.md"
-      update_required_when: "taskmap, current snapshot, capability registry, todo list, or task/follow-up distinction changes"
+      update_required_when: "explicit task-map projection repair, link fix, frozen-section notice, or approved regeneration; new task sequencing, open-item facts, capability metadata, and registry authority belong in DOCREG work orders or docs/registry shards"
     - path: "docs/insights/insights_registry.yaml"
       update_required_when: "development ideas are captured, promoted, resolved, deferred, or reclassified"
     - path: ".jikuo/policies/manifest.yaml"

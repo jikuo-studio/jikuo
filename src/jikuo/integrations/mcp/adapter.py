@@ -252,7 +252,7 @@ def _proposal_response(
         project_root=project_root,
     )
     markdown = str(with_markdown.get("chat_ready_markdown") or "")
-    return _base_response(
+    response = _base_response(
         tool_name=tool_name,
         status=str(with_markdown.get("status") or "review"),
         data_details=with_markdown,
@@ -262,6 +262,9 @@ def _proposal_response(
         chat_ready_markdown=markdown,
         runtime_report=_runtime_report_from(with_markdown),
     )
+    if isinstance(with_markdown.get("work_profile"), dict):
+        response["work_profile"] = with_markdown["work_profile"]
+    return response
 
 
 def _cards_by_kind(response: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -332,6 +335,8 @@ def _conversation_turn_response(
             tool for tool in mcp_followups if tool != "jikuo.propose_policy_suggestions"
         ]
     response["conversation_router"] = router
+    if isinstance(data_details, dict) and isinstance(data_details.get("work_profile"), dict):
+        response["work_profile"] = data_details["work_profile"]
     response["mcp_followup_tools"] = mcp_followups
     if isinstance(router, dict):
         response["classified_obligations"] = list(

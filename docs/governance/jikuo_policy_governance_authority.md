@@ -62,6 +62,47 @@ No natural-language discussion, insight capture, task map update, or starter-pac
 sync may skip the guarded boundary between `policy_plan` and
 `approved_active_policy`.
 
+### 3.1 User Interaction Execution Model
+
+Every user message creates a user-turn boundary. If the AI does anything with
+that message--answers, reads files, searches, analyzes, edits, proposes policy,
+or prepares a handoff--JIKUO should be able to model that work as a governed
+processing instance.
+
+The user-facing work lifecycle should be small and hard to miss:
+
+1. `conversation_turn`: the user message enters the governed project. JIKUO
+   routes, classifies, detects initialization needs, and records compact
+   evidence without storing raw chat transcripts.
+2. `task_start`: the AI begins processing that turn. This is not synonymous
+   with code editing and is not synonymous with a durable task-session write.
+   A `task_start` may be discussion, research, read-only inspection, local
+   command execution, documentation work, code editing, configuration, or
+   policy-governance work.
+3. `completion_review`: the AI is ready to return work to the user. JIKUO
+   checks policy runtime status, evidence, main-document obligations, and
+   summary / business-meaning obligations before user-visible delivery.
+
+This model separates lifecycle from work nature:
+
+```text
+User turn -> conversation_turn -> task_start -> completion_review
+                         \          \              \
+                          \          work_profile   evidence/status review
+                           route/config review
+```
+
+`task_session_start` is a durable evidence-carrier decision inside a governed
+task. It must remain guarded and explicit. It must not be treated as the only
+meaning of `task_start`.
+
+Current code still exposes several tool-specific events such as
+`configuration_review`, `policy_evolution_plan`, `policy_template_import_plan`,
+and `evidence_review`. Those names are implementation surfaces, not a reason to
+expand the core user-work lifecycle. Future projection work should preserve
+existing tool compatibility while adding a `work_profile.lifecycle_event` that
+uses the three user-work lifecycle values above.
+
 ---
 
 ## 4. Policy Scope Classes
@@ -124,7 +165,9 @@ AI calls should provide a structured hint where possible:
 ```json
 {
   "agent_hint": {
-    "task_class": "discussion",
+    "intent_class": ["discussion"],
+    "operation_class": ["no_tool"],
+    "output_class": ["answer"],
     "confidence": "medium",
     "reason": "user is asking for design judgement, not asking to edit files",
     "expected_write_effect": "none"
@@ -182,29 +225,61 @@ fallback_expanded = true
 
 `other` must never mean "no policy applies."
 
-### 6.6 Output shape
+### 6.6 Work-profile output shape
 
-The router should eventually produce an auditable structure like:
+The router should eventually produce an auditable `work_profile`. This is the
+bridge between lifecycle event and policy triggering:
 
 ```json
 {
-  "task_classification": {
-    "primary": "other",
-    "policy_scopes": ["discussion", "editing"],
+  "work_profile": {
+    "schema": "jikuo.work_profile.v0",
+    "lifecycle_event": "task_start",
+    "intent_class": ["discussion"],
+    "operation_class": ["read_only"],
+    "output_class": ["plan"],
+    "policy_scopes": ["discussion"],
     "basis": {
-      "agent_hint": "discussion",
-      "deterministic_signals": ["editing"],
-      "fallback": "expanded_due_to_conflict"
+      "agent_hint": {
+        "intent_class": ["discussion"],
+        "operation_class": ["read_only"]
+      },
+      "deterministic_signals": [
+        {
+          "signal": "user_requested_code_inspection",
+          "minimum_operation_class": "read_only"
+        }
+      ],
+      "fallback": "not_expanded"
     },
+    "confidence": "medium",
+    "fallback_expanded": false
+  }
+}
+```
+
+If sources conflict or confidence is low, `fallback_expanded` should become
+`true` and `policy_scopes` should expand conservatively:
+
+```json
+{
+  "work_profile": {
+    "lifecycle_event": "task_start",
+    "intent_class": ["other"],
+    "operation_class": ["local_command"],
+    "output_class": ["answer"],
+    "policy_scopes": ["discussion", "editing"],
     "confidence": "low",
     "fallback_expanded": true
   }
 }
 ```
 
-This field is distinct from the current conversation-turn follow-up obligations
+`work_profile` is distinct from current conversation-turn follow-up obligations
 such as `task_start`, `completion_review`, `configuration_review`, or
-`policy_suggestion_review`.
+`policy_suggestion_review`. Follow-up obligations say which tool may be useful
+next. `work_profile` says what kind of governed work is happening and which
+policy scopes should be considered.
 
 ---
 
@@ -212,9 +287,11 @@ such as `task_start`, `completion_review`, `configuration_review`, or
 
 JIKUO should distinguish:
 
-- `event`: the lifecycle event being evaluated, such as `conversation_turn`,
-  `task_start`, `completion_review`, `policy_evolution_plan`, or
-  `configuration_review`;
+- `event`: the current implemented tool or lifecycle event name. Existing code
+  still accepts broad names such as `configuration_review`,
+  `policy_evolution_plan`, and `policy_template_import_plan` for compatibility.
+- `work_profile.lifecycle_event`: the user-work lifecycle stage:
+  `conversation_turn`, `task_start`, or `completion_review`.
 - `policy_scope`: the conservative class used to decide which policy groups
   apply, such as `discussion`, `editing`, `progress_summary`, or fallback-expanded
   `discussion + editing`;
@@ -242,6 +319,15 @@ applies_to_task_classes:
 The evaluator can then match policies against `policy_scopes` generated by the
 router instead of depending only on brittle exact `task_type` or `jikuo_layer`
 values.
+
+Practical rule:
+
+```text
+implemented event routes the current tool path;
+work_profile.lifecycle_event says where this sits in the user-work lifecycle;
+work_profile.policy_scopes says which policy groups should be considered;
+conditions and evidence decide whether a specific policy is satisfied.
+```
 
 ---
 
@@ -299,7 +385,9 @@ Current JIKUO has:
 Current JIKUO does not yet have:
 
 - structured `agent_hint` input on every router path;
-- the `discussion` / `editing` / `progress_summary` / `other` policy-scope layer;
+- a formal `work_profile` projection on every governed proposal;
+- the `discussion` / `editing` / `progress_summary` / `other` policy-scope layer
+  as evaluator input;
 - policy definitions that declare `applies_to_task_classes`;
 - evaluator support for scope-based triggering;
 - runtime cards that show hint/signal/fallback routing;
@@ -314,17 +402,24 @@ These are policy-governance tasks, not document-registry tasks.
 
 Recommended future slices:
 
-1. `POLTRIG-01`: add router output for `agent_hint`, deterministic signals,
-   `task_classification`, `policy_scopes`, and fallback expansion.
-2. `POLTRIG-02`: let policies declare `applies_to_task_classes` while preserving
+1. `POLTRIG-01A`: add `work_profile` projection for proposal output only. It
+   must include `agent_hint`, deterministic signals, `intent_class`,
+   `operation_class`, `output_class`, `policy_scopes`, confidence, and fallback
+   expansion. It must not change evaluator behavior. Current implementation
+   status: projected in `agent_flow` proposals and MCP proposal / router
+   responses; policy-store matching is intentionally unchanged.
+2. `POLTRIG-01B`: separate lightweight `task_start` processing from durable
+   `task_session_start`. `task_start` should represent AI processing of the
+   user turn; task-session creation remains guarded and explicit.
+3. `POLTRIG-02`: let policies declare `applies_to_work_profile` while preserving
    existing event / condition behavior.
-3. `POLTRIG-03`: make the evaluator match policy scopes and keep exact condition
+4. `POLTRIG-03`: make the evaluator match policy scopes and keep exact condition
    checks as additional filters.
-4. `POLTRIG-04`: update MCP and host adapter surfaces to require or strongly
+5. `POLTRIG-04`: update MCP and host adapter surfaces to require or strongly
    encourage agent hints.
-5. `POLTRIG-05`: surface hint/signal/fallback basis in runtime cards and
+6. `POLTRIG-05`: surface hint/signal/fallback basis in runtime cards and
    structured execution events.
-6. `POLCAT-01`: keep self-bootstrap policy promotion hard-gated so official
+7. `POLCAT-01`: keep self-bootstrap policy promotion hard-gated so official
    starter packs are selected, reviewed, and opt-in.
 
 `DOCREG-01B3` may still proceed as a domain-specific completion-review policy,
@@ -333,7 +428,25 @@ the model itself.
 
 ---
 
-## 12. Review Rule
+## 12. Candidate Policies Held For Later Activation
+
+The current held candidates are maintained in the transitional task-sequencing
+authority, not as active policy-store entries:
+
+- `POLICY-CANDIDATE-first-principles-critical-alignment`
+- `POLICY-CANDIDATE-data-model-drift-alarm`
+
+See
+`docs/work_orders/SPRINT_050_WO-PER-JIKUO-DOCREG-01_layered_document_registry.md`
+section "Held Policy-Governance Candidates" for the current candidate text.
+
+This authority document keeps the principle: concept alignment and root-cause
+reasoning precede implementation detail acceptance, and data-model drift must
+be treated as an architecture warning before adding more fields or layers.
+
+---
+
+## 13. Review Rule
 
 Before implementing or activating a policy-governance change, check this document
 and report whether the change affects:

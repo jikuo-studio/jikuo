@@ -8,6 +8,8 @@
 > **Boundary**: This is a productization roadmap, not a runtime narrative-engine work order.
 > **Current application track**: AI-primary engineering governance.
 
+> **DOCREG transition note**: This file is now a legacy L3 human-readable projection. Do not add new task sequencing, open-item facts, capability metadata, or registry authority here by default. Use `docs/work_orders/SPRINT_050_WO-PER-JIKUO-DOCREG-01_layered_document_registry.md` for DOCREG transition sequencing and `docs/registry/*.yaml` for registry facts. Edit this file only for explicit projection notes, link fixes, frozen-section notices, or approved regeneration.
+
 ---
 
 ## 1. Product Positioning

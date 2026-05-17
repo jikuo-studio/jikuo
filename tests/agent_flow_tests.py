@@ -396,6 +396,12 @@ class AgentFlowProposalTests(unittest.TestCase):
             "not_evaluated_by_runner",
         )
         self.assertEqual(proposal["trigger_decision"]["execution_readiness"], "ready")
+        self.assertEqual(proposal["work_profile"]["schema"], "jikuo.work_profile.v0")
+        self.assertEqual(proposal["work_profile"]["lifecycle_event"], "task_start")
+        self.assertIn("discussion", proposal["work_profile"]["policy_scopes"])
+        self.assertIn("editing", proposal["work_profile"]["policy_scopes"])
+        self.assertTrue(proposal["work_profile"]["fallback_expanded"])
+        self.assertIn("## Work Profile", proposal["chat_ready_markdown"])
         self.assertEqual(proposal["policy_context"]["policy_store_status"], "missing")
         self.assertEqual(proposal["policy_context"]["policy_eval_status"], "not_evaluated")
         self.assertEqual(proposal["triggered_policies"], [])
@@ -438,6 +444,15 @@ class AgentFlowProposalTests(unittest.TestCase):
 
         self.assertEqual(completed.returncode, 0, completed.stderr)
         proposal = json.loads(completed.stdout)
+        self.assertEqual(proposal["work_profile"]["schema"], "jikuo.work_profile.v0")
+        self.assertEqual(
+            proposal["work_profile"]["lifecycle_event"],
+            "conversation_turn",
+        )
+        self.assertEqual(proposal["work_profile"]["intent_class"], "discussion")
+        self.assertEqual(proposal["work_profile"]["operation_class"], "no_tool")
+        self.assertEqual(proposal["work_profile"]["policy_scopes"], ["discussion"])
+        self.assertFalse(proposal["work_profile"]["fallback_expanded"])
         self.assertEqual(
             proposal["trigger_decision"]["invocation_scenario"],
             "conversation_turn",
@@ -508,6 +523,42 @@ class AgentFlowProposalTests(unittest.TestCase):
         self.assertFalse(proposal["write_effect"]["writes_performed"])
         self.assertFalse((READY_PROJECT / ".jikuo" / "task_sessions").exists())
         self.assertFalse((READY_PROJECT / ".jikuo" / "policies").exists())
+
+    def test_work_profile_does_not_treat_no_write_as_editing(self):
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-B",
+                str(TOOL),
+                "propose",
+                "--event",
+                "conversation_turn",
+                "--trigger-mode",
+                "semantic",
+                "--user-phrase",
+                "this is a no-write review",
+                "--project-root",
+                str(READY_PROJECT),
+                "--format",
+                "json",
+            ],
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        proposal = json.loads(completed.stdout)
+        self.assertEqual(proposal["work_profile"]["schema"], "jikuo.work_profile.v0")
+        self.assertEqual(
+            proposal["work_profile"]["lifecycle_event"],
+            "conversation_turn",
+        )
+        self.assertEqual(proposal["work_profile"]["intent_class"], "discussion")
+        self.assertEqual(proposal["work_profile"]["operation_class"], "no_tool")
+        self.assertEqual(proposal["work_profile"]["policy_scopes"], ["discussion"])
 
     def test_conversation_turn_router_detects_policy_and_task_obligations(self):
         completed = subprocess.run(
