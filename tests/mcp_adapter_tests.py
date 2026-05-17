@@ -201,6 +201,27 @@ class MCPStageAAdapterTests(unittest.TestCase):
             self.assertEqual(response["work_profile"]["operation_class"], "write_file")
             self.assertIn("editing", response["work_profile"]["policy_scopes"])
             self.assertIn("card_markdown", response)
+            self.assertIn("client_display_links", response)
+            self.assertEqual(
+                response["field_classification"]["client_display_links"],
+                "return",
+            )
+            self.assertEqual(
+                [
+                    item["lifecycle_event"]
+                    for item in response["client_display_links"][
+                        "lifecycle_card_links"
+                    ]
+                ],
+                ["task_start"],
+            )
+            self.assertIn("### Lifecycle Card Links", response["card_markdown"])
+            self.assertEqual(
+                response["data_details"]["client_display_links"][
+                    "lifecycle_card_links"
+                ][0]["ref"],
+                response["client_display_links"]["lifecycle_card_links"][0]["ref"],
+            )
             self.assertEqual(response["display"]["must_show_verbatim"], ["card_markdown"])
             self.assertEqual(
                 response["display"]["card_priority_order"][0],
@@ -402,6 +423,16 @@ class MCPStageAAdapterTests(unittest.TestCase):
             self.assertIn("configuration_review", kinds)
             self.assertIn("jikuo.get_configuration_status", response["mcp_followup_tools"])
             self.assertIn("Conversation-turn router", response["card_markdown"])
+            self.assertEqual(
+                [
+                    item["lifecycle_event"]
+                    for item in response["client_display_links"][
+                        "lifecycle_card_links"
+                    ]
+                ],
+                ["conversation_turn"],
+            )
+            self.assertIn("### Lifecycle Card Links", response["card_markdown"])
             self.assertEqual(
                 response["display"]["card_priority_order"][1],
                 "conversation_turn_router",

@@ -60,7 +60,17 @@ class RuntimeVisibilityTests(unittest.TestCase):
                 display_links["links"]["last_card"]["ref"],
                 ".jikuo/runtime/last_card.md",
             )
+            self.assertEqual(
+                [item["lifecycle_event"] for item in display_links["lifecycle_card_links"]],
+                ["task_start"],
+            )
+            self.assertEqual(
+                display_links["lifecycle_card_links"][0]["ref"],
+                runtime_report["history_ref"],
+            )
             self.assertIn("## JIKUO Runtime Links", proposal["chat_ready_markdown"])
+            self.assertIn("### Lifecycle Card Links", proposal["chat_ready_markdown"])
+            self.assertIn("`task_start`", proposal["chat_ready_markdown"])
             self.assertIn(
                 display_links["links"]["last_card"]["markdown"],
                 proposal["chat_ready_markdown"],
@@ -88,6 +98,10 @@ class RuntimeVisibilityTests(unittest.TestCase):
             self.assertEqual(
                 state_summary["client_display_links"]["links"]["last_card"]["ref"],
                 ".jikuo/runtime/last_card.md",
+            )
+            self.assertEqual(
+                state_summary["client_display_links"]["lifecycle_card_links"][0]["ref"],
+                runtime_report["history_ref"],
             )
             self.assertEqual(state_summary["counts"]["card_count"], len(proposal["cards"]))
             self.assertTrue(state_summary["write_boundary"]["runtime_visibility_write_performed"])
@@ -143,6 +157,191 @@ class RuntimeVisibilityTests(unittest.TestCase):
             )
             self.assertEqual(show_card.returncode, 0, show_card.stderr)
             self.assertEqual(show_card.stdout, proposal["chat_ready_markdown"])
+
+    def test_runtime_lifecycle_card_links_carry_forward_until_next_task_start(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            shutil.copytree(READY_PROJECT, project_root)
+
+            start = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "propose",
+                    "--event",
+                    "task_start",
+                    "--task-title",
+                    "Lifecycle Link Probe",
+                    "--project-root",
+                    str(project_root),
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertEqual(start.returncode, 0, start.stderr)
+            start_proposal = json.loads(start.stdout)
+
+            verification_report = runtime_visibility.persist_agent_flow_snapshot(
+                project_root=project_root,
+                proposal={
+                    "schema": "test.lifecycle_snapshot",
+                    "proposal_id": "verification_lifecycle_probe",
+                    "runner_mode": "test",
+                    "status": "review",
+                    "trigger_decision": {"invocation_scenario": "verification_review"},
+                    "cards": [],
+                    "triggered_policies": [],
+                    "missing_evidence_reports": [],
+                    "required_actions": [],
+                    "write_effect": {"writes_performed": False},
+                },
+                card_markdown="# Verification Probe\n",
+            )
+
+            completion = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "propose",
+                    "--event",
+                    "completion_review",
+                    "--task-title",
+                    "Lifecycle Link Probe",
+                    "--summary",
+                    "Completion card should keep the task-start card visible.",
+                    "--project-root",
+                    str(project_root),
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertEqual(completion.returncode, 0, completion.stderr)
+            completion_proposal = json.loads(completion.stdout)
+
+            lifecycle_links = completion_proposal["client_display_links"][
+                "lifecycle_card_links"
+            ]
+            self.assertEqual(
+                [item["lifecycle_event"] for item in lifecycle_links],
+                ["task_start", "verification_review", "completion_review"],
+            )
+            self.assertEqual(
+                lifecycle_links[0]["ref"],
+                start_proposal["runtime_visibility"]["history_ref"],
+            )
+            self.assertEqual(
+                lifecycle_links[1]["ref"],
+                verification_report["history_ref"],
+            )
+            self.assertEqual(
+                lifecycle_links[2]["ref"],
+                completion_proposal["runtime_visibility"]["history_ref"],
+            )
+            self.assertIn(
+                "### Lifecycle Card Links",
+                completion_proposal["chat_ready_markdown"],
+            )
+            self.assertIn("`task_start`", completion_proposal["chat_ready_markdown"])
+            self.assertIn("`verification_review`", completion_proposal["chat_ready_markdown"])
+            self.assertIn("`completion_review`", completion_proposal["chat_ready_markdown"])
+
+            runtime_visibility.persist_agent_flow_snapshot(
+                project_root=project_root,
+                proposal={
+                    "schema": "test.non_lifecycle_snapshot",
+                    "proposal_id": "non_lifecycle_status_probe",
+                    "runner_mode": "test",
+                    "status": "review",
+                    "trigger_decision": {"invocation_scenario": "project_status"},
+                    "cards": [],
+                    "triggered_policies": [],
+                    "missing_evidence_reports": [],
+                    "required_actions": [],
+                    "write_effect": {"writes_performed": False},
+                },
+                card_markdown="# Non-lifecycle Probe\n",
+            )
+            state_summary = json.loads(
+                (project_root / ".jikuo" / "runtime" / "state_summary.json").read_text(
+                    encoding="utf-8",
+                )
+            )
+            self.assertEqual(
+                [
+                    item["lifecycle_event"]
+                    for item in state_summary["client_display_links"][
+                        "lifecycle_card_links"
+                    ]
+                ],
+                ["task_start", "verification_review", "completion_review"],
+            )
+
+            show_markdown = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    "-m",
+                    "jikuo",
+                    "show",
+                    "--project-root",
+                    str(project_root),
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertEqual(show_markdown.returncode, 0, show_markdown.stderr)
+            self.assertIn("### Lifecycle Card Links", show_markdown.stdout)
+            self.assertIn("`task_start`", show_markdown.stdout)
+            self.assertIn("`verification_review`", show_markdown.stdout)
+            self.assertIn("`completion_review`", show_markdown.stdout)
+
+            next_start = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "propose",
+                    "--event",
+                    "task_start",
+                    "--task-title",
+                    "Next Lifecycle Link Probe",
+                    "--project-root",
+                    str(project_root),
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertEqual(next_start.returncode, 0, next_start.stderr)
+            next_start_proposal = json.loads(next_start.stdout)
+            self.assertEqual(
+                [
+                    item["lifecycle_event"]
+                    for item in next_start_proposal["client_display_links"][
+                        "lifecycle_card_links"
+                    ]
+                ],
+                ["task_start"],
+            )
 
     def test_show_reports_stale_task_session_index_without_refreshing_it(self):
         with tempfile.TemporaryDirectory() as tmp:

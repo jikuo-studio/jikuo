@@ -28,6 +28,18 @@ LAST_CARD_REF = ".jikuo/runtime/last_card.md"
 STATE_SUMMARY_REF = ".jikuo/runtime/state_summary.json"
 HISTORY_DIR_REF = ".jikuo/runtime/history"
 PACKAGE_FIXTURES_ROOT = Path(__file__).resolve().parent / "fixtures"
+LIFECYCLE_EVENT_ORDER = [
+    "conversation_turn",
+    "configuration_review",
+    "task_start",
+    "task_continue",
+    "evidence_review",
+    "verification_review",
+    "pre_delivery",
+    "completion_review",
+    "handoff",
+]
+LIFECYCLE_EVENTS = set(LIFECYCLE_EVENT_ORDER)
 
 
 def utc_now_compact() -> str:
@@ -132,6 +144,7 @@ def build_state_summary(
             "history_ref": runtime_report.get("history_ref"),
         },
         "client_display_links": build_client_display_links(runtime_report),
+        "lifecycle_card_links": runtime_report.get("lifecycle_card_links", []),
         "policy_runtime_status": policy_runtime_status,
         "counts": {
             "card_count": len(proposal.get("cards", [])),
@@ -163,13 +176,20 @@ def local_markdown_target(path: Path) -> str:
     return path.resolve().as_posix()
 
 
+def int_or_zero(value: Any) -> int:
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
 def runtime_link_item(
     *,
     project_root: Path,
     key: str,
     label: str,
     ref: str | None,
-) -> dict[str, str] | None:
+) -> dict[str, Any] | None:
     if not ref:
         return None
     resolved = (project_root / ref).resolve()
@@ -187,6 +207,119 @@ def runtime_link_item(
     }
 
 
+def lifecycle_event_for_snapshot(proposal: dict[str, Any]) -> str | None:
+    trigger = proposal.get("trigger_decision") or {}
+    event = trigger.get("invocation_scenario")
+    if not event:
+        source = proposal.get("source") or {}
+        event = source.get("event")
+    if not event:
+        event = proposal.get("operation")
+    if not event:
+        return None
+    event_text = str(event)
+    if event_text not in LIFECYCLE_EVENTS:
+        return None
+    return event_text
+
+
+def sort_lifecycle_card_links(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    order = {event: index for index, event in enumerate(LIFECYCLE_EVENT_ORDER)}
+    return sorted(
+        items,
+        key=lambda item: (
+            order.get(str(item.get("lifecycle_event")), len(order)),
+            str(item.get("updated_at_utc") or ""),
+            str(item.get("ref") or ""),
+        ),
+    )
+
+
+def load_previous_lifecycle_card_links(project_root: Path) -> list[dict[str, Any]]:
+    state_path = runtime_root_for(project_root) / "state_summary.json"
+    if not state_path.is_file():
+        return []
+    try:
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return []
+    links = state.get("client_display_links") or {}
+    previous = links.get("lifecycle_card_links") or state.get("lifecycle_card_links") or []
+    output: list[dict[str, Any]] = []
+    for raw_item in previous:
+        if not isinstance(raw_item, dict):
+            continue
+        event = raw_item.get("lifecycle_event")
+        ref = raw_item.get("ref")
+        if not event or str(event) not in LIFECYCLE_EVENTS or not ref:
+            continue
+        item = runtime_link_item(
+            project_root=project_root,
+            key=f"lifecycle_{event}",
+            label=str(raw_item.get("label") or f"{event} card"),
+            ref=str(ref),
+        )
+        if not item:
+            continue
+        item["lifecycle_event"] = str(event)
+        item["updated_at_utc"] = raw_item.get("updated_at_utc")
+        item["triggered_policy_count"] = int_or_zero(
+            raw_item.get("triggered_policy_count")
+        )
+        item["missing_evidence_count"] = int_or_zero(
+            raw_item.get("missing_evidence_count")
+        )
+        output.append(item)
+    return output
+
+
+def lifecycle_card_link_for_snapshot(
+    *,
+    project_root: Path,
+    proposal: dict[str, Any],
+    runtime_report: dict[str, Any],
+) -> dict[str, Any] | None:
+    event = lifecycle_event_for_snapshot(proposal)
+    history_ref = runtime_report.get("history_ref")
+    if not event or not history_ref:
+        return None
+    item = runtime_link_item(
+        project_root=project_root,
+        key=f"lifecycle_{event}",
+        label=f"{event} card",
+        ref=str(history_ref),
+    )
+    if not item:
+        return None
+    item["lifecycle_event"] = event
+    item["updated_at_utc"] = runtime_report.get("updated_at_utc")
+    item["triggered_policy_count"] = len(proposal.get("triggered_policies", []))
+    item["missing_evidence_count"] = len(proposal.get("missing_evidence_reports", []))
+    return item
+
+
+def lifecycle_card_links_for_snapshot(
+    *,
+    project_root: Path,
+    proposal: dict[str, Any],
+    runtime_report: dict[str, Any],
+) -> list[dict[str, Any]]:
+    current = lifecycle_card_link_for_snapshot(
+        project_root=project_root,
+        proposal=proposal,
+        runtime_report=runtime_report,
+    )
+    if current and current["lifecycle_event"] == "task_start":
+        previous = []
+    else:
+        previous = load_previous_lifecycle_card_links(project_root)
+    if not current:
+        return sort_lifecycle_card_links(previous)
+    by_event = {item["lifecycle_event"]: item for item in previous}
+    by_event[current["lifecycle_event"]] = current
+    return sort_lifecycle_card_links(list(by_event.values()))
+
+
 def build_client_display_links(runtime_report: dict[str, Any]) -> dict[str, Any]:
     project_root_value = runtime_report.get("project_root")
     if not project_root_value:
@@ -195,6 +328,7 @@ def build_client_display_links(runtime_report: dict[str, Any]) -> dict[str, Any]
             "status": "unavailable",
             "reason": "runtime report has no project_root",
             "links": {},
+            "lifecycle_card_links": [],
         }
     if not runtime_report.get("write_performed"):
         return {
@@ -205,6 +339,7 @@ def build_client_display_links(runtime_report: dict[str, Any]) -> dict[str, Any]
                 "governed JIKUO runtime output."
             ),
             "links": {},
+            "lifecycle_card_links": [],
             "reason": runtime_report.get("reason"),
         }
     project_root = Path(str(project_root_value)).resolve()
@@ -236,6 +371,7 @@ def build_client_display_links(runtime_report: dict[str, Any]) -> dict[str, Any]
             "governed JIKUO runtime output."
         ),
         "links": {key: value for key, value in links.items() if value is not None},
+        "lifecycle_card_links": runtime_report.get("lifecycle_card_links", []),
         "reason": runtime_report.get("reason"),
     }
 
@@ -250,6 +386,7 @@ def skipped_report(*, project_root: Path, reason: str) -> dict[str, Any]:
         "last_card_ref": LAST_CARD_REF,
         "state_summary_ref": STATE_SUMMARY_REF,
         "history_ref": None,
+        "lifecycle_card_links": [],
         "project_root": str(project_root),
     }
 
@@ -267,7 +404,7 @@ def prepare_agent_flow_snapshot(
         source_id=str(proposal.get("proposal_id") or proposal.get("schema") or "proposal"),
     )
     updated_at = utc_now_iso()
-    return {
+    report = {
         "schema": RUNTIME_VISIBILITY_REPORT_SCHEMA,
         "status": "planned",
         "write_performed": False,
@@ -279,6 +416,12 @@ def prepare_agent_flow_snapshot(
         "project_root": str(resolved_root),
         "updated_at_utc": updated_at,
     }
+    report["lifecycle_card_links"] = lifecycle_card_links_for_snapshot(
+        project_root=resolved_root,
+        proposal=proposal,
+        runtime_report=report,
+    )
+    return report
 
 
 def persist_prepared_agent_flow_snapshot(
@@ -490,6 +633,15 @@ def format_state_summary(summary: dict[str, Any]) -> str:
             item = links.get(key)
             if item:
                 lines.append(f"- {item['label']}: {item['markdown']}")
+        lifecycle_links = display_links.get("lifecycle_card_links") or []
+        if lifecycle_links:
+            lines.extend(["", "### Lifecycle Card Links", ""])
+            for item in lifecycle_links:
+                lines.append(
+                    f"- `{item.get('lifecycle_event')}`: {item.get('markdown')} "
+                    f"(triggered_policies=`{item.get('triggered_policy_count', 0)}`, "
+                    f"missing_evidence=`{item.get('missing_evidence_count', 0)}`)"
+                )
         if not links:
             lines.append(f"- Status: `{display_links.get('status', 'unavailable')}`")
             if display_links.get("reason"):

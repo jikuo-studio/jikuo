@@ -4047,6 +4047,15 @@ def render_client_display_links(display_links: dict[str, Any]) -> list[str]:
         item = links.get(key)
         if item:
             lines.append(f"- {item['label']}: {item['markdown']}")
+    lifecycle_links = display_links.get("lifecycle_card_links") or []
+    if lifecycle_links:
+        lines.extend(["", "### Lifecycle Card Links", ""])
+        for item in lifecycle_links:
+            lines.append(
+                f"- `{item.get('lifecycle_event')}`: {item.get('markdown')} "
+                f"(triggered_policies=`{item.get('triggered_policy_count', 0)}`, "
+                f"missing_evidence=`{item.get('missing_evidence_count', 0)}`)"
+            )
     if not links:
         lines.append(f"- Status: `{display_links.get('status', 'unavailable')}`")
         if display_links.get("reason"):

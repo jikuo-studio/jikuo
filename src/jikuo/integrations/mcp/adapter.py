@@ -213,6 +213,9 @@ def _base_response(
     if chat_ready_markdown is not None:
         response["chat_ready_markdown"] = chat_ready_markdown
     if runtime:
+        response["client_display_links"] = runtime_visibility.build_client_display_links(
+            runtime
+        )
         response["runtime_snapshot_ref"] = runtime.get("last_card_ref")
         response["display_verification"] = _display_verification(
             data=data_details,

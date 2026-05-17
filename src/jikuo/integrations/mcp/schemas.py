@@ -99,6 +99,7 @@ def _tool(
             {
                 "card_markdown": RETURN,
                 "chat_ready_markdown": RETURN,
+                "client_display_links": RETURN,
                 "runtime_snapshot_ref": RETURN,
                 "display_verification": RETURN,
             }
