@@ -59,6 +59,25 @@ def create_agent_flow_ready_project(root: Path) -> None:
     )
 
 
+def add_policy_work_profile_applicability(policy_path: Path) -> None:
+    text = policy_path.read_text(encoding="utf-8")
+    text = text.replace(
+        "triggers:\n",
+        "\n".join(
+            [
+                "applies_to_work_profile:",
+                '  - lifecycle_events: ["completion_review"]',
+                '    policy_scopes: ["progress_summary"]',
+                '    operation_classes: ["no_tool"]',
+                "triggers:",
+                "",
+            ]
+        ),
+        1,
+    )
+    policy_path.write_text(text, encoding="utf-8")
+
+
 def write_agent_flow_project_context(root: Path) -> None:
     docs_dir = root / "docs"
     docs_dir.mkdir(parents=True, exist_ok=True)
@@ -944,6 +963,69 @@ class AgentFlowProposalTests(unittest.TestCase):
         self.assertIn("CAP-POLICY-TRIGGER-EVALUATE-01", atom_ids)
         self.assertIn("CAP-POLICY-EVIDENCE-CHECK-01", atom_ids)
         self.assertFalse((POLICY_ACTIVE_PROJECT / ".jikuo" / "task_sessions").exists())
+
+    def test_work_profile_applicability_surfaces_without_changing_runtime_trigger(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            shutil.copytree(POLICY_ACTIVE_PROJECT, project_root)
+            add_policy_work_profile_applicability(
+                project_root
+                / ".jikuo"
+                / "policies"
+                / "approved"
+                / "POLICY-three-phase-audit.yaml"
+            )
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "propose",
+                    "--event",
+                    "task_start",
+                    "--task-title",
+                    "Work Profile Applicability Probe",
+                    "--project-root",
+                    str(project_root),
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            proposal = json.loads(completed.stdout)
+            self.assertEqual(len(proposal["triggered_policies"]), 1)
+            triggered = proposal["triggered_policies"][0]
+            self.assertEqual(triggered["policy_ref"], "POLICY-three-phase-audit")
+            self.assertEqual(
+                triggered["applies_to_work_profile"]["lifecycle_events"],
+                ["completion_review"],
+            )
+            self.assertEqual(
+                triggered["applies_to_work_profile"]["evaluator_effect"],
+                "not_consumed_by_POLTRIG_02",
+            )
+            runtime_cards = [
+                card
+                for card in proposal["cards"]
+                if card["card_kind"] == "policy_runtime_status"
+            ]
+            self.assertEqual(len(runtime_cards), 1)
+            self.assertIn(
+                "triggered_policy_work_profile_applicability: POLICY-three-phase-audit",
+                "\n".join(runtime_cards[0]["shown_outputs"]),
+            )
+            self.assertIn(
+                "evaluator_effect=not_consumed_by_POLTRIG_02",
+                proposal["chat_ready_markdown"],
+            )
+            self.assertFalse((project_root / ".jikuo" / "task_sessions").exists())
 
     def test_policy_evidence_record_proposes_guarded_append_without_write(self):
         session_file = (

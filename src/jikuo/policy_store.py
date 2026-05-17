@@ -42,6 +42,7 @@ POLICY_EVIDENCE_CHECK_STATUS_CHECKED = "checked"
 POLICY_EVIDENCE_CHECK_STATUS_REFUSED = "refused"
 POLICY_CONDITION_EVAL_STATUS_NOT_EVALUATED = "not_evaluated"
 POLICY_CONDITION_EVAL_STATUS_CHECKED = "checked"
+WORK_PROFILE_APPLICABILITY_SCHEMA = "jikuo.policy_work_profile_applicability.v0"
 POLICY_EVOLUTION_WRITE_SUPPORTED_OPERATIONS = {
     "deprecate_policy",
     "supersede_policy",
@@ -287,17 +288,21 @@ def summarize_policy(
             f"active policy version mismatch: manifest={expected_version}, file={version}"
         )
 
-    return (
-        {
-            "policy_id": policy_id or expected_policy_id,
-            "version": version if version is not None else expected_version,
-            "path": display_path(policy_path, project_root),
-            "title": record.get("title"),
-            "status": record.get("status"),
-            "schema_version": schema,
-        },
-        warnings,
+    summary = {
+        "policy_id": policy_id or expected_policy_id,
+        "version": version if version is not None else expected_version,
+        "path": display_path(policy_path, project_root),
+        "title": record.get("title"),
+        "status": record.get("status"),
+        "schema_version": schema,
+    }
+    work_profile_applicability = normalize_work_profile_applicability(
+        record.get("applies_to_work_profile")
     )
+    if work_profile_applicability:
+        summary["applies_to_work_profile"] = work_profile_applicability
+
+    return (summary, warnings)
 
 
 def read_policy_record(policy_path: Path) -> tuple[dict[str, Any] | None, list[str]]:
@@ -311,6 +316,82 @@ def read_policy_record(policy_path: Path) -> tuple[dict[str, Any] | None, list[s
     if schema != POLICY_SCHEMA:
         return None, [f"unsupported policy schema: {schema or 'missing'}"]
     return record, []
+
+
+def scalar_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(item) for item in value if item is not None]
+    if isinstance(value, str):
+        return [value]
+    return []
+
+
+def normalize_work_profile_applicability(raw: Any) -> dict[str, Any] | None:
+    """Project policy work-profile applicability without affecting evaluation.
+
+    The minimal YAML reader supports this field as a top-level list of mappings
+    with inline lists, for example:
+
+    applies_to_work_profile:
+      - lifecycle_events: ["task_start"]
+        policy_scopes: ["editing"]
+    """
+
+    if raw in (None, [], {}):
+        return None
+    entries = raw if isinstance(raw, list) else [raw]
+    lifecycle_events: list[str] = []
+    policy_scopes: list[str] = []
+    intent_classes: list[str] = []
+    operation_classes: list[str] = []
+    output_classes: list[str] = []
+    warnings: list[str] = []
+
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            warnings.append(f"entry_{index + 1}_is_not_a_mapping")
+            continue
+        lifecycle_events.extend(scalar_list(entry.get("lifecycle_events")))
+        policy_scopes.extend(scalar_list(entry.get("policy_scopes")))
+        intent_classes.extend(scalar_list(entry.get("intent_classes")))
+        operation_classes.extend(scalar_list(entry.get("operation_classes")))
+        output_classes.extend(scalar_list(entry.get("output_classes")))
+
+    def dedupe(values: list[str]) -> list[str]:
+        seen: set[str] = set()
+        result: list[str] = []
+        for value in values:
+            if value in seen:
+                continue
+            seen.add(value)
+            result.append(value)
+        return result
+
+    projection = {
+        "schema": WORK_PROFILE_APPLICABILITY_SCHEMA,
+        "status": "declared_report_only",
+        "lifecycle_events": dedupe(lifecycle_events),
+        "policy_scopes": dedupe(policy_scopes),
+        "intent_classes": dedupe(intent_classes),
+        "operation_classes": dedupe(operation_classes),
+        "output_classes": dedupe(output_classes),
+        "evaluator_effect": "not_consumed_by_POLTRIG_02",
+        "warnings": warnings,
+    }
+    if not any(
+        projection[key]
+        for key in (
+            "lifecycle_events",
+            "policy_scopes",
+            "intent_classes",
+            "operation_classes",
+            "output_classes",
+        )
+    ):
+        projection["status"] = "declared_empty_or_unreadable"
+    return projection
 
 
 def next_actions_for(status: str) -> list[str]:
@@ -2942,19 +3023,23 @@ def evaluate_policy_triggers(
             condition_reports.extend(reports)
             if not conditions_matched:
                 continue
-            triggered_policies.append(
-                {
-                    "policy_ref": policy_id,
-                    "policy_title": record.get("title"),
-                    "version": record.get("version") or policy_ref.get("version"),
-                    "source": "project_approved_policy",
-                    "trigger_ref": trigger_ref,
-                    "trigger_reason": f"task_lifecycle_event matched {event}",
-                    "condition_status": "matched",
-                    "status": "triggered",
-                    "confidence": "tool_verified",
-                }
+            work_profile_applicability = normalize_work_profile_applicability(
+                record.get("applies_to_work_profile")
             )
+            triggered_policy = {
+                "policy_ref": policy_id,
+                "policy_title": record.get("title"),
+                "version": record.get("version") or policy_ref.get("version"),
+                "source": "project_approved_policy",
+                "trigger_ref": trigger_ref,
+                "trigger_reason": f"task_lifecycle_event matched {event}",
+                "condition_status": "matched",
+                "status": "triggered",
+                "confidence": "tool_verified",
+            }
+            if work_profile_applicability:
+                triggered_policy["applies_to_work_profile"] = work_profile_applicability
+            triggered_policies.append(triggered_policy)
             actions = record.get("required_actions", [])
             projected_actions: list[dict[str, Any]] = []
             if isinstance(actions, list):
@@ -3179,9 +3264,15 @@ def format_text(report: dict[str, Any]) -> str:
         if report["triggered_policies"]:
             lines.append("Triggered policy refs:")
             for ref in report["triggered_policies"]:
-                lines.append(
-                    f"- {ref.get('policy_ref')} via {ref.get('trigger_ref')}"
-                )
+                line = f"- {ref.get('policy_ref')} via {ref.get('trigger_ref')}"
+                applicability = ref.get("applies_to_work_profile") or {}
+                if applicability:
+                    line += (
+                        " "
+                        f"(work_profile_applicability={applicability.get('status')}, "
+                        f"evaluator_effect={applicability.get('evaluator_effect')})"
+                    )
+                lines.append(line)
         if report["warnings"]:
             lines.append("Warnings:")
             lines.extend(f"- {warning}" for warning in report["warnings"])
@@ -3228,10 +3319,18 @@ def format_text(report: dict[str, Any]) -> str:
     if report["active_policy_refs"]:
         lines.append("Active policy refs:")
         for ref in report["active_policy_refs"]:
-            lines.append(
+            line = (
                 f"- {ref.get('policy_id')} v{ref.get('version')} "
                 f"({ref.get('path')})"
             )
+            applicability = ref.get("applies_to_work_profile") or {}
+            if applicability:
+                line += (
+                    " "
+                    f"work_profile_applicability={applicability.get('status')} "
+                    f"evaluator_effect={applicability.get('evaluator_effect')}"
+                )
+            lines.append(line)
     if report["warnings"]:
         lines.append("Warnings:")
         lines.extend(f"- {warning}" for warning in report["warnings"])

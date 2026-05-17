@@ -383,6 +383,8 @@ Current JIKUO has:
 - no-write `work_profile` projection on proposal and MCP responses;
 - lightweight `task_start` processing projection that is separate from guarded
   `task_session_start` creation;
+- policy `applies_to_work_profile` declarations surfaced in policy-store status,
+  trigger reports, and runtime cards as report-only metadata;
 - MCP surfaces for route, status, proposals, and guarded writes.
 
 Current JIKUO does not yet have:
@@ -390,7 +392,6 @@ Current JIKUO does not yet have:
 - structured `agent_hint` input on every router path;
 - the `discussion` / `editing` / `progress_summary` / `other` policy-scope layer
   as evaluator input;
-- policy definitions that declare `applies_to_task_classes`;
 - evaluator support for scope-based triggering;
 - runtime cards that show hint/signal/fallback routing;
 - strict host adapters that guarantee every user turn supplies the hint and calls
@@ -419,7 +420,10 @@ Recommended future slices:
    deferral, preview, or guarded apply path. Policy evaluator behavior remains
    unchanged.
 3. `POLTRIG-02`: let policies declare `applies_to_work_profile` while preserving
-   existing event / condition behavior.
+   existing event / condition behavior. Current implementation status:
+   policy-store status, trigger evaluation, and runtime policy cards surface
+   `applies_to_work_profile` as `declared_report_only`; the evaluator does not
+   consume it, and mismatched declarations do not change trigger results.
 4. `POLTRIG-03`: make the evaluator match policy scopes and keep exact condition
    checks as additional filters.
 5. `POLTRIG-04`: update MCP and host adapter surfaces to require or strongly

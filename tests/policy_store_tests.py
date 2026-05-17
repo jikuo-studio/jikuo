@@ -2,6 +2,7 @@ import json
 import shutil
 import subprocess
 import sys
+import tempfile
 import unittest
 import uuid
 from contextlib import contextmanager
@@ -82,6 +83,25 @@ def run_status(project_root: Path) -> subprocess.CompletedProcess[str]:
     )
 
 
+def add_work_profile_applicability(policy_path: Path) -> None:
+    text = policy_path.read_text(encoding="utf-8")
+    text = text.replace(
+        "triggers:\n",
+        "\n".join(
+            [
+                "applies_to_work_profile:",
+                '  - lifecycle_events: ["completion_review"]',
+                '    policy_scopes: ["progress_summary"]',
+                '    operation_classes: ["no_tool"]',
+                "triggers:",
+                "",
+            ]
+        ),
+        1,
+    )
+    policy_path.write_text(text, encoding="utf-8")
+
+
 class PolicyStoreStatusTests(unittest.TestCase):
     def test_missing_policy_store_reports_missing_without_write(self):
         completed = run_status(MISSING_PROJECT)
@@ -124,6 +144,35 @@ class PolicyStoreStatusTests(unittest.TestCase):
         self.assertTrue(
             all(not ref.startswith("docs/jikuo/") for ref in report["source_refs"])
         )
+
+    def test_active_policy_store_projects_work_profile_applicability(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            shutil.copytree(ACTIVE_PROJECT, project_root)
+            add_work_profile_applicability(
+                project_root
+                / ".jikuo"
+                / "policies"
+                / "approved"
+                / "POLICY-three-phase-audit.yaml"
+            )
+
+            completed = run_status(project_root)
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            report = json.loads(completed.stdout)
+            applicability = report["active_policy_refs"][0]["applies_to_work_profile"]
+            self.assertEqual(
+                applicability["schema"],
+                "jikuo.policy_work_profile_applicability.v0",
+            )
+            self.assertEqual(applicability["status"], "declared_report_only")
+            self.assertEqual(applicability["lifecycle_events"], ["completion_review"])
+            self.assertEqual(applicability["policy_scopes"], ["progress_summary"])
+            self.assertEqual(
+                applicability["evaluator_effect"],
+                "not_consumed_by_POLTRIG_02",
+            )
 
     def test_stale_policy_store_reports_missing_active_ref(self):
         completed = run_status(STALE_PROJECT)
@@ -183,6 +232,52 @@ class PolicyStoreStatusTests(unittest.TestCase):
         self.assertEqual(report["evidence_status"][0]["current_status"], "missing")
         self.assertEqual(len(report["missing_evidence_reports"]), 1)
         self.assertFalse((ACTIVE_PROJECT / ".jikuo" / "task_sessions").exists())
+
+    def test_work_profile_applicability_does_not_change_trigger_evaluation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            shutil.copytree(ACTIVE_PROJECT, project_root)
+            add_work_profile_applicability(
+                project_root
+                / ".jikuo"
+                / "policies"
+                / "approved"
+                / "POLICY-three-phase-audit.yaml"
+            )
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "evaluate",
+                    "--event",
+                    "task_start",
+                    "--project-root",
+                    str(project_root),
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            report = json.loads(completed.stdout)
+            self.assertEqual(len(report["triggered_policies"]), 1)
+            triggered = report["triggered_policies"][0]
+            self.assertEqual(triggered["policy_ref"], "POLICY-three-phase-audit")
+            self.assertEqual(
+                triggered["applies_to_work_profile"]["lifecycle_events"],
+                ["completion_review"],
+            )
+            self.assertEqual(
+                triggered["applies_to_work_profile"]["evaluator_effect"],
+                "not_consumed_by_POLTRIG_02",
+            )
 
     def test_evaluate_task_start_accepts_inline_card_rendered_evidence(self):
         completed = subprocess.run(

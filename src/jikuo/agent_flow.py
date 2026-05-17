@@ -1092,6 +1092,14 @@ def build_policy_runtime_status_card(
     for item in triggered_policies:
         title = item.get("policy_title") or item.get("policy_ref")
         shown_outputs.append(f"triggered_policy: {item.get('policy_ref')} ({title})")
+        applicability = item.get("applies_to_work_profile") or {}
+        if applicability:
+            shown_outputs.append(
+                "triggered_policy_work_profile_applicability: "
+                f"{item.get('policy_ref')} / "
+                f"{applicability.get('status')} / "
+                f"evaluator_effect={applicability.get('evaluator_effect')}"
+            )
     for item in not_triggered:
         title = item.get("policy_title") or item.get("policy_ref")
         shown_outputs.append(
