@@ -23,6 +23,7 @@ CARD_PRIORITY_ORDER = (
     "conversation_turn_router",
     "configuration_review",
     "policy_suggestion_review",
+    "task_start_processing",
     "task_session_completion_acceptance",
     "task_session_start_preview",
 )

@@ -253,9 +253,10 @@ class MCPStageAAdapterTests(unittest.TestCase):
 
             self.assertEqual(response["tool_name"], "jikuo.propose_task_start")
             cards = response["data_details"]["cards"]
-            self.assertEqual(cards[0]["card_kind"], "task_session_binding")
+            self.assertEqual(cards[0]["card_kind"], "task_start_processing")
+            self.assertEqual(cards[1]["card_kind"], "task_session_binding")
             self.assertEqual(
-                cards[0]["task_session_resolution"]["status"],
+                cards[1]["task_session_resolution"]["status"],
                 "explicitly_deferred",
             )
             self.assertFalse((project_root / ".jikuo" / "task_sessions").exists())

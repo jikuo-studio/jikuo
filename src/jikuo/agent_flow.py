@@ -64,6 +64,7 @@ CARD_PRIORITY_ORDER = [
     "conversation_turn_router",
     "configuration_review",
     "policy_suggestion_review",
+    "task_start_processing",
     "task_session_completion_acceptance",
     "task_session_start_preview",
     "task_session_binding",
@@ -179,6 +180,7 @@ EVENT_ALIASES = {
 NO_WRITE_ATOMS = {
     "CAP-PROJECT-STATE-STATUS-01",
     "CAP-PROJECT-STATE-INIT-DRYRUN-01",
+    "CAP-TASK-START-PROCESSING-01",
     "CAP-TASK-START-DRYRUN-01",
     "CAP-TASK-STATUS-01",
     "CAP-TASK-INDEX-DRYRUN-01",
@@ -580,6 +582,42 @@ def task_session_binding_evidence_for(
     }
 
 
+def task_start_processing_evidence_for(
+    *,
+    event: str,
+    card: dict[str, Any],
+) -> dict[str, Any]:
+    resolution = dict(card.get("task_start_resolution") or {})
+    return {
+        "evidence_id": stable_id(
+            "evidence",
+            "|".join(
+                [
+                    event,
+                    str(card.get("card_id") or "task_start_processing"),
+                    "record_lightweight_task_start_processing",
+                ]
+            ),
+        ),
+        "evidence_type": "task_start_processing_evidence",
+        "action_type": "record_lightweight_task_start_processing",
+        "source": {
+            "kind": "agent_flow_card",
+            "ref": card.get("card_id"),
+        },
+        "producer": {
+            "actor": "agent",
+            "tool": "python -B -m jikuo.agent_flow",
+        },
+        "status": "ok",
+        "summary": (
+            "agent_flow recorded lightweight task_start processing without "
+            "creating or requiring a durable task-session."
+        ),
+        "task_start_processing": resolution or None,
+    }
+
+
 def proactive_policy_suggestion_evidence_for(
     *,
     event: str,
@@ -654,6 +692,8 @@ def produced_policy_evidence_for(
     for card in cards:
         if card.get("status") == "refused":
             continue
+        if card.get("card_kind") == "task_start_processing":
+            evidence.append(task_start_processing_evidence_for(event=event, card=card))
         if card.get("card_kind") in {"task_session_start_preview", "task_session_binding"}:
             evidence.append(
                 task_session_binding_evidence_for(event=event, card=card)
@@ -1833,6 +1873,55 @@ def build_task_start_cards(
         )
         return [card], [], [refusal]
 
+    processing_resolution = {
+        "schema": "jikuo.task_start_resolution.v0",
+        "status": "processing_started",
+        "lifecycle_event": "task_start",
+        "task_title": task_title,
+        "durable_task_session_status": "separate_guarded_decision",
+        "requires_task_session_write": False,
+        "allowed_next_decisions": [
+            "bind_existing_task_session",
+            "approve_guarded_task_session_start",
+            "explicitly_defer_task_session",
+            "continue_lightweight_task_start",
+        ],
+    }
+    processing_card = generic_card(
+        card_kind="task_start_processing",
+        status="ok",
+        title="Task start processing",
+        summary=(
+            "Lightweight task_start processing is active without creating a "
+            "durable task-session."
+        ),
+        shown_inputs=[
+            f"project_root: {project_root}",
+            f"task_title: {task_title}",
+            f"session_id: {session_id or 'not_supplied'}",
+        ],
+        shown_outputs=[
+            "lifecycle_event: task_start",
+            "processing_status: processing_started",
+            "task_session_start: separate_guarded_decision",
+            "durable_write_performed: false",
+        ],
+        next_actions=[
+            "continue lightweight task processing",
+            "review task-session resolution separately before any durable session write",
+        ],
+    )
+    processing_card["task_start_resolution"] = processing_resolution
+    processing_traces = [
+        atom_trace(
+            loop_step_id="DPL-04",
+            atom_id="CAP-TASK-START-PROCESSING-01",
+            mode="no-write",
+            status="ok",
+            summary="recorded lightweight task_start processing separately from task-session start",
+        )
+    ]
+
     if session_id:
         status_report = task_session.build_status_report(
             project_root=project_root,
@@ -1884,7 +1973,7 @@ def build_task_start_cards(
                     summary="projected existing task-session binding into a desktop card",
                 ),
             ]
-            return [card], traces, []
+            return [processing_card, card], processing_traces + traces, []
     if task_session_decision == "defer":
         if not task_session_defer_reason:
             refusal = "task_session_defer_reason_required"
@@ -1901,7 +1990,7 @@ def build_task_start_cards(
                     "provide --task-session-defer-reason before explicitly deferring"
                 ],
             )
-            return [card], [], [refusal]
+            return [processing_card, card], processing_traces, [refusal]
         resolution = {
             "schema": "jikuo.task_session_resolution.v0",
             "status": "explicitly_deferred",
@@ -1949,7 +2038,7 @@ def build_task_start_cards(
                 summary="projected explicit task-session deferral into a desktop card",
             ),
         ]
-        return [card], traces, []
+        return [processing_card, card], processing_traces + traces, []
 
     plan = task_session.build_start_plan(
         project_root=project_root,
@@ -2008,7 +2097,7 @@ def build_task_start_cards(
             summary="projected task-session start plan into a desktop card",
         ),
     ]
-    return [card], traces, []
+    return [processing_card, card], processing_traces + traces, []
 
 
 def build_index_cards(

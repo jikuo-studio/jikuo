@@ -1157,6 +1157,15 @@ entries:
     approval: "does not implement strict host enforcement; hooks must later stop agents from proceeding past unresolved decisions"
     referenced_by_transitional_cache:
       - "docs/governance/jikuo_productization_task_map.md"
+  - id: "CAP-TASK-START-PROCESSING-01"
+    title: "Lightweight task-start processing projection"
+    status: "implemented no-write"
+    metadata_status: "complete"
+    entry_point: "python -B -m jikuo.agent_flow propose --event task_start ..."
+    write_effect: "none"
+    approval: "N/A; durable task-session creation remains a separate guarded task_session_start apply"
+    referenced_by_transitional_cache:
+      - "docs/governance/jikuo_policy_governance_authority.md"
   - id: "CAP-TASK-START-DRYRUN-01"
     title: "Task-session start preview"
     status: "implemented"

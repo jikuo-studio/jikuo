@@ -410,10 +410,16 @@ class AgentFlowProposalTests(unittest.TestCase):
         self.assertEqual(proposal["missing_evidence_reports"], [])
         self.assertEqual(proposal["policy_feedback_options"], [])
         atom_ids = {trace["atom_id"] for trace in proposal["atom_trace"]}
+        self.assertIn("CAP-TASK-START-PROCESSING-01", atom_ids)
         self.assertIn("CAP-TASK-START-DRYRUN-01", atom_ids)
         self.assertIn("CAP-CARD-TASKSESSION-01", atom_ids)
         self.assertIn("CAP-POLICY-STORE-STATUS-01", atom_ids)
-        self.assertEqual(proposal["cards"][0]["card_kind"], "task_session_start_preview")
+        self.assertEqual(proposal["cards"][0]["card_kind"], "task_start_processing")
+        self.assertEqual(
+            proposal["cards"][0]["task_start_resolution"]["status"],
+            "processing_started",
+        )
+        self.assertEqual(proposal["cards"][1]["card_kind"], "task_session_start_preview")
         self.assertFalse((READY_PROJECT / ".jikuo" / "task_sessions").exists())
         self.assertFalse((READY_PROJECT / ".jikuo" / "policies").exists())
 
@@ -2279,9 +2285,14 @@ class AgentFlowProposalTests(unittest.TestCase):
             self.assertTrue(
                 proposal["approval_boundary"]["guarded_apply_available"]
             )
-            command = proposal["cards"][0]["command_proposal"]["command_preview"]
+            session_card = next(
+                card
+                for card in proposal["cards"]
+                if card["card_kind"] == "task_session_start_preview"
+            )
+            command = session_card["command_proposal"]["command_preview"]
             self.assertEqual(
-                proposal["cards"][0]["task_session_resolution"]["status"],
+                session_card["task_session_resolution"]["status"],
                 "needs_user_decision",
             )
             self.assertIn("python -B -m jikuo.agent_flow apply", command)
@@ -2371,9 +2382,10 @@ class AgentFlowProposalTests(unittest.TestCase):
 
             self.assertEqual(completed.returncode, 0, completed.stderr)
             proposal = json.loads(completed.stdout)
-            self.assertEqual(proposal["cards"][0]["card_kind"], "task_session_binding")
+            self.assertEqual(proposal["cards"][0]["card_kind"], "task_start_processing")
+            self.assertEqual(proposal["cards"][1]["card_kind"], "task_session_binding")
             self.assertEqual(
-                proposal["cards"][0]["task_session_resolution"]["status"],
+                proposal["cards"][1]["task_session_resolution"]["status"],
                 "explicitly_deferred",
             )
             self.assertEqual(
@@ -2449,9 +2461,14 @@ class AgentFlowProposalTests(unittest.TestCase):
 
             self.assertEqual(completed.returncode, 0, completed.stderr)
             proposal = json.loads(completed.stdout)
-            self.assertEqual(proposal["cards"][0]["card_kind"], "task_session_binding")
-            self.assertEqual(proposal["cards"][0]["status"], "ok")
-            self.assertIsNone(proposal["cards"][0].get("command_proposal"))
+            self.assertEqual(proposal["cards"][0]["card_kind"], "task_start_processing")
+            session_card = next(
+                card
+                for card in proposal["cards"]
+                if card["card_kind"] == "task_session_binding"
+            )
+            self.assertEqual(session_card["status"], "ok")
+            self.assertIsNone(session_card.get("command_proposal"))
             self.assertEqual(proposal["missing_evidence_reports"], [])
             self.assertEqual(
                 proposal["evidence_status"][0]["required_type"],

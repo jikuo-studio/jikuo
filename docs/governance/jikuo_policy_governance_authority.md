@@ -380,12 +380,14 @@ Current JIKUO has:
 - conversation-turn router follow-up obligations;
 - proactive policy-suggestion review evidence;
 - policy dead-zone per-card classification;
+- no-write `work_profile` projection on proposal and MCP responses;
+- lightweight `task_start` processing projection that is separate from guarded
+  `task_session_start` creation;
 - MCP surfaces for route, status, proposals, and guarded writes.
 
 Current JIKUO does not yet have:
 
 - structured `agent_hint` input on every router path;
-- a formal `work_profile` projection on every governed proposal;
 - the `discussion` / `editing` / `progress_summary` / `other` policy-scope layer
   as evaluator input;
 - policy definitions that declare `applies_to_task_classes`;
@@ -410,7 +412,12 @@ Recommended future slices:
    responses; policy-store matching is intentionally unchanged.
 2. `POLTRIG-01B`: separate lightweight `task_start` processing from durable
    `task_session_start`. `task_start` should represent AI processing of the
-   user turn; task-session creation remains guarded and explicit.
+   user turn; task-session creation remains guarded and explicit. Current
+   implementation status: `task_start` proposals produce a no-write
+   `task_start_processing` card, `task_start_processing_evidence`, and
+   `CAP-TASK-START-PROCESSING-01` trace before any task-session binding,
+   deferral, preview, or guarded apply path. Policy evaluator behavior remains
+   unchanged.
 3. `POLTRIG-02`: let policies declare `applies_to_work_profile` while preserving
    existing event / condition behavior.
 4. `POLTRIG-03`: make the evaluator match policy scopes and keep exact condition
