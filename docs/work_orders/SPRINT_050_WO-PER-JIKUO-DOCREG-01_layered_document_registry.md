@@ -61,16 +61,17 @@ Key decisions accepted for planning:
 | 5 | `DOCREG-01A`: add `document_registry.schema.md` and registry tests | implemented draft | Keep the registry honest as it grows. | Without checks, registry files can become another unverified documentation layer. |
 | 6 | `DOCREG-01B1`: registry data semantics repair | implemented and externally smoke-accepted | Keep registry fields meaningful before hard checks are enabled. | DOCREG-01A revealed three hidden debts: reverse cache fields could be mistaken for source edges, work-order capability edges were empty, and capability implementation status was mixed with registry metadata completeness. |
 | 7 | `DOCREG-01B2`: harden structural checks | implemented | Turn the registry from a draft list into a guarded documentation contract. | Hard failures now catch mechanically decidable drift while repository-wide `CAP-*` completeness remains warning-only for known migration debt. |
-| 8 | `DOCREG-01B2a`: task-map projection edit guard | planned before B3 | Make the task map's projection-only role hard to miss before adding more registry policy. | Recent work showed agents can still treat the oversized task map as a live source because older mount text and project context wording were too permissive. |
-| 9 | `DOCREG-01B3`: completion-review registry policy | planned after B2a | Make registry maintenance visible in governed slice completion, not just CI. | A user needs to see that changed work-order / insight / registry docs were checked against the registry before a slice is called complete. |
-| 10 | `DATA-01A`: execution-event schema fixtures only | implemented draft | Give future Dashboard / Studio / BI work stable execution facts to read. | Runtime history is currently Markdown-first and not analytics-friendly. |
-| 11 | `LIVE-20B`: policy dead-zone history scanning | planned after DATA-01A | Detect repeated zero-trigger policy evaluations across time. | Users can see a single-card classification, but not long-running dead zones yet. |
-| 12 | Codex hook spike / strict adapter review | planned | Test whether Codex can run JIKUO before every user turn. | MCP availability does not equal strict mounted execution. |
-| 13 | Claude hook spike / strict adapter review | planned | Test whether Claude hook-capable hosts can run JIKUO before every user turn. | Claude can use JIKUO MCP, but strict pre-turn behavior still needs proof. |
-| 14 | `SELF-BOOTSTRAP-02`: stable self-bootstrap execution strategy | planned | Make JIKUO development reliably invoke JIKUO instead of relying on assistant memory. | Current self-bootstrap is improving but still depends on discipline until hooks/adapters exist. |
-| 15 | `SELF-BOOTSTRAP-03`: harness workspace boundary spike | deferred planned proof | Test whether JIKUO should govern its own source repository from a parent harness workspace. | The source repository and the harness state currently share one root, which may blur product-vs-governed-project boundaries. |
-| 16 | Policy governance routing: conservative task classification and task-session default carrier | planned later; authority moved to `docs/governance/jikuo_policy_governance_authority.md` | Make natural-language task approval reliably start or continue governed work without adding heavy approval layers. | Current policy triggering can fall through when task classification is too narrow, while task-session binding can feel heavier than the user's "continue" instruction; policy routing should be hint-assisted, deterministic-checked, and fallback-expanded. |
-| 17 | Policy catalog / starter pack hardening | planned later | Prevent JIKUO dogfood policies from being distributed as user starter policies by accident. | JIKUO self-bootstrap policy directories must never overwrite user project policies. |
+| 8 | `DOCREG-01B2a`: task-map projection edit guard | implemented | Make the task map's projection-only role hard to miss before adding more registry policy. | Recent work showed agents can still treat the oversized task map as a live source because older mount text and project context wording were too permissive. |
+| 9 | `DOCREG-01B2b`: lightweight task context anchors | implemented draft | Let tasks point at required context bundles and originating evidence without building a heavy knowledge graph. | Policy-trigger work showed that background can exist in the repo while agents still miss the originating failure unless the task registry mounts it. |
+| 10 | `DOCREG-01B3`: completion-review registry policy | planned after B2b | Make registry maintenance visible in governed slice completion, not just CI. | A user needs to see that changed work-order / insight / registry docs were checked against the registry before a slice is called complete. |
+| 11 | `DATA-01A`: execution-event schema fixtures only | implemented draft | Give future Dashboard / Studio / BI work stable execution facts to read. | Runtime history is currently Markdown-first and not analytics-friendly. |
+| 12 | `LIVE-20B`: policy dead-zone history scanning | planned after DATA-01A | Detect repeated zero-trigger policy evaluations across time. | Users can see a single-card classification, but not long-running dead zones yet. |
+| 13 | Codex hook spike / strict adapter review | planned | Test whether Codex can run JIKUO before every user turn. | MCP availability does not equal strict mounted execution. |
+| 14 | Claude hook spike / strict adapter review | planned | Test whether Claude hook-capable hosts can run JIKUO before every user turn. | Claude can use JIKUO MCP, but strict pre-turn behavior still needs proof. |
+| 15 | `SELF-BOOTSTRAP-02`: stable self-bootstrap execution strategy | planned | Make JIKUO development reliably invoke JIKUO instead of relying on assistant memory. | Current self-bootstrap is improving but still depends on discipline until hooks/adapters exist. |
+| 16 | `SELF-BOOTSTRAP-03`: harness workspace boundary spike | deferred planned proof | Test whether JIKUO should govern its own source repository from a parent harness workspace. | The source repository and the harness state currently share one root, which may blur product-vs-governed-project boundaries. |
+| 17 | Policy governance routing: conservative task classification and task-session default carrier | planned later; authority moved to `docs/governance/jikuo_policy_governance_authority.md` | Make natural-language task approval reliably start or continue governed work without adding heavy approval layers. | Current policy triggering can fall through when task classification is too narrow, while task-session binding can feel heavier than the user's "continue" instruction; policy routing should be hint-assisted, deterministic-checked, and fallback-expanded. |
+| 18 | Policy catalog / starter pack hardening | planned later | Prevent JIKUO dogfood policies from being distributed as user starter policies by accident. | JIKUO self-bootstrap policy directories must never overwrite user project policies. |
 
 ---
 
@@ -346,3 +347,37 @@ Future hardening candidate:
 - Add a registry / completion-review check that warns when
   `docs/governance/jikuo_productization_task_map.md` changes outside explicit
   projection repair, link fix, frozen-section notice, or approved regeneration.
+
+## 10.2 DOCREG-01B2b Lightweight Task Context Anchors
+
+Recorded on 2026-05-17 after policy-trigger work showed that complete
+background can exist in the repository while still not being mounted by the
+active task.
+
+Business scenario preserved:
+
+- A policy-trigger task must know that its root cause was a real
+  NarrativeSystem policy dead zone, not only an abstract evaluator redesign.
+- A documentation-registry task must expose its accepted authority without
+  making the legacy task map a writable source again.
+- A future agent should mount a small context bundle and a small evidence list,
+  not maintain a heavy graph of every related document.
+
+Implemented decisions:
+
+- `required_mount_sets` is the task context-bundle mechanism during the DOCREG
+  transition.
+- `work_orders.yaml` may carry sparse `originating_evidence_refs`,
+  `authority_refs`, and `stop_boundaries` fields.
+- `mount_sets.yaml` now includes
+  `MOUNT-POLICY-TRIGGER-DEAD-ZONE-REPAIR` for POLTRIG work.
+- `JIKUO-POLTRIG-03` is registered as a planned work order with the LIVE-20
+  initial evidence mounted before evaluator behavior changes.
+
+Non-goals:
+
+- no new registry shard;
+- no reverse-edge relationship fields;
+- no generated projection tooling;
+- no legacy task-map task sequencing update;
+- no policy evaluator behavior change.

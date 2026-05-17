@@ -18,6 +18,7 @@ It complements, but does not replace:
 - `docs/governance/jikuo_policy_aware_agent_flow_contract.md`: policy-aware proposal and card projection contract.
 - `docs/insights/INSIGHT-2026-05-17-conservative-task-classification-routing.md`: originating insight for conservative task classification.
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-20_policy_dead_zone_detection.md`: policy dead-zone visibility work.
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-POLTRIG-03_policy_scope_evaluator_consumption.md`: registered evaluator-consumption task with dead-zone evidence and stop boundary.
 
 When these documents appear to conflict, use this document for policy-governance
 direction and use the lower-level contracts for current implemented storage,
@@ -425,7 +426,10 @@ Recommended future slices:
    `applies_to_work_profile` as `declared_report_only`; the evaluator does not
    consume it, and mismatched declarations do not change trigger results.
 4. `POLTRIG-03`: make the evaluator match policy scopes and keep exact condition
-   checks as additional filters.
+   checks as additional filters. Registered work order:
+   `docs/work_orders/SPRINT_050_WO-PER-JIKUO-POLTRIG-03_policy_scope_evaluator_consumption.md`;
+   mount `MOUNT-POLICY-TRIGGER-DEAD-ZONE-REPAIR` and stop before behavior
+   change review.
 5. `POLTRIG-04`: update MCP and host adapter surfaces to require or strongly
    encourage agent hints.
 6. `POLTRIG-05`: surface hint/signal/fallback basis in runtime cards and

@@ -48,6 +48,10 @@ document_roles:
     path: "docs/governance/jikuo_policy_governance_authority.md"
     required: true
     note: "Current authority for policy lifecycle, source boundaries, trigger routing, AI hint handling, deterministic signal priority, and fallback expansion."
+  policy_trigger_scope_evaluator_work_order:
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-POLTRIG-03_policy_scope_evaluator_consumption.md"
+    required: true
+    note: "Planned POLTRIG evaluator-consumption task. Mount with MOUNT-POLICY-TRIGGER-DEAD-ZONE-REPAIR and stop before behavior change review."
   project_context_contract:
     path: "docs/governance/jikuo_project_context_binding_and_policy_template_portability.md"
     required: true

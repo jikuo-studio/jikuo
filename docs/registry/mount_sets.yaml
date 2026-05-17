@@ -23,6 +23,14 @@ entries:
     documents:
       - path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-DATA-01_structured_execution_event_ledger_and_analytics_contract.md"
       - path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-20_policy_dead_zone_detection.md"
+  - id: "MOUNT-POLICY-TRIGGER-DEAD-ZONE-REPAIR"
+    title: "Policy trigger dead-zone repair context bundle"
+    status: "draft"
+    documents:
+      - path: "docs/governance/jikuo_policy_governance_authority.md"
+      - path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-20_policy_dead_zone_detection.md"
+      - path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-21_governed_slice_task_session_resolution.md"
+      - path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-DOCREG-01_layered_document_registry.md"
   - id: "MOUNT-STRICT-HARNESS-PROOF"
     title: "Strict mounted harness adapter proof mount set"
     status: "seed"

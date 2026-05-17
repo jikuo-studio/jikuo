@@ -44,6 +44,10 @@ def block_values(text: str, key: str) -> list[str]:
     return values
 
 
+def ref_path(value: str) -> str:
+    return value.split("#", 1)[0]
+
+
 def existing_rel(path: str) -> bool:
     return (ROOT / path).exists()
 
@@ -134,6 +138,27 @@ class DocumentRegistryTests(unittest.TestCase):
         mount_sets = read_rel("docs/registry/mount_sets.yaml")
         for path in quoted_values(mount_sets, "path"):
             self.assertTrue(existing_rel(path), path)
+
+    def test_work_order_context_anchors_resolve(self) -> None:
+        work_orders = read_rel("docs/registry/work_orders.yaml")
+        mount_sets = read_rel("docs/registry/mount_sets.yaml")
+        mount_ids = set(entry_ids(mount_sets))
+        for mount_id in block_values(work_orders, "required_mount_sets"):
+            self.assertIn(mount_id, mount_ids, mount_id)
+        for key in ("originating_evidence_refs", "authority_refs"):
+            for value in block_values(work_orders, key):
+                self.assertTrue(existing_rel(ref_path(value)), value)
+
+    def test_poltrig_03_mounts_dead_zone_evidence(self) -> None:
+        work_orders = read_rel("docs/registry/work_orders.yaml")
+        entries = split_entries(work_orders)
+        matches = [entry for entry in entries if 'id: "JIKUO-POLTRIG-03"' in entry]
+        self.assertEqual(len(matches), 1)
+        entry = matches[0]
+        self.assertIn("MOUNT-POLICY-TRIGGER-DEAD-ZONE-REPAIR", entry)
+        self.assertIn("LIVE-20_policy_dead_zone_detection.md#7-initial-evidence", entry)
+        self.assertIn("jikuo_policy_governance_authority.md", entry)
+        self.assertIn("Stop before changing evaluator behavior", entry)
 
     def test_registry_shards_do_not_hand_maintain_reverse_edges(self) -> None:
         reverse_field_re = re.compile(r"^\s+(used_by|referenced_by|source_work_orders|source_refs):", re.MULTILINE)

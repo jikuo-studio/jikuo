@@ -68,6 +68,14 @@ Slice completion main document check:
 - Check `.jikuo/policies/manifest.yaml` when approved, deprecated, superseded, or proposal policy refs change.
 - If a checked main document does not need an update, report that it was checked and why the existing scope remains valid.
 
+Task context bundles:
+
+- For a registered work order, inspect `docs/registry/work_orders.yaml` before implementation and mount any `required_mount_sets`.
+- Treat `originating_evidence_refs` as the root-cause evidence for why a task exists; read it before summarizing business meaning.
+- Treat `authority_refs` as the accepted design boundary for the task.
+- Treat `stop_boundaries` as review points, especially before evaluator, policy-store, registry-authority, or durable-write behavior changes.
+- Keep these anchors sparse. Do not replace them with a hand-maintained reverse graph.
+
 Atomic capability registry:
 
 - legacy projection location: `docs/governance/jikuo_productization_task_map.md` section `Atomic Capability Registry`

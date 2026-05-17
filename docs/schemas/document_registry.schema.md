@@ -30,6 +30,18 @@ Required fields:
 - `capability_extraction_status`: how `implements_capabilities` was derived.
 - `required_mount_sets`: forward references to `MOUNT-*` ids.
 
+Optional context-anchor fields:
+
+- `originating_evidence_refs`: repository-relative documents or document
+  anchors proving why the work order exists.
+- `authority_refs`: repository-relative documents or anchors that define the
+  accepted design boundary for the work order.
+- `stop_boundaries`: short human-readable limits that must be reviewed before
+  risky behavior changes.
+
+These fields are intentionally sparse. Use `required_mount_sets` for reusable
+context bundles; do not copy every related document into every work-order entry.
+
 `capability_extraction_status` values:
 
 - `extracted_from_work_order_body`: one or more `CAP-*` ids were found in the
@@ -94,6 +106,9 @@ Required fields:
 - `title`: human title.
 - `status`: `seed`, `draft`, `accepted`, `implemented`, or `archived`.
 - `documents`: list of repository-relative paths.
+
+Mount sets may be used as context bundles. A context bundle is still a forward
+edge from a task to required reading; it is not a reverse dependency map.
 
 ## Relationship Rule
 

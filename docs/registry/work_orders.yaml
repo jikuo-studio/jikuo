@@ -438,7 +438,12 @@ entries:
     impact_tags: []
     implements_capabilities: []
     capability_extraction_status: "no_capability_refs_found"
-    required_mount_sets: []
+    required_mount_sets:
+      - "MOUNT-DOCREG-01A"
+    authority_refs:
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-DOCREG-01_layered_document_registry.md"
+    stop_boundaries:
+      - "Do not use the legacy task map as the source of truth for new task sequencing, open items, capability metadata, or registry authority."
   - id: "JIKUO-DOCS-01"
     title: "SPRINT_050_WO-PER-JIKUO-DOCS-01: Product Doc Rehome And Reference Migration"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-DOCS-01_product_doc_rehome_and_reference_migration.md"
@@ -767,7 +772,12 @@ entries:
     impact_tags: []
     implements_capabilities: []
     capability_extraction_status: "no_capability_refs_found"
-    required_mount_sets: []
+    required_mount_sets:
+      - "MOUNT-POLICY-TRIGGER-DEAD-ZONE-REPAIR"
+    originating_evidence_refs:
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-20_policy_dead_zone_detection.md#7-initial-evidence"
+    authority_refs:
+      - "docs/governance/jikuo_policy_governance_authority.md"
   - id: "JIKUO-LIVE-21"
     title: "SPRINT_050_WO-PER-JIKUO-LIVE-21: Governed Slice Task-Session Resolution"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-21_governed_slice_task_session_resolution.md"
@@ -840,6 +850,30 @@ entries:
     implements_capabilities: []
     capability_extraction_status: "no_capability_refs_found"
     required_mount_sets: []
+  - id: "JIKUO-POLTRIG-03"
+    title: "SPRINT_050_WO-PER-JIKUO-POLTRIG-03: Policy Scope Evaluator Consumption"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-POLTRIG-03_policy_scope_evaluator_consumption.md"
+    sprint: "SPRINT_050"
+    status: "Planned; context registered, implementation requires explicit evaluator-change review"
+    impact_tags:
+      - "policy_governance"
+      - "trigger_routing"
+      - "dead_zone_repair"
+    implements_capabilities:
+      - "CAP-POLICY-TRIGGER-EVALUATE-01"
+      - "CAP-POLICY-CONDITION-EVALUATOR-01"
+      - "CAP-POLICY-WORK-PROFILE-APPLICABILITY-01"
+      - "CAP-POLICY-DEAD-ZONE-DETECTION-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets:
+      - "MOUNT-POLICY-TRIGGER-DEAD-ZONE-REPAIR"
+    originating_evidence_refs:
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-20_policy_dead_zone_detection.md#7-initial-evidence"
+    authority_refs:
+      - "docs/governance/jikuo_policy_governance_authority.md"
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-POLTRIG-03_policy_scope_evaluator_consumption.md"
+    stop_boundaries:
+      - "Stop before changing evaluator behavior and present the policy-scope matching algorithm for user review."
   - id: "JIKUO-PRD-01"
     title: "SPRINT_050_WO-PER-JIKUO-PRD-01: Product Definition"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-PRD-01_product_definition.md"
