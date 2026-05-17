@@ -53,7 +53,7 @@ Key decisions accepted for planning:
 | 4 | `DOCREG-01A`: seed `scenario_chains.yaml` and `mount_sets.yaml` | implemented draft | Make scenario-to-capability and task-to-document relationships explicit. | Scenario chains, capabilities, and mounts are related but not validated as a graph. |
 | 5 | `DOCREG-01A`: add `document_registry.schema.md` and registry tests | implemented draft | Keep the registry honest as it grows. | Without checks, registry files can become another unverified documentation layer. |
 | 6 | `DOCREG-01B1`: registry data semantics repair | implemented and externally smoke-accepted | Keep registry fields meaningful before hard checks are enabled. | DOCREG-01A revealed three hidden debts: reverse cache fields could be mistaken for source edges, work-order capability edges were empty, and capability implementation status was mixed with registry metadata completeness. |
-| 7 | `DOCREG-01B2`: harden structural checks | planned after B1 | Turn the registry from a draft list into a guarded documentation contract. | Hard failures should only start after B1 data is accurate enough that checks catch real drift instead of blocking on known migration debt. |
+| 7 | `DOCREG-01B2`: harden structural checks | implemented | Turn the registry from a draft list into a guarded documentation contract. | Hard failures now catch mechanically decidable drift while repository-wide `CAP-*` completeness remains warning-only for known migration debt. |
 | 8 | `DOCREG-01B3`: completion-review registry policy | planned after B2 | Make registry maintenance visible in governed slice completion, not just CI. | A user needs to see that changed work-order / insight / registry docs were checked against the registry before a slice is called complete. |
 | 9 | `DATA-01A`: execution-event schema fixtures only | implemented draft | Give future Dashboard / Studio / BI work stable execution facts to read. | Runtime history is currently Markdown-first and not analytics-friendly. |
 | 10 | `LIVE-20B`: policy dead-zone history scanning | planned after DATA-01A | Detect repeated zero-trigger policy evaluations across time. | Users can see a single-card classification, but not long-running dead zones yet. |
@@ -185,3 +185,48 @@ Verification:
 - `python -B -m unittest tests.document_registry_tests` passed with 7 tests.
 - `python -B -m unittest tests.execution_events_schema_tests` passed with 5 tests.
 - `python -B -m unittest discover -s tests -p "*_tests.py"` passed with 202 tests.
+
+## 10. DOCREG-01B2 Implementation Record
+
+DOCREG-01B2 hardens structural checks after B1 made the draft registry data
+semantically meaningful.
+
+Business scenario preserved:
+
+- A maintainer adds a new work-order file and must register it before the slice
+  can be considered documentation-governed.
+- A maintainer adds a new insight file and must keep the insight registry in
+  sync.
+- A maintainer adds a new registry shard and must declare it in
+  `registry_index.yaml`.
+- A future agent must not create `open_items.yaml` as a source shard, because
+  open items are a computed view over work-order and capability status.
+- A future agent must not reintroduce hand-maintained reverse edges in registry
+  shards.
+
+Implemented hard checks:
+
+- every `docs/registry/*.yaml` shard except `registry_index.yaml` is declared by
+  the index;
+- `docs/registry/open_items.yaml` must not exist;
+- registered work-order, insight, mount, and external-registry paths must exist;
+- every `docs/work_orders/*.md` file is registered in `work_orders.yaml`;
+- every `docs/insights/INSIGHT-*.md` file is registered in
+  `docs/insights/insights_registry.yaml`;
+- reverse-edge fields such as `used_by`, `referenced_by`,
+  `source_work_orders`, and `source_refs` are forbidden in registry shards;
+- `capability_extraction_status` is a checked enum and must agree with whether
+  `implements_capabilities` is empty.
+
+Explicitly still warning-only:
+
+- whole-repository `CAP-*` completeness. The current 16 capabilities marked
+  `metadata_status: "metadata_missing_in_task_map"` are known migration debt.
+  Future hardening should add an explicit grandfathering rule before turning
+  all metadata completeness into a hard failure.
+
+Stop point:
+
+- DOCREG-01B3 is policy governance. It should add completion-review policy
+  surfacing for registry maintenance, but it is intentionally not implemented
+  in this B2 slice.

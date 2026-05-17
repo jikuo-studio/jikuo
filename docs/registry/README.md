@@ -36,3 +36,19 @@ The current `referenced_by_transitional_cache` field in `capabilities.yaml` is a
 temporary DOCREG migration aid. It preserves discovery provenance while the old
 task-map table is being retired, but it is not a source-of-truth relationship
 field and should move to a generated view in DOCREG-01C.
+
+## Validation Posture
+
+DOCREG-01B2 introduces hard checks for registry facts that are safe to decide by
+code:
+
+- registry shards must be declared in `registry_index.yaml`;
+- work-order and insight files must be registered;
+- declared paths must exist;
+- `open_items.yaml` must not become a source shard;
+- hand-maintained reverse-edge fields are forbidden;
+- work-order capability extraction status must match the actual forward edges.
+
+Repository-wide `CAP-*` completeness remains warning-only until the known
+`metadata_missing_in_task_map` migration entries are either completed or covered
+by an explicit grandfathering rule.

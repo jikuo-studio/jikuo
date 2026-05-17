@@ -125,3 +125,25 @@ Required fields:
 
 External registry entries make the layered registry aware of policy and insight
 indexes without taking ownership of their formats.
+
+## DOCREG-01B2 Hard Checks
+
+The first hard-check layer covers facts that can be decided mechanically:
+
+- every `docs/registry/*.yaml` shard, except `registry_index.yaml`, must be
+  declared in `registry_index.yaml`;
+- `docs/registry/open_items.yaml` must not exist because open items are a
+  computed view, not a source shard;
+- every `path` / `file` declared by the registry must exist;
+- every `docs/work_orders/*.md` file must appear in `work_orders.yaml`;
+- every `docs/insights/INSIGHT-*.md` file must appear in
+  `docs/insights/insights_registry.yaml`;
+- hand-maintained reverse-edge fields such as `used_by`, `referenced_by`,
+  `source_work_orders`, and `source_refs` are forbidden in registry shards;
+- `capability_extraction_status` must be one of the declared enum values and
+  must agree with whether `implements_capabilities` is empty.
+
+`CAP-*` completeness across the whole repository remains warning-only during
+the draft window. The 16 entries marked
+`metadata_status: "metadata_missing_in_task_map"` are known migration debt, so
+B2 guards future drift without blocking on those historical entries.

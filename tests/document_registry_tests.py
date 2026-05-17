@@ -6,6 +6,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 REGISTRY_ROOT = ROOT / "docs" / "registry"
 CAP_RE = re.compile(r"CAP-[A-Z0-9-]+")
+ALLOWED_WORK_ORDER_CAPABILITY_EXTRACTION = {
+    "extracted_from_work_order_body",
+    "no_capability_refs_found",
+}
+ALLOWED_REVERSE_CACHE_FIELDS = {
+    "referenced_by_transitional_cache",
+    "referenced_by_transitional_cache_truncated",
+}
 
 
 def read_rel(path: str) -> str:
@@ -47,6 +55,26 @@ class DocumentRegistryTests(unittest.TestCase):
             if shard_path.startswith(("docs/registry/", "docs/insights/", ".jikuo/")):
                 self.assertTrue(existing_rel(shard_path), shard_path)
 
+    def test_registry_yaml_shards_are_indexed(self) -> None:
+        index = read_rel("docs/registry/registry_index.yaml")
+        indexed = {
+            path
+            for path in quoted_values(index, "path")
+            if path.startswith("docs/registry/")
+        }
+        actual = {
+            f"docs/registry/{path.name}"
+            for path in REGISTRY_ROOT.glob("*.yaml")
+            if path.name != "registry_index.yaml"
+        }
+        self.assertEqual(actual, indexed)
+
+    def test_open_items_is_not_a_source_shard(self) -> None:
+        index = read_rel("docs/registry/registry_index.yaml")
+        self.assertIn('id: "open_items"', index)
+        self.assertIn("Open items are a computed view", index)
+        self.assertFalse(existing_rel("docs/registry/open_items.yaml"))
+
     def test_work_order_paths_exist(self) -> None:
         work_orders = read_rel("docs/registry/work_orders.yaml")
         paths = [
@@ -56,6 +84,34 @@ class DocumentRegistryTests(unittest.TestCase):
         ]
         self.assertGreaterEqual(len(paths), 80)
         for path in paths:
+            self.assertTrue(existing_rel(path), path)
+
+    def test_all_work_order_files_are_registered(self) -> None:
+        work_orders = read_rel("docs/registry/work_orders.yaml")
+        registered = {
+            value
+            for value in quoted_values(work_orders, "path")
+            if value.startswith("docs/work_orders/")
+        }
+        actual = {
+            f"docs/work_orders/{path.name}"
+            for path in (ROOT / "docs" / "work_orders").glob("*.md")
+        }
+        self.assertEqual(actual, registered)
+
+    def test_all_insight_files_are_registered(self) -> None:
+        registry = read_rel("docs/insights/insights_registry.yaml")
+        registered = {
+            value
+            for value in quoted_values(registry, "file")
+            if value.startswith("docs/insights/INSIGHT-")
+        }
+        actual = {
+            f"docs/insights/{path.name}"
+            for path in (ROOT / "docs" / "insights").glob("INSIGHT-*.md")
+        }
+        self.assertEqual(actual, registered)
+        for path in registered:
             self.assertTrue(existing_rel(path), path)
 
     def test_capability_ids_have_valid_prefix(self) -> None:
@@ -79,6 +135,18 @@ class DocumentRegistryTests(unittest.TestCase):
         for path in quoted_values(mount_sets, "path"):
             self.assertTrue(existing_rel(path), path)
 
+    def test_registry_shards_do_not_hand_maintain_reverse_edges(self) -> None:
+        reverse_field_re = re.compile(r"^\s+(used_by|referenced_by|source_work_orders|source_refs):", re.MULTILINE)
+        for path in REGISTRY_ROOT.glob("*.yaml"):
+            text = path.read_text(encoding="utf-8", errors="replace")
+            for match in reverse_field_re.finditer(text):
+                field = match.group(1)
+                self.assertIn(
+                    field,
+                    ALLOWED_REVERSE_CACHE_FIELDS,
+                    f"{field} in {path.relative_to(ROOT)}",
+                )
+
     def test_capability_metadata_and_transitional_cache_paths(self) -> None:
         capabilities = read_rel("docs/registry/capabilities.yaml")
         self.assertNotIn("source_refs:", capabilities)
@@ -100,21 +168,17 @@ class DocumentRegistryTests(unittest.TestCase):
         work_orders = read_rel("docs/registry/work_orders.yaml")
         entries = split_entries(work_orders)
         self.assertGreaterEqual(len(entries), 80)
-        allowed_statuses = {
-            "extracted_from_work_order_body",
-            "no_capability_refs_found",
-        }
-
         for entry in entries:
             statuses = quoted_values(entry, "capability_extraction_status")
             self.assertEqual(len(statuses), 1, entry[:160])
             status = statuses[0]
-            self.assertIn(status, allowed_statuses)
+            self.assertIn(status, ALLOWED_WORK_ORDER_CAPABILITY_EXTRACTION)
             refs = block_values(entry, "implements_capabilities")
             if status == "extracted_from_work_order_body":
                 self.assertGreater(len(refs), 0, entry[:160])
             else:
                 self.assertEqual(refs, [], entry[:160])
+            self.assertNotIn("CAP-UNKNOWN", refs)
 
     def test_repo_cap_ids_are_registered_warning_only(self) -> None:
         capabilities = read_rel("docs/registry/capabilities.yaml")

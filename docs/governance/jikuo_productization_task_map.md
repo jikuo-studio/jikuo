@@ -2733,21 +2733,23 @@ Open items:
 
 1. Review / accept `JIKUO-LIVE-21`: governed slice task-session resolution now triggers for all `task_start` events and exposes `needs_user_decision` instead of silently treating unresolved previews as complete.
 2. Use `JIKUO-DOCREG-01` as the transitional source of truth for the registry migration task sequence while `docs/registry/*.yaml` is still `v0_draft`.
-3. Review `DOCREG-01B1`: registry semantics repair now separates capability implementation `status` from `metadata_status`, renames `source_refs` to generated `referenced_by_transitional_cache`, extracts work-order `implements_capabilities` edges, and freezes this task-map capability section as a projection.
-4. Accept / review `DATA-01A`: `docs/schemas/execution_events_v0_draft.md`, JSONL fixtures, and schema tests now exist without runtime writes. Next data work is deciding the DATA-01B event-emission boundary.
-5. Extend `JIKUO-LIVE-20` beyond LIVE-20A: scan recent runtime history, count repeated zero-trigger classifications, and surface warnings in `jikuo show` / MCP status so users can see dead zones across time, not only on the current card.
-6. Run `JIKUO-CODEX-PLUGIN-01` / future Codex hook split: Codex MCP proof is accepted and active in real work, so the remaining Codex question is whether a hook / plugin surface can provide true pre-turn mounted routing, visible failure, and runtime card surfacing.
-7. Run `JIKUO-CLAUDE-HOOK-01`: Claude / Claude Code MCP proof is accepted and active in real work, so the remaining Claude question is whether a hook-capable host can call `jikuo.route_user_request` before every turn, surface cards / runtime links, and fail visibly.
-8. If Codex and Claude both prove `strict_pre_turn_supported`, plan both strict mounted adapters; the decision becomes implementation order and failure semantics, not a single-winner host choice.
-9. Discuss and scope `JIKUO-SELF-BOOTSTRAP-02` stable self-bootstrap execution: JIKUO development slices need a repeatable route/config/task-start/completion-review workflow before relying on assistant behavior.
-10. Run `JIKUO-SELF-BOOTSTRAP-03` harness workspace boundary spike before any source-directory migration: test whether `.jikuo/`, activation settings, runtime cards, and client instructions belong in a parent harness workspace while the source repository is a governed child target.
-11. Keep Cursor and VS Code + GitHub Copilot Agent Mode MCP proof as compatibility expansion using `docs/integrations/mcp_client_proof_playbook.md`; they are no longer blockers for Codex / Claude strict-mounted work.
-12. Plan `JIKUO-ONBOARD-01` package-first non-engineer onboarding: install package -> run CLI setup -> configure client MCP -> verify runtime card, without making Python `import` the user entry.
-13. Decide the external release license using `docs/work_orders/SPRINT_050_WO-PER-JIKUO-REL-01_external_release_license_decision.md`; current package metadata remains `Proprietary` until explicit user decision.
-14. Keep the decision about whether new self-bootstrap policies enter built-in starter templates suspended until explicit user approval.
-15. Plan `JIKUO-STUDIO-01` dashboard as a post-MCP product architecture slice; it is deferred from MCP-01 scope and current Stage B work relies on card markdown plus runtime card links instead. Mount `docs/insights/INSIGHT-2026-05-16-studio-dashboard-frontend-architecture.md` and `JIKUO-DATA-01` before that slice.
-16. Keep per-client hooks/packs and Agent SDK / platform adapters as planned post-MCP work, not current MCP blockers.
-17. Defer OS notifications, rollback, broader conditions, UI beyond Studio, Plugin, and gates unless explicitly promoted by user approval.
+3. Review / accept `DOCREG-01B1`: registry semantics repair separates capability implementation `status` from `metadata_status`, renames `source_refs` to generated `referenced_by_transitional_cache`, extracts work-order `implements_capabilities` edges, and freezes this task-map capability section as a projection.
+4. Review / accept `DOCREG-01B2`: structural hard checks now fail on unindexed registry shards, unregistered work-order / insight files, missing declared paths, illegal `open_items.yaml`, hand-maintained reverse edges, and invalid work-order capability extraction status. Repository-wide `CAP-*` completeness remains warning-only until the 16 `metadata_missing_in_task_map` entries have an explicit grandfathering / cleanup path.
+5. Stop before `DOCREG-01B3`: completion-review registry policy is the next policy-governance task and needs explicit discussion before implementation.
+6. Accept / review `DATA-01A`: `docs/schemas/execution_events_v0_draft.md`, JSONL fixtures, and schema tests now exist without runtime writes. Next data work is deciding the DATA-01B event-emission boundary.
+7. Extend `JIKUO-LIVE-20` beyond LIVE-20A: scan recent runtime history, count repeated zero-trigger classifications, and surface warnings in `jikuo show` / MCP status so users can see dead zones across time, not only on the current card.
+8. Run `JIKUO-CODEX-PLUGIN-01` / future Codex hook split: Codex MCP proof is accepted and active in real work, so the remaining Codex question is whether a hook / plugin surface can provide true pre-turn mounted routing, visible failure, and runtime card surfacing.
+9. Run `JIKUO-CLAUDE-HOOK-01`: Claude / Claude Code MCP proof is accepted and active in real work, so the remaining Claude question is whether a hook-capable host can call `jikuo.route_user_request` before every turn, surface cards / runtime links, and fail visibly.
+10. If Codex and Claude both prove `strict_pre_turn_supported`, plan both strict mounted adapters; the decision becomes implementation order and failure semantics, not a single-winner host choice.
+11. Discuss and scope `JIKUO-SELF-BOOTSTRAP-02` stable self-bootstrap execution: JIKUO development slices need a repeatable route/config/task-start/completion-review workflow before relying on assistant behavior.
+12. Run `JIKUO-SELF-BOOTSTRAP-03` harness workspace boundary spike before any source-directory migration: test whether `.jikuo/`, activation settings, runtime cards, and client instructions belong in a parent harness workspace while the source repository is a governed child target.
+13. Keep Cursor and VS Code + GitHub Copilot Agent Mode MCP proof as compatibility expansion using `docs/integrations/mcp_client_proof_playbook.md`; they are no longer blockers for Codex / Claude strict-mounted work.
+14. Plan `JIKUO-ONBOARD-01` package-first non-engineer onboarding: install package -> run CLI setup -> configure client MCP -> verify runtime card, without making Python `import` the user entry.
+15. Decide the external release license using `docs/work_orders/SPRINT_050_WO-PER-JIKUO-REL-01_external_release_license_decision.md`; current package metadata remains `Proprietary` until explicit user decision.
+16. Keep the decision about whether new self-bootstrap policies enter built-in starter templates suspended until explicit user approval.
+17. Plan `JIKUO-STUDIO-01` dashboard as a post-MCP product architecture slice; it is deferred from MCP-01 scope and current Stage B work relies on card markdown plus runtime card links instead. Mount `docs/insights/INSIGHT-2026-05-16-studio-dashboard-frontend-architecture.md` and `JIKUO-DATA-01` before that slice.
+18. Keep per-client hooks/packs and Agent SDK / platform adapters as planned post-MCP work, not current MCP blockers.
+19. Defer OS notifications, rollback, broader conditions, UI beyond Studio, Plugin, and gates unless explicitly promoted by user approval.
 
 MCP MVP scope freeze:
 
