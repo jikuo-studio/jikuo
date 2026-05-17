@@ -44,6 +44,10 @@ document_roles:
   policy_aware_agent_flow_contract:
     path: "docs/governance/jikuo_policy_aware_agent_flow_contract.md"
     required: true
+  policy_governance_authority:
+    path: "docs/governance/jikuo_policy_governance_authority.md"
+    required: true
+    note: "Current authority for policy lifecycle, source boundaries, trigger routing, AI hint handling, deterministic signal priority, and fallback expansion."
   project_context_contract:
     path: "docs/governance/jikuo_project_context_binding_and_policy_template_portability.md"
     required: true
@@ -190,6 +194,8 @@ main_document_mounts:
       update_required_when: "documentation roots, entry points, or directory responsibilities change"
     - path: "docs/governance/jikuo_execution_mounts.md"
       update_required_when: "required mounts, execution order, command previews, or active context changes"
+    - path: "docs/governance/jikuo_policy_governance_authority.md"
+      update_required_when: "policy lifecycle, source boundary, trigger routing, task classification, AI hint, deterministic signal priority, fallback expansion, or policy distribution posture changes"
     - path: "docs/governance/jikuo_productization_task_map.md"
       update_required_when: "taskmap, current snapshot, capability registry, todo list, or task/follow-up distinction changes"
     - path: "docs/insights/insights_registry.yaml"

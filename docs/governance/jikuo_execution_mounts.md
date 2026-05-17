@@ -42,6 +42,7 @@ Always mount:
 - `docs/README.md`
 - `docs/governance/jikuo_execution_mounts.md`
 - `docs/governance/jikuo_productization_task_map.md`
+- `docs/governance/jikuo_policy_governance_authority.md`
 - `docs/governance/jikuo_skeleton_kernel_boundary_and_backlog.md`
 - `docs/governance/jikuo_project_context_binding_and_policy_template_portability.md`
 - `docs/governance/jikuo_trust_privacy_provenance_baseline.md`
@@ -59,6 +60,7 @@ Slice completion main document check:
 - Check `README.md` when the product-facing project status, quickstart, MCP surface, release posture, or GitHub preview path changes.
 - Check `docs/README.md` when document roots, directory roles, or entry points change.
 - Check `docs/governance/jikuo_execution_mounts.md` when required mounts, execution order, command previews, or active context changes.
+- Check `docs/governance/jikuo_policy_governance_authority.md` when policy lifecycle, source boundaries, trigger routing, task classification, AI hint, deterministic signal priority, fallback expansion, or policy distribution posture changes.
 - Check `docs/governance/jikuo_productization_task_map.md` when the task map, current snapshot, capability registry, or todo list changes.
 - Check `docs/registry/registry_index.yaml` when registry shard authority, projection metadata, or impact-tag routing changes.
 - Check `docs/work_orders/SPRINT_050_WO-PER-JIKUO-DOCREG-01_layered_document_registry.md` while DOCREG is still in transition and registry scope or sequencing changes.
@@ -108,6 +110,13 @@ Policy store / user configuration flow:
 - this contract defines policy store source hierarchy, future `.jikuo/policies/` layout proposal, policy proposals, approved policy metadata, decision records, write plans/results, revision, deprecation, supersession, rollback, and desktop APP configuration flow
 - current implementation includes a read-only status adapter, report-only trigger/condition/evidence evaluator, explicit task-session policy evidence ingestion, proposal-only policy write planning, guarded initial policy-store writing, guarded active-store append, and guarded policy decision records: `python -B -m jikuo.policy_store status`; `python -B -m jikuo.policy_store evaluate`; `python -B -m jikuo.policy_store plan-write`; `python -B -m jikuo.policy_store write-policy`
 - read-only / proposal-only paths do not create `.jikuo/policies/`; the guarded writer may create `.jikuo/policies/` only with explicit confirmation and approval; no path executes actions, auto-persists evidence, updates `.jikuo/project_state.yaml`, or implements UI, Skill, MCP, Plugin, or gates
+
+Policy governance authority:
+
+- current policy-governance authority location: `docs/governance/jikuo_policy_governance_authority.md`
+- mount this document before discussing or changing policy lifecycle, source boundaries, policy catalog / starter-pack posture, trigger routing, task classification, AI hint handling, deterministic hard-signal priority, fallback expansion, or policy-scope matching
+- this document defines the current product direction: policy routing is hint-assisted, deterministic-checked, and fallback-expanded; `other` / uncertain work must expand to at least discussion plus editing policy scopes instead of falling through to no-op
+- this document does not activate, edit, deprecate, supersede, distribute, or implement policy records by itself
 
 Policy-aware agent flow projection:
 
