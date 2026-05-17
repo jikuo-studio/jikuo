@@ -78,6 +78,25 @@ def add_policy_work_profile_applicability(policy_path: Path) -> None:
     policy_path.write_text(text, encoding="utf-8")
 
 
+def add_matching_policy_work_profile_applicability(policy_path: Path) -> None:
+    text = policy_path.read_text(encoding="utf-8")
+    text = text.replace(
+        "triggers:\n",
+        "\n".join(
+            [
+                "applies_to_work_profile:",
+                '  - lifecycle_events: ["task_start"]',
+                '    policy_scopes: ["editing"]',
+                '    operation_classes: ["write_file"]',
+                "triggers:",
+                "",
+            ]
+        ),
+        1,
+    )
+    policy_path.write_text(text, encoding="utf-8")
+
+
 def write_agent_flow_project_context(root: Path) -> None:
     docs_dir = root / "docs"
     docs_dir.mkdir(parents=True, exist_ok=True)
@@ -188,6 +207,9 @@ def write_conversation_policy_suggestion_store(root: Path) -> None:
                 "source_refs:",
                 '  - type: "test_fixture"',
                 '    ref: "tests:conversation_policy_suggestion"',
+                "applies_to_work_profile:",
+                '  - lifecycle_events: ["conversation_turn"]',
+                '    policy_scopes: ["discussion", "editing", "progress_summary"]',
                 "triggers:",
                 '  - trigger_id: "TRG-conversation-turn"',
                 '    type: "task_lifecycle_event"',
@@ -743,6 +765,53 @@ class AgentFlowProposalTests(unittest.TestCase):
             self.assertFalse(proposal["write_effect"]["writes_performed"])
             self.assertFalse((project_root / ".jikuo" / "task_sessions").exists())
 
+    def test_conversation_turn_policy_suggestion_handles_editing_scope(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            write_conversation_policy_suggestion_store(project_root)
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "propose",
+                    "--event",
+                    "conversation_turn",
+                    "--trigger-mode",
+                    "mounted",
+                    "--user-phrase",
+                    "Please commit the changes and remember that I often ask for this.",
+                    "--project-root",
+                    str(project_root),
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            proposal = json.loads(completed.stdout)
+            self.assertEqual(proposal["work_profile"]["lifecycle_event"], "conversation_turn")
+            self.assertIn("editing", proposal["work_profile"]["policy_scopes"])
+            self.assertEqual(len(proposal["triggered_policies"]), 1)
+            triggered = proposal["triggered_policies"][0]
+            self.assertEqual(
+                triggered["policy_ref"],
+                "POLICY-jikuo-conversation-level-proactive-policy-suggestion",
+            )
+            self.assertEqual(triggered["work_profile_match"]["status"], "matched")
+            self.assertIn(
+                "policy_scope:editing",
+                triggered["work_profile_match"]["matched_refs"],
+            )
+            self.assertFalse(proposal["missing_evidence_reports"])
+
     def test_conversation_turn_policy_suggestion_review_records_no_candidate(self):
         with tempfile.TemporaryDirectory() as tmp:
             project_root = Path(tmp) / "project"
@@ -964,7 +1033,7 @@ class AgentFlowProposalTests(unittest.TestCase):
         self.assertIn("CAP-POLICY-EVIDENCE-CHECK-01", atom_ids)
         self.assertFalse((POLICY_ACTIVE_PROJECT / ".jikuo" / "task_sessions").exists())
 
-    def test_work_profile_applicability_surfaces_without_changing_runtime_trigger(self):
+    def test_work_profile_applicability_blocks_mismatched_runtime_trigger(self):
         with tempfile.TemporaryDirectory() as tmp:
             project_root = Path(tmp) / "project"
             shutil.copytree(POLICY_ACTIVE_PROJECT, project_root)
@@ -1000,29 +1069,88 @@ class AgentFlowProposalTests(unittest.TestCase):
 
             self.assertEqual(completed.returncode, 0, completed.stderr)
             proposal = json.loads(completed.stdout)
-            self.assertEqual(len(proposal["triggered_policies"]), 1)
-            triggered = proposal["triggered_policies"][0]
-            self.assertEqual(triggered["policy_ref"], "POLICY-three-phase-audit")
-            self.assertEqual(
-                triggered["applies_to_work_profile"]["lifecycle_events"],
-                ["completion_review"],
-            )
-            self.assertEqual(
-                triggered["applies_to_work_profile"]["evaluator_effect"],
-                "not_consumed_by_POLTRIG_02",
-            )
+            self.assertEqual(len(proposal["triggered_policies"]), 0)
             runtime_cards = [
                 card
                 for card in proposal["cards"]
                 if card["card_kind"] == "policy_runtime_status"
             ]
             self.assertEqual(len(runtime_cards), 1)
+            dead_zone = runtime_cards[0]["policy_runtime_status"]["policy_dead_zone"]
+            self.assertEqual(dead_zone["classification"], "work_profile_scope_mismatch")
             self.assertIn(
-                "triggered_policy_work_profile_applicability: POLICY-three-phase-audit",
+                "not_triggered_policy: POLICY-three-phase-audit",
                 "\n".join(runtime_cards[0]["shown_outputs"]),
             )
             self.assertIn(
-                "evaluator_effect=not_consumed_by_POLTRIG_02",
+                "work_profile lifecycle_event task_start did not match",
+                proposal["chat_ready_markdown"],
+            )
+            self.assertFalse((project_root / ".jikuo" / "task_sessions").exists())
+
+    def test_work_profile_applicability_surfaces_scope_match_runtime_trigger(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            shutil.copytree(POLICY_ACTIVE_PROJECT, project_root)
+            add_matching_policy_work_profile_applicability(
+                project_root
+                / ".jikuo"
+                / "policies"
+                / "approved"
+                / "POLICY-three-phase-audit.yaml"
+            )
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "propose",
+                    "--event",
+                    "task_start",
+                    "--task-title",
+                    "Work Profile Applicability Probe",
+                    "--project-root",
+                    str(project_root),
+                    "--changed-path",
+                    "src/jikuo/agent_flow.py",
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            proposal = json.loads(completed.stdout)
+            self.assertEqual(len(proposal["triggered_policies"]), 1)
+            triggered = proposal["triggered_policies"][0]
+            self.assertEqual(triggered["policy_ref"], "POLICY-three-phase-audit")
+            self.assertEqual(
+                triggered["applies_to_work_profile"]["evaluator_effect"],
+                "consumed_by_POLTRIG_03_scope_filter",
+            )
+            self.assertEqual(triggered["work_profile_match"]["status"], "matched")
+            runtime_cards = [
+                card
+                for card in proposal["cards"]
+                if card["card_kind"] == "policy_runtime_status"
+            ]
+            self.assertEqual(len(runtime_cards), 1)
+            shown_outputs = "\n".join(runtime_cards[0]["shown_outputs"])
+            self.assertIn(
+                "triggered_policy_work_profile_applicability: POLICY-three-phase-audit",
+                shown_outputs,
+            )
+            self.assertIn(
+                "triggered_policy_work_profile_match: POLICY-three-phase-audit",
+                shown_outputs,
+            )
+            self.assertIn(
+                "evaluator_effect=consumed_by_POLTRIG_03_scope_filter",
                 proposal["chat_ready_markdown"],
             )
             self.assertFalse((project_root / ".jikuo" / "task_sessions").exists())

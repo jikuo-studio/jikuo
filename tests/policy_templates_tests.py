@@ -116,6 +116,7 @@ class PolicyTemplateTests(unittest.TestCase):
                 self.assertNotIn("user_natural_language", text)
                 self.assertIn('source_project_ref: "redacted"', text)
                 self.assertIn('local_path: "redacted"', text)
+                self.assertIn("applies_to_work_profile:", text)
 
     def test_inspect_source_lists_approved_policy_candidates(self):
         with temp_project_dir() as root:

@@ -31,6 +31,9 @@ template_policy:
   source_refs:
     - type: "policy_template"
       ref: "POLICYTEMPLATE-local-policy-pre-development-scenario-chain-atom-registration"
+  applies_to_work_profile:
+    - lifecycle_events: ["task_start"]
+      policy_scopes: ["editing"]
   triggers:
     - trigger_id: "TRG-task-start"
       type: "task_lifecycle_event"

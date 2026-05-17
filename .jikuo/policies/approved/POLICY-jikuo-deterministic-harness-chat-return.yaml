@@ -7,6 +7,9 @@ scenario_package: "engineering_governance"
 source_refs:
   - type: "user_natural_language"
     ref: "user_policy:jikuo_is_a_strict_harness_after_startup"
+applies_to_work_profile:
+  - lifecycle_events: ["task_start"]
+    policy_scopes: ["discussion", "editing", "progress_summary"]
 triggers:
   - trigger_id: "TRG-task-start"
     type: "task_lifecycle_event"

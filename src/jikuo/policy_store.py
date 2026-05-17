@@ -20,9 +20,11 @@ from typing import Any
 
 if __package__:
     from . import project_state
+    from . import work_profile as work_profile_module
 else:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     import project_state
+    import work_profile as work_profile_module
 
 
 POLICY_STORE_STATUS_SCHEMA = "jikuo.policy_store_status.v0"
@@ -329,7 +331,7 @@ def scalar_list(value: Any) -> list[str]:
 
 
 def normalize_work_profile_applicability(raw: Any) -> dict[str, Any] | None:
-    """Project policy work-profile applicability without affecting evaluation.
+    """Project policy work-profile applicability for scope-aware evaluation.
 
     The minimal YAML reader supports this field as a top-level list of mappings
     with inline lists, for example:
@@ -371,13 +373,13 @@ def normalize_work_profile_applicability(raw: Any) -> dict[str, Any] | None:
 
     projection = {
         "schema": WORK_PROFILE_APPLICABILITY_SCHEMA,
-        "status": "declared_report_only",
+        "status": "declared",
         "lifecycle_events": dedupe(lifecycle_events),
         "policy_scopes": dedupe(policy_scopes),
         "intent_classes": dedupe(intent_classes),
         "operation_classes": dedupe(operation_classes),
         "output_classes": dedupe(output_classes),
-        "evaluator_effect": "not_consumed_by_POLTRIG_02",
+        "evaluator_effect": "consumed_by_POLTRIG_03_scope_filter",
         "warnings": warnings,
     }
     if not any(
@@ -2593,6 +2595,116 @@ def evaluate_policy_conditions(
     return all(item["status"] == "matched" for item in reports), reports
 
 
+def ensure_work_profile_for_evaluation(
+    *,
+    event: str,
+    supplied_work_profile: dict[str, Any] | None,
+    task_type: str | None,
+    jikuo_layer: str | None,
+    changed_paths: list[str],
+    added_paths: list[str],
+) -> tuple[dict[str, Any], str]:
+    if isinstance(supplied_work_profile, dict):
+        return supplied_work_profile, "supplied"
+    return (
+        work_profile_module.build_work_profile(
+            raw_event=event,
+            normalized_event=event,
+            task_type=task_type,
+            jikuo_layer=jikuo_layer,
+            changed_paths=changed_paths,
+            added_paths=added_paths,
+        ),
+        "inferred_from_evaluator_context",
+    )
+
+
+def evaluate_work_profile_applicability(
+    *,
+    policy_ref: str,
+    trigger_ref: str | None,
+    applicability: dict[str, Any],
+    work_profile_projection: dict[str, Any],
+) -> tuple[bool, dict[str, Any]]:
+    expected_lifecycle_events = scalar_list(applicability.get("lifecycle_events"))
+    expected_policy_scopes = scalar_list(applicability.get("policy_scopes"))
+    observed_lifecycle_event = str(
+        work_profile_projection.get("lifecycle_event") or ""
+    )
+    observed_policy_scopes = [
+        str(scope)
+        for scope in scalar_list(work_profile_projection.get("policy_scopes"))
+    ]
+    observed_scope_set = set(observed_policy_scopes)
+    matched_scopes = [
+        scope for scope in expected_policy_scopes if scope in observed_scope_set
+    ]
+    lifecycle_matched = (
+        not expected_lifecycle_events
+        or observed_lifecycle_event in expected_lifecycle_events
+    )
+    scopes_matched = bool(matched_scopes) if expected_policy_scopes else True
+    sufficient_declaration = bool(expected_lifecycle_events or expected_policy_scopes)
+    fallback_expanded = bool(work_profile_projection.get("fallback_expanded", False))
+
+    status = "matched"
+    summary = "work_profile applicability matched"
+    if not sufficient_declaration:
+        status = "review_required"
+        summary = (
+            "Policy declares applies_to_work_profile but has no lifecycle_events "
+            "or policy_scopes for POLTRIG-03 consumption."
+        )
+    elif not lifecycle_matched:
+        status = "not_matched"
+        summary = (
+            f"work_profile lifecycle_event {observed_lifecycle_event or 'missing'} "
+            f"did not match {expected_lifecycle_events}"
+        )
+    elif not scopes_matched:
+        status = "not_matched"
+        summary = (
+            f"work_profile policy_scopes {observed_policy_scopes} did not overlap "
+            f"{expected_policy_scopes}"
+        )
+    elif matched_scopes:
+        summary = f"work_profile policy_scope matched {', '.join(matched_scopes)}"
+        if fallback_expanded:
+            summary += " via conservative fallback expansion"
+
+    matched_refs: list[str] = []
+    if lifecycle_matched and expected_lifecycle_events:
+        matched_refs.append(f"lifecycle_event:{observed_lifecycle_event}")
+    matched_refs.extend(f"policy_scope:{scope}" for scope in matched_scopes)
+
+    return (
+        status == "matched",
+        {
+            "condition_ref": f"{policy_ref}:work_profile_applicability",
+            "policy_ref": policy_ref,
+            "trigger_ref": trigger_ref,
+            "condition_type": "work_profile_applicability",
+            "expected": {
+                "lifecycle_events": expected_lifecycle_events,
+                "policy_scopes": expected_policy_scopes,
+            },
+            "observed": {
+                "lifecycle_event": observed_lifecycle_event,
+                "policy_scopes": observed_policy_scopes,
+                "intent_class": work_profile_projection.get("intent_class"),
+                "operation_class": work_profile_projection.get("operation_class"),
+                "output_class": work_profile_projection.get("output_class"),
+                "fallback_expanded": fallback_expanded,
+            },
+            "matched_refs": matched_refs,
+            "status": status,
+            "summary": summary,
+            "match_basis": "work_profile_lifecycle_and_scope_overlap",
+            "evaluator_effect": "consumed_by_POLTRIG_03_scope_filter",
+        },
+    )
+
+
 def project_required_actions(
     *,
     policy_ref: str,
@@ -2893,6 +3005,7 @@ def evaluate_policy_triggers(
     jikuo_layer: str | None = None,
     changed_paths: list[str] | None = None,
     added_paths: list[str] | None = None,
+    work_profile: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     status_report = inspect_policy_store(project_root=project_root, cwd=cwd)
     resolved_root = Path(status_report["project_root"])
@@ -2912,6 +3025,14 @@ def evaluate_policy_triggers(
     condition_reports: list[dict[str, Any]] = []
     changed_path_list = [str(path) for path in (changed_paths or [])]
     added_path_list = [str(path) for path in (added_paths or [])]
+    effective_work_profile, work_profile_source = ensure_work_profile_for_evaluation(
+        event=event,
+        supplied_work_profile=work_profile,
+        task_type=task_type,
+        jikuo_layer=jikuo_layer,
+        changed_paths=changed_path_list,
+        added_paths=added_path_list,
+    )
 
     if status_report["policy_store_status"] != "active":
         eval_status = (
@@ -2941,6 +3062,8 @@ def evaluate_policy_triggers(
             "missing_evidence_reports": [],
             "task_session_id": task_session_id,
             "evidence_source_refs": persisted_source_refs,
+            "work_profile": effective_work_profile,
+            "work_profile_source": work_profile_source,
             "write_allowed_by_command": False,
             "warnings": warnings,
             "source_refs": CONTRACT_REFS,
@@ -2991,6 +3114,23 @@ def evaluate_policy_triggers(
                 continue
             policy_id = str(record.get("policy_id") or policy_ref.get("policy_id"))
             trigger_ref = trigger.get("trigger_id")
+            work_profile_applicability = normalize_work_profile_applicability(
+                record.get("applies_to_work_profile")
+            )
+            work_profile_match_report: dict[str, Any] | None = None
+            if work_profile_applicability:
+                (
+                    work_profile_matched,
+                    work_profile_match_report,
+                ) = evaluate_work_profile_applicability(
+                    policy_ref=policy_id,
+                    trigger_ref=trigger_ref if isinstance(trigger_ref, str) else None,
+                    applicability=work_profile_applicability,
+                    work_profile_projection=effective_work_profile,
+                )
+                condition_reports.append(work_profile_match_report)
+                if not work_profile_matched:
+                    continue
             raw_conditions = record.get("conditions", [])
             if raw_conditions is None:
                 raw_conditions = []
@@ -3023,9 +3163,6 @@ def evaluate_policy_triggers(
             condition_reports.extend(reports)
             if not conditions_matched:
                 continue
-            work_profile_applicability = normalize_work_profile_applicability(
-                record.get("applies_to_work_profile")
-            )
             triggered_policy = {
                 "policy_ref": policy_id,
                 "policy_title": record.get("title"),
@@ -3039,6 +3176,7 @@ def evaluate_policy_triggers(
             }
             if work_profile_applicability:
                 triggered_policy["applies_to_work_profile"] = work_profile_applicability
+                triggered_policy["work_profile_match"] = work_profile_match_report
             triggered_policies.append(triggered_policy)
             actions = record.get("required_actions", [])
             projected_actions: list[dict[str, Any]] = []
@@ -3100,6 +3238,8 @@ def evaluate_policy_triggers(
         "missing_evidence_reports": missing_evidence_reports,
         "task_session_id": task_session_id,
         "evidence_source_refs": persisted_source_refs,
+        "work_profile": effective_work_profile,
+        "work_profile_source": work_profile_source,
         "write_allowed_by_command": False,
         "warnings": warnings,
         "source_refs": CONTRACT_REFS,
@@ -3251,6 +3391,7 @@ def format_text(report: dict[str, Any]) -> str:
             f"Condition eval status: {report.get('policy_condition_eval_status')}",
             f"Evidence check status: {report['policy_evidence_check_status']}",
             f"Task session id: {report.get('task_session_id')}",
+            f"Work profile source: {report.get('work_profile_source')}",
             f"Triggered policies: {len(report['triggered_policies'])}",
             f"Required actions: {len(report['required_actions'])}",
             f"Condition reports: {len(report.get('condition_reports', []))}",
@@ -3272,6 +3413,9 @@ def format_text(report: dict[str, Any]) -> str:
                         f"(work_profile_applicability={applicability.get('status')}, "
                         f"evaluator_effect={applicability.get('evaluator_effect')})"
                     )
+                match = ref.get("work_profile_match") or {}
+                if match:
+                    line += f" match={match.get('status')}"
                 lines.append(line)
         if report["warnings"]:
             lines.append("Warnings:")
@@ -3444,6 +3588,11 @@ def build_parser() -> argparse.ArgumentParser:
     evaluate.add_argument("--changed-path", action="append", default=[])
     evaluate.add_argument("--added-path", action="append", default=[])
     evaluate.add_argument(
+        "--work-profile-json",
+        default=None,
+        help="JSON object work_profile projection for POLTRIG-03 scope matching.",
+    )
+    evaluate.add_argument(
         "--produced-evidence-json",
         default=None,
         help="JSON list of inline produced evidence for report-only matching.",
@@ -3532,6 +3681,15 @@ def main(argv: list[str] | None = None) -> int:
         )
     elif args.command == "evaluate":
         produced_evidence: list[dict[str, Any]] | None = None
+        work_profile_projection: dict[str, Any] | None = None
+        if args.work_profile_json:
+            try:
+                decoded_work_profile = json.loads(args.work_profile_json)
+            except json.JSONDecodeError as exc:
+                parser.error(f"--work-profile-json must be valid JSON: {exc}")
+            if not isinstance(decoded_work_profile, dict):
+                parser.error("--work-profile-json must decode to an object")
+            work_profile_projection = decoded_work_profile
         if args.produced_evidence_json:
             try:
                 decoded = json.loads(args.produced_evidence_json)
@@ -3570,6 +3728,7 @@ def main(argv: list[str] | None = None) -> int:
             jikuo_layer=args.jikuo_layer,
             changed_paths=args.changed_path,
             added_paths=args.added_path,
+            work_profile=work_profile_projection,
         )
     else:
         report = inspect_policy_store(project_root=args.project_root)

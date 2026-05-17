@@ -7,6 +7,9 @@ scenario_package: "engineering_governance"
 source_refs:
   - type: "user_natural_language"
     ref: "user_policy:maintain_main_doc_mount_paths_and_update_scope_before_completion"
+applies_to_work_profile:
+  - lifecycle_events: ["completion_review"]
+    policy_scopes: ["editing", "progress_summary"]
 triggers:
   - trigger_id: "TRG-completion"
     type: "task_lifecycle_event"

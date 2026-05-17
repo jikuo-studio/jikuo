@@ -55,6 +55,9 @@ template_policy:
       - "list explicit non-goals and deferred tasks"
       - "do not add newly discovered non-blocking work to the active slice without explicit user approval"
       - "record task_scope_control_evidence before proceeding"
+  applies_to_work_profile:
+    - lifecycle_events: ["task_start"]
+      policy_scopes: ["editing"]
   triggers:
     - trigger_id: "TRG-task-start"
       type: "task_lifecycle_event"

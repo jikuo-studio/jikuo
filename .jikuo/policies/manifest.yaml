@@ -103,7 +103,7 @@ superseded_policy_refs:
     superseded_by: "POLICY-jikuo-conversation-level-proactive-policy-suggestion"
     decision_ref: ".jikuo/policies/decisions/POLICYDECISION-d1c874a565.yaml"
     superseded_at: "2026-05-16T04:58:40Z"
-last_updated_at: "2026-05-17T05:20:00Z"
+last_updated_at: "2026-05-17T14:14:03Z"
 compatibility:
   unknown_fields: "preserve"
   writer: "policy_store_write_mode"

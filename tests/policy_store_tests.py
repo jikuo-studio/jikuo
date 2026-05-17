@@ -102,6 +102,42 @@ def add_work_profile_applicability(policy_path: Path) -> None:
     policy_path.write_text(text, encoding="utf-8")
 
 
+def add_matching_work_profile_applicability(policy_path: Path) -> None:
+    text = policy_path.read_text(encoding="utf-8")
+    text = text.replace(
+        "triggers:\n",
+        "\n".join(
+            [
+                "applies_to_work_profile:",
+                '  - lifecycle_events: ["task_start"]',
+                '    policy_scopes: ["editing"]',
+                '    operation_classes: ["write_file"]',
+                "triggers:",
+                "",
+            ]
+        ),
+        1,
+    )
+    policy_path.write_text(text, encoding="utf-8")
+
+
+def add_soft_only_work_profile_applicability(policy_path: Path) -> None:
+    text = policy_path.read_text(encoding="utf-8")
+    text = text.replace(
+        "triggers:\n",
+        "\n".join(
+            [
+                "applies_to_work_profile:",
+                '  - operation_classes: ["write_file"]',
+                "triggers:",
+                "",
+            ]
+        ),
+        1,
+    )
+    policy_path.write_text(text, encoding="utf-8")
+
+
 class PolicyStoreStatusTests(unittest.TestCase):
     def test_missing_policy_store_reports_missing_without_write(self):
         completed = run_status(MISSING_PROJECT)
@@ -166,12 +202,12 @@ class PolicyStoreStatusTests(unittest.TestCase):
                 applicability["schema"],
                 "jikuo.policy_work_profile_applicability.v0",
             )
-            self.assertEqual(applicability["status"], "declared_report_only")
+            self.assertEqual(applicability["status"], "declared")
             self.assertEqual(applicability["lifecycle_events"], ["completion_review"])
             self.assertEqual(applicability["policy_scopes"], ["progress_summary"])
             self.assertEqual(
                 applicability["evaluator_effect"],
-                "not_consumed_by_POLTRIG_02",
+                "consumed_by_POLTRIG_03_scope_filter",
             )
 
     def test_stale_policy_store_reports_missing_active_ref(self):
@@ -233,7 +269,48 @@ class PolicyStoreStatusTests(unittest.TestCase):
         self.assertEqual(len(report["missing_evidence_reports"]), 1)
         self.assertFalse((ACTIVE_PROJECT / ".jikuo" / "task_sessions").exists())
 
-    def test_work_profile_applicability_does_not_change_trigger_evaluation(self):
+    def test_legacy_policy_without_work_profile_declaration_still_triggers(self):
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-B",
+                str(TOOL),
+                "evaluate",
+                "--event",
+                "task_start",
+                "--project-root",
+                str(ACTIVE_PROJECT),
+                "--work-profile-json",
+                json.dumps(
+                    {
+                        "schema": "jikuo.work_profile.v0",
+                        "lifecycle_event": "completion_review",
+                        "policy_scopes": ["progress_summary"],
+                    }
+                ),
+                "--format",
+                "json",
+            ],
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        report = json.loads(completed.stdout)
+        self.assertEqual(len(report["triggered_policies"]), 1)
+        self.assertEqual(
+            report["triggered_policies"][0]["policy_ref"],
+            "POLICY-three-phase-audit",
+        )
+        self.assertNotIn(
+            "applies_to_work_profile",
+            report["triggered_policies"][0],
+        )
+
+    def test_work_profile_applicability_blocks_mismatched_scope(self):
         with tempfile.TemporaryDirectory() as tmp:
             project_root = Path(tmp) / "project"
             shutil.copytree(ACTIVE_PROJECT, project_root)
@@ -267,16 +344,110 @@ class PolicyStoreStatusTests(unittest.TestCase):
 
             self.assertEqual(completed.returncode, 0, completed.stderr)
             report = json.loads(completed.stdout)
+            self.assertEqual(len(report["triggered_policies"]), 0)
+            self.assertEqual(report["work_profile_source"], "inferred_from_evaluator_context")
+            blockers = [
+                item
+                for item in report["condition_reports"]
+                if item["condition_type"] == "work_profile_applicability"
+            ]
+            self.assertEqual(len(blockers), 1)
+            self.assertEqual(blockers[0]["status"], "not_matched")
+            self.assertIn("lifecycle_event task_start did not match", blockers[0]["summary"])
+
+    def test_work_profile_applicability_requires_hard_scope_fields(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            shutil.copytree(ACTIVE_PROJECT, project_root)
+            add_soft_only_work_profile_applicability(
+                project_root
+                / ".jikuo"
+                / "policies"
+                / "approved"
+                / "POLICY-three-phase-audit.yaml"
+            )
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "evaluate",
+                    "--event",
+                    "task_start",
+                    "--project-root",
+                    str(project_root),
+                    "--changed-path",
+                    "src/jikuo/policy_store.py",
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            report = json.loads(completed.stdout)
+            self.assertEqual(len(report["triggered_policies"]), 0)
+            blockers = [
+                item
+                for item in report["condition_reports"]
+                if item["condition_type"] == "work_profile_applicability"
+            ]
+            self.assertEqual(len(blockers), 1)
+            self.assertEqual(blockers[0]["status"], "review_required")
+            self.assertIn("no lifecycle_events or policy_scopes", blockers[0]["summary"])
+
+    def test_work_profile_applicability_triggers_on_matching_scope(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            shutil.copytree(ACTIVE_PROJECT, project_root)
+            add_matching_work_profile_applicability(
+                project_root
+                / ".jikuo"
+                / "policies"
+                / "approved"
+                / "POLICY-three-phase-audit.yaml"
+            )
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "evaluate",
+                    "--event",
+                    "task_start",
+                    "--project-root",
+                    str(project_root),
+                    "--changed-path",
+                    "src/jikuo/policy_store.py",
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            report = json.loads(completed.stdout)
             self.assertEqual(len(report["triggered_policies"]), 1)
             triggered = report["triggered_policies"][0]
             self.assertEqual(triggered["policy_ref"], "POLICY-three-phase-audit")
             self.assertEqual(
-                triggered["applies_to_work_profile"]["lifecycle_events"],
-                ["completion_review"],
-            )
-            self.assertEqual(
                 triggered["applies_to_work_profile"]["evaluator_effect"],
-                "not_consumed_by_POLTRIG_02",
+                "consumed_by_POLTRIG_03_scope_filter",
+            )
+            self.assertEqual(triggered["work_profile_match"]["status"], "matched")
+            self.assertIn(
+                "policy_scope:editing",
+                triggered["work_profile_match"]["matched_refs"],
             )
 
     def test_evaluate_task_start_accepts_inline_card_rendered_evidence(self):

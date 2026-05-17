@@ -7,6 +7,9 @@ scenario_package: "engineering_governance"
 source_refs:
   - type: "user_natural_language"
     ref: "user_repeated_need_progress_todo_business_meaning"
+applies_to_work_profile:
+  - lifecycle_events: ["completion_review"]
+    policy_scopes: ["progress_summary"]
 triggers:
   - trigger_id: "TRG-completion-review"
     type: "task_lifecycle_event"

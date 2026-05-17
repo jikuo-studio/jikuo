@@ -285,6 +285,7 @@ def build_policy_context(
     jikuo_layer: str | None = None,
     changed_paths: list[str] | None = None,
     added_paths: list[str] | None = None,
+    work_profile_projection: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]], dict[str, list[dict[str, Any]]]]:
     """Expose policy-store state plus no-write trigger/evidence evaluation."""
 
@@ -297,6 +298,7 @@ def build_policy_context(
         jikuo_layer=jikuo_layer,
         changed_paths=changed_paths,
         added_paths=added_paths,
+        work_profile=work_profile_projection,
     )
     if report["policy_store_status"] == "missing":
         next_actions = [
@@ -933,6 +935,12 @@ def classify_policy_dead_zone(
         and str(report.get("condition_type") or "")
         in {"task_type_is", "jikuo_layer_is"}
     ]
+    work_profile_blockers = [
+        report
+        for report in condition_reports
+        if str(report.get("status") or "") != "matched"
+        and str(report.get("condition_type") or "") == "work_profile_applicability"
+    ]
     other_blockers = [
         report
         for report in condition_reports
@@ -968,6 +976,15 @@ def classify_policy_dead_zone(
         next_actions = [
             "rerun the governed event with the task_type and jikuo_layer expected by relevant active policies",
             "if the work is genuinely outside existing policy scope, record a policy coverage gap or propose a new policy",
+        ]
+    elif normalized_event in POLICY_DEAD_ZONE_GOVERNED_WORK_EVENTS and work_profile_blockers:
+        first = work_profile_blockers[0]
+        classification = "work_profile_scope_mismatch"
+        severity = "warning"
+        reason = str(first.get("summary") or "work_profile did not match active policies")
+        next_actions = [
+            "review the work_profile projection and policy applies_to_work_profile declaration",
+            "if the work should be governed, backfill or refine the policy scope declaration before relying on the no-trigger result",
         ]
     elif normalized_event in POLICY_DEAD_ZONE_GOVERNED_WORK_EVENTS and other_blockers:
         first = other_blockers[0]
@@ -1074,6 +1091,13 @@ def build_policy_runtime_status_card(
         f"condition_eval_status: {policy_context.get('policy_condition_eval_status')}",
         f"evidence_check_status: {policy_context.get('policy_evidence_check_status')}",
     ]
+    work_profile_projection = policy_context.get("work_profile") or {}
+    if work_profile_projection:
+        shown_inputs.append(
+            "work_profile: "
+            f"{work_profile_projection.get('lifecycle_event')} / "
+            f"scopes={work_profile_projection.get('policy_scopes')}"
+        )
     shown_outputs = [
         f"active_policy_count: {active_count}",
         f"triggered_policy_count: {triggered_count}",
@@ -1099,6 +1123,16 @@ def build_policy_runtime_status_card(
                 f"{item.get('policy_ref')} / "
                 f"{applicability.get('status')} / "
                 f"evaluator_effect={applicability.get('evaluator_effect')}"
+            )
+        work_profile_match = item.get("work_profile_match") or {}
+        if work_profile_match:
+            observed = work_profile_match.get("observed") or {}
+            shown_outputs.append(
+                "triggered_policy_work_profile_match: "
+                f"{item.get('policy_ref')} / "
+                f"{work_profile_match.get('status')} / "
+                f"matched_refs={work_profile_match.get('matched_refs')} / "
+                f"fallback_expanded={observed.get('fallback_expanded')}"
             )
     for item in not_triggered:
         title = item.get("policy_title") or item.get("policy_ref")
@@ -1156,6 +1190,11 @@ def build_policy_runtime_status_card(
         "missing_evidence": missing_evidence,
         "policy_feedback_options": policy_feedback_options,
     }
+    if work_profile_projection:
+        card["policy_runtime_status"]["work_profile"] = work_profile_projection
+        card["policy_runtime_status"]["work_profile_source"] = policy_context.get(
+            "work_profile_source"
+        )
     if dead_zone:
         card["policy_runtime_status"]["policy_dead_zone"] = dead_zone
     trace = atom_trace(
@@ -3351,6 +3390,7 @@ def build_proposal(
             jikuo_layer=jikuo_layer,
             changed_paths=changed_paths,
             added_paths=added_paths,
+            work_profile_projection=work_profile_projection,
         )
         traces.extend(policy_traces)
     else:

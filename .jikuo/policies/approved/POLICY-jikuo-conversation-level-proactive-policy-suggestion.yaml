@@ -7,6 +7,9 @@ scenario_package: "engineering_governance"
 source_refs:
   - type: "policy_supersession"
     ref: "<exact user phrase as spoken>"
+applies_to_work_profile:
+  - lifecycle_events: ["conversation_turn"]
+    policy_scopes: ["discussion", "editing", "progress_summary"]
 triggers:
   - trigger_id: "TRG-conversation-turn"
     type: "task_lifecycle_event"

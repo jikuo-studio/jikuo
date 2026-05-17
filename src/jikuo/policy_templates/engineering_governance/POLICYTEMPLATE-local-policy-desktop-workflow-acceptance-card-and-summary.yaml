@@ -31,6 +31,9 @@ template_policy:
   source_refs:
     - type: "policy_template"
       ref: "POLICYTEMPLATE-local-policy-desktop-workflow-acceptance-card-and-summary"
+  applies_to_work_profile:
+    - lifecycle_events: ["task_start"]
+      policy_scopes: ["discussion", "progress_summary"]
   triggers:
     - trigger_id: "TRG-task-start"
       type: "task_lifecycle_event"

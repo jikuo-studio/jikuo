@@ -7,6 +7,9 @@ scenario_package: "engineering_governance"
 source_refs:
   - type: "policy_consolidation"
     ref: "user_policy:consolidate_policy_vs_code_and_development_idea_routing"
+applies_to_work_profile:
+  - lifecycle_events: ["task_start"]
+    policy_scopes: ["editing"]
 triggers:
   - trigger_id: "TRG-task-start"
     type: "task_lifecycle_event"

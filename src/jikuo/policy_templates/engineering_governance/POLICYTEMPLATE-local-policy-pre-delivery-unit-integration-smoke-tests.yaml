@@ -31,6 +31,9 @@ template_policy:
   source_refs:
     - type: "policy_template"
       ref: "POLICYTEMPLATE-local-policy-pre-delivery-unit-integration-smoke-tests"
+  applies_to_work_profile:
+    - lifecycle_events: ["completion_review"]
+      policy_scopes: ["editing", "progress_summary"]
   triggers:
     - trigger_id: "TRG-pre-delivery"
       type: "task_lifecycle_event"

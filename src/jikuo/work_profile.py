@@ -1,9 +1,9 @@
 """No-write work-profile projection for JIKUO user interactions.
 
 The work profile is a compatibility projection over the current event model.
-It does not trigger policies by itself and must not be treated as durable
-evidence. Its job is to make the user-turn/task/review model explicit before
-later policy-trigger work consumes it.
+It is not durable evidence and does not write policy records. Its job is to
+make the user-turn/task/review model explicit so policy distribution can match
+declared lifecycle and scope without depending only on brittle task labels.
 """
 
 from __future__ import annotations
@@ -20,6 +20,7 @@ LIFECYCLE_EVENTS = {"conversation_turn", "task_start", "completion_review"}
 COMPLETION_EVENTS = {
     "completion_review",
     "verification_review",
+    "pre_delivery",
     "handoff",
 }
 
@@ -325,8 +326,8 @@ def build_work_profile(
             "fallback": fallback_reason,
         },
         "non_effects": [
-            "does not change policy evaluator behavior",
             "does not create or update .jikuo/policies/",
             "does not create task-session evidence",
+            "does not replace exact policy conditions",
         ],
     }

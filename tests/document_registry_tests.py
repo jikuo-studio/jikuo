@@ -158,7 +158,7 @@ class DocumentRegistryTests(unittest.TestCase):
         self.assertIn("MOUNT-POLICY-TRIGGER-DEAD-ZONE-REPAIR", entry)
         self.assertIn("LIVE-20_policy_dead_zone_detection.md#7-initial-evidence", entry)
         self.assertIn("jikuo_policy_governance_authority.md", entry)
-        self.assertIn("Stop before changing evaluator behavior", entry)
+        self.assertIn("Do not make intent_classes", entry)
 
     def test_registry_shards_do_not_hand_maintain_reverse_edges(self) -> None:
         reverse_field_re = re.compile(r"^\s+(used_by|referenced_by|source_work_orders|source_refs):", re.MULTILINE)

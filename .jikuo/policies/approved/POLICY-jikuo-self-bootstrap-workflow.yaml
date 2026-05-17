@@ -7,6 +7,9 @@ scenario_package: "engineering_governance"
 source_refs:
   - type: "user_natural_language"
     ref: "user_policy:self_bootstrap_jikuo_development_with_jikuo_workflow"
+applies_to_work_profile:
+  - lifecycle_events: ["task_start"]
+    policy_scopes: ["discussion", "editing"]
 triggers:
   - trigger_id: "TRG-task-start"
     type: "task_lifecycle_event"

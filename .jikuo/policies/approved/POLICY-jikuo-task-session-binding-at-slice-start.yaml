@@ -11,6 +11,9 @@ source_refs:
     ref: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-15_self_bootstrap_task_session_binding.md"
   - type: "user_natural_language"
     ref: "user_policy:task_session_resolution_must_not_be_silently_skipped"
+applies_to_work_profile:
+  - lifecycle_events: ["task_start"]
+    policy_scopes: ["discussion", "editing", "progress_summary"]
 triggers:
   - trigger_id: "TRG-task-start"
     type: "task_lifecycle_event"

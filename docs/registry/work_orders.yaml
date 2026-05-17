@@ -854,7 +854,7 @@ entries:
     title: "SPRINT_050_WO-PER-JIKUO-POLTRIG-03: Policy Scope Evaluator Consumption"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-POLTRIG-03_policy_scope_evaluator_consumption.md"
     sprint: "SPRINT_050"
-    status: "Planned; context registered, implementation requires explicit evaluator-change review"
+    status: "Implemented and verified; evaluator consumes lifecycle_events and policy_scopes only"
     impact_tags:
       - "policy_governance"
       - "trigger_routing"
@@ -873,7 +873,7 @@ entries:
       - "docs/governance/jikuo_policy_governance_authority.md"
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-POLTRIG-03_policy_scope_evaluator_consumption.md"
     stop_boundaries:
-      - "Stop before changing evaluator behavior and present the policy-scope matching algorithm for user review."
+      - "Do not make intent_classes, operation_classes, or output_classes hard evaluator gates without a new reviewed slice."
   - id: "JIKUO-PRD-01"
     title: "SPRINT_050_WO-PER-JIKUO-PRD-01: Product Definition"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-PRD-01_product_definition.md"
