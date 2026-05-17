@@ -128,6 +128,18 @@ def start_plan_card(plan: dict[str, Any]) -> dict[str, Any]:
         if plan.get("can_start")
         else None
     )
+    resolution_status = "needs_user_decision" if plan.get("can_start") else "blocked"
+    resolution = {
+        "schema": "jikuo.task_session_resolution.v0",
+        "status": resolution_status,
+        "decision": "guarded_create_proposed" if plan.get("can_start") else "blocked",
+        "requires_user_decision": bool(plan.get("can_start")),
+        "allowed_next_decisions": (
+            ["approve_create_task_session", "explicitly_defer_task_session"]
+            if plan.get("can_start")
+            else ["resolve_refusal_reasons"]
+        ),
+    }
 
     return {
         "schema": CARD_SCHEMA,
@@ -142,6 +154,8 @@ def start_plan_card(plan: dict[str, Any]) -> dict[str, Any]:
         ),
         "source_refs": plan.get("source_refs", []),
         "task_session_refs": [plan.get("session_id")] if plan.get("session_id") else [],
+        "task_session_resolution": resolution,
+        "task_session_binding_status": resolution_status,
         "command_proposal": proposal,
         "approval_request": (
             approval_request(
@@ -165,11 +179,20 @@ def start_plan_card(plan: dict[str, Any]) -> dict[str, Any]:
             f"session_id: {plan.get('session_id')}",
         ],
         "shown_outputs": [
+            f"task_session_resolution_status: {resolution_status}",
+            f"requires_user_decision: {resolution['requires_user_decision']}",
             f"target_session_file: {plan.get('target_session_file')}",
             f"write_allowed_by_command: {plan.get('write_allowed_by_command')}",
         ],
         "refusal_reasons": refusal_reasons,
-        "next_actions": plan.get("next_actions", []),
+        "next_actions": (
+            [
+                "choose one task-session resolution before continuing governed work: approve creation or explicitly defer",
+                *plan.get("next_actions", []),
+            ]
+            if plan.get("can_start")
+            else plan.get("next_actions", [])
+        ),
     }
 
 

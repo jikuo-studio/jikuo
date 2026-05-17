@@ -158,6 +158,8 @@ TOOL_DEFINITIONS: dict[str, dict[str, Any]] = {
             "changed_paths": RETURN,
             "added_paths": RETURN,
             "summary": REDACT_OPTIONAL,
+            "task_session_decision": RETURN,
+            "task_session_defer_reason": REDACT_OPTIONAL,
         },
         card_returning=True,
     ),

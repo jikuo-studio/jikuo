@@ -1,0 +1,32 @@
+schema_version: "jikuo.registry.v0_draft"
+registry_id: "jikuo-mount-sets"
+entries:
+  - id: "MOUNT-BASE-JIKUO-DEVELOPMENT"
+    title: "Base JIKUO development mount set"
+    status: "seed"
+    documents:
+      - path: "README.md"
+      - path: "docs/README.md"
+      - path: "docs/governance/jikuo_execution_mounts.md"
+      - path: "docs/governance/jikuo_productization_task_map.md"
+      - path: ".jikuo/project_context.yaml"
+  - id: "MOUNT-DOCREG-01A"
+    title: "Document registry implementation mount set"
+    status: "seed"
+    documents:
+      - path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-DOCREG-01_layered_document_registry.md"
+      - path: "docs/governance/jikuo_execution_mounts.md"
+      - path: ".jikuo/project_context.yaml"
+  - id: "MOUNT-DATA-01A"
+    title: "Structured execution event ledger schema mount set"
+    status: "seed"
+    documents:
+      - path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-DATA-01_structured_execution_event_ledger_and_analytics_contract.md"
+      - path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-20_policy_dead_zone_detection.md"
+  - id: "MOUNT-STRICT-HARNESS-PROOF"
+    title: "Strict mounted harness adapter proof mount set"
+    status: "seed"
+    documents:
+      - path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-INTG-03_strict_mounted_harness_adapter_contract.md"
+      - path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CODEX-PLUGIN-01_codex_plugin_pre_turn_harness_review.md"
+      - path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CLAUDE-HOOK-01_claude_hook_strict_adapter_review.md"

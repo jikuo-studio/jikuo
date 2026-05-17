@@ -76,6 +76,13 @@ def unquote_scalar(value: str) -> Any:
         return []
     if value == "{}":
         return {}
+    if value.startswith("[") and value.endswith("]"):
+        try:
+            decoded = json.loads(value)
+        except json.JSONDecodeError:
+            decoded = None
+        if isinstance(decoded, list):
+            return decoded
     if value.lower() == "true":
         return True
     if value.lower() == "false":

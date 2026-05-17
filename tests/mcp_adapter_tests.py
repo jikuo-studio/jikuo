@@ -232,6 +232,30 @@ class MCPStageAAdapterTests(unittest.TestCase):
                 str((project_root / ".jikuo" / "runtime" / "last_card.md").resolve()),
             )
 
+    def test_propose_task_start_accepts_explicit_deferral_arguments(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = copy_fixture(POLICY_ACTIVE_PROJECT, tmp)
+
+            response = adapter.call_tool(
+                "jikuo.propose_task_start",
+                {
+                    "project_root": str(project_root),
+                    "task_title": "MCP deferral smoke",
+                    "task_session_decision": "defer",
+                    "task_session_defer_reason": "lightweight discussion only",
+                },
+                transport=schemas.LOCAL_STDIO_TRANSPORT,
+            )
+
+            self.assertEqual(response["tool_name"], "jikuo.propose_task_start")
+            cards = response["data_details"]["cards"]
+            self.assertEqual(cards[0]["card_kind"], "task_session_binding")
+            self.assertEqual(
+                cards[0]["task_session_resolution"]["status"],
+                "explicitly_deferred",
+            )
+            self.assertFalse((project_root / ".jikuo" / "task_sessions").exists())
+
     def test_get_configuration_status_returns_review_and_runtime_card(self):
         with tempfile.TemporaryDirectory() as tmp:
             project_root = copy_fixture(POLICY_ACTIVE_PROJECT, tmp)

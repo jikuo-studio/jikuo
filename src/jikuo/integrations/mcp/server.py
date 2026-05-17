@@ -125,6 +125,8 @@ def register_stage_a_tools(
         owner_agent: str | None = None,
         work_routing_category: str | None = None,
         work_routing_summary: str | None = None,
+        task_session_decision: str | None = None,
+        task_session_defer_reason: str | None = None,
     ) -> dict[str, Any]:
         return _call(
             "jikuo.propose_task_start",
@@ -139,6 +141,8 @@ def register_stage_a_tools(
                 "owner_agent": owner_agent,
                 "work_routing_category": work_routing_category,
                 "work_routing_summary": work_routing_summary,
+                "task_session_decision": task_session_decision,
+                "task_session_defer_reason": task_session_defer_reason,
             },
             default_transport=default_transport,
         )

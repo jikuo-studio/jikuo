@@ -19,6 +19,7 @@ JIKUO now uses this standalone repository as its active product-development home
 - `docs/governance/`: JIKUO product maps, execution mounts, kernel/skeleton boundaries, policy contracts, and agent instruction contracts.
 - `docs/integrations/`: JIKUO integration examples, client configuration notes, and smoke-test companion artifacts.
 - `docs/schemas/`: JIKUO-owned schema and view-model contracts.
+- `docs/registry/`: draft machine-readable registries for work orders, capabilities, scenario chains, and mount sets.
 - `docs/insights/`: captured development insights and their registry.
 - `docs/migration/`: repository migration handoffs and source-project archive transition records.
 
@@ -56,7 +57,18 @@ The following remain outside this repository's active documentation mount unless
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-17_task_session_index_stale_hint.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-18_previous_latest_todo_snapshot_posture.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-19_starter_policy_provenance_backfill.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-21_governed_slice_task_session_resolution.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-SEC-02_mcp_response_privacy_classification_baseline.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CODEX-PLUGIN-01_codex_plugin_pre_turn_harness_review.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CLAUDE-HOOK-01_claude_hook_strict_adapter_review.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-20_policy_dead_zone_detection.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-DOCREG-01_layered_document_registry.md`
+- `docs/registry/registry_index.yaml`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-DATA-01_structured_execution_event_ledger_and_analytics_contract.md`
+- `docs/schemas/execution_events_v0_draft.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-SELF-BOOTSTRAP-02_stable_self_bootstrap_execution_strategy.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-SELF-BOOTSTRAP-03_harness_workspace_boundary_spike.md`
+- `docs/insights/INSIGHT-2026-05-17-self-bootstrap-harness-workspace-boundary.md`
 - `docs/integrations/mcp_client_configuration_examples.md`
 - `docs/integrations/mcp_client_proof_playbook.md`
 - `docs/migration/NARRATIVESYSTEM_RESOURCE_POOL_HANDOFF.md`
@@ -75,6 +87,7 @@ When a future task creates JIKUO-owned docs:
 - put durable contracts under `docs/governance/`
 - put integration examples and client-specific setup notes under `docs/integrations/`
 - put schemas under `docs/schemas/`
+- put machine-readable documentation registries under `docs/registry/`
 - put development insights under `docs/insights/`
 - put source-project archive / migration handoffs under `docs/migration/`
 - update references in code, tests, sidecar state, fixtures, indexes, and checker rules
@@ -87,6 +100,8 @@ When a future task creates JIKUO-owned docs:
 Before closing each JIKUO development slice, check whether these main documents need updates:
 
 - `.jikuo/project_context.yaml`
+- `docs/registry/registry_index.yaml`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-DOCREG-01_layered_document_registry.md` while DOCREG sequencing remains transitional
 - `README.md`
 - `docs/README.md`
 - `docs/governance/jikuo_execution_mounts.md`

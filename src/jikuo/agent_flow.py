@@ -51,6 +51,7 @@ POLICY_EVAL_STATUS_NOT_EVALUATED = "not_evaluated"
 POLICY_CONDITION_EVAL_STATUS_NOT_EVALUATED = "not_evaluated"
 POLICY_FEEDBACK_OPTIONS_SCHEMA = "jikuo.policy_feedback_options.v0"
 POLICY_RUNTIME_STATUS_SCHEMA = "jikuo.policy_runtime_status.v0"
+POLICY_DEAD_ZONE_CLASSIFICATION_SCHEMA = "jikuo.policy_dead_zone_classification.v0"
 DISPLAY_DIRECTIVES_SCHEMA = "jikuo.display_directives.v0"
 CONVERSATION_ROUTER_SCHEMA = "jikuo.conversation_turn_router.v0"
 POLICY_SUGGESTION_REVIEW_SCHEMA = "jikuo.proactive_policy_suggestion_review.v0"
@@ -103,6 +104,27 @@ WORK_ROUTING_CATEGORY_ALIASES = {
     "defer": "deferred",
     "deferred": "deferred",
     "mixed": "mixed",
+}
+
+POLICY_DEAD_ZONE_NON_GOVERNANCE_EVENTS = {
+    "audit_report",
+    "configuration_review",
+    "index_preview",
+    "policy_evolution_plan",
+    "policy_feedback_record",
+    "policy_template_import_plan",
+    "policy_write_plan",
+    "project_status",
+    "starter_policy_pack_init",
+    "task_continue",
+}
+POLICY_DEAD_ZONE_GOVERNED_WORK_EVENTS = {
+    "completion_review",
+    "evidence_review",
+    "handoff",
+    "pre_delivery",
+    "task_start",
+    "verification_review",
 }
 
 EVENT_ALIASES = {
@@ -173,6 +195,7 @@ NO_WRITE_ATOMS = {
     "CAP-POLICY-EVOLUTION-PLAN-PROPOSE-01",
     "CAP-POLICY-RUNTIME-STATUS-CARD-01",
     "CAP-RUNTIME-VISIBILITY-CHANNEL-01",
+    "CAP-TASK-SESSION-RESOLUTION-01",
     "CAP-TASK-SESSION-BINDING-EVIDENCE-01",
     "CAP-TASKMAP-INSIGHT-FOLLOWUP-EVIDENCE-01",
     "CAP-STARTER-POLICY-PACK-INIT-01",
@@ -500,13 +523,24 @@ def task_session_binding_evidence_for(
 ) -> dict[str, Any]:
     task_session_refs = list(card.get("task_session_refs") or [])
     command = card.get("command_proposal") or {}
+    resolution = dict(card.get("task_session_resolution") or {})
     binding_status = str(
-        card.get(
-            "task_session_binding_status",
-            "guarded_create_proposed"
+        resolution.get("status")
+        or card.get("task_session_binding_status")
+        or (
+            "needs_user_decision"
             if command.get("command_preview")
-            else "binding_reviewed",
+            else "binding_reviewed"
         )
+    )
+    evidence_status = (
+        "ok"
+        if binding_status == "existing_session_bound"
+        else "explicitly_deferred"
+        if binding_status == "explicitly_deferred"
+        else "needs_user_decision"
+        if binding_status in {"needs_user_decision", "guarded_create_proposed"}
+        else "ok"
     )
     return {
         "evidence_id": stable_id(
@@ -529,7 +563,7 @@ def task_session_binding_evidence_for(
             "actor": "agent",
             "tool": "python -B -m jikuo.agent_flow",
         },
-        "status": "ok",
+        "status": evidence_status,
         "summary": (
             "agent_flow surfaced task-session binding handling for this slice: "
             f"{binding_status}"
@@ -539,6 +573,7 @@ def task_session_binding_evidence_for(
             "task_session_refs": task_session_refs,
             "command_kind": command.get("command_kind"),
             "approval_required": bool(command.get("requires_user_approval")),
+            "resolution": resolution or None,
         },
     }
 
@@ -835,8 +870,115 @@ def summarize_missing_evidence(
     return missing_items
 
 
+def classify_policy_dead_zone(
+    *,
+    event: str | None,
+    task_type: str,
+    jikuo_layer: str,
+    active_count: int,
+    triggered_count: int,
+    store_status: str,
+    condition_reports: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    if store_status != "active" or active_count == 0 or triggered_count > 0:
+        return None
+
+    normalized_event = event or "unknown"
+    context_blockers = [
+        report
+        for report in condition_reports
+        if str(report.get("status") or "") != "matched"
+        and str(report.get("condition_type") or "")
+        in {"task_type_is", "jikuo_layer_is"}
+    ]
+    other_blockers = [
+        report
+        for report in condition_reports
+        if str(report.get("status") or "") != "matched"
+    ]
+
+    if normalized_event == "conversation_turn":
+        classification = "route_followup_required"
+        severity = "warning"
+        reason = (
+            "conversation_turn evaluated active policies directly; use the router "
+            "follow-up task_start or completion_review call for governed work"
+        )
+        next_actions = [
+            "call jikuo.propose_task_start or the router-listed follow-up tool before continuing task work",
+            "keep conversation_turn as the routing step, not the final policy-governed work step",
+        ]
+    elif normalized_event in POLICY_DEAD_ZONE_NON_GOVERNANCE_EVENTS:
+        classification = "non_governance_event"
+        severity = "info"
+        reason = (
+            f"{normalized_event} is not normally a governed work event for project policies"
+        )
+        next_actions = [
+            "do not treat this card as proof that task work was governed",
+            "for actual work, run route_user_request and then task_start or completion_review with task context",
+        ]
+    elif normalized_event in POLICY_DEAD_ZONE_GOVERNED_WORK_EVENTS and context_blockers:
+        first = context_blockers[0]
+        classification = "missing_or_mismatched_task_context"
+        severity = "warning"
+        reason = str(first.get("summary") or "task context did not match active policies")
+        next_actions = [
+            "rerun the governed event with the task_type and jikuo_layer expected by relevant active policies",
+            "if the work is genuinely outside existing policy scope, record a policy coverage gap or propose a new policy",
+        ]
+    elif normalized_event in POLICY_DEAD_ZONE_GOVERNED_WORK_EVENTS and other_blockers:
+        first = other_blockers[0]
+        classification = "condition_mismatch"
+        severity = "warning"
+        reason = str(first.get("summary") or "policy conditions did not match")
+        next_actions = [
+            "review changed_path / added_path context and rerun with the specific paths being governed",
+            "if no active policy should cover this work, record it as a healthy no-op or coverage gap explicitly",
+        ]
+    elif normalized_event in POLICY_DEAD_ZONE_GOVERNED_WORK_EVENTS:
+        classification = "policy_coverage_gap"
+        severity = "warning"
+        reason = (
+            f"{normalized_event} is a governed work event, but no active policy "
+            "reported a matching trigger or condition"
+        )
+        next_actions = [
+            "review whether the project needs policies for this work type",
+            "consider starter-policy expansion or a reviewed project-local policy proposal",
+        ]
+    else:
+        classification = "unknown_event_no_trigger"
+        severity = "warning"
+        reason = (
+            f"{normalized_event} produced zero triggered policies, and JIKUO has "
+            "no specific dead-zone classification for that event"
+        )
+        next_actions = [
+            "rerun through route_user_request or a known governed work event",
+            "record the event as a LIVE-20 classification gap if it represents real work",
+        ]
+
+    return {
+        "schema": POLICY_DEAD_ZONE_CLASSIFICATION_SCHEMA,
+        "status": "detected",
+        "classification": classification,
+        "severity": severity,
+        "event": normalized_event,
+        "task_type": task_type,
+        "jikuo_layer": jikuo_layer,
+        "active_policy_count": active_count,
+        "triggered_policy_count": triggered_count,
+        "reason": reason,
+        "next_actions": next_actions,
+    }
+
+
 def build_policy_runtime_status_card(
     *,
+    event: str | None,
+    task_type: str,
+    jikuo_layer: str,
     policy_context: dict[str, Any],
     triggered_policies: list[dict[str, Any]],
     required_actions: list[dict[str, Any]],
@@ -861,9 +1003,20 @@ def build_policy_runtime_status_card(
     triggered_count = len(triggered_policies)
     missing_count = len(missing_evidence)
     store_status = str(policy_context.get("policy_store_status") or "unavailable")
+    dead_zone = classify_policy_dead_zone(
+        event=event,
+        task_type=task_type,
+        jikuo_layer=jikuo_layer,
+        active_count=active_count,
+        triggered_count=triggered_count,
+        store_status=store_status,
+        condition_reports=condition_reports,
+    )
     card_status = (
         "review"
-        if missing_count > 0 or store_status in {"stale", "conflict"}
+        if missing_count > 0
+        or store_status in {"stale", "conflict"}
+        or (dead_zone and dead_zone.get("severity") == "warning")
         else "ok"
     )
     summary = (
@@ -888,6 +1041,12 @@ def build_policy_runtime_status_card(
         f"missing_evidence_count: {missing_count}",
         f"policy_feedback_option_count: {len(policy_feedback_options)}",
     ]
+    if dead_zone:
+        shown_outputs.append(
+            "policy_dead_zone: "
+            f"{dead_zone['classification']} / {dead_zone['severity']} - "
+            f"{dead_zone['reason']}"
+        )
     for item in triggered_policies:
         title = item.get("policy_title") or item.get("policy_ref")
         shown_outputs.append(f"triggered_policy: {item.get('policy_ref')} ({title})")
@@ -907,6 +1066,8 @@ def build_policy_runtime_status_card(
         ]
     elif triggered_policies:
         next_actions = ["continue with triggered policy actions visible in this proposal"]
+    elif dead_zone:
+        next_actions = list(dead_zone["next_actions"])
     elif store_status == "active":
         next_actions = ["continue; no active policy triggered for this event"]
     else:
@@ -945,6 +1106,8 @@ def build_policy_runtime_status_card(
         "missing_evidence": missing_evidence,
         "policy_feedback_options": policy_feedback_options,
     }
+    if dead_zone:
+        card["policy_runtime_status"]["policy_dead_zone"] = dead_zone
     trace = atom_trace(
         loop_step_id="DPL-06",
         atom_id="CAP-POLICY-RUNTIME-STATUS-CARD-01",
@@ -1653,6 +1816,8 @@ def build_task_start_cards(
     task_title: str | None,
     session_id: str | None,
     owner_agent: str,
+    task_session_decision: str | None = None,
+    task_session_defer_reason: str | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]:
     if not task_title:
         refusal = "task_title_required_for_task_start"
@@ -1694,6 +1859,13 @@ def build_task_start_cards(
             )
             card["task_session_refs"] = [session_id]
             card["task_session_binding_status"] = "existing_session_bound"
+            card["task_session_resolution"] = {
+                "schema": "jikuo.task_session_resolution.v0",
+                "status": "existing_session_bound",
+                "decision": "bind_existing_task_session",
+                "requires_user_decision": False,
+                "allowed_next_decisions": ["continue_with_bound_task_session"],
+            }
             traces = [
                 atom_trace(
                     loop_step_id="DPL-04",
@@ -1711,6 +1883,71 @@ def build_task_start_cards(
                 ),
             ]
             return [card], traces, []
+    if task_session_decision == "defer":
+        if not task_session_defer_reason:
+            refusal = "task_session_defer_reason_required"
+            card = generic_card(
+                card_kind="task_session_resolution_refusal",
+                status="refused",
+                title="Task-session defer needs a reason",
+                summary=(
+                    "Explicitly deferring task-session creation requires a compact "
+                    "reason so the governed slice does not silently lose lifecycle context."
+                ),
+                refusal_reasons=[refusal],
+                next_actions=[
+                    "provide --task-session-defer-reason before explicitly deferring"
+                ],
+            )
+            return [card], [], [refusal]
+        resolution = {
+            "schema": "jikuo.task_session_resolution.v0",
+            "status": "explicitly_deferred",
+            "decision": "explicitly_defer_task_session",
+            "requires_user_decision": False,
+            "reason": task_session_defer_reason,
+            "allowed_next_decisions": ["continue_without_task_session_for_this_slice"],
+        }
+        card = generic_card(
+            card_kind="task_session_binding",
+            status="review",
+            title="Task-session resolution",
+            summary=(
+                "Task-session creation is explicitly deferred for this governed slice."
+            ),
+            shown_inputs=[
+                f"project_root: {project_root}",
+                f"task_title: {task_title}",
+            ],
+            shown_outputs=[
+                "task_session_resolution_status: explicitly_deferred",
+                f"defer_reason: {task_session_defer_reason}",
+            ],
+            next_actions=[
+                "continue only in lightweight/no-session mode for this slice",
+                "report the task-session deferral in the final user summary",
+            ],
+        )
+        card["task_session_refs"] = []
+        card["task_session_binding_status"] = "explicitly_deferred"
+        card["task_session_resolution"] = resolution
+        traces = [
+            atom_trace(
+                loop_step_id="DPL-04",
+                atom_id="CAP-TASK-SESSION-RESOLUTION-01",
+                mode="no-write",
+                status="explicitly_deferred",
+                summary="recorded explicit task-session deferral as no-write resolution evidence",
+            ),
+            atom_trace(
+                loop_step_id="DPL-06",
+                atom_id="CAP-CARD-TASKSESSION-01",
+                mode="no-write",
+                status=card_status(card),
+                summary="projected explicit task-session deferral into a desktop card",
+            ),
+        ]
+        return [card], traces, []
 
     plan = task_session.build_start_plan(
         project_root=project_root,
@@ -2791,6 +3028,8 @@ def build_proposal(
     produced_evidence: list[dict[str, Any]] | None = None,
     work_routing_category: str | None = None,
     work_routing_summary: str | None = None,
+    task_session_decision: str | None = None,
+    task_session_defer_reason: str | None = None,
 ) -> dict[str, Any]:
     event = normalize_event(raw_event)
     cards: list[dict[str, Any]]
@@ -2833,6 +3072,8 @@ def build_proposal(
             task_title=task_title,
             session_id=session_id,
             owner_agent=owner_agent,
+            task_session_decision=task_session_decision,
+            task_session_defer_reason=task_session_defer_reason,
         )
     elif event == "index_preview":
         cards, traces, refusals = build_index_cards(project_root=project_root)
@@ -2953,12 +3194,25 @@ def build_proposal(
         and card.get("status") != "refused"
         for card in cards
     ):
+        task_resolution_status = "ok"
+        if any(
+            (card.get("task_session_resolution") or {}).get("status")
+            == "needs_user_decision"
+            for card in cards
+        ):
+            task_resolution_status = "review"
+        elif any(
+            (card.get("task_session_resolution") or {}).get("status")
+            == "explicitly_deferred"
+            for card in cards
+        ):
+            task_resolution_status = "explicitly_deferred"
         traces.append(
             atom_trace(
                 loop_step_id="DPL-05",
                 atom_id="CAP-TASK-SESSION-BINDING-EVIDENCE-01",
                 mode="no-write",
-                status="ok",
+                status=task_resolution_status,
                 summary=(
                     "projected task-session binding handling as report-only "
                     "policy evidence"
@@ -3004,6 +3258,9 @@ def build_proposal(
     )
     if event is not None:
         policy_runtime_card, policy_runtime_trace = build_policy_runtime_status_card(
+            event=event,
+            task_type=task_type,
+            jikuo_layer=jikuo_layer,
             policy_context=policy_context,
             triggered_policies=policy_sections["triggered_policies"],
             required_actions=policy_sections["required_actions"],
@@ -3870,6 +4127,13 @@ def build_parser() -> argparse.ArgumentParser:
     propose.add_argument("--event", required=True)
     propose.add_argument("--task-title", default=None)
     propose.add_argument("--session-id", default=None)
+    propose.add_argument(
+        "--task-session-decision",
+        choices=("defer",),
+        default=None,
+        help="Explicit no-write task-session resolution decision for task_start.",
+    )
+    propose.add_argument("--task-session-defer-reason", default=None)
     propose.add_argument("--policy-event", default=None)
     propose.add_argument("--task-type", default=None)
     propose.add_argument("--jikuo-layer", default=None)
@@ -4109,6 +4373,8 @@ def main(argv: list[str] | None = None) -> int:
         produced_evidence=produced_evidence,
         work_routing_category=args.work_routing_category,
         work_routing_summary=args.work_routing_summary,
+        task_session_decision=args.task_session_decision,
+        task_session_defer_reason=args.task_session_defer_reason,
     )
     proposal_output = proposal_with_chat_ready_markdown(
         proposal,

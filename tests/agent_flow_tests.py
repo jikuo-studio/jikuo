@@ -289,7 +289,7 @@ def write_task_session_binding_policy_store(root: Path) -> None:
             [
                 'schema_version: "jikuo.configurable_rule_policy.v0"',
                 f'policy_id: "{policy_id}"',
-                "version: 1",
+                "version: 2",
                 'status: "active_report_only"',
                 'title: "Task-session binding at governed slice start"',
                 'scenario_package: "self_bootstrap_governance"',
@@ -300,16 +300,7 @@ def write_task_session_binding_policy_store(root: Path) -> None:
                 '  - trigger_id: "TRG-task-start"',
                 '    type: "task_lifecycle_event"',
                 '    event: "task_start"',
-                "conditions:",
-                '  - condition_id: "COND-code-change"',
-                '    type: "task_type_is"',
-                '    value: "code_change"',
-                '  - condition_id: "COND-implementation-governance"',
-                '    type: "jikuo_layer_is"',
-                '    value: "implementation_governance"',
-                '  - condition_id: "COND-source-change"',
-                '    type: "changed_path_matches"',
-                '    pattern: "src/jikuo/**"',
+                "conditions: []",
                 "required_actions:",
                 '  - action_id: "ACT-bind-create-or-explicitly-defer-task-session"',
                 '    type: "bind_create_or_explicitly_defer_task_session"',
@@ -317,6 +308,7 @@ def write_task_session_binding_policy_store(root: Path) -> None:
                 '  - evidence_id: "EVD-task-session-binding-evidence"',
                 '    type: "task_session_binding_evidence"',
                 '    satisfies_action: "ACT-bind-create-or-explicitly-defer-task-session"',
+                '    required_status: ["ok", "needs_user_decision", "explicitly_deferred"]',
                 "enforcement:",
                 '  phase: "report_only"',
                 '  level: "review_required"',
@@ -333,7 +325,7 @@ def write_task_session_binding_policy_store(root: Path) -> None:
                 'store_root: ".jikuo/policies"',
                 "active_policy_refs:",
                 f'  - policy_id: "{policy_id}"',
-                "    version: 1",
+                "    version: 2",
                 f'    path: ".jikuo/policies/approved/{policy_id}.yaml"',
                 "proposal_refs:",
                 "  []",
@@ -1952,6 +1944,61 @@ class AgentFlowProposalTests(unittest.TestCase):
         self.assertIn("CAP-POLICY-CONDITION-EVALUATOR-01", atom_ids)
         self.assertFalse((POLICY_CONDITION_PROJECT / ".jikuo" / "task_sessions").exists())
 
+    def test_policy_dead_zone_classifies_task_context_mismatch(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "condition_project"
+            shutil.copytree(POLICY_CONDITION_PROJECT, project_root)
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "propose",
+                    "--event",
+                    "task_start",
+                    "--task-title",
+                    "Mismatched Context Probe",
+                    "--project-root",
+                    str(project_root),
+                    "--task-type",
+                    "analysis",
+                    "--jikuo-layer",
+                    "design_review",
+                    "--changed-path",
+                    "docs/jikuo/work_orders/SPRINT_050_probe.md",
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            proposal = json.loads(completed.stdout)
+            runtime_cards = [
+                card
+                for card in proposal["cards"]
+                if card["card_kind"] == "policy_runtime_status"
+            ]
+            self.assertEqual(len(runtime_cards), 1)
+            runtime_card = runtime_cards[0]
+            runtime_status = runtime_card["policy_runtime_status"]
+            dead_zone = runtime_status["policy_dead_zone"]
+            self.assertEqual(dead_zone["schema"], "jikuo.policy_dead_zone_classification.v0")
+            self.assertEqual(dead_zone["classification"], "missing_or_mismatched_task_context")
+            self.assertEqual(dead_zone["severity"], "warning")
+            self.assertEqual(dead_zone["event"], "task_start")
+            self.assertEqual(dead_zone["task_type"], "analysis")
+            self.assertIn("task_type analysis did not match", dead_zone["reason"])
+            self.assertEqual(runtime_card["status"], "review")
+            self.assertIn(
+                "policy_dead_zone: missing_or_mismatched_task_context",
+                proposal["chat_ready_markdown"],
+            )
+
     def test_task_start_projects_real_chain_policy_missing_evidence_and_feedback(self):
         completed = subprocess.run(
             [
@@ -2172,17 +2219,117 @@ class AgentFlowProposalTests(unittest.TestCase):
                 proposal["evidence_status"][0]["required_type"],
                 "task_session_binding_evidence",
             )
-            self.assertEqual(proposal["evidence_status"][0]["current_status"], "ok")
+            self.assertEqual(
+                proposal["evidence_status"][0]["current_status"],
+                "needs_user_decision",
+            )
             atom_ids = {trace["atom_id"] for trace in proposal["atom_trace"]}
             self.assertIn("CAP-TASK-SESSION-BINDING-EVIDENCE-01", atom_ids)
             self.assertTrue(
                 proposal["approval_boundary"]["guarded_apply_available"]
             )
             command = proposal["cards"][0]["command_proposal"]["command_preview"]
+            self.assertEqual(
+                proposal["cards"][0]["task_session_resolution"]["status"],
+                "needs_user_decision",
+            )
             self.assertIn("python -B -m jikuo.agent_flow apply", command)
             self.assertIn("--operation \"task_session_start\"", command)
             self.assertIn("--confirm-apply", command)
             self.assertIn("--approval-phrase", command)
+            self.assertFalse((project_root / ".jikuo" / "task_sessions").exists())
+
+    def test_task_start_policy_triggers_for_document_governance_slice(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            shutil.copytree(READY_PROJECT, project_root)
+            write_task_session_binding_policy_store(project_root)
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "propose",
+                    "--event",
+                    "task_start",
+                    "--task-title",
+                    "Document Governance Binding Probe",
+                    "--project-root",
+                    str(project_root),
+                    "--task-type",
+                    "documentation_registry_update",
+                    "--jikuo-layer",
+                    "document_governance",
+                    "--changed-path",
+                    "docs/governance/jikuo_productization_task_map.md",
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            proposal = json.loads(completed.stdout)
+            self.assertEqual(
+                proposal["triggered_policies"][0]["policy_ref"],
+                "POLICY-jikuo-task-session-binding-at-slice-start",
+            )
+            self.assertEqual(proposal["condition_reports"], [])
+            self.assertEqual(proposal["missing_evidence_reports"], [])
+            self.assertEqual(
+                proposal["evidence_status"][0]["current_status"],
+                "needs_user_decision",
+            )
+
+    def test_task_start_policy_accepts_explicit_task_session_deferral(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            shutil.copytree(READY_PROJECT, project_root)
+            write_task_session_binding_policy_store(project_root)
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "propose",
+                    "--event",
+                    "task_start",
+                    "--task-title",
+                    "Explicit Deferral Probe",
+                    "--project-root",
+                    str(project_root),
+                    "--task-session-decision",
+                    "defer",
+                    "--task-session-defer-reason",
+                    "lightweight design discussion only",
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            proposal = json.loads(completed.stdout)
+            self.assertEqual(proposal["cards"][0]["card_kind"], "task_session_binding")
+            self.assertEqual(
+                proposal["cards"][0]["task_session_resolution"]["status"],
+                "explicitly_deferred",
+            )
+            self.assertEqual(
+                proposal["evidence_status"][0]["current_status"],
+                "explicitly_deferred",
+            )
+            self.assertEqual(proposal["missing_evidence_reports"], [])
             self.assertFalse((project_root / ".jikuo" / "task_sessions").exists())
 
     def test_task_start_binds_existing_task_session_as_policy_evidence(self):
@@ -2464,6 +2611,62 @@ class AgentFlowProposalTests(unittest.TestCase):
         atom_ids = {trace["atom_id"] for trace in proposal["atom_trace"]}
         self.assertIn("CAP-POLICY-STORE-WRITE-PROPOSE-01", atom_ids)
         self.assertFalse((READY_PROJECT / ".jikuo" / "policies").exists())
+
+    def test_policy_dead_zone_classifies_policy_write_plan_as_non_governance(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "active_project"
+            shutil.copytree(POLICY_ACTIVE_PROJECT, project_root)
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "propose",
+                    "--event",
+                    "policy_write_plan",
+                    "--policy-ref",
+                    "POLICY-new-governance-rule",
+                    "--policy-title",
+                    "New governance rule",
+                    "--policy-source-ref",
+                    "<exact user phrase as spoken>",
+                    "--policy-task-type",
+                    "code_change",
+                    "--policy-jikuo-layer",
+                    "implementation_governance",
+                    "--policy-changed-path-pattern",
+                    "src/**",
+                    "--project-root",
+                    str(project_root),
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            proposal = json.loads(completed.stdout)
+            runtime_cards = [
+                card
+                for card in proposal["cards"]
+                if card["card_kind"] == "policy_runtime_status"
+            ]
+            self.assertEqual(len(runtime_cards), 1)
+            runtime_card = runtime_cards[0]
+            runtime_status = runtime_card["policy_runtime_status"]
+            dead_zone = runtime_status["policy_dead_zone"]
+            self.assertEqual(dead_zone["classification"], "non_governance_event")
+            self.assertEqual(dead_zone["severity"], "info")
+            self.assertEqual(dead_zone["event"], "policy_write_plan")
+            self.assertEqual(runtime_card["status"], "ok")
+            self.assertIn(
+                "do not treat this card as proof that task work was governed",
+                dead_zone["next_actions"],
+            )
 
     def test_starter_policy_pack_init_projects_agent_flow_apply_without_write(self):
         with tempfile.TemporaryDirectory() as tmp:

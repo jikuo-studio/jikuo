@@ -24,6 +24,14 @@ document_roles:
     path: "docs/governance/jikuo_productization_task_map.md"
     required: true
     note: "Current productization task map and latest todo section."
+  document_registry_transition_work_order:
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-DOCREG-01_layered_document_registry.md"
+    required: true
+    note: "Transitional source of truth for the DOCREG task sequence until docs/registry/registry_index.yaml and first shards exist."
+  registry_index:
+    path: "docs/registry/registry_index.yaml"
+    required: true
+    note: "Draft L0 document-registry index introduced by DOCREG-01A; source-of-truth shard routing during the registry migration."
   previous_todo_map:
     path: null
     required: false
@@ -73,6 +81,26 @@ document_roles:
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-INTG-03_strict_mounted_harness_adapter_contract.md"
     required: true
     note: "Contract for host adapters that turn mounted mode from instruction-only behavior into pre-turn JIKUO execution."
+  codex_plugin_harness_review_work_order:
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CODEX-PLUGIN-01_codex_plugin_pre_turn_harness_review.md"
+    required: true
+    note: "Codex proof task for determining whether plugin / hook surfaces can provide strict pre-turn JIKUO execution or only instruction / MCP setup assistance."
+  claude_hook_harness_review_work_order:
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CLAUDE-HOOK-01_claude_hook_strict_adapter_review.md"
+    required: true
+    note: "Claude proof task for determining whether a hook-capable host can run JIKUO before every user turn and surface cards / runtime links without overclaiming strict mounted support."
+  self_bootstrap_stable_execution_work_order:
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-SELF-BOOTSTRAP-02_stable_self_bootstrap_execution_strategy.md"
+    required: true
+    note: "Stable self-bootstrap strategy for making JIKUO development consistently invoke route/config/task-start/completion-review tooling instead of relying on assistant memory."
+  self_bootstrap_harness_workspace_boundary_work_order:
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-SELF-BOOTSTRAP-03_harness_workspace_boundary_spike.md"
+    required: true
+    note: "Spike for testing whether self-bootstrap should use a parent harness workspace with child source repositories before any source-directory migration."
+  self_bootstrap_harness_workspace_boundary_insight:
+    path: "docs/insights/INSIGHT-2026-05-17-self-bootstrap-harness-workspace-boundary.md"
+    required: false
+    note: "Captured insight that JIKUO harness state may belong at a workspace boundary rather than inside the source repository being governed."
   trigger_mode_conversation_router_work_order:
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-ROUTER-01_trigger_mode_and_conversation_turn_router.md"
     required: true
@@ -85,6 +113,10 @@ document_roles:
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-15_self_bootstrap_task_session_binding.md"
     required: true
     note: "Pre-MCP follow-up requiring each governed JIKUO development slice to bind, create, or explicitly defer a task-session."
+  governed_slice_task_session_resolution_work_order:
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-21_governed_slice_task_session_resolution.md"
+    required: true
+    note: "Hardening slice that makes task-session resolution visible for every governed task_start, including documentation and registry work."
   policy_runtime_card_priority_work_order:
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-16_policy_runtime_card_priority.md"
     required: true
@@ -119,6 +151,10 @@ document_roles:
     path: "docs/insights/INSIGHT-2026-05-16-studio-dashboard-frontend-architecture.md"
     required: false
     note: "Mount before future JIKUO-STUDIO-01 dashboard / Studio architecture or implementation slices."
+  structured_execution_event_ledger_work_order:
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-DATA-01_structured_execution_event_ledger_and_analytics_contract.md"
+    required: true
+    note: "Future dashboard / BI / support-bundle data contract; mount before analytics, runtime event persistence, or Studio data-model work."
   mcp_client_configuration_examples:
     path: "docs/integrations/mcp_client_configuration_examples.md"
     required: true
@@ -142,6 +178,10 @@ main_document_mounts:
     - ".jikuo/project_context.yaml"
     - "docs/governance/jikuo_execution_mounts.md"
   checked_before_slice_completion:
+    - path: "docs/registry/registry_index.yaml"
+      update_required_when: "registry shard authority, projection metadata, or impact-tag routing changes"
+    - path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-DOCREG-01_layered_document_registry.md"
+      update_required_when: "documentation registry scope, current DOCREG task sequence, or self-bootstrap hierarchy deferment changes before registry shards exist"
     - path: ".jikuo/project_context.yaml"
       update_required_when: "document roles, directory roles, mount policy, or completion-check scope changes"
     - path: "README.md"
@@ -172,6 +212,10 @@ directory_roles:
     path: "docs/migration"
     required: false
     note: "Source-project archive and migration handoff records. These are not runtime authority unless a work order explicitly mounts them."
+  document_registry:
+    path: "docs/registry"
+    required: true
+    note: "Draft machine-readable document registry shards introduced by DOCREG-01A."
   policy_store:
     path: ".jikuo/policies"
     required: true
@@ -182,6 +226,11 @@ directory_roles:
     path: ".jikuo/runtime"
     required: false
     note: "Out-of-band runtime visibility channel root for JIKUO-LIVE-12; ignored local projection files are surfaced through jikuo show and client_display_links."
+  structured_execution_events:
+    path: ".jikuo/events"
+    required: false
+    status: "planned_by_DATA_01"
+    note: "Future local append-only structured execution ledger for dashboard, BI, support bundles, and audit projections. Do not treat as implemented until DATA-01 schema and write slices are accepted."
   task_sessions:
     path: ".jikuo/task_sessions"
     required: false

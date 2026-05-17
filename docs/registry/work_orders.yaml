@@ -1,0 +1,1004 @@
+schema_version: "jikuo.registry.v0_draft"
+registry_id: "jikuo-work-orders"
+entries:
+  - id: "JIKUO-AGENT-00"
+    title: "SPRINT_050_WO-PER-JIKUO-AGENT-00: Desktop-Agent-First Interaction Contract"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-AGENT-00_agent_native_interaction_contract.md"
+    sprint: "SPRINT_050"
+    status: "Accepted by user; upstream desktop-agent-first contract for `JIKUO-CORE-01`"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-AGENT-01"
+    title: "SPRINT_050_WO-PER-JIKUO-AGENT-01: Desktop Agent Card Projection Contract"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-AGENT-01_desktop_agent_card_projection_contract.md"
+    sprint: "SPRINT_050"
+    status: "Accepted by user for downstream project-local state / sidecar storage planning"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-AGENT-02"
+    title: "SPRINT_050_WO-PER-JIKUO-AGENT-02: Desktop-Agent Task-Session Workflow Cards And Command Composition"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-AGENT-02_desktop_agent_task_session_workflow_cards.md"
+    sprint: "SPRINT_050"
+    status: "Draft, ready for user review"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-AGENT-03"
+    title: "SPRINT_050_WO-PER-JIKUO-AGENT-03: Minimal Task-Session Card Projection Helper"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-AGENT-03_minimal_task_session_card_projection_helper.md"
+    sprint: "SPRINT_050"
+    status: "Implemented, ready for user review"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-AGENT-04"
+    title: "SPRINT_050_WO-PER-JIKUO-AGENT-04: Desktop Agent Invocation Contract"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-AGENT-04_desktop_agent_invocation_contract.md"
+    sprint: "SPRINT_050"
+    status: "Accepted by user for downstream `agent_flow.py` implementation"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-AGENT-05"
+    title: "SPRINT_050_WO-PER-JIKUO-AGENT-05: Local Deterministic Agent Flow Proposal Runner"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-AGENT-05_local_deterministic_agent_flow_proposal_runner.md"
+    sprint: "SPRINT_050"
+    status: "Accepted as no-write proposal runner for downstream instruction-pack planning"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-PROJECT-STATE-STATUS-01"
+      - "CAP-TASK-START-DRYRUN-01"
+      - "CAP-CARD-TASKSESSION-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-AGENT-06"
+    title: "SPRINT_050_WO-PER-JIKUO-AGENT-06: Lightweight Desktop Agent Instruction Pack"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-AGENT-06_lightweight_desktop_agent_instruction_pack.md"
+    sprint: "SPRINT_050"
+    status: "Implemented, ready for user review"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-AGENT-07"
+    title: "SPRINT_050_WO-PER-JIKUO-AGENT-07: Policy-Aware Agent Flow Proposal"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-AGENT-07_policy_aware_agent_flow_proposal.md"
+    sprint: "SPRINT_050"
+    status: "Implemented, ready for user review"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-AGENT-08"
+    title: "SPRINT_050_WO-PER-JIKUO-AGENT-08: Policy-Aware Agent Flow Fallback"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-AGENT-08_policy_aware_agent_flow_fallback.md"
+    sprint: "SPRINT_050"
+    status: "Implemented, ready for user review"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-POLICY-STORE-ADAPTER-01"
+      - "CAP-POLICY-AWARE-FLOW-IMPLEMENTATION-01"
+      - "CAP-POLICY-EVIDENCE-CHECKER-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-ARCH-01"
+    title: "SPRINT_050_WO-PER-JIKUO-ARCH-01: Skeleton / Kernel Boundary And Kernel Backlog"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-ARCH-01_skeleton_kernel_boundary_and_kernel_backlog.md"
+    sprint: "SPRINT_050"
+    status: "Implemented, ready for user review"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-ARCH-02"
+    title: "SPRINT_050_WO-PER-JIKUO-ARCH-02: Integration Neutrality And Integrations Layout"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-ARCH-02_integration_neutrality_and_integrations_layout.md"
+    sprint: "SPRINT_050"
+    status: "Accepted on 2026-05-14, immediate pre-MCP architecture contract"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-INTEGRATION-NEUTRALITY-CONTRACT-01"
+      - "CAP-MCP-AGENT-FLOW-WRAPPER-01"
+      - "CAP-AGENTS-SDK-ADAPTER-EXPLORATION-01"
+      - "CAP-RUNTIME-VISIBILITY-CHANNEL-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-ARCH-03"
+    title: "SPRINT_050_WO-PER-JIKUO-ARCH-03: MCP Pre-Implementation API Neutrality Review"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-ARCH-03_mcp_pre_implementation_api_neutrality_review.md"
+    sprint: "SPRINT_050"
+    status: "Accepted on 2026-05-15, pre-MCP review complete"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-MCP-PREIMPLEMENTATION-API-NEUTRALITY-REVIEW-01"
+      - "CAP-INTEGRATION-NEUTRALITY-CONTRACT-01"
+      - "CAP-MCP-AGENT-FLOW-WRAPPER-01"
+      - "CAP-RUNTIME-VISIBILITY-CHANNEL-01"
+      - "CAP-TASK-SESSION-BINDING-EVIDENCE-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-CLAUDE-HOOK-01"
+    title: "SPRINT_050_WO-PER-JIKUO-CLAUDE-HOOK-01: Claude Hook Strict Adapter Review"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CLAUDE-HOOK-01_claude_hook_strict_adapter_review.md"
+    sprint: "SPRINT_050"
+    status: "Planned; do not implement before Claude host proof and explicit user approval"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-CODEX-PLUGIN-01"
+    title: "SPRINT_050_WO-PER-JIKUO-CODEX-PLUGIN-01: Codex Plugin Pre-Turn Harness Review"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CODEX-PLUGIN-01_codex_plugin_pre_turn_harness_review.md"
+    sprint: "SPRINT_050"
+    status: "Planned; do not implement before client proof and explicit user approval"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-CORE-01"
+    title: "SPRINT_050_WO-PER-JIKUO-CORE-01: Structured Result Model"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-01_structured_result_model.md"
+    sprint: "SPRINT_050"
+    status: "Accepted by user; upstream structured result model for `JIKUO-CORE-02`"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-CORE-02"
+    title: "SPRINT_050_WO-PER-JIKUO-CORE-02: UI-Ready Rule Registry Model"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-02_ui_ready_rule_registry_model.md"
+    sprint: "SPRINT_050"
+    status: "Part 1 accepted by user; Part 2 view-model schema accepted for downstream planning"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-CORE-03"
+    title: "SPRINT_050_WO-PER-JIKUO-CORE-03: Task Session And Evidence Model"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-03_task_session_and_evidence_model.md"
+    sprint: "SPRINT_050"
+    status: "Part 1 accepted by user; Part 2 task-session schema accepted for downstream projection planning"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-CORE-04"
+    title: "SPRINT_050_WO-PER-JIKUO-CORE-04: Project Local State And Sidecar Storage Contract"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-04_project_local_state_and_sidecar_storage_contract.md"
+    sprint: "SPRINT_050"
+    status: "Accepted by user for downstream report-only sidecar bootstrap planning"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-CORE-05"
+    title: "SPRINT_050_WO-PER-JIKUO-CORE-05: Configurable Rule Trigger And Execution Policy"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-05_configurable_rule_trigger_and_execution_policy.md"
+    sprint: "SPRINT_050"
+    status: "Implemented, ready for user review"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-CORE-06"
+    title: "SPRINT_050_WO-PER-JIKUO-CORE-06: Rule Action And Evidence Model"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-06_rule_action_and_evidence_model.md"
+    sprint: "SPRINT_050"
+    status: "Implemented, ready for user review"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-CORE-07"
+    title: "SPRINT_050_WO-PER-JIKUO-CORE-07: Policy Store And User Configuration Flow"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-07_policy_store_and_user_configuration_flow.md"
+    sprint: "SPRINT_050"
+    status: "Implemented, ready for user review"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-CORE-08"
+    title: "SPRINT_050_WO-PER-JIKUO-CORE-08: Read-Only Policy Store Inspection"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-08_read_only_policy_store_inspection.md"
+    sprint: "SPRINT_050"
+    status: "Implemented, ready for user review"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-POLICY-STORE-WRITE-01"
+      - "CAP-POLICY-TRIGGER-EVALUATOR-01"
+      - "CAP-POLICY-EVIDENCE-CHECKER-01"
+      - "CAP-POLICY-STORE-STATUS-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-CORE-09"
+    title: "SPRINT_050_WO-PER-JIKUO-CORE-09: Policy Trigger Evaluator MVP"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-09_policy_trigger_evaluator_mvp.md"
+    sprint: "SPRINT_050"
+    status: "Implemented, ready for user review"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-POLICY-EVIDENCE-CHECKER-01"
+      - "CAP-POLICY-STORE-WRITE-01"
+      - "CAP-POLICY-CONDITION-EVALUATOR-01"
+      - "CAP-POLICY-TRIGGER-EVALUATE-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-CORE-10"
+    title: "SPRINT_050_WO-PER-JIKUO-CORE-10: Policy Evidence Checker MVP"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-10_policy_evidence_checker_mvp.md"
+    sprint: "SPRINT_050"
+    status: "Implemented, ready for user review"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-POLICY-CONDITION-EVALUATOR-01"
+      - "CAP-POLICY-STORE-WRITE-01"
+      - "CAP-POLICY-EVIDENCE-PERSIST-01"
+      - "CAP-POLICY-EVIDENCE-CHECK-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-CORE-11"
+    title: "SPRINT_050_WO-PER-JIKUO-CORE-11: Policy Evidence Persistence Proposal Bridge"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-11_policy_evidence_persistence_proposal_bridge.md"
+    sprint: "SPRINT_050"
+    status: "Implemented, ready for user review"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-POLICY-CONDITION-EVALUATOR-01"
+      - "CAP-POLICY-STORE-WRITE-01"
+      - "CAP-POLICY-EVIDENCE-INGEST-01"
+      - "CAP-POLICY-EVIDENCE-PERSIST-PROPOSE-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-CORE-12"
+    title: "SPRINT_050_WO-PER-JIKUO-CORE-12: Policy Evidence Ingestion MVP"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-12_policy_evidence_ingestion_mvp.md"
+    sprint: "SPRINT_050"
+    status: "Implemented, ready for user review"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-POLICY-CONDITION-EVALUATOR-01"
+      - "CAP-POLICY-STORE-WRITE-01"
+      - "CAP-MCP-TOOL-01"
+      - "CAP-CODEX-SKILL-01"
+      - "CAP-POLICY-EVIDENCE-INGEST-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-CORE-13"
+    title: "SPRINT_050_WO-PER-JIKUO-CORE-13: Policy Condition Evaluator MVP"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-13_policy_condition_evaluator_mvp.md"
+    sprint: "SPRINT_050"
+    status: "Implemented, ready for user review"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-POLICY-STORE-WRITE-01"
+      - "CAP-MCP-TOOL-01"
+      - "CAP-CODEX-SKILL-01"
+      - "CAP-POLICY-CONDITION-EVALUATOR-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-CORE-14"
+    title: "SPRINT_050_WO-PER-JIKUO-CORE-14: Policy Write Plan Proposal MVP"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-14_policy_write_plan_proposal_mvp.md"
+    sprint: "SPRINT_050"
+    status: "Implemented, ready for user review"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-POLICY-STORE-WRITE-01"
+      - "CAP-MCP-TOOL-01"
+      - "CAP-CODEX-SKILL-01"
+      - "CAP-POLICY-STORE-WRITE-PROPOSE-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-CORE-15"
+    title: "SPRINT_050_WO-PER-JIKUO-CORE-15: Guarded Policy Store Write MVP"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-15_guarded_policy_store_write_mvp.md"
+    sprint: "SPRINT_050"
+    status: "Implemented, ready for user review"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-MCP-TOOL-01"
+      - "CAP-CODEX-SKILL-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-CORE-16"
+    title: "SPRINT_050_WO-PER-JIKUO-CORE-16: Active Policy Store Append MVP"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-16_active_policy_store_append_mvp.md"
+    sprint: "SPRINT_050"
+    status: "Implemented, ready for user review"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-MCP-TOOL-01"
+      - "CAP-CODEX-SKILL-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-CORE-17"
+    title: "SPRINT_050_WO-PER-JIKUO-CORE-17: Policy Decision Record MVP"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-17_policy_decision_record_mvp.md"
+    sprint: "SPRINT_050"
+    status: "Implemented, ready for user review"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-MCP-TOOL-01"
+      - "CAP-CODEX-SKILL-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-CORE-18"
+    title: "SPRINT 050 WO-PER-JIKUO-CORE-18: Real Test Data And Real Chain Policy"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-18_real_test_data_and_chain_policy.md"
+    sprint: "SPRINT_050"
+    status: "unknown"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-CORE-19"
+    title: "SPRINT 050 WO-PER-JIKUO-CORE-19: Pre-Code-Change Governance Classification Policy"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-19_pre_code_change_layer_classification_policy.md"
+    sprint: "SPRINT_050"
+    status: "unknown"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-CORE-20"
+    title: "SPRINT_050_WO-PER-JIKUO-CORE-20: Project Context Binding And Policy Template Portability"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-20_project_context_binding_and_policy_template_portability.md"
+    sprint: "SPRINT_050"
+    status: "Draft contract, ready for user review"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-CORE-20B"
+    title: "SPRINT_050_WO-PER-JIKUO-CORE-20B: Resource Reference Hygiene"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-20B_resource_reference_hygiene.md"
+    sprint: "SPRINT_050"
+    status: "Implemented, ready for user review"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-CORE-21"
+    title: "SPRINT_050_WO-PER-JIKUO-CORE-21: Policy Template Extraction And Import MVP"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-21_policy_template_extraction_import_mvp.md"
+    sprint: "SPRINT_050"
+    status: "Implemented for extract/export and no-write import planning MVP; `JIKUO-CORE-23` now implements project-context resolution and guarded template activation"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-POLICY-TEMPLATE-EXTRACT-01"
+      - "CAP-POLICY-TEMPLATE-PORTABILITY-01"
+      - "CAP-PROJECT-CONTEXT-BINDING-01"
+      - "CAP-TRUST-PRIVACY-PROVENANCE-BASELINE-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-CORE-22"
+    title: "SPRINT_050_WO-PER-JIKUO-CORE-22: Starter Policy Pack First-Use Initialization"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-22_starter_policy_pack_first_use_initialization.md"
+    sprint: "SPRINT_050"
+    status: "Implemented MVP, ready for review"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-AGENT-FLOW-01"
+      - "CAP-STARTER-POLICY-PACK-INIT-01"
+      - "CAP-AGENT-FLOW-APPLY-STARTER-POLICY-PACK-01"
+      - "CAP-PROJECT-STATE-WRITE-01"
+      - "CAP-POLICY-STORE-STATUS-01"
+      - "CAP-POLICY-TEMPLATE-EXTRACT-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-CORE-23"
+    title: "SPRINT_050_WO-PER-JIKUO-CORE-23: Project Context Template Activation"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-23_project_context_template_activation.md"
+    sprint: "SPRINT_050"
+    status: "Implemented for project-context resolution, no-write import planning, and guarded template activation"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-PROJECT-CONTEXT-RESOLVER-01"
+      - "CAP-POLICY-TEMPLATE-IMPORT-PLAN-01"
+      - "CAP-POLICY-TEMPLATE-ACTIVATE-01"
+      - "CAP-POLICY-STORE-STATUS-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-CORE-24"
+    title: "SPRINT_050_WO-PER-JIKUO-CORE-24: Agent Flow Template Activation Bridge"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-24_agent_flow_template_activation_bridge.md"
+    sprint: "SPRINT_050"
+    status: "Implemented for desktop `agent_flow.py` template import planning and guarded activation"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-AGENT-FLOW-POLICY-TEMPLATE-IMPORT-PLAN-01"
+      - "CAP-PROJECT-CONTEXT-RESOLVER-01"
+      - "CAP-POLICY-TEMPLATE-IMPORT-PLAN-01"
+      - "CAP-POLICY-TEMPLATE-ACTIVATE-01"
+      - "CAP-AGENT-FLOW-APPLY-POLICY-TEMPLATE-ACTIVATION-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-DATA-01"
+    title: "SPRINT_050_WO-PER-JIKUO-DATA-01: Structured Execution Event Ledger and Analytics Contract"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-DATA-01_structured_execution_event_ledger_and_analytics_contract.md"
+    sprint: "SPRINT_050"
+    status: "Planned; design analysis before implementation"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-DOCREG-01"
+    title: "SPRINT_050_WO-PER-JIKUO-DOCREG-01: Layered Document Registry"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-DOCREG-01_layered_document_registry.md"
+    sprint: "SPRINT_050"
+    status: "Planned; transitional authority for the current documentation-registry task list"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-DOCS-01"
+    title: "SPRINT_050_WO-PER-JIKUO-DOCS-01: Product Doc Rehome And Reference Migration"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-DOCS-01_product_doc_rehome_and_reference_migration.md"
+    sprint: "SPRINT_050"
+    status: "Implemented, ready for user review"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-POLICY-STORE-ADAPTER-01"
+      - "CAP-POLICY-AWARE-FLOW-IMPLEMENTATION-01"
+      - "CAP-POLICY-EVIDENCE-CHECKER-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-FLOW-01"
+    title: "SPRINT_050_WO-PER-JIKUO-FLOW-01: Engineering Governance User Journey And Interaction Flow"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-FLOW-01_engineering_governance_user_journey_and_interaction_flow.md"
+    sprint: "SPRINT_050"
+    status: "Draft / aligned with accepted scenario-chain and document-mounting model"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-FLOW-02"
+    title: "SPRINT_050_WO-PER-JIKUO-FLOW-02: Desktop App Primary Operating Loop"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-FLOW-02_desktop_app_primary_operating_loop.md"
+    sprint: "SPRINT_050"
+    status: "Accepted; updated with AGENT-06 instruction-pack composition"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-AGENT-INVOCATION-01"
+      - "CAP-AGENT-FLOW-01"
+      - "CAP-DESKTOP-AGENT-INSTRUCTION-01"
+      - "CAP-PROJECT-STATE-STATUS-01"
+      - "CAP-PROJECT-STATE-INIT-DRYRUN-01"
+      - "CAP-TASK-STATUS-01"
+      - "CAP-TASK-START-DRYRUN-01"
+      - "CAP-TASK-INDEX-DRYRUN-01"
+      - "CAP-TASK-UPDATE-DRYRUN-01"
+      - "CAP-RULE-REGISTRY-01"
+      - "CAP-CHECKER-01"
+      - "CAP-CHECKER-JSON-01"
+      - "CAP-POLICY-STORE-STATUS-01"
+      - "CAP-POLICY-TRIGGER-EVALUATE-01"
+      - "CAP-POLICY-CONDITION-EVALUATOR-01"
+      - "CAP-POLICY-STORE-WRITE-PROPOSE-01"
+      - "CAP-POLICY-EVIDENCE-CHECK-01"
+      - "CAP-POLICY-EVIDENCE-INGEST-01"
+      - "CAP-CARD-TASKSESSION-01"
+      - "CAP-PROJECT-STATE-WRITE-01"
+      - "CAP-TASK-START-WRITE-01"
+      - "CAP-TASK-INDEX-REFRESH-01"
+      - "CAP-POLICY-STORE-WRITE-01"
+      - "CAP-POLICY-STORE-APPEND-01"
+      - "CAP-POLICY-DECISION-WRITE-01"
+      - "CAP-POLICY-EVIDENCE-PERSIST-PROPOSE-01"
+      - "CAP-TASK-EVIDENCE-APPEND-01"
+      - "CAP-TASK-VERIFICATION-APPEND-01"
+      - "CAP-TASK-COMPLETE-01"
+      - "CAP-TASK-HANDOFF-01"
+      - "CAP-CODEX-SKILL-01"
+      - "CAP-MCP-TOOL-01"
+      - "CAP-CODEX-PLUGIN-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-INIT-01"
+    title: "SPRINT_050_WO-PER-JIKUO-INIT-01: First-use Configuration Review"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-INIT-01_first_use_configuration_review.md"
+    sprint: "SPRINT_050"
+    status: "Core no-write review implemented; MCP read-only configuration status, activation settings read / plan, and guarded activation settings apply tools implemented; strict client adapters remain planned"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-CONFIGURATION-REVIEW-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-INIT-02"
+    title: "SPRINT_050_WO-PER-JIKUO-INIT-02: Reviewed Configuration Onboarding"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-INIT-02_reviewed_configuration_onboarding.md"
+    sprint: "SPRINT_050"
+    status: "Implemented source-provenance core behavior and router surfacing"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-INTG-01"
+    title: "SPRINT_050_WO-PER-JIKUO-INTG-01: Universal Instruction File Distribution"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-INTG-01_universal_instruction_file_distribution.md"
+    sprint: "SPRINT_050"
+    status: "Implemented and accepted on 2026-05-14, pre-MCP companion for cross-client behavior"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-INTG-02"
+    title: "SPRINT_050_WO-PER-JIKUO-INTG-02: Client Onboarding Settings And Trigger Mode Selection"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-INTG-02_client_onboarding_settings_and_trigger_mode.md"
+    sprint: "SPRINT_050"
+    status: "Implemented core instruction-distribution support, project-level guarded activation settings persistence, and no-write MCP router surfaces"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-INTG-03"
+    title: "SPRINT_050_WO-PER-JIKUO-INTG-03: Strict Mounted Harness Adapter Contract"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-INTG-03_strict_mounted_harness_adapter_contract.md"
+    sprint: "SPRINT_050"
+    status: "Contract / planning accepted; implementation deferred to client proof and later adapter slices"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-LIVE-01"
+    title: "SPRINT 050 WO-PER-JIKUO-LIVE-01: Policy Evaluation Goes Live In Desktop Chat"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-01_policy_evaluation_goes_live_in_desktop_chat.md"
+    sprint: "SPRINT_050"
+    status: "unknown"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-LIVE-02"
+    title: "SPRINT 050 WO-PER-JIKUO-LIVE-02: Policy Feedback Record Proposal Bridge"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-02_policy_feedback_record_proposal_bridge.md"
+    sprint: "SPRINT_050"
+    status: "unknown"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-LIVE-03"
+    title: "SPRINT 050 WO-PER-JIKUO-LIVE-03: Guarded Agent Flow Evidence Apply"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-03_guarded_agent_flow_evidence_apply.md"
+    sprint: "SPRINT_050"
+    status: "unknown"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-AGENT-FLOW-APPLY-TASK-EVIDENCE-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-LIVE-04"
+    title: "SPRINT 050 WO-PER-JIKUO-LIVE-04: Policy Proposal Persistence"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-04_policy_proposal_persistence.md"
+    sprint: "SPRINT_050"
+    status: "unknown"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-POLICY-PROPOSAL-PERSIST-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-LIVE-05"
+    title: "SPRINT 050 WO-PER-JIKUO-LIVE-05: Policy Evolution Plan Proposal"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-05_policy_evolution_plan_proposal.md"
+    sprint: "SPRINT_050"
+    status: "unknown"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-POLICY-EVOLUTION-PLAN-PROPOSE-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-LIVE-06"
+    title: "SPRINT 050 WO-PER-JIKUO-LIVE-06: Guarded Policy Deprecation Writer MVP"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-06_guarded_policy_deprecation_writer_mvp.md"
+    sprint: "SPRINT_050"
+    status: "unknown"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-POLICY-DEPRECATION-WRITE-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-LIVE-07"
+    title: "SPRINT 050 WO-PER-JIKUO-LIVE-07: Guarded Policy Supersession Writer MVP"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-07_guarded_policy_supersession_writer_mvp.md"
+    sprint: "SPRINT_050"
+    status: "unknown"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-POLICY-SUPERSESSION-WRITE-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-LIVE-08"
+    title: "SPRINT 050 WO-PER-JIKUO-LIVE-08: Agent Flow Guarded Policy Evolution Apply MVP"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-08_agent_flow_guarded_policy_evolution_apply_mvp.md"
+    sprint: "SPRINT_050"
+    status: "unknown"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-AGENT-FLOW-APPLY-POLICY-EVOLUTION-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-LIVE-09"
+    title: "SPRINT_050_WO-PER-JIKUO-LIVE-09: Proposal-To-Apply Binding MVP"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-09_proposal_to_apply_binding_mvp.md"
+    sprint: "SPRINT_050"
+    status: "Implemented, ready for user review"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-LIVE-10"
+    title: "SPRINT_050_WO-PER-JIKUO-LIVE-10: Policy Runtime Status Card"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-10_policy_runtime_status_card.md"
+    sprint: "SPRINT_050"
+    status: "unknown"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-LIVE-DESKTOP-POLICY-EVAL-01"
+      - "CAP-POLICY-STORE-STATUS-01"
+      - "CAP-POLICY-TRIGGER-EVALUATE-01"
+      - "CAP-POLICY-CONDITION-EVALUATOR-01"
+      - "CAP-POLICY-EVIDENCE-CHECK-01"
+      - "CAP-POLICY-RUNTIME-STATUS-CARD-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-LIVE-11"
+    title: "SPRINT_050_WO-PER-JIKUO-LIVE-11: Deterministic Harness Chat Return Contract"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-11_deterministic_harness_chat_return_contract.md"
+    sprint: "SPRINT_050"
+    status: "unknown"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-DESKTOP-CHAT-HARNESS-SURFACE-01"
+      - "CAP-POLICY-RUNTIME-STATUS-CARD-01"
+      - "CAP-AGENT-FLOW-01"
+      - "CAP-MCP-AGENT-FLOW-WRAPPER-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-LIVE-12"
+    title: "SPRINT_050_WO-PER-JIKUO-LIVE-12: Out-of-band Runtime Visibility Channels"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-12_out_of_band_runtime_visibility_channels.md"
+    sprint: "SPRINT_050"
+    status: "Phase 1 accepted on 2026-05-14"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-LIVE-13"
+    title: "SPRINT_050_WO-PER-JIKUO-LIVE-13: Taskmap Insight Follow-up Evidence"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-13_taskmap_insight_followup_evidence.md"
+    sprint: "SPRINT_050"
+    status: "Accepted on 2026-05-14"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-LIVE-14"
+    title: "SPRINT_050_WO-PER-JIKUO-LIVE-14: Completion Review Policy-Only Surfacing"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-14_completion_review_policy_only_surfacing.md"
+    sprint: "SPRINT_050"
+    status: "Implemented and accepted on 2026-05-14, pre-MCP harness quality follow-up"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-COMPLETION-REVIEW-POLICY-ONLY-SURFACE-01"
+      - "CAP-MAIN-DOC-MOUNT-MAINTENANCE-01"
+      - "CAP-POLICY-RUNTIME-STATUS-CARD-01"
+      - "CAP-RUNTIME-VISIBILITY-CHANNEL-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-LIVE-15"
+    title: "SPRINT_050_WO-PER-JIKUO-LIVE-15: Self-Bootstrap Task-Session Binding"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-15_self_bootstrap_task_session_binding.md"
+    sprint: "SPRINT_050"
+    status: "Implemented and accepted on 2026-05-14, pre-MCP harness quality follow-up"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-TASK-SESSION-BINDING-EVIDENCE-01"
+      - "CAP-TASK-START-DRYRUN-01"
+      - "CAP-AGENT-FLOW-APPLY-TASK-SESSION-START-01"
+      - "CAP-TASK-START-WRITE-01"
+      - "CAP-POLICY-RUNTIME-STATUS-CARD-01"
+      - "CAP-RUNTIME-VISIBILITY-CHANNEL-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-LIVE-16"
+    title: "SPRINT_050_WO-PER-JIKUO-LIVE-16: Policy Runtime Card Priority"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-16_policy_runtime_card_priority.md"
+    sprint: "SPRINT_050"
+    status: "Implemented and ready for user review on 2026-05-15"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-POLICY-RUNTIME-CARD-PRIORITY-01"
+      - "CAP-POLICY-RUNTIME-STATUS-CARD-01"
+      - "CAP-DESKTOP-CHAT-HARNESS-SURFACE-01"
+      - "CAP-RUNTIME-VISIBILITY-CHANNEL-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-LIVE-17"
+    title: "SPRINT_050_WO-PER-JIKUO-LIVE-17: Task-Session Index Stale Hint"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-17_task_session_index_stale_hint.md"
+    sprint: "SPRINT_050"
+    status: "Implemented and ready for user review on 2026-05-15"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-RUNTIME-SHOW-CLI-01"
+      - "CAP-TASK-INDEX-REFRESH-01"
+      - "CAP-TASK-SESSION-INDEX-STALE-HINT-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-LIVE-18"
+    title: "SPRINT_050_WO-PER-JIKUO-LIVE-18: Previous/Latest Todo Snapshot Posture"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-18_previous_latest_todo_snapshot_posture.md"
+    sprint: "SPRINT_050"
+    status: "Implemented and ready for user review on 2026-05-15"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-PROJECT-CONTEXT-BINDING-01"
+      - "CAP-TODO-SNAPSHOT-POSTURE-01"
+      - "CAP-MAIN-DOC-MOUNT-MAINTENANCE-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-LIVE-19"
+    title: "SPRINT_050_WO-PER-JIKUO-LIVE-19: Starter Policy Provenance Backfill"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-19_starter_policy_provenance_backfill.md"
+    sprint: "SPRINT_050"
+    status: "Implemented and ready for user review on 2026-05-15"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-STARTER-POLICY-PROVENANCE-01"
+      - "CAP-STARTER-POLICY-PACK-INIT-01"
+      - "CAP-TRUST-PRIVACY-PROVENANCE-BASELINE-01"
+      - "CAP-MCP-PREIMPLEMENTATION-API-NEUTRALITY-REVIEW-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-LIVE-20"
+    title: "SPRINT_050_WO-PER-JIKUO-LIVE-20: Policy Dead-Zone Detection"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-20_policy_dead_zone_detection.md"
+    sprint: "SPRINT_050"
+    status: "LIVE-20A implemented; history-threshold scanning and broader surfacing remain planned"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-LIVE-21"
+    title: "SPRINT_050_WO-PER-JIKUO-LIVE-21: Governed Slice Task-Session Resolution"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-21_governed_slice_task_session_resolution.md"
+    sprint: "SPRINT_050"
+    status: "Implemented on 2026-05-17, pending review"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-TASK-START-DRYRUN-01"
+      - "CAP-CARD-TASKSESSION-01"
+      - "CAP-TASK-SESSION-BINDING-EVIDENCE-01"
+      - "CAP-POLICY-TRIGGER-EVALUATE-01"
+      - "CAP-POLICY-EVIDENCE-CHECK-01"
+      - "CAP-RUNTIME-VISIBILITY-CHANNEL-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-MCP-01"
+    title: "SPRINT_050_WO-PER-JIKUO-MCP-01: MCP Wrapper MVP"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-MCP-01_mcp_wrapper_mvp.md"
+    sprint: "SPRINT_050"
+    status: "MCP MVP body implemented and release-smoked; Stage A server wrapper accepted; Stage B1 task-session evidence guarded-write tool implemented after explicit user approval; Stage B2 policy evolution guarded-write tool implemented and externally smoke-accepted; Stage B3 policy-template activation guarded-write tool implemented and externally smoke-accepted; post-MVP configuration status, activation settings read / plan / apply, and router tools implemented"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-POLICY-STORE-STATUS-01"
+      - "CAP-POLICY-RUNTIME-STATUS-CARD-01"
+      - "CAP-DESKTOP-CHAT-HARNESS-SURFACE-01"
+      - "CAP-RUNTIME-VISIBILITY-CHANNEL-01"
+      - "CAP-AGENT-FLOW-01"
+      - "CAP-POLICY-STORE-WRITE-PROPOSE-01"
+      - "CAP-POLICY-EVOLUTION-PLAN-PROPOSE-01"
+      - "CAP-AGENT-FLOW-POLICY-TEMPLATE-IMPORT-PLAN-01"
+      - "CAP-CONFIGURATION-REVIEW-01"
+      - "CAP-MCP-ACTIVATION-SETTINGS-READ-PLAN-01"
+      - "CAP-CONVERSATION-TURN-ROUTER-01"
+      - "CAP-MCP-CONVERSATION-ROUTER-SURFACE-01"
+      - "CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01"
+      - "CAP-AGENT-FLOW-APPLY-TASK-EVIDENCE-01"
+      - "CAP-POLICY-EVOLUTION-APPLY-BINDING-01"
+      - "CAP-AGENT-FLOW-APPLY-POLICY-EVOLUTION-01"
+      - "CAP-AGENT-FLOW-APPLY-POLICY-TEMPLATE-ACTIVATION-01"
+      - "CAP-MCP-ACTIVATION-SETTINGS-APPLY-01"
+      - "CAP-LIVE-DESKTOP-POLICY-EVAL-01"
+      - "CAP-POLICY-TEMPLATE-IMPORT-PLAN-01"
+      - "CAP-POLICY-TEMPLATE-ACTIVATE-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-PKG-00"
+    title: "SPRINT_050_WO-PER-JIKUO-PKG-00: Package Boundary And Extraction Plan"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-PKG-00_package_boundary_and_extraction_plan.md"
+    sprint: "SPRINT_050"
+    status: "Draft, ready for user review"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-PKG-01"
+    title: "SPRINT_050_WO-PER-JIKUO-PKG-01: Minimal Package Extraction"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-PKG-01_minimal_package_extraction.md"
+    sprint: "SPRINT_050"
+    status: "Initial extraction executed, ready for user review"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-POLICY-CATALOG-01"
+    title: "JIKUO-POLICY-CATALOG-01: Self-Bootstrap Policy Promotion Review"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-POLICY-CATALOG-01_self_bootstrap_policy_promotion_review.md"
+    sprint: "SPRINT_050"
+    status: "Accepted for code-level hardening; first boundary implementation in progress"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-PRD-01"
+    title: "SPRINT_050_WO-PER-JIKUO-PRD-01: Product Definition"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-PRD-01_product_definition.md"
+    sprint: "SPRINT_050"
+    status: "Accepted by user; revised desktop-agent-first input for `JIKUO-AGENT-00`"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-REL-01"
+    title: "SPRINT_050_WO-PER-JIKUO-REL-01: External Release License Decision"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-REL-01_external_release_license_decision.md"
+    sprint: "SPRINT_050"
+    status: "Decision brief drafted; package metadata remains `Proprietary` until the user explicitly chooses a license"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-ROUTER-01"
+    title: "SPRINT 050 WO-PER-JIKUO-ROUTER-01: Trigger Mode And Conversation-Turn Router"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-ROUTER-01_trigger_mode_and_conversation_turn_router.md"
+    sprint: "SPRINT_050"
+    status: "Core no-write router implemented; MCP router surfaces implemented"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-CONVERSATION-TURN-ROUTER-01"
+      - "CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01"
+      - "CAP-JIKUO-TRIGGER-MODE-01"
+      - "CAP-PROGRESS-SUMMARY-BUSINESS-MEANING-POLICY-01"
+      - "CAP-MCP-AGENT-FLOW-WRAPPER-01"
+      - "CAP-DESKTOP-CHAT-HARNESS-SURFACE-01"
+      - "CAP-RUNTIME-VISIBILITY-CHANNEL-01"
+      - "CAP-AGENTS-SDK-ADAPTER-EXPLORATION-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-SCENARIO-CHAIN-01"
+    title: "SPRINT_050_WO-PER-JIKUO-SCENARIO-CHAIN-01: Governance Scenario Chain And Document Mounting Model"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-SCENARIO-CHAIN-01_governance_scenario_chain_and_document_mounting_model.md"
+    sprint: "SPRINT_050"
+    status: "Accepted by user for downstream CORE-03 planning"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-SDK-01"
+    title: "SPRINT_050_WO-PER-JIKUO-SDK-01: Agent SDK And Agentic Platform Adapter Exploration"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-SDK-01_agent_sdk_adapter_exploration.md"
+    sprint: "SPRINT_050"
+    status: "Accepted on 2026-05-14, pre-MCP architecture exploration"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-AGENTS-SDK-ADAPTER-EXPLORATION-01"
+      - "CAP-INTEGRATION-NEUTRALITY-CONTRACT-01"
+      - "CAP-MCP-AGENT-FLOW-WRAPPER-01"
+      - "CAP-MCP-RUNTIME-STATUS-CARD-01"
+      - "CAP-UNIVERSAL-INSTRUCTION-FILE-01"
+      - "CAP-RUNTIME-VISIBILITY-CHANNEL-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-SEC-01"
+    title: "SPRINT_050_WO-PER-JIKUO-SEC-01: Trust Privacy Provenance Baseline"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-SEC-01_trust_privacy_provenance_baseline.md"
+    sprint: "SPRINT_050"
+    status: "Draft contract, updated by LIVE-19 on 2026-05-15"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-SEC-02"
+    title: "SPRINT_050_WO-PER-JIKUO-SEC-02: MCP Response Privacy Classification Baseline"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-SEC-02_mcp_response_privacy_classification_baseline.md"
+    sprint: "SPRINT_050"
+    status: "Accepted on 2026-05-15"
+    impact_tags: []
+    implements_capabilities:
+      - "CAP-MCP-RESPONSE-PRIVACY-CLASSIFICATION-01"
+      - "CAP-TRUST-PRIVACY-PROVENANCE-BASELINE-01"
+      - "CAP-MCP-PREIMPLEMENTATION-API-NEUTRALITY-REVIEW-01"
+      - "CAP-MCP-AGENT-FLOW-WRAPPER-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets: []
+  - id: "JIKUO-SELF-BOOTSTRAP-02"
+    title: "SPRINT_050_WO-PER-JIKUO-SELF-BOOTSTRAP-02: Stable Self-Bootstrap Execution Strategy"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-SELF-BOOTSTRAP-02_stable_self_bootstrap_execution_strategy.md"
+    sprint: "SPRINT_050"
+    status: "Planned; discuss strategy before implementation"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-SELF-BOOTSTRAP-03"
+    title: "SPRINT_050_WO-PER-JIKUO-SELF-BOOTSTRAP-03: Harness Workspace Boundary Spike"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-SELF-BOOTSTRAP-03_harness_workspace_boundary_spike.md"
+    sprint: "SPRINT_050"
+    status: "Planned; proof / design spike only"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-SIDECAR-01"
+    title: "SPRINT_050_WO-PER-JIKUO-SIDECAR-01: Report-Only Project State Bootstrap"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-SIDECAR-01_report_only_project_state_bootstrap.md"
+    sprint: "SPRINT_050"
+    status: "Accepted by user; report-only status / dry-run helper implemented and accepted for downstream write-mode proposal planning"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-SIDECAR-02"
+    title: "SPRINT_050_WO-PER-JIKUO-SIDECAR-02: Project State Write Mode Proposal"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-SIDECAR-02_project_state_write_mode_proposal.md"
+    sprint: "SPRINT_050"
+    status: "Accepted by user; initial project-state write mode implemented and project root state initialized; accepted for downstream task-session persistence proposal planning"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-TASKSESSION-01"
+    title: "SPRINT_050_WO-PER-JIKUO-TASKSESSION-01: Task Session Sidecar Persistence Proposal"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-TASKSESSION-01_task_session_sidecar_persistence_proposal.md"
+    sprint: "SPRINT_050"
+    status: "Accepted by user; dry-run task-session helper implemented and accepted for downstream write-mode proposal planning"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-TASKSESSION-02"
+    title: "SPRINT_050_WO-PER-JIKUO-TASKSESSION-02: Task Session Write Mode Proposal"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-TASKSESSION-02_task_session_write_mode_proposal.md"
+    sprint: "SPRINT_050"
+    status: "Accepted by user; guarded write mode implemented and ready for user review"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-TASKSESSION-03"
+    title: "SPRINT_050_WO-PER-JIKUO-TASKSESSION-03: Project-State Task-Session Index Update"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-TASKSESSION-03_project_state_task_session_index_update.md"
+    sprint: "SPRINT_050"
+    status: "Accepted by user; index dry-run / guarded refresh implemented and ready for user review"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-TASKSESSION-04"
+    title: "SPRINT_050_WO-PER-JIKUO-TASKSESSION-04: Task-Session Lifecycle, Evidence, Completion, And Handoff Boundary"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-TASKSESSION-04_lifecycle_evidence_completion_handoff.md"
+    sprint: "SPRINT_050"
+    status: "Accepted by user; lifecycle update dry-run / guarded append implemented and ready for user review"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
+  - id: "JIKUO-UX-00"
+    title: "SPRINT_050_WO-PER-JIKUO-UX-00: User Scenarios And Atomic Action Map"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-UX-00_user_scenarios_and_atomic_action_map.md"
+    sprint: "SPRINT_050"
+    status: "Accepted by user; upstream input for `JIKUO-PRD-01`"
+    impact_tags: []
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []

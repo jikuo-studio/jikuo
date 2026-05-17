@@ -352,6 +352,7 @@ intentionally approving a real project policy-template activation.
 - The server listed the 8 Stage A tools and successfully called `jikuo.get_runtime_status_card`.
 - User verified real desktop-client smoke from Codex Desktop on 2026-05-15.
 - User verified real desktop-client smoke from Claude Desktop on 2026-05-15.
+- Codex and Claude are accepted as active private-preview MCP clients; their remaining risk is strict pre-turn hook enforcement and policy dead-zone detection, not basic MCP availability.
 - Local client and test byproducts may remain under ignored project paths such as `.claude/` and `tmp/`; they are not Stage A source artifacts.
 - Stage B1 `jikuo.apply_task_session_evidence_update` was implemented after explicit user approval.
 - Official Python MCP SDK `ClientSession` stdio smoke listed 9 tools, called the Stage B1 tool successfully, and confirmed Stage B2 / B3 tools were not exposed.

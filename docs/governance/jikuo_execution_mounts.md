@@ -60,6 +60,8 @@ Slice completion main document check:
 - Check `docs/README.md` when document roots, directory roles, or entry points change.
 - Check `docs/governance/jikuo_execution_mounts.md` when required mounts, execution order, command previews, or active context changes.
 - Check `docs/governance/jikuo_productization_task_map.md` when the task map, current snapshot, capability registry, or todo list changes.
+- Check `docs/registry/registry_index.yaml` when registry shard authority, projection metadata, or impact-tag routing changes.
+- Check `docs/work_orders/SPRINT_050_WO-PER-JIKUO-DOCREG-01_layered_document_registry.md` while DOCREG is still in transition and registry scope or sequencing changes.
 - Check `docs/insights/insights_registry.yaml` when a development idea is captured, promoted, resolved, or deferred.
 - Check `.jikuo/policies/manifest.yaml` when approved, deprecated, superseded, or proposal policy refs change.
 - If a checked main document does not need an update, report that it was checked and why the existing scope remains valid.
@@ -67,8 +69,9 @@ Slice completion main document check:
 Atomic capability registry:
 
 - current registry location: `docs/governance/jikuo_productization_task_map.md` section `Atomic Capability Registry`
-- do not create a separate atomic-capability registry document unless the registry needs machine-readable extraction
-- if machine-readable extraction becomes necessary, derive it from the task-map section rather than creating divergent sources of truth
+- draft structured registry location: `docs/registry/capabilities.yaml`
+- registry index: `docs/registry/registry_index.yaml`
+- `JIKUO-DOCREG-01` remains the transitional authority for DOCREG sequencing while the draft registry is reviewed and stabilized
 
 Loop composition map:
 
@@ -160,6 +163,9 @@ For future MCP / plugin work, also mount:
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-MCP-01_mcp_wrapper_mvp.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-ARCH-02_integration_neutrality_and_integrations_layout.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-SDK-01_agent_sdk_adapter_exploration.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CODEX-PLUGIN-01_codex_plugin_pre_turn_harness_review.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-CLAUDE-HOOK-01_claude_hook_strict_adapter_review.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-SELF-BOOTSTRAP-03_harness_workspace_boundary_spike.md`
 - any generated MCP / skill / plugin contract documents
 
 For future policy template extraction / import work, also mount:
@@ -187,6 +193,8 @@ For future starter policy pack / first-use initialization work, also mount:
 For future Dashboard / Studio frontend work, also mount:
 
 - `docs/insights/INSIGHT-2026-05-16-studio-dashboard-frontend-architecture.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-DATA-01_structured_execution_event_ledger_and_analytics_contract.md`
+- `docs/schemas/execution_events_v0_draft.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-UX-00_user_scenarios_and_atomic_action_map.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-PRD-01_product_definition.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-12_out_of_band_runtime_visibility_channels.md`
@@ -569,8 +577,8 @@ Accepted target for the current pre-MCP visibility review:
 - `JIKUO-MCP-01` Stage A acceptance requires `jikuo.get_runtime_status_card` to show the same single-card Markdown through chat, `.jikuo/runtime/last_card.md`, and `jikuo show --last-card`; broader proposal tools may show full proposal Markdown, but policy runtime status must remain first when present
 - `JIKUO-MCP-01` Stage A SDK-free adapter boundary is implemented: `src/jikuo/integrations/mcp/adapter.py`, `schemas.py`, and `tests/mcp_adapter_tests.py` expose the 8 no-write / card / proposal tools without importing MCP SDK code; `server.py` and real-client smoke are accepted for Stage A
 - `JIKUO-MCP-01` official SDK availability was checked on 2026-05-15 and the user approved declaring the Python `mcp` dependency: `server.py` is implemented as a thin official FastMCP wrapper over the SDK-free adapter; real SDK import / module-entry smoke and official SDK `ClientSession` stdio smoke passed after installing `mcp 1.27.1` in a test environment, and desktop-client configuration smoke is accepted as user-verified in Codex Desktop and Claude Desktop
-- `JIKUO-MCP-01` client setup examples now live at `docs/integrations/mcp_client_configuration_examples.md`; use them for future Claude Code, Claude Desktop, Cursor, or Codex-style local stdio smoke before accepting Stage A release gates
-- `JIKUO-MCP-01` Stage A desktop smoke is accepted as user-verified on 2026-05-15 for Codex Desktop and Claude Desktop; Stage B2 policy evolution guarded-write is implemented and externally smoke-accepted, and Stage B3 policy-template activation is implemented after explicit user acceptance
+- `JIKUO-MCP-01` client setup examples now live at `docs/integrations/mcp_client_configuration_examples.md`; Codex / Claude MCP proof is accepted for current private-preview work, and the same examples remain the regression / expansion path for Cursor and VS Code + GitHub Copilot Agent Mode
+- `JIKUO-MCP-01` Stage A desktop smoke is accepted as user-verified on 2026-05-15 for Codex Desktop and Claude Desktop, and both clients are treated as active private-preview MCP clients; Stage B2 policy evolution guarded-write is implemented and externally smoke-accepted, and Stage B3 policy-template activation is implemented after explicit user acceptance
 - `JIKUO-MCP-01` Stage B1 is accepted and implemented for `jikuo.apply_task_session_evidence_update`; Stage B2 is accepted, implemented, and externally smoke-accepted on 2026-05-16 for `jikuo.apply_policy_evolution_write`; Stage B3 is accepted and implemented for `jikuo.apply_policy_template_activation`
 - `JIKUO-MCP-01` Stage B1 official SDK smoke passed during the B1 slice: a Python MCP `ClientSession` listed 9 tools, called `jikuo.apply_task_session_evidence_update`, and confirmed Stage B2 / B3 tools were not exposed before later Stage B2 approval
 - `JIKUO-MCP-01` Stage B2 Claude-assisted acceptance passed with adapter and FastMCP wrapper tool lists showing 10 tools, B2 refusal / apply paths working, no task-session side effects, no raw approval phrase leakage, fixture runtime card written, and Stage B3 still absent during that slice
@@ -582,6 +590,7 @@ Accepted target for the current pre-MCP visibility review:
 - `JIKUO-SDK-01` is accepted and defines OpenAI Agents SDK, Claude Agent SDK, Google ADK, Vercel AI SDK, and Google Antigravity-style agentic platforms as optional orchestration / client-environment adapters that consume JIKUO through MCP / CLI / public adapter APIs while local policy, evidence, approvals, and runtime visibility remain authoritative
 - `JIKUO-ROUTER-01` is accepted: it defines semantic mode, mounted harness mode, the `conversation_turn` event, a no-write router output shape, implemented MCP router tools, and future Agent SDK / Studio / strict adapter expectations
 - `JIKUO-LIVE-15` adds a self-bootstrap requirement that governed JIKUO development slices bind, create, or explicitly defer a task-session at task start; `.jikuo/project_state.yaml latest_task_session_refs` refresh remains a separate guarded action unless promoted later
+- `JIKUO-LIVE-21` hardens that requirement so every governed `task_start`, including documentation / registry / data-contract slices, surfaces task-session resolution as `existing_session_bound`, `needs_user_decision`, or `explicitly_deferred`
 - `JIKUO-MCP-01` prerequisites for Stage A, Stage B1, Stage B2, and Stage B3 are accepted, and MCP MVP body release smoke has passed; product-surface expansion remains a separate approval point
 - `CAP-CONVERSATION-TURN-ROUTER-01` core no-write path is implemented in `agent_flow.py`: `python -B -m jikuo.agent_flow propose --event conversation_turn --user-phrase "<user turn>" --trigger-mode semantic|mounted --format json`
 - `CAP-JIKUO-TRIGGER-MODE-01` now has an observable core difference: `semantic` with no matching obligation returns `no_jikuo_action_required`, while `mounted` with no matching obligation returns `mounted_idle_tick`
@@ -591,13 +600,17 @@ Accepted target for the current pre-MCP visibility review:
 - `JIKUO-INIT-02` records reviewed configuration onboarding: missing activation settings and legacy settings without review metadata are treated as unreviewed defaults, first active JIKUO use injects `configuration_review` before task work when no explicit trigger-mode override exists, and guarded activation apply records whether each key setting is a user-reviewed default or a user-configured value
 - strict mounted behavior is not achieved by MCP plus instruction files alone; it requires a future pre-turn host adapter such as a Claude Code hook, Agent SDK wrapper, Studio/local proxy, Codex plugin, Cursor extension, or VS Code extension
 - `JIKUO-INTG-03` records the strict mounted adapter contract: host adapters must read `.jikuo/activation_settings.yaml`, call JIKUO before each user turn in mounted mode, surface card markdown or runtime links, and visibly fail rather than silently bypass governance
-- `JIKUO-CODEX-PLUGIN-01` records the Codex plugin feasibility task: verify whether Codex plugin surfaces support a true pre-turn harness before claiming strict mounted behavior; otherwise keep Codex plugin scope to instruction, MCP setup, and proof assistance
-- `JIKUO-LIVE-20` records the policy dead-zone detection task: repeated runtime cards with active policies and zero triggered policies must be classified as healthy no-op, wrong invocation, missing task context, missing activation, or policy coverage gap before users trust the governance result
+- `JIKUO-CODEX-PLUGIN-01` records the Codex hook / plugin feasibility task: verify whether Codex surfaces support a true pre-turn harness before claiming strict mounted behavior; Codex MCP availability itself is already accepted, so the remaining question is host-level enforcement
+- `JIKUO-CLAUDE-HOOK-01` records the Claude hook feasibility task: verify whether a Claude hook-capable host can run `jikuo.route_user_request` before every user turn, surface card markdown or runtime links, and visibly fail before claiming Claude strict mounted behavior; this track can be implemented alongside a Codex adapter if both prove stable
+- `JIKUO-LIVE-20` records the policy dead-zone detection task: NarrativeSystem usage showed that mounted MCP access can coexist with around 10 active policies and repeated zero-trigger cards; LIVE-20A now classifies each zero-trigger policy runtime card as non-governance event, route follow-up required, missing/mismatched task context, condition mismatch, policy coverage gap, or unknown event before users trust the governance result
+- `JIKUO-DATA-01` records the structured execution event-ledger and analytics contract: future dashboard, BI, support bundles, and audit views should read schema-versioned local execution events rather than scraping Markdown cards, while raw transcripts and remote telemetry remain out of scope
+- `JIKUO-DOCREG-01` records the layered document-registry transition: until `docs/registry/registry_index.yaml` and first shards exist, it is the current task-list authority for DOCREG sequencing, registry scope, and the deferred self-bootstrap hierarchy item
 - `JIKUO-SELF-BOOTSTRAP-02` records the stable self-bootstrap execution strategy task: JIKUO development should consistently invoke route/config/task-start/completion-review tooling, bind or explicitly defer task sessions, surface runtime card links, and check main docs before commits
-- `docs/integrations/mcp_client_proof_playbook.md` is the current manual proof guide for Claude Code GUI, Codex, Cursor, and VS Code + GitHub Copilot Agent mode; use it before claiming cross-client MCP support, and prefer the private GitHub clone path from `https://github.com/jikuo-studio/jikuo.git` for realistic first-user proof
+- `JIKUO-SELF-BOOTSTRAP-03` records the harness workspace boundary spike: self-bootstrap should test whether JIKUO runs more truthfully from a parent harness workspace that owns `.jikuo/`, activation settings, runtime cards, and client instructions while treating the source repository as a governed child target; no source-tree migration is approved by this record
+- `docs/integrations/mcp_client_proof_playbook.md` is the current manual proof guide for regression and expansion proof; Codex / Claude proof is accepted, while Cursor and VS Code + GitHub Copilot Agent Mode remain future compatibility targets before broad cross-client support is claimed
 - `docs/migration/NARRATIVESYSTEM_RESOURCE_POOL_HANDOFF.md` records the 2026-05-16 JIKUO-side active reference migration: `docs/jikuo/` and `tools/jikuo/` in NarrativeSystem are no longer active JIKUO runtime / contract dependencies, while NarrativeSystem scenario registry and sprint index files still require a separate NarrativeSystem-side scan before archive decisions
 - policy evolution proposal/apply surfaces now preserve non-default replacement triggers through `--replacement-trigger-event`, so a reviewed supersession can target `conversation_turn` without silently falling back to `task_start`
-- dashboard / Studio UI, OS notifications, per-client hook packs, rollback, broader conditions, UI, Plugin, and gates remain deferred; current MCP visibility relies on card markdown plus runtime card links
+- dashboard / Studio UI, OS notifications, packaged per-client hook packs beyond accepted proof tasks, source-directory migration, rollback, broader conditions, UI, Plugin, and gates remain deferred; current MCP visibility relies on card markdown plus runtime card links
 - `INSIGHT-2026-05-16-studio-dashboard-frontend-architecture` records the current frontend architecture posture for future `JIKUO-STUDIO-01`: projection-first view models, panel registration, guarded action registration, and canonical `.jikuo/` state remain the change-friendly boundary
 - `POLICY-jikuo-conversation-level-proactive-policy-suggestion` is active report-only: repeated user needs, corrections, or preferences are reviewed as policy candidates at `conversation_turn` before they remain hidden chat behavior; automatic policy mining and activation remain deferred.
 - `CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01` is implemented in the core conversation-turn proposal path and exposed through MCP `jikuo.propose_policy_suggestions`: it produces compact candidate/no-candidate `proactive_policy_suggestion_review_evidence` without storing raw transcripts. Remaining work is strict SDK / mounted-harness surfacing, not kernel policy evidence production.

@@ -27,8 +27,8 @@ gate are being decided.
 - Starter policy templates with provenance for first-use project bootstrap.
 - A local stdio MCP server exposing 17 tools for status, cards, proposals,
   configuration review, activation settings, routing, and guarded writes.
-- Client proof docs for Claude Code GUI, Codex, Cursor, and VS Code + GitHub
-  Copilot Agent mode.
+- Accepted private-preview MCP use in Codex and Claude, plus proof docs for
+  Cursor, VS Code + GitHub Copilot Agent mode, and regression checks.
 - Integration-neutral core APIs reserved for MCP, future Agent SDK wrappers,
   Studio, plugins, and client adapters.
 
@@ -130,6 +130,10 @@ JIKUO before each user turn.
   rules.
 - [`docs/governance/jikuo_productization_task_map.md`](docs/governance/jikuo_productization_task_map.md):
   active task map and capability registry.
+- [`docs/registry/`](docs/registry/): draft structured registry shards for
+  work orders, capabilities, scenario chains, and mount sets.
+- [`docs/schemas/execution_events_v0_draft.md`](docs/schemas/execution_events_v0_draft.md):
+  draft structured execution-event schema for future analytics.
 - [`docs/governance/jikuo_execution_mounts.md`](docs/governance/jikuo_execution_mounts.md):
   current execution mount set.
 - [`docs/work_orders/`](docs/work_orders/): accepted and in-progress work

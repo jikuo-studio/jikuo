@@ -1,6 +1,6 @@
 schema_version: "jikuo.configurable_rule_policy.v0"
 policy_id: "POLICY-jikuo-task-session-binding-at-slice-start"
-version: 1
+version: 2
 status: "active_report_only"
 title: "Task-session binding at governed slice start"
 scenario_package: "self_bootstrap_governance"
@@ -9,20 +9,13 @@ source_refs:
     ref: "user_policy:each_development_slice_must_bind_or_create_task_session"
   - type: "work_order"
     ref: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-15_self_bootstrap_task_session_binding.md"
+  - type: "user_natural_language"
+    ref: "user_policy:task_session_resolution_must_not_be_silently_skipped"
 triggers:
   - trigger_id: "TRG-task-start"
     type: "task_lifecycle_event"
     event: "task_start"
-conditions:
-  - condition_id: "COND-jikuo-dev-code-change"
-    type: "task_type_is"
-    value: "code_change"
-  - condition_id: "COND-jikuo-implementation-governance"
-    type: "jikuo_layer_is"
-    value: "implementation_governance"
-  - condition_id: "COND-jikuo-source-change"
-    type: "changed_path_matches"
-    pattern: "src/jikuo/**"
+conditions: []
 required_actions:
   - action_id: "ACT-bind-create-or-explicitly-defer-task-session"
     type: "bind_create_or_explicitly_defer_task_session"
@@ -31,6 +24,7 @@ required_evidence:
   - evidence_id: "EVD-task-session-binding-evidence"
     type: "task_session_binding_evidence"
     satisfies_action: "ACT-bind-create-or-explicitly-defer-task-session"
+    required_status: ["ok", "needs_user_decision", "explicitly_deferred"]
 enforcement:
   phase: "report_only"
   level: "review_required"

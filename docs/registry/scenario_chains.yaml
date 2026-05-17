@@ -1,0 +1,32 @@
+schema_version: "jikuo.registry.v0_draft"
+registry_id: "jikuo-scenario-chains"
+entries:
+  - id: "SCENARIO-DESKTOP-TASK-START"
+    title: "Desktop task start governance loop"
+    status: "seed"
+    capability_refs:
+      - "CAP-CONVERSATION-TURN-ROUTER-01"
+      - "CAP-AGENT-FLOW-01"
+      - "CAP-TASK-START-DRYRUN-01"
+      - "CAP-POLICY-RUNTIME-STATUS-CARD-01"
+  - id: "SCENARIO-MCP-RUNTIME-VISIBILITY"
+    title: "MCP runtime status and card visibility"
+    status: "seed"
+    capability_refs:
+      - "CAP-MCP-AGENT-FLOW-WRAPPER-01"
+      - "CAP-MCP-RUNTIME-STATUS-CARD-01"
+      - "CAP-RUNTIME-VISIBILITY-CHANNEL-01"
+      - "CAP-CLIENT-RUNTIME-LINK-SURFACE-01"
+  - id: "SCENARIO-FIRST-USE-ONBOARDING"
+    title: "First-use configuration and activation settings review"
+    status: "seed"
+    capability_refs:
+      - "CAP-CONFIGURATION-REVIEW-01"
+      - "CAP-CLIENT-ONBOARDING-SETTINGS-01"
+      - "CAP-CONFIGURATION-SOURCE-PROVENANCE-01"
+  - id: "SCENARIO-DOCUMENT-REGISTRY-TRANSITION"
+    title: "Layered document registry migration"
+    status: "seed"
+    capability_refs:
+      - "CAP-DOCUMENT-REGISTRY-TRANSITION-01"
+      - "CAP-MAIN-DOC-MOUNT-MAINTENANCE-01"

@@ -52,3 +52,4 @@ Without a task-session binding, completion / evidence / handoff lifecycle record
 - `agent_flow.py apply --operation task_session_start` refuses without approval and writes one compact task-session after explicit approval.
 - Current slice session: `.jikuo/task_sessions/task_20260514T130539Z_jikuo_live_15_self_bootstrap_task_session_bindin_aa0dd272.yaml`.
 - Follow-up retained: `.jikuo/project_state.yaml latest_task_session_refs` refresh remains a separate guarded action unless promoted later.
+- Follow-up hardening accepted in `JIKUO-LIVE-21`: the active task-session binding policy now applies to every governed `task_start`, and unresolved task-session previews surface as `needs_user_decision` rather than plain `ok`.

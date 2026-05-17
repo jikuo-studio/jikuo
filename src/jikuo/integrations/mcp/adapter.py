@@ -882,6 +882,8 @@ def call_tool(
             owner_agent=str(args.get("owner_agent") or "codex"),
             work_routing_category=args.get("work_routing_category"),
             work_routing_summary=args.get("work_routing_summary"),
+            task_session_decision=args.get("task_session_decision"),
+            task_session_defer_reason=args.get("task_session_defer_reason"),
         )
 
     if tool_name == "jikuo.propose_policy_write_plan":
