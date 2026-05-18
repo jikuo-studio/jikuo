@@ -63,15 +63,16 @@ Key decisions accepted for planning:
 | 7 | `DOCREG-01B2`: harden structural checks | implemented | Turn the registry from a draft list into a guarded documentation contract. | Hard failures now catch mechanically decidable drift while repository-wide `CAP-*` completeness remains warning-only for known migration debt. |
 | 8 | `DOCREG-01B2a`: task-map projection edit guard | implemented | Make the task map's projection-only role hard to miss before adding more registry policy. | Recent work showed agents can still treat the oversized task map as a live source because older mount text and project context wording were too permissive. |
 | 9 | `DOCREG-01B2b`: lightweight task context anchors | implemented draft | Let tasks point at required context bundles and originating evidence without building a heavy knowledge graph. | Policy-trigger work showed that background can exist in the repo while agents still miss the originating failure unless the task registry mounts it. |
-| 10 | `DOCREG-01B3`: completion-review registry policy | planned after B2b | Make registry maintenance visible in governed slice completion, not just CI. | A user needs to see that changed work-order / insight / registry docs were checked against the registry before a slice is called complete. |
+| 10 | `DOCREG-01B3`: registry-specific completion checker | deferred behind policy-management MVP | Avoid duplicating the existing main-document completion policy until a distinct registry checker, evidence type, and user-visible need are approved. | `POLICY-jikuo-main-doc-mount-maintenance` already covers main-document completion review; adding another completion policy now would increase policy noise. |
 | 11 | `DATA-01A`: execution-event schema fixtures only | implemented draft | Give future Dashboard / Studio / BI work stable execution facts to read. | Runtime history is currently Markdown-first and not analytics-friendly. |
 | 12 | `LIVE-20B`: policy dead-zone history scanning | planned after DATA-01A | Detect repeated zero-trigger policy evaluations across time. | Users can see a single-card classification, but not long-running dead zones yet. |
 | 13 | Codex hook spike / strict adapter review | planned | Test whether Codex can run JIKUO before every user turn. | MCP availability does not equal strict mounted execution. |
 | 14 | Claude hook spike / strict adapter review | planned | Test whether Claude hook-capable hosts can run JIKUO before every user turn. | Claude can use JIKUO MCP, but strict pre-turn behavior still needs proof. |
 | 15 | `SELF-BOOTSTRAP-02`: stable self-bootstrap execution strategy | planned | Make JIKUO development reliably invoke JIKUO instead of relying on assistant memory. | Current self-bootstrap is improving but still depends on discipline until hooks/adapters exist. |
 | 16 | `SELF-BOOTSTRAP-03`: harness workspace boundary spike | deferred planned proof | Test whether JIKUO should govern its own source repository from a parent harness workspace. | The source repository and the harness state currently share one root, which may blur product-vs-governed-project boundaries. |
-| 17 | Policy governance routing: conservative task classification and task-session default carrier | planned later; authority moved to `docs/governance/jikuo_policy_governance_authority.md` | Make natural-language task approval reliably start or continue governed work without adding heavy approval layers. | Current policy triggering can fall through when task classification is too narrow, while task-session binding can feel heavier than the user's "continue" instruction; policy routing should be hint-assisted, deterministic-checked, and fallback-expanded. |
-| 18 | Policy catalog / starter pack hardening | planned later | Prevent JIKUO dogfood policies from being distributed as user starter policies by accident. | JIKUO self-bootstrap policy directories must never overwrite user project policies. |
+| 17 | `LIFECYCLE-01`: invoked-turn lifecycle completion | current primary foundation task | Make JIKUO complete lifecycle nodes and their policies once it is pulled up. | Current cards and policy checks are event-by-event; completion obligations can be invisible unless the completion node is explicitly run. |
+| 18 | `POLICY-MGMT-01`: lightweight policy-management work | planned after lifecycle ordering adjustment | Activate the two held user-authored candidates through existing no-write plan / guarded apply paths, and design official distribution boundaries. | The current policy task should stay simple while lifecycle facts are not yet explicit enough for heavier policy insight modeling. |
+| 19 | Policy catalog / starter pack hardening | dependency of lightweight policy distribution design; boundary implementation exists, item-level review remains | Prevent JIKUO dogfood policies from being distributed as user starter policies by accident. | JIKUO self-bootstrap policy directories must never overwrite user project policies, and official starter policy updates must remain opt-in. |
 
 ---
 
@@ -83,11 +84,15 @@ work order is the current transitional task-sequencing authority. They are not
 active policies, and they must not be written into `.jikuo/policies/approved`
 until the user explicitly approves a policy-write plan.
 
-Activation is intentionally deferred until the minimum architecture correction
-around `work_profile`, lightweight `task_start`, and future evaluator boundaries
-is accepted. The reason is practical: these candidates are about reasoning and
-modeling behavior, so activating them before the policy-trigger model is stable
-would create noisy governance instead of useful protection.
+Activation is intentionally deferred until each candidate has a no-write policy
+plan and an explicit guarded apply / evolution decision. The reason is
+practical: these candidates are about reasoning and modeling behavior, so
+activating them by ad hoc YAML edits would create noisy governance instead of
+useful protection.
+
+They are now the first manual activation set for lightweight
+`POLICY-MGMT-01`. Do not introduce a heavier candidate registry before
+`LIFECYCLE-01` clarifies lifecycle facts and node completion.
 
 ### POLICY-CANDIDATE-first-principles-critical-alignment
 
@@ -314,9 +319,11 @@ Explicitly still warning-only:
 
 Stop point:
 
-- DOCREG-01B3 is policy governance. It should add completion-review policy
-  surfacing for registry maintenance, but it is intentionally not implemented
-  in this B2 slice.
+- DOCREG-01B3 is policy governance and remains deferred behind `LIFECYCLE-01`
+  and lightweight `POLICY-MGMT-01`. Do not add a duplicate completion-review
+  registry policy while the current main-document completion obligation already
+  covers governed slice closeout, unless a separate registry-specific checker /
+  evidence need is approved.
 
 ## 10.1 DOCREG-01B2a Projection Guard Note
 

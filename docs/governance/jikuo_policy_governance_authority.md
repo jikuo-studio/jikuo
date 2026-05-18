@@ -126,6 +126,35 @@ uses the three user-work lifecycle values above.
 
 ---
 
+### 3.2 Focused Policy Management Boundary
+
+Near-term policy management should stay lightweight while lifecycle data is
+still not explicit enough to support high-quality policy insight.
+
+For the current MVP, policy management means:
+
+1. activate the two held user-authored candidates through the existing no-write
+   policy plan and guarded apply paths;
+2. design official distribution boundaries so reusable policies can become
+   package templates or starter-pack entries without copying JIKUO dogfood
+   policies into user projects.
+
+It does not yet mean building a heavy durable candidate-disposition registry or
+asking JIKUO to generate new policy insights from incomplete lifecycle data.
+Runtime `policy_candidate` cards remain report-only evidence and cannot become
+active policies by themselves.
+
+The two held candidates in `DOCREG-01` are the first manual activation set:
+
+- `POLICY-CANDIDATE-first-principles-critical-alignment`
+- `POLICY-CANDIDATE-data-model-drift-alarm`
+
+Keep them held until each one has a no-write policy plan, explicit user
+approval, and guarded apply. Do not invent a separate candidate lifecycle before
+`LIFECYCLE-01` makes turn lifecycle facts more explicit.
+
+---
+
 ## 4. Policy Scope Classes
 
 JIKUO should avoid many fragile task categories. Too many fine-grained classes
@@ -427,17 +456,24 @@ Current JIKUO has:
 - no-write `work_profile` projection on proposal and MCP responses;
 - lightweight `task_start` processing projection that is separate from guarded
   `task_session_start` creation;
-- policy `applies_to_work_profile` declarations surfaced in policy-store status,
-  trigger reports, and runtime cards as report-only metadata;
+- policy `applies_to_work_profile` declarations consumed by the evaluator for
+  `work_profile.lifecycle_event` and `work_profile.policy_scopes`, with exact
+  conditions preserved as additional filters;
+- runtime cards that show work-profile inputs and scope-match reports for
+  triggered-policy decisions;
 - MCP surfaces for route, status, proposals, and guarded writes.
 
 Current JIKUO does not yet have:
 
+- lifecycle-node completion orchestration that ensures a pulled-up JIKUO turn
+  reaches completion review in addition to task start;
 - structured `agent_hint` input on every router path;
-- the `discussion` / `editing` / `progress_summary` / `other` policy-scope layer
-  as evaluator input;
-- evaluator support for scope-based triggering;
-- runtime cards that show hint/signal/fallback routing;
+- no-write plans and guarded applies for the two held `DOCREG-01` policy
+  candidates;
+- an official distribution design that reviews reusable policies before package
+  template / starter-pack publication and guarded project-local activation;
+- full hint/signal/fallback routing detail in runtime cards and structured
+  execution events;
 - strict host adapters that guarantee every user turn supplies the hint and calls
   JIKUO before the model response.
 
@@ -473,16 +509,28 @@ Recommended future slices:
    `work_profile.policy_scopes`. `intent_class`, `operation_class`, and
    `output_class` remain explanatory projection fields until a later reviewed
    slice.
-5. `POLTRIG-04`: update MCP and host adapter surfaces to require or strongly
+5. `LIFECYCLE-01`: current priority. Define and implement the invoked-turn
+   lifecycle completion runner so that when JIKUO is pulled up, lifecycle nodes
+   and their policies complete consistently. This is about node-execution
+   completeness; it is not a promise that GUI clients can force JIKUO invocation
+   before hooks are proven.
+6. `POLICY-MGMT-01`: keep the policy-management MVP lightweight: activate the
+   two held user-authored candidates through existing no-write plan / guarded
+   apply paths, and design official distribution boundaries. Do not build a
+   heavy candidate-disposition registry before lifecycle facts are explicit.
+7. `POLTRIG-04`: update MCP and host adapter surfaces to require or strongly
    encourage agent hints.
-6. `POLTRIG-05`: surface hint/signal/fallback basis in runtime cards and
+8. `POLTRIG-05`: surface hint/signal/fallback basis in runtime cards and
    structured execution events.
-7. `POLCAT-01`: keep self-bootstrap policy promotion hard-gated so official
-   starter packs are selected, reviewed, and opt-in.
+9. `POLCAT-01`: keep self-bootstrap policy promotion hard-gated so official
+   starter packs are selected, reviewed, and opt-in. This is a distribution
+   boundary dependency of `POLICY-MGMT-01`, not a substitute for candidate
+   promotion and held-candidate cleanup.
 
-`DOCREG-01B3` may still proceed as a domain-specific completion-review policy,
-but it should be treated as a consumer of this policy-governance model, not as
-the model itself.
+`DOCREG-01B3` is deferred. Do not add a duplicate completion-review registry
+policy while `POLICY-jikuo-main-doc-mount-maintenance` covers the current
+main-document completion check, unless a separate registry-specific checker,
+evidence type, and user-visible need are approved.
 
 ---
 
@@ -497,6 +545,16 @@ authority, not as active policy-store entries:
 See
 `docs/work_orders/SPRINT_050_WO-PER-JIKUO-DOCREG-01_layered_document_registry.md`
 section "Held Policy-Governance Candidates" for the current candidate text.
+
+Current status:
+
+- both candidates are `held`, not active;
+- both are scoped to `POLICY-MGMT-01` as the first manual activation set;
+- valid near-term outcomes are: approve through a no-write policy plan and
+  guarded apply, merge into an existing active policy through guarded evolution,
+  reject, or keep deferred with a reason;
+- no outcome may be inferred from discussion alone, and no heavier candidate
+  registry should be introduced before `LIFECYCLE-01` clarifies lifecycle facts.
 
 This authority document keeps the principle: concept alignment and root-cause
 reasoning precede implementation detail acceptance, and data-model drift must

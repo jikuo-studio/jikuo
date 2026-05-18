@@ -62,10 +62,11 @@ Program-level roadmap anchor:
 - Current program tracks:
   - MCP and client runtime: MCP MVP Stage A / B1 / B2 / B3 are implemented; remaining work is release proof, client compatibility expansion, and future router / adapter surfacing.
   - Strict mounted harness: Codex hook and Claude hook tracks remain the near-term path for true pre-turn execution; MCP plus instruction files remain instruction-level, not strict mounted, until a host adapter proves otherwise.
-  - Policy trigger repair: POLTRIG-01A / 01B / 02 / 03 are implemented; task-to-runtime association remains a deferred data-architecture insight until strict client hooks prove that JIKUO can run reliably before each governed turn and completion.
-  - Document registry: DOCREG-01A / B1 / B2 are complete; DOCREG-01B3 policy governance and later generated projections remain.
+  - Lifecycle infrastructure: `LIFECYCLE-01` is now the current primary foundation task. Once JIKUO is invoked for a user turn, it should complete the visible lifecycle nodes and their policy checks (`conversation_turn`, `task_start`, `completion_review`) even though GUI clients still need separate hook proof for forced invocation.
+  - Policy management: POLTRIG-01A / 01B / 02 / 03 are implemented. The near-term policy-management work is intentionally lightweight: activate the two held user-authored candidates through existing no-write plan / guarded apply paths, and design official distribution boundaries.
+  - Document registry: DOCREG-01A / B1 / B2 are complete; DOCREG-01B3 is deferred unless a registry-specific completion checker need is approved, because the current main-document completion obligation already exists in policy governance.
   - Runtime data and analytics: DATA-01A defines execution-event fixtures and schema direction; runtime event emission, history scanning, dashboard / BI, and support-bundle export remain future slices.
-  - Policy catalog and starter packs: official starter policy distribution must remain separate from JIKUO self-bootstrap policies and must never overwrite user-approved local policies.
+  - Policy catalog and starter packs: official starter policy distribution must remain separate from JIKUO self-bootstrap policies, must never overwrite user-approved local policies, and remains opt-in.
   - Release and assets: GitHub private preview exists; license, trademark / domain posture, packaging, CI, PyPI, and public-review readiness remain explicit release decisions.
   - Product surfaces: Studio / dashboard, per-client hook packs, Agent SDK / ADK adapters, and OS notifications remain product expansion tracks after the harness and data model stabilize.
   - Self-bootstrap boundary: the parent harness workspace / child source repository layout is an accepted spike, not an approved source-tree migration.

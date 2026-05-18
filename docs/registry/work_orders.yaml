@@ -850,6 +850,63 @@ entries:
     implements_capabilities: []
     capability_extraction_status: "no_capability_refs_found"
     required_mount_sets: []
+  - id: "JIKUO-LIFECYCLE-01"
+    title: "SPRINT_050_WO-PER-JIKUO-LIFECYCLE-01: Invoked-Turn Lifecycle Completion"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIFECYCLE-01_invoked_turn_lifecycle_completion.md"
+    sprint: "SPRINT_050"
+    status: "Planned; business model and data model review before implementation"
+    impact_tags:
+      - "process_governance"
+      - "runtime_visibility"
+      - "policy_governance"
+    implements_capabilities:
+      - "CAP-INVOKED-TURN-LIFECYCLE-COMPLETION-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets:
+      - "MOUNT-LIFECYCLE-01"
+    originating_evidence_refs:
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-14_completion_review_policy_only_surfacing.md#1-why-this-slice-exists"
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-DATA-01_structured_execution_event_ledger_and_analytics_contract.md#3-problem-statement"
+      - "docs/insights/INSIGHT-2026-05-17-work-unit-task-association-boundary.md"
+    authority_refs:
+      - "docs/governance/jikuo_execution_mounts.md"
+      - "docs/governance/jikuo_policy_governance_authority.md"
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIFECYCLE-01_invoked_turn_lifecycle_completion.md"
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-DATA-01_structured_execution_event_ledger_and_analytics_contract.md"
+    stop_boundaries:
+      - "Do not implement code before lifecycle business model, data structure, layers, and chain are reviewed."
+      - "Do not make task_session_id mandatory for lifecycle completion."
+      - "Do not infer work_order_id or task association from recent cards, paths, or proposal titles."
+      - "Do not claim GUI clients force JIKUO invocation before host hook proof."
+  - id: "JIKUO-POLICY-MGMT-01"
+    title: "SPRINT_050_WO-PER-JIKUO-POLICY-MGMT-01: Policy Management MVP"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-POLICY-MGMT-01_policy_management_mvp.md"
+    sprint: "SPRINT_050"
+    status: "Planned lightweight policy track; follows JIKUO-LIFECYCLE-01 for implementation priority"
+    impact_tags:
+      - "policy_governance"
+      - "policy_distribution"
+      - "mvp"
+    implements_capabilities:
+      - "CAP-POLICY-CANDIDATE-PROMOTION-01"
+      - "CAP-POLICY-DISTRIBUTION-MVP-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets:
+      - "MOUNT-POLICY-MANAGEMENT-MVP"
+    originating_evidence_refs:
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-DOCREG-01_layered_document_registry.md#31-held-policy-governance-candidates"
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-20_policy_dead_zone_detection.md#7-initial-evidence"
+    authority_refs:
+      - "docs/governance/jikuo_policy_governance_authority.md"
+      - "docs/governance/jikuo_policy_store_configuration_flow.md"
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-POLICY-MGMT-01_policy_management_mvp.md"
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-POLICY-CATALOG-01_self_bootstrap_policy_promotion_review.md"
+    stop_boundaries:
+      - "Do not activate held policy candidates without a no-write plan, explicit user approval, and guarded apply."
+      - "Do not build a heavy candidate-disposition registry before JIKUO-LIFECYCLE-01 clarifies lifecycle facts."
+      - "Do not copy JIKUO self-bootstrap .jikuo/policies into official starter packs or user projects."
+      - "Do not change evaluator behavior in this work order without a separate POLTRIG review."
+      - "Do not use the legacy task map as the source of truth for this task."
   - id: "JIKUO-POLTRIG-03"
     title: "SPRINT_050_WO-PER-JIKUO-POLTRIG-03: Policy Scope Evaluator Consumption"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-POLTRIG-03_policy_scope_evaluator_consumption.md"
