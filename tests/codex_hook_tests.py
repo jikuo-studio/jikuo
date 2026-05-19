@@ -93,6 +93,30 @@ class CodexHookProofTests(unittest.TestCase):
         self.assertIn("jikuo.propose_task_start", context)
         self.assertIn("Durable writes remain guarded", context)
 
+    def test_build_agent_flow_command_uses_stdin_flag_without_raw_prompt(self):
+        hook = load_hook_module()
+        raw_prompt = "SECRET_PROMPT_VALUE: implement proof"
+        hook_input = hook.HookInput(
+            hook_event_name="UserPromptSubmit",
+            prompt=raw_prompt,
+            cwd=ROOT,
+            session_id="session-command",
+            turn_id="turn-command",
+            permission_mode="default",
+            model=None,
+        )
+
+        command = hook.build_agent_flow_command(
+            hook_input,
+            ROOT,
+            "mounted",
+            env={"JIKUO_HOOK_PYTHON": "python"},
+        )
+
+        self.assertIn("--user-phrase-stdin", command)
+        self.assertNotIn("--user-phrase", command)
+        self.assertNotIn(raw_prompt, command)
+
     def test_main_emits_codex_additional_context_with_fake_runner(self):
         hook = load_hook_module()
         payload = {

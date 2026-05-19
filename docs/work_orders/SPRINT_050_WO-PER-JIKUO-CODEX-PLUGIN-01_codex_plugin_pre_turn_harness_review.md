@@ -248,7 +248,7 @@ honest fallback.
 The proof script should call the local no-write router before the model works:
 
 ```powershell
-python -B -m jikuo.agent_flow propose --event conversation_turn --project-root "<PROJECT_ROOT>" --trigger-mode mounted --user-phrase "<prompt>" --format json
+python -B -m jikuo.agent_flow propose --event conversation_turn --project-root "<PROJECT_ROOT>" --trigger-mode mounted --user-phrase-stdin --format json
 ```
 
 The CLI path is the first proof target because a hook command is an external
@@ -256,9 +256,10 @@ process. A later adapter may prefer MCP `jikuo.route_user_request` if the host
 offers a reliable in-process MCP client boundary to hooks.
 
 Proof notes should record only card links, status, and compact summaries. They
-must not persist the full prompt text. If later privacy review decides that even
-transient process arguments are too exposed, add a stdin/API router entry before
-promoting this proof into a distributable hook pack.
+must not persist the full prompt text. The current hook passes the prompt to the
+local CLI over stdin, not through process arguments. A later reusable hook pack
+may still replace the CLI hop with MCP or an in-process API when the host offers
+a reliable boundary.
 
 ### Hook Output
 
@@ -323,10 +324,9 @@ These files implement the thin Codex adapter:
 
 The hook is intentionally not a policy engine. It must not decide active-policy
 applicability, perform durable writes, persist raw prompts, or claim
-AI-semantic routing. The current implementation still passes the prompt
-transiently to the local CLI as `--user-phrase`; that is acceptable for this
-project-local proof, but a reusable hook pack should add a stdin/API route if
-process-argument exposure is too broad for the target environment.
+AI-semantic routing. The current implementation passes the prompt transiently
+to the local CLI over stdin via `--user-phrase-stdin`, so prompt text is not
+placed in the child process argument list.
 
 An accepted proof note under `docs/integrations/proofs/` is still pending and
 must be based on a real Codex GUI run, not only unit tests.
@@ -339,6 +339,8 @@ Current local verification:
 - A local stdin smoke call to `.codex/hooks/jikuo_user_prompt_submit.py`
   returns `hookSpecificOutput.additionalContext` and creates a
   `conversation_turn` runtime history card.
+- `agent_flow propose --user-phrase-stdin` is covered by regression tests and
+  is the preferred Codex hook transport for prompt text.
 
 This verification proves the script behavior only. It does not prove the Codex
 GUI has loaded, trusted, or executed the hook.

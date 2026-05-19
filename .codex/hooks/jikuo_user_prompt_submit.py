@@ -125,8 +125,7 @@ def build_agent_flow_command(
         "json",
     ]
     if hook_input.prompt:
-        # Transient only: do not write the raw prompt to hook-owned files.
-        command.extend(["--user-phrase", hook_input.prompt])
+        command.append("--user-phrase-stdin")
     return command
 
 
@@ -146,6 +145,7 @@ def run_agent_flow(
             command,
             cwd=project_root,
             env=process_env,
+            input=hook_input.prompt if hook_input.prompt else None,
             text=True,
             encoding="utf-8",
             stdout=subprocess.PIPE,
@@ -245,7 +245,7 @@ def render_additional_context(
         f"History card: {history or 'unavailable'}.",
         "Required follow-up tools: " + (", ".join(followups) if followups else "none reported."),
         "Durable writes remain guarded; this hook must not create task sessions, policies, commits, or evidence writes by itself.",
-        "Privacy boundary: the hook does not persist the raw prompt or transcript in hook-owned files.",
+        "Privacy boundary: the hook passes the prompt to JIKUO over stdin and does not persist the raw prompt or transcript in hook-owned files.",
     ]
     return "\n".join(lines)
 
@@ -259,7 +259,7 @@ def render_failure_context(error: Exception, hook_input: HookInput, project_root
             f"Turn id: {hook_input.turn_id or 'unavailable'}.",
             f"Failure summary: {error}",
             "Do not claim strict-mounted JIKUO ran for this turn unless a later visible card proves it.",
-            "Privacy boundary: the hook does not persist the raw prompt or transcript in hook-owned files.",
+            "Privacy boundary: the hook passes the prompt to JIKUO over stdin when available and does not persist the raw prompt or transcript in hook-owned files.",
         ]
     )
 

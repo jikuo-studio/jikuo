@@ -469,13 +469,14 @@ host_semantic_intent = <provided | unavailable | heuristic_fallback>
 Minimal JIKUO command:
 
 ```powershell
-<PYTHON_EXE> -B -m jikuo.agent_flow propose --event conversation_turn --project-root "<PROJECT_ROOT>" --trigger-mode mounted --user-phrase "<prompt>" --format json
+<PYTHON_EXE> -B -m jikuo.agent_flow propose --event conversation_turn --project-root "<PROJECT_ROOT>" --trigger-mode mounted --user-phrase-stdin --format json
 ```
 
 Proof notes should not copy the full prompt. Record card links, status, and a
-compact summary only. If prompt-in-argv exposure is unacceptable for a target
-environment, add a stdin/API router entry before packaging this as a reusable
-hook pack.
+compact summary only. The current project-local hook passes prompt text to the
+CLI over stdin with `--user-phrase-stdin`, not through the child process
+argument list. A reusable hook pack may still switch to MCP or an in-process API
+when the target host provides a reliable boundary.
 
 Semantic classification proof:
 

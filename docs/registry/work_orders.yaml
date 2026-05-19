@@ -137,7 +137,7 @@ entries:
     title: "SPRINT_050_WO-PER-JIKUO-CODEX-PLUGIN-01: Codex Plugin Pre-Turn Harness Review"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CODEX-PLUGIN-01_codex_plugin_pre_turn_harness_review.md"
     sprint: "SPRINT_050"
-    status: "Level 1 project-local proof files implemented and local stdin smoke passed; official Codex hook surface reviewed, host semantic-intent, multi-intent slice, and end-to-end GUI trigger-flow boundaries recorded; GUI proof acceptance pending"
+    status: "Level 1 project-local proof files implemented, local stdin smoke passed, and hook prompt transport moved to --user-phrase-stdin; official Codex hook surface reviewed, host semantic-intent, multi-intent slice, and end-to-end GUI trigger-flow boundaries recorded; GUI proof acceptance pending"
     impact_tags:
       - "strict_mounted_harness"
       - "client_proof"

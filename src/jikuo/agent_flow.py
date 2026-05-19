@@ -4391,6 +4391,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     propose.add_argument("--project-root", type=Path, default=None)
     propose.add_argument("--user-phrase", default=None)
+    propose.add_argument(
+        "--user-phrase-stdin",
+        action="store_true",
+        help="Read the user phrase from stdin instead of a command-line argument.",
+    )
     propose.add_argument("--trigger-mode", choices=sorted(TRIGGER_MODES), default=None)
     propose.add_argument("--format", choices=("markdown", "json"), default="markdown")
 
@@ -4510,6 +4515,12 @@ def main(argv: list[str] | None = None) -> int:
             }
         )
 
+    user_phrase = args.user_phrase
+    if args.user_phrase_stdin:
+        if user_phrase:
+            parser.error("--user-phrase and --user-phrase-stdin are mutually exclusive")
+        user_phrase = sys.stdin.read().rstrip("\r\n")
+
     proposal = build_proposal(
         raw_event=args.event,
         task_title=args.task_title,
@@ -4553,7 +4564,7 @@ def main(argv: list[str] | None = None) -> int:
         completion_status=args.completion_status,
         owner_agent=args.owner_agent,
         project_root=args.project_root,
-        user_phrase=args.user_phrase,
+        user_phrase=user_phrase,
         trigger_mode=args.trigger_mode,
         produced_evidence=produced_evidence,
         work_routing_category=args.work_routing_category,

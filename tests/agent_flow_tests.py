@@ -571,6 +571,46 @@ class AgentFlowProposalTests(unittest.TestCase):
         self.assertFalse((READY_PROJECT / ".jikuo" / "task_sessions").exists())
         self.assertFalse((READY_PROJECT / ".jikuo" / "policies").exists())
 
+    def test_conversation_turn_router_reads_user_phrase_from_stdin(self):
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-B",
+                str(TOOL),
+                "propose",
+                "--event",
+                "conversation_turn",
+                "--trigger-mode",
+                "mounted",
+                "--user-phrase-stdin",
+                "--project-root",
+                str(READY_PROJECT),
+                "--format",
+                "json",
+            ],
+            cwd=ROOT,
+            input="please show setup settings",
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        proposal = json.loads(completed.stdout)
+        self.assertEqual(
+            proposal["trigger_decision"]["user_phrase"],
+            "please show setup settings",
+        )
+        router = proposal["conversation_router"]
+        self.assertEqual(router["schema"], "jikuo.conversation_turn_router.v0")
+        self.assertEqual(router["trigger_mode"], "mounted")
+        self.assertEqual(
+            router["required_followup_tools"],
+            ["python -B -m jikuo.agent_flow propose --event configuration_review"],
+        )
+        self.assertFalse(proposal["write_effect"]["writes_performed"])
+
     def test_work_profile_does_not_treat_no_write_as_editing(self):
         completed = subprocess.run(
             [

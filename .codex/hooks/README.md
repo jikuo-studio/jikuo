@@ -30,11 +30,11 @@ prefer AI semantics over deterministic fallback.
 
 ## Privacy Boundary
 
-The hook does not write the raw prompt or transcript to hook-owned files. For
-the current proof, the prompt is passed transiently to the local JIKUO CLI so
-the existing router can classify the turn. If this process-argument exposure is
-too much for a target environment, add a stdin/API router entry before packaging
-the hook as a reusable client adapter.
+The hook does not write the raw prompt or transcript to hook-owned files. The
+prompt is passed transiently to the local JIKUO CLI over stdin with
+`--user-phrase-stdin`, so the raw prompt is not placed in the child process
+argument list. A later reusable adapter can still replace the CLI hop with an
+MCP or in-process API call when the host provides a reliable boundary.
 
 ## Configuration
 
