@@ -21,7 +21,8 @@ This work order depends on:
 - `docs/governance/jikuo_policy_governance_authority.md`;
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-14_completion_review_policy_only_surfacing.md`;
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-DATA-01_structured_execution_event_ledger_and_analytics_contract.md`;
-- `docs/insights/INSIGHT-2026-05-17-work-unit-task-association-boundary.md`.
+- `docs/insights/INSIGHT-2026-05-17-work-unit-task-association-boundary.md`;
+- `docs/insights/INSIGHT-2026-05-19-completion-review-evidence-bridge-gap.md`.
 
 It does not use `docs/governance/jikuo_productization_task_map.md` as task
 authority. That file remains a legacy L3 human-readable projection.
@@ -78,6 +79,7 @@ No implementation should start until these questions are reviewed:
 | Node set | Which lifecycle nodes are mandatory for the first MVP, and which remain optional or future? |
 | Scope inheritance | Which facts are inherited across nodes, and which are recomputed at each node? |
 | Policy evaluation | Which policies must run at each node, and how should node-local evidence be reported? |
+| Evidence bridge | How does an actually performed main-document check become structured `main_document_mount_maintenance_evidence` without requiring a durable task session or inferring evidence from commits? |
 | Runtime projection | Which card links and structured fields are enough before DATA-01B durable event writes exist? |
 | Task association | When, if ever, can a lifecycle instance bind to a durable `task_session_id` or `work_order_id`? |
 

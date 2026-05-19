@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$(git rev-parse --show-toplevel)/.codex/hooks/jikuo_user_prompt_submit.py\"",
+            "statusMessage": "Running JIKUO pre-turn check",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

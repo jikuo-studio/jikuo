@@ -54,6 +54,10 @@ entries:
     title: "Strict mounted harness adapter proof mount set"
     status: "seed"
     documents:
+      - path: "docs/governance/jikuo_execution_mounts.md"
       - path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-INTG-03_strict_mounted_harness_adapter_contract.md"
       - path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CODEX-PLUGIN-01_codex_plugin_pre_turn_harness_review.md"
       - path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CLAUDE-HOOK-01_claude_hook_strict_adapter_review.md"
+      - path: "docs/integrations/mcp_client_proof_playbook.md"
+      - path: "docs/integrations/mcp_client_configuration_examples.md"
+      - path: ".codex/hooks/README.md"

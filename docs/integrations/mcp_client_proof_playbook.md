@@ -440,6 +440,180 @@ Record:
 - Strict mounted status: MCP + instruction only unless a Codex plugin / hook /
   app extension point is verified separately.
 
+### Codex Hook Proof Design
+
+The next Codex proof is not another MCP tool-discovery run. It is a host-boundary
+proof for the official Codex hook surface.
+
+Official behavior to verify in the installed Codex build:
+
+- Codex can load hooks from `~/.codex/hooks.json`,
+  `~/.codex/config.toml`, `<repo>/.codex/hooks.json`, or
+  `<repo>/.codex/config.toml`.
+- Project-local `.codex/` hooks require the project layer to be trusted.
+- `UserPromptSubmit` receives the current `prompt` before it is sent to the
+  model and can add `additionalContext` or block the prompt.
+- Plugin-bundled hooks are opt-in, so the first proof should use project-local
+  `.codex/` hook configuration rather than a packaged plugin hook.
+
+Minimal proof input:
+
+```text
+hook_event_name = UserPromptSubmit
+prompt = <current user prompt>
+cwd = <PROJECT_ROOT or a subdirectory inside it>
+trigger_mode = mounted
+host_semantic_intent = <provided | unavailable | heuristic_fallback>
+```
+
+Minimal JIKUO command:
+
+```powershell
+<PYTHON_EXE> -B -m jikuo.agent_flow propose --event conversation_turn --project-root "<PROJECT_ROOT>" --trigger-mode mounted --user-phrase "<prompt>" --format json
+```
+
+Proof notes should not copy the full prompt. Record card links, status, and a
+compact summary only. If prompt-in-argv exposure is unacceptable for a target
+environment, add a stdin/API router entry before packaging this as a reusable
+hook pack.
+
+Semantic classification proof:
+
+- The first proof may only prove mounted invocation. That is useful but it does
+  not prove AI-semantic routing.
+- If the host exposes AI semantic intent before JIKUO runs, pass a compact
+  `host_semantic_intent` object with source, confidence, lifecycle event,
+  `policy_scopes`, intent class, operation class, output class, and compact
+  rationale.
+- If the hook can only see the raw prompt, record
+  `host_semantic_intent.status = unavailable` and let JIKUO report deterministic
+  keyword routing as fallback.
+- Do not let the hook decide active-policy applicability. JIKUO remains the
+  final classification and policy-distribution authority.
+
+Suggested compact semantic-intent evidence:
+
+```yaml
+host_semantic_intent:
+  status: provided | unavailable | heuristic_fallback
+  provider: host_ai | jikuo_semantic_classifier | deterministic_keyword_router
+  multi_intent: true | false
+  constraints: [no_file_write]
+  policy_scopes: [discussion, editing, progress_summary]
+  primary_intent_ref: update_docs
+  intent_slices:
+    - id: explain_design
+      policy_scopes: [discussion]
+      intent_class: design_explanation
+      operation_class: read_only
+      output_class: explanation
+    - id: update_docs
+      policy_scopes: [editing]
+      intent_class: implementation_request
+      operation_class: documentation_update
+      output_class: repository_change
+    - id: summarize_progress
+      policy_scopes: [progress_summary]
+      intent_class: progress_summary
+      operation_class: summarize
+      output_class: summary
+  confidence: medium
+  rationale_summary: "Compact summary only; no raw prompt."
+```
+
+Minimum semantic proof cases:
+
+| Probe prompt shape | Expected semantic intent | Expected final JIKUO behavior |
+|---|---|---|
+| "Explain the design only; do not edit files." | one discussion slice, `constraints=[no_file_write]` | final scope includes `discussion`, not `editing`; editing keywords become conflict evidence if present |
+| "Update the hook docs." | one editing slice | final scope includes `editing`; editing policies can trigger |
+| "Explain it, update docs, then summarize progress." | discussion + editing + progress summary slices | final aggregate scopes include all three; runtime card shows slices |
+| Host semantic intent unavailable | `status=unavailable` | JIKUO reports deterministic fallback honestly |
+| Host says discussion, keywords suggest editing | conflict recorded | final decision follows host/constraint if confidence is sufficient, with conflict visible |
+
+End-to-end Codex GUI proof flow:
+
+1. Enable the project-local Codex `UserPromptSubmit` proof hook in a trusted
+   project.
+2. Submit a probe prompt from the Codex GUI, not only from CLI.
+3. Confirm the hook fires before Codex starts substantive model output.
+4. Confirm the hook calls JIKUO and produces a new `conversation_turn` history
+   card.
+5. Confirm Codex receives `additionalContext` with latest card, history card,
+   semantic-intent status, final scopes, triggered-policy summary, and required
+   follow-up tools.
+6. Continue the task in Codex and perform any requested edits or discussion.
+7. Before the final answer or commit, run `completion_review`.
+8. Confirm completion review produces a separate lifecycle card and reports
+   main-doc / evidence / progress-summary status.
+9. Record the proof result with links to the pre-turn card and completion card,
+   plus pass/fail observations. Do not copy the raw prompt or transcript.
+
+The proof is accepted only when the user can see that Codex did not merely have
+MCP tools available. JIKUO must have been invoked before work, its context must
+have been mounted into Codex, and completion review must have produced a later
+card for the same governed work.
+
+Expected hook output:
+
+```json
+{
+  "hookSpecificOutput": {
+    "hookEventName": "UserPromptSubmit",
+    "additionalContext": "JIKUO mounted pre-turn ran. Semantic intent: <provided|unavailable|fallback>. Latest card: <path>. History card: <path>. Required follow-up tools: <tools-or-none>."
+  }
+}
+```
+
+Strict mounted proof passes only if:
+
+- the hook runs before Codex starts substantive model work;
+- a new `.jikuo/runtime/history/*.md` card is produced for the user prompt;
+- the injected `additionalContext` includes the latest card path and any
+  required follow-up tools;
+- semantic-intent availability is recorded honestly as host AI, JIKUO semantic
+  classifier, deterministic fallback, or unavailable;
+- multi-intent prompts produce aggregate policy scopes and visible per-slice
+  explanations rather than being collapsed into one hidden label;
+- negative constraints such as "do not edit" are represented separately and can
+  prevent keyword-only editing promotion;
+- a no-op prompt still produces a visible `mounted_idle_tick`;
+- a JIKUO failure is visible as a block or degradation, not a silent bypass.
+
+Strict mounted proof fails if:
+
+- the GUI surface does not load or trust the hook;
+- the hook runs after model work has already started;
+- the hook cannot locate a stable project root;
+- the proof relies on reading the full transcript as a stable API;
+- the proof only demonstrates MCP availability.
+- the proof claims AI-semantic classification while only keyword fallback ran.
+
+Project-local proof files now implemented for the current repository:
+
+```text
+<PROJECT_ROOT>\.codex\hooks.json
+<PROJECT_ROOT>\.codex\hooks\jikuo_user_prompt_submit.py
+<PROJECT_ROOT>\.codex\hooks\README.md
+tests\codex_hook_tests.py
+```
+
+These files are only Level 1 adapter proof scaffolding. They do not prove Codex
+GUI strict mounted behavior until the project `.codex/` layer is trusted, a real
+Codex prompt produces a pre-turn JIKUO card, Codex receives the injected
+`additionalContext`, and a later completion-review card is linked in the proof
+report.
+
+Accepted proof notes should still be written under:
+
+```text
+docs\integrations\proofs\<accepted-codex-hook-proof>.md
+```
+
+Do not commit screenshots, temporary local runtime cards, raw prompts, raw
+transcripts, or client-specific private paths unless the user explicitly
+approves.
+
 ## 12. Cursor Proof
 
 ### Configure

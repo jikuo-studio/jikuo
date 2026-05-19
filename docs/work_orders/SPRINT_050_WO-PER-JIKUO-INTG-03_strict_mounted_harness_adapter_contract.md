@@ -59,6 +59,147 @@ A strict mounted adapter must:
 9. Keep durable writes behind existing guarded-write tools that require
    explicit confirmation and approval phrase.
 
+## 3.1 Shared Proof Contract
+
+Every client proof should use the same conceptual adapter contract even when
+the host-specific hook mechanism differs:
+
+| Field | Meaning |
+|---|---|
+| `client_id` | `codex`, `claude`, `cursor`, `vscode_copilot`, `agent_sdk`, or another explicit host id |
+| `client_event` | the host event that fires before user-turn handling, such as Codex `UserPromptSubmit` |
+| `project_root` | explicit root passed to JIKUO; do not infer from recent cards |
+| `user_turn_summary` | current prompt or compact summary, never a stored raw transcript |
+| `host_semantic_intent` | optional compact AI semantic classification from the host or a classifier provider; include source, confidence, aggregate scopes, optional `intent_slices`, constraints, and compact rationale when available |
+| `trigger_mode` | `mounted`, `semantic`, or `ask`, read from activation settings when available |
+| `jikuo_call` | MCP `jikuo.route_user_request` when reliable, CLI `python -B -m jikuo.agent_flow propose --event conversation_turn` as fallback |
+| `display_result` | card markdown or runtime links surfaced back to the user / model |
+| `failure_result` | visible block or degradation; silent bypass is a proof failure |
+
+## 3.2 Classification Cooperation Contract
+
+Strict mounted adapters must separate three responsibilities:
+
+- Host / classifier semantic judgment: classify the user turn with AI-level
+  semantics when the host can provide it before governance evaluation.
+- Adapter transport: pass that compact classification to JIKUO and surface the
+  returned card links. The adapter does not decide policy applicability.
+- JIKUO authority: merge host semantic intent, deterministic signals, explicit
+  lifecycle events, activation settings, and registry context into the final
+  work profile used for policy distribution.
+
+Final classification precedence should be explicit and visible:
+
+1. Explicit user-approved lifecycle or guarded command context.
+2. Host AI semantic intent or a dedicated JIKUO semantic classifier result,
+   when available with sufficient confidence.
+3. Deterministic keyword/path/tool signals as fallback and conflict evidence.
+4. Conservative fallback with degraded status when neither AI nor deterministic
+   signals are sufficient.
+
+If AI semantic intent and deterministic signals disagree, the runtime card
+should show the conflict instead of silently picking one. The policy evaluator
+must consume the final JIKUO work profile, not raw host claims.
+
+Multi-intent turns are normal and must be modeled explicitly. One user turn has
+one lifecycle position, but it may contain multiple intent slices:
+
+```yaml
+host_semantic_intent:
+  multi_intent: true
+  primary_intent_ref: update_docs
+  intent_slices:
+    - id: discuss_design
+      policy_scopes: [discussion]
+      intent_class: design_discussion
+      operation_class: read_only
+      output_class: explanation
+    - id: update_docs
+      policy_scopes: [editing]
+      intent_class: implementation_request
+      operation_class: documentation_update
+      output_class: repository_change
+    - id: summarize
+      policy_scopes: [progress_summary]
+      intent_class: progress_summary
+      operation_class: summarize
+      output_class: summary
+```
+
+JIKUO must aggregate final policy scopes from the union of intent-slice scopes,
+unless an explicit negative constraint removes or gates a scope. `primary` is
+only a summary/order hint; it must not block other slices from policy
+distribution. The runtime card should show both the aggregate final
+`work_profile` and the per-slice explanation so users can see why several
+policies triggered from one instruction.
+
+Negative constraints have to be represented separately from keyword signals.
+For example, "only discuss how to change this, do not edit files" should produce
+`constraints: [no_file_write]`, final scope `discussion`, and a conflict note if
+editing keywords were detected. It should not become an editing task solely
+because deterministic keywords include "change".
+
+Minimum implementation checklist for a later code slice:
+
+- add `host_semantic_intent` input to CLI, MCP adapter schemas, and hook proof
+  payloads;
+- add schema normalization for `intent_slices`, aggregate scopes, constraints,
+  confidence, provider, and compact rationale;
+- merge host semantic intent in `work_profile.build_work_profile()` ahead of
+  keyword fallback;
+- record deterministic keyword/path/tool agreement or conflict in
+  `basis.deterministic_signals` / `basis.conflicts`;
+- keep policy evaluator input stable: final `lifecycle_event` plus aggregate
+  `policy_scopes`;
+- add runtime-card rendering and tests for single-intent, multi-intent,
+  negative-constraint, host-unavailable fallback, and host/keyword conflict.
+
+The proof conclusion should distinguish:
+
+- MCP availability;
+- instruction-following reliability;
+- host-level pre-turn hook availability;
+- host-time AI semantic-intent availability;
+- actual JIKUO router execution before model work.
+
+Only the last item can support a strict mounted claim.
+
+## 3.3 End-To-End Client Trigger Contract
+
+An accepted strict client adapter must prove more than hook discovery. The
+end-to-end governed turn is:
+
+1. Host receives a user turn.
+2. Host pre-turn boundary runs before model work.
+3. Adapter collects minimal context and activation settings.
+4. Adapter provides or honestly marks semantic intent status.
+5. Adapter calls JIKUO no-write routing / lifecycle start.
+6. JIKUO produces final work profile and policy distribution.
+7. Adapter surfaces card links, triggered-policy summary, missing evidence, and
+   follow-up tools back to the host model / user.
+8. Host executes the actual work while honoring the mounted JIKUO context.
+9. Guarded writes remain behind existing approval-based tools.
+10. Completion review runs before final delivery or commit and produces a later
+    lifecycle card.
+
+This contract is client-neutral. Codex may use `UserPromptSubmit` and
+`additionalContext`; Claude, Cursor, VS Code, Agent SDK wrappers, or a Studio
+entry point may use different host mechanics. The required observable behavior
+is the same: JIKUO must run before substantive work, the model must see the
+result, and completion evidence must be visible before closure.
+
+Minimum observable artifacts for an end-to-end proof:
+
+- pre-turn history card for the user prompt;
+- injected or displayed card link before model work;
+- semantic-intent status and final aggregate policy scopes;
+- visible per-slice explanation for multi-intent turns;
+- visible conflict or fallback when deterministic signals disagree or are the
+  only classifier;
+- completion-review history card for the same governed turn;
+- final response or proof note linking both lifecycle cards;
+- no raw prompt / transcript persisted as proof evidence.
+
 ## 4. Client Priority
 
 | Client / host | Near-term route | Strict-mounted status |
@@ -79,6 +220,12 @@ A strict mounted adapter must:
   task execution.
 - If mounted mode is requested but no pre-turn adapter is active, the client
   surfaces a degraded / non-strict status.
+- If host AI semantic intent is unavailable, the client records
+  `semantic_intent_status=unavailable` and JIKUO may use deterministic fallback;
+  this must not be described as AI-semantic routing.
+- If one user instruction contains discussion, editing, and summary intents,
+  the final work profile includes all relevant aggregate scopes and the runtime
+  card shows per-slice intent explanations.
 - In mounted mode, a user turn with no obligation still produces a visible
   `mounted_idle_tick`.
 - The same runtime card is visible through chat, `.jikuo/runtime/last_card.md`,
@@ -95,6 +242,8 @@ A strict mounted adapter must:
 The next slice is not more kernel work. It is client proof:
 
 - verify the current 17-tool MCP surface in the selected GUI clients
+- verify Codex `UserPromptSubmit` hook proof as the current first Codex
+  host-boundary candidate
 - preserve proof artifacts for users
 - record which clients support only MCP + instructions and which can support a
   true pre-turn adapter

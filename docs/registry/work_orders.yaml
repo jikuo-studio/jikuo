@@ -137,11 +137,31 @@ entries:
     title: "SPRINT_050_WO-PER-JIKUO-CODEX-PLUGIN-01: Codex Plugin Pre-Turn Harness Review"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CODEX-PLUGIN-01_codex_plugin_pre_turn_harness_review.md"
     sprint: "SPRINT_050"
-    status: "Planned; do not implement before client proof and explicit user approval"
-    impact_tags: []
-    implements_capabilities: []
-    capability_extraction_status: "no_capability_refs_found"
-    required_mount_sets: []
+    status: "Level 1 project-local proof files implemented and local stdin smoke passed; official Codex hook surface reviewed, host semantic-intent, multi-intent slice, and end-to-end GUI trigger-flow boundaries recorded; GUI proof acceptance pending"
+    impact_tags:
+      - "strict_mounted_harness"
+      - "client_proof"
+      - "codex"
+    implements_capabilities:
+      - "CAP-CODEX-PLUGIN-HARNESS-REVIEW-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets:
+      - "MOUNT-STRICT-HARNESS-PROOF"
+    originating_evidence_refs:
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-INTG-03_strict_mounted_harness_adapter_contract.md#6-current-stop-point"
+      - "docs/integrations/mcp_client_proof_playbook.md#11-codex-desktop--codex-cli-proof"
+    authority_refs:
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CODEX-PLUGIN-01_codex_plugin_pre_turn_harness_review.md"
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-INTG-03_strict_mounted_harness_adapter_contract.md"
+      - "docs/integrations/mcp_client_proof_playbook.md"
+    stop_boundaries:
+      - "Do not treat checked-in .codex proof files as accepted strict-mounted behavior before a real Codex GUI proof is recorded."
+      - "Do not claim Codex strict mounted support before UserPromptSubmit proof is accepted."
+      - "Do not claim AI-semantic routing unless host_semantic_intent or a dedicated semantic classifier proof passes; deterministic keyword routing is only fallback/conflict evidence."
+      - "Do not collapse multi-intent user turns into a single hidden label; use intent_slices plus aggregate policy_scopes when semantic proof work begins."
+      - "Do not accept Codex GUI strict-mounted proof unless both pre-turn and completion_review lifecycle cards are visible and linked in the proof note."
+      - "Do not use plugin-bundled hooks as the first proof path while plugin_hooks remains opt-in."
+      - "Do not persist raw prompts or transcripts as proof evidence."
   - id: "JIKUO-CORE-01"
     title: "SPRINT_050_WO-PER-JIKUO-CORE-01: Structured Result Model"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-01_structured_result_model.md"
