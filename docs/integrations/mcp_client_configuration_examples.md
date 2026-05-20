@@ -1,8 +1,8 @@
 # JIKUO MCP Client Configuration Examples
 
 > Status: MCP MVP local stdio configuration examples and smoke-log companion.
-> Scope: local stdio MCP clients only. Current surface exposes 17 tools: 8 Stage A
-> no-write / card / proposal tools, three configuration / activation-settings read-plan tools, two no-write router tools, one activation-settings guarded-write tool, plus Stage B1 / B2 / B3 guarded-write tools.
+> Scope: local stdio MCP clients only. Current surface exposes 18 tools: 8 Stage A
+> no-write / card / proposal tools, three configuration / activation-settings read-plan tools, two no-write router tools, one no-write MCP Sampling semantic probe tool, one activation-settings guarded-write tool, plus Stage B1 / B2 / B3 guarded-write tools.
 
 ## Purpose
 
@@ -16,6 +16,7 @@ Cursor, and VS Code + GitHub Copilot Agent mode, use
 
 Source references:
 
+- MCP Sampling specification: `https://modelcontextprotocol.io/specification/2025-06-18/client/sampling`
 - Claude Code MCP docs: `https://code.claude.com/docs/en/mcp`
 - Cursor MCP docs: `https://docs.cursor.com/advanced/model-context-protocol`
 - OpenAI Docs MCP / Codex setup reference: `https://developers.openai.com/learn/docs-mcp`
@@ -215,7 +216,7 @@ For a configured client:
 
 ## Current MVP Tool Discovery Checklist
 
-For the current surface, tool discovery should list exactly 17 tools:
+For the current surface, tool discovery should list exactly 18 tools:
 
 1. `jikuo.status`
 2. `jikuo.get_runtime_status`
@@ -231,9 +232,10 @@ For the current surface, tool discovery should list exactly 17 tools:
 12. `jikuo.apply_activation_settings_update`
 13. `jikuo.route_user_request`
 14. `jikuo.propose_policy_suggestions`
-15. `jikuo.apply_task_session_evidence_update`
-16. `jikuo.apply_policy_evolution_write`
-17. `jikuo.apply_policy_template_activation`
+15. `jikuo.probe_sampling_semantic_intent`
+16. `jikuo.apply_task_session_evidence_update`
+17. `jikuo.apply_policy_evolution_write`
+18. `jikuo.apply_policy_template_activation`
 
 If a GUI client shows fewer tools after updating JIKUO, start a new client
 session or restart the desktop application so it respawns the MCP server.
@@ -246,7 +248,7 @@ compatibility claim without reading source code:
 1. Client name, version if visible, date, OS, and JIKUO commit hash.
 2. The exact MCP server configuration path or GUI settings screen used.
 3. The Python executable path used to launch `jikuo.integrations.mcp.server`.
-4. A tool-discovery result showing exactly the current 17 tools.
+4. A tool-discovery result showing exactly the current 18 tools.
 5. One no-write card call, preferably `jikuo.get_runtime_status_card`, with the
    card displayed in the client.
 6. One router call, preferably `jikuo.route_user_request` with a setup/settings
@@ -304,6 +306,26 @@ For `jikuo.route_user_request` and `jikuo.propose_policy_suggestions`:
    create `.jikuo/policies/`, `.jikuo/task_sessions/`, or
    `.jikuo/project_state.yaml`.
 
+## MCP Sampling Semantic Probe Checklist
+
+For `jikuo.probe_sampling_semantic_intent`:
+
+1. The tool returns `sampling_semantic_intent.schema =
+   jikuo.mcp_sampling_semantic_intent.v0`.
+2. When the client supports MCP Sampling, the tool may request
+   `sampling/createMessage` from the client and return
+   `sampling_semantic_intent.status=provided`.
+3. When the client does not support Sampling, denies the request, or returns an
+   invalid classifier response, the tool returns `status=unavailable` or
+   `status=invalid` and still runs the normal no-write router with honest
+   fallback status.
+4. The tool must not be used as proof of strict mounted behavior. It only
+   proves whether the MCP client can act as an AI semantic provider during a
+   tool call.
+5. The response must not echo the full prompt. Proof notes should record only
+   the status, model name if returned by the client, card links, and compact
+   observations.
+
 ## Stage B1 Smoke Checklist
 
 For `jikuo.apply_task_session_evidence_update`:
@@ -360,4 +382,5 @@ intentionally approving a real project policy-template activation.
 - Stage B3 `jikuo.apply_policy_template_activation` was implemented after explicit user approval and externally smoke-accepted in Claude Code GUI on 2026-05-16.
 - Current GUI MCP smoke observed 11 tools during the Stage B3 slice and did not show a client tool-list cache issue after starting a fresh session.
 - Final local official SDK release smoke passed on 2026-05-16 using `tmp/mcp-stage-a-venv/Scripts/python.exe`: `ClientSession` listed the 11-tool MVP surface and `jikuo.get_runtime_status_card` returned card Markdown matching `.jikuo/runtime/last_card.md` in a temporary fixture project.
-- After `JIKUO-INIT-01`, `jikuo.get_configuration_status`, `jikuo.get_activation_settings`, `jikuo.plan_activation_settings_update`, guarded `jikuo.apply_activation_settings_update`, and the router tools `jikuo.route_user_request` / `jikuo.propose_policy_suggestions` expand the current surface to 17 tools; repeat tool discovery before publishing client proof docs.
+- After `JIKUO-INIT-01`, `jikuo.get_configuration_status`, `jikuo.get_activation_settings`, `jikuo.plan_activation_settings_update`, guarded `jikuo.apply_activation_settings_update`, the router tools `jikuo.route_user_request` / `jikuo.propose_policy_suggestions`, and `jikuo.probe_sampling_semantic_intent` expand the current surface to 18 tools; repeat tool discovery before publishing client proof docs.
+- Local official SDK smoke on 2026-05-20 listed 18 tools, confirmed `jikuo.probe_sampling_semantic_intent` input schema excludes the injected MCP context parameter, and confirmed a client without Sampling support returns `sampling_semantic_intent.status=unavailable` without echoing the probe prompt.

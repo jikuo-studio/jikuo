@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-CODEX-PLUGIN-01: Codex Plugin Pre-Turn Harness Review
 
-> **Status**: Level 1 project-local proof files implemented and local stdin smoke passed; host semantic-intent input and work-profile merge path implemented for CLI / MCP / Codex hook proof; official Codex hook surface reviewed on 2026-05-19; GUI proof, host-time semantic provider proof, and strict mounted acceptance still pending.
+> **Status**: Level 1 project-local proof files implemented and local stdin smoke passed; host semantic-intent input and work-profile merge path implemented for CLI / MCP / Codex hook proof; MCP Sampling semantic-provider probe implemented as an optional client-mediated proof path; official Codex hook surface reviewed on 2026-05-19; GUI hook proof, host-time semantic provider acceptance, and strict mounted acceptance still pending.
 > **Date**: 2026-05-16
 > **Product meaning**: Determine whether a Codex plugin can make JIKUO run before every user turn, or whether it should only ship as an instruction / MCP setup aid. This prevents JIKUO from claiming strict mounted behavior that Codex cannot actually enforce.
 
@@ -265,6 +265,29 @@ Do not claim AI-semantic policy routing for Codex until Level 2 passes. If
 Codex hooks expose only the raw prompt at `UserPromptSubmit` time, record the
 semantic-intent provider as unavailable and keep deterministic routing as an
 honest fallback.
+
+### MCP Sampling Provider Probe
+
+MCP Sampling is a useful Level 2B probe, not a replacement for the Codex hook.
+The official MCP Sampling model lets a server send `sampling/createMessage` to
+the MCP client during a tool call, while the client keeps control over model
+access, model selection, permissions, and human review.
+
+JIKUO now exposes `jikuo.probe_sampling_semantic_intent` for this purpose:
+
+- it asks a Sampling-capable MCP client for compact
+  `host_semantic_intent`;
+- it routes the same turn through existing JIKUO `conversation_turn` logic with
+  that semantic intent when available;
+- it reports `sampling_semantic_intent.status=provided`, `unavailable`, or
+  `invalid`;
+- it redacts exact prompt echoes from returned proof data;
+- it remains no-write except for normal `.jikuo/runtime/` visibility.
+
+This can prove that a client can act as a semantic provider during an MCP tool
+call. It cannot prove that Codex runs JIKUO before model work. Strict mounted
+Codex proof still requires `UserPromptSubmit` or an equivalent host boundary to
+fire before substantive model execution and inject the JIKUO card context.
 
 ### JIKUO Call
 

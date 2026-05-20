@@ -61,10 +61,13 @@ ROUTER_TOOL_NAMES = (
     "jikuo.propose_policy_suggestions",
 )
 
+SAMPLING_TOOL_NAMES = ("jikuo.probe_sampling_semantic_intent",)
+
 EXPOSED_TOOL_NAMES = (
     STAGE_A_TOOL_NAMES
     + CONFIGURATION_TOOL_NAMES
     + ROUTER_TOOL_NAMES
+    + SAMPLING_TOOL_NAMES
     + STAGE_B1_TOOL_NAMES
     + STAGE_B2_TOOL_NAMES
     + STAGE_B3_TOOL_NAMES
@@ -332,6 +335,37 @@ TOOL_DEFINITIONS: dict[str, dict[str, Any]] = {
         },
         card_returning=True,
         stage="R1",
+        write_mode="no-write",
+    ),
+    "jikuo.probe_sampling_semantic_intent": _tool(
+        name="jikuo.probe_sampling_semantic_intent",
+        description=(
+            "Probe whether the current MCP client supports Sampling for compact "
+            "semantic-intent classification, then route the user turn through "
+            "JIKUO with the sampled host_semantic_intent when available. This "
+            "is no-write and must not be treated as strict mounted proof."
+        ),
+        input_fields={
+            "project_root": LOCAL_ONLY,
+            "user_phrase": REDACT_OPTIONAL,
+            "trigger_mode": RETURN,
+            "task_title": REDACT_OPTIONAL,
+            "summary": REDACT_OPTIONAL,
+            "source_client": RETURN,
+            "model_hint": RETURN,
+            "max_tokens": RETURN,
+        },
+        output_fields={
+            "conversation_router": RETURN,
+            "classified_obligations": RETURN,
+            "required_followup_tools": RETURN,
+            "mcp_followup_tools": RETURN,
+            "work_profile": RETURN,
+            "sampling_semantic_intent": RETURN,
+            "host_semantic_intent": RETURN,
+        },
+        card_returning=True,
+        stage="S1",
         write_mode="no-write",
     ),
     "jikuo.apply_task_session_evidence_update": _tool(

@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-MCP-01: MCP Wrapper MVP
 
-> **Status**: MCP MVP body implemented and release-smoked; Stage A server wrapper accepted; Stage B1 task-session evidence guarded-write tool implemented after explicit user approval; Stage B2 policy evolution guarded-write tool implemented and externally smoke-accepted; Stage B3 policy-template activation guarded-write tool implemented and externally smoke-accepted; post-MVP configuration status, activation settings read / plan / apply, and router tools implemented
+> **Status**: MCP MVP body implemented and release-smoked; Stage A server wrapper accepted; Stage B1 task-session evidence guarded-write tool implemented after explicit user approval; Stage B2 policy evolution guarded-write tool implemented and externally smoke-accepted; Stage B3 policy-template activation guarded-write tool implemented and externally smoke-accepted; post-MVP configuration status, activation settings read / plan / apply, router tools, and no-write MCP Sampling semantic-provider probe implemented
 > **Product meaning**: formally move the next phase from more kernel expansion to an MCP wrapper MVP, so desktop Agents can call JIKUO through a stable tool surface while users remain in their desktop AI client.
 > **Scope rule**: wrap stable atoms only; do not add new governance capability in this slice.
 
@@ -93,6 +93,7 @@ not create `.jikuo/policies/`, create `.jikuo/task_sessions/`, or update
 | `jikuo.plan_activation_settings_update` | `CAP-MCP-ACTIVATION-SETTINGS-READ-PLAN-01` | no governance write; may update `.jikuo/runtime/` | return a reviewed activation settings update plan without writing `.jikuo/activation_settings.yaml` |
 | `jikuo.route_user_request` | `CAP-CONVERSATION-TURN-ROUTER-01`; `CAP-MCP-CONVERSATION-ROUTER-SURFACE-01` | no governance write; may update `.jikuo/runtime/` | classify one user turn into JIKUO obligations and MCP follow-up tools |
 | `jikuo.propose_policy_suggestions` | `CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01`; `CAP-MCP-CONVERSATION-ROUTER-SURFACE-01` | no governance write; may update `.jikuo/runtime/` | return reviewable policy-candidate suggestions from a user turn without writing policy files |
+| `jikuo.probe_sampling_semantic_intent` | `CAP-MCP-SAMPLING-SEMANTIC-PROVIDER-01`; `CAP-HOST-SEMANTIC-INTENT-WORK-PROFILE-01`; `CAP-CONVERSATION-TURN-ROUTER-01` | no governance write; may update `.jikuo/runtime/` | ask a Sampling-capable MCP client for compact semantic intent, then route the turn through JIKUO; cleanly reports unavailable when Sampling is unsupported |
 
 Stage B exposes guarded write operations only after Stage A acceptance gates pass.
 Stage B1 is accepted for task-session evidence writes. Stage B2 is accepted for
@@ -179,6 +180,7 @@ This slice must not implement:
 | Persist approved evidence | Agent calls `jikuo.apply_task_session_evidence_update` with confirmation and approval phrase | `CAP-AGENT-FLOW-APPLY-TASK-EVIDENCE-01` | guarded write to explicit task-session only |
 | Apply approved rule evolution | Agent calls `jikuo.apply_policy_evolution_write` with proposal ref, confirmation, and approval phrase | `CAP-POLICY-EVOLUTION-APPLY-BINDING-01`, `CAP-AGENT-FLOW-APPLY-POLICY-EVOLUTION-01` | guarded write only after proposal binding passes |
 | Apply approved policy-template activation | Agent calls `jikuo.apply_policy_template_activation` with template path, confirmation, and approval phrase | `CAP-POLICY-TEMPLATE-ACTIVATE-01`, `CAP-AGENT-FLOW-APPLY-POLICY-TEMPLATE-ACTIVATION-01` | guarded write only after bindings resolve |
+| Probe client semantic sampling | Agent calls `jikuo.probe_sampling_semantic_intent`; MCP server requests `sampling/createMessage` from the client when supported, then routes through JIKUO | `CAP-MCP-SAMPLING-SEMANTIC-PROVIDER-01`, `CAP-HOST-SEMANTIC-INTENT-WORK-PROFILE-01`, `CAP-CONVERSATION-TURN-ROUTER-01` | no governance write; not strict mounted proof; prompt echoes must be redacted from returned proof data |
 
 ## 7. Implementation Plan
 
@@ -278,7 +280,9 @@ Stage A implementation progress:
 - [x] Post-MVP configuration status read surface implemented: `jikuo.get_configuration_status` wraps `agent_flow propose --event configuration_review`, returns `jikuo.configuration_review.v0`, and writes only runtime visibility.
 - [x] Post-MVP activation settings read / plan surface implemented: `jikuo.get_activation_settings` returns `jikuo.activation_settings_status.v0`; `jikuo.plan_activation_settings_update` returns `jikuo.activation_settings_plan.v0`; neither writes `.jikuo/activation_settings.yaml`; this initially expanded tool discovery to 14 tools before the guarded apply surface was accepted.
 - [x] Post-MVP activation settings guarded apply surface implemented after explicit user approval: `jikuo.apply_activation_settings_update` refuses without confirmation / approval phrase, writes only `.jikuo/activation_settings.yaml` on success, redacts the raw approval phrase, and previously expanded tool discovery to 15 tools before router tools were accepted.
-- [x] Post-MVP router surface implemented after configuration acceptance: `jikuo.route_user_request` wraps the no-write `conversation_turn` router and returns MCP follow-up tools; `jikuo.propose_policy_suggestions` exposes `jikuo.proactive_policy_suggestion_review.v0` candidates; both preserve display directives, runtime links, SEC-02 field classification, and no-write boundaries; current tool discovery expands to 17 tools.
+- [x] Post-MVP router surface implemented after configuration acceptance: `jikuo.route_user_request` wraps the no-write `conversation_turn` router and returns MCP follow-up tools; `jikuo.propose_policy_suggestions` exposes `jikuo.proactive_policy_suggestion_review.v0` candidates; both preserve display directives, runtime links, SEC-02 field classification, and no-write boundaries; current tool discovery expanded to 17 tools before the Sampling probe slice.
+- [x] MCP Sampling semantic provider proof implemented as a no-write post-MVP tool: `jikuo.probe_sampling_semantic_intent` uses the official SDK `ctx.session.create_message()` path when a client supports `sampling/createMessage`, asks for compact `host_semantic_intent`, redacts prompt echoes from returned proof data, routes through existing `jikuo.route_user_request`, and reports `sampling_semantic_intent.status=unavailable` when Sampling is unsupported or invalid; current tool discovery expands to 18 tools.
+- [x] Local official SDK smoke on 2026-05-20 listed 18 tools, verified the Sampling tool input schema does not expose the injected `ctx` parameter, and called `jikuo.probe_sampling_semantic_intent` through `ClientSession`; the local client returned `sampling_semantic_intent.status=unavailable` and did not echo the probe prompt.
 
 Stage A desktop-client acceptance log:
 

@@ -3,6 +3,9 @@
 /.jikuo/runtime/
 /.claude/
 /.mcp.json
+/.codex_tmp/
+/browser_profiles/
+/node_modules/
 
 # Python bytecode
 __pycache__/

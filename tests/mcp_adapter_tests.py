@@ -141,6 +141,14 @@ class MCPStageAAdapterTests(unittest.TestCase):
             "no-write",
         )
         self.assertEqual(
+            by_name["jikuo.probe_sampling_semantic_intent"]["stage"],
+            "S1",
+        )
+        self.assertEqual(
+            by_name["jikuo.probe_sampling_semantic_intent"]["write_mode"],
+            "no-write",
+        )
+        self.assertEqual(
             by_name["jikuo.apply_task_session_evidence_update"]["stage"],
             "B1",
         )
@@ -478,6 +486,34 @@ class MCPStageAAdapterTests(unittest.TestCase):
                 "provided",
             )
             self.assertIn("Semantic intent status: `provided`", response["card_markdown"])
+
+    def test_sampling_semantic_probe_reports_unavailable_without_mcp_context(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+
+            response = adapter.call_tool(
+                "jikuo.probe_sampling_semantic_intent",
+                {
+                    "project_root": str(project_root),
+                    "user_phrase": "Please update the hook docs.",
+                    "trigger_mode": "mounted",
+                    "source_client": "codex",
+                },
+            )
+
+            self.assertEqual(response["tool_name"], "jikuo.probe_sampling_semantic_intent")
+            self.assertEqual(response["sampling_semantic_intent"]["status"], "unavailable")
+            self.assertIn(
+                "adapter_call_has_no_mcp_client_sampling_context",
+                response["sampling_semantic_intent"]["errors"],
+            )
+            self.assertEqual(
+                response["work_profile"]["basis"]["host_semantic_intent"]["status"],
+                "unavailable",
+            )
+            self.assertEqual(response["host_semantic_intent"]["status"], "unavailable")
+            self.assertIn("### Lifecycle Card Links", response["card_markdown"])
 
     def test_route_user_request_prompts_activation_configuration_when_missing(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -1,3 +1,5 @@
+import asyncio
+import json
 import shutil
 import tempfile
 import unittest
@@ -105,6 +107,37 @@ class FakeFastMCP:
         self.run_calls.append({"args": args, "kwargs": kwargs})
 
 
+class FakeSamplingContent:
+    def __init__(self, text: str):
+        self.text = text
+
+
+class FakeSamplingResult:
+    def __init__(self, text: str):
+        self.content = FakeSamplingContent(text)
+        self.model = "fake-client-model"
+        self.stopReason = "endTurn"
+
+
+class FakeSamplingSession:
+    def __init__(self, text: str | None = None, error: Exception | None = None):
+        self.text = text
+        self.error = error
+        self.calls = []
+
+    async def create_message(self, **kwargs):
+        self.calls.append(kwargs)
+        if self.error is not None:
+            raise self.error
+        return FakeSamplingResult(self.text or "{}")
+
+
+class FakeSamplingContext:
+    def __init__(self, session: FakeSamplingSession):
+        self.session = session
+        self.request_id = "request-1"
+
+
 class MCPServerWrapperTests(unittest.TestCase):
     def test_create_server_registers_stage_a_plus_accepted_stage_b_tools_only(self):
         fake = server.create_server(fastmcp_cls=FakeFastMCP)
@@ -117,6 +150,7 @@ class MCPServerWrapperTests(unittest.TestCase):
         self.assertIn("jikuo.apply_activation_settings_update", fake.tools)
         self.assertIn("jikuo.route_user_request", fake.tools)
         self.assertIn("jikuo.propose_policy_suggestions", fake.tools)
+        self.assertIn("jikuo.probe_sampling_semantic_intent", fake.tools)
         self.assertIn("jikuo.apply_task_session_evidence_update", fake.tools)
         self.assertIn("jikuo.apply_policy_evolution_write", fake.tools)
         self.assertIn("jikuo.apply_policy_template_activation", fake.tools)
@@ -247,6 +281,77 @@ class MCPServerWrapperTests(unittest.TestCase):
             self.assertEqual(policy_response["policy_candidate_count"], 1)
             self.assertFalse((project_root / ".jikuo" / "policies").exists())
             self.assertFalse((project_root / ".jikuo" / "task_sessions").exists())
+
+    def test_sampling_semantic_tool_uses_client_sampling_then_routes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            fake = server.create_server(fastmcp_cls=FakeFastMCP)
+            sampling_json = json.dumps(
+                {
+                    "provider": "mcp_sampling",
+                    "confidence": "high",
+                    "policy_scopes": ["editing"],
+                    "work_profile": {
+                        "policy_scopes": ["editing"],
+                        "intent_class": "implementation_request",
+                        "operation_class": "documentation_update",
+                        "output_class": "repository_change",
+                    },
+                    "rationale_summary": "The user asked for a documentation update.",
+                }
+            )
+            session = FakeSamplingSession(sampling_json)
+
+            response = asyncio.run(
+                fake.tools["jikuo.probe_sampling_semantic_intent"]["function"](
+                    project_root=str(project_root),
+                    user_phrase="Please update the hook docs.",
+                    trigger_mode="mounted",
+                    source_client="codex",
+                    ctx=FakeSamplingContext(session),
+                )
+            )
+
+            self.assertEqual(response["tool_name"], "jikuo.probe_sampling_semantic_intent")
+            self.assertEqual(response["sampling_semantic_intent"]["status"], "provided")
+            self.assertEqual(response["sampling_semantic_intent"]["model"], "fake-client-model")
+            self.assertEqual(
+                response["work_profile"]["basis"]["host_semantic_intent"]["provider"],
+                "mcp_sampling",
+            )
+            self.assertIn("editing", response["work_profile"]["policy_scopes"])
+            self.assertEqual(session.calls[0]["include_context"], "none")
+            serialized = json.dumps(response, ensure_ascii=False)
+            self.assertNotIn("Please update the hook docs.", serialized)
+
+    def test_sampling_semantic_tool_falls_back_when_client_sampling_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            fake = server.create_server(fastmcp_cls=FakeFastMCP)
+            secret_prompt = "SECRET_PROMPT_VALUE please update docs"
+            session = FakeSamplingSession(error=RuntimeError(f"sampling failed: {secret_prompt}"))
+
+            response = asyncio.run(
+                fake.tools["jikuo.probe_sampling_semantic_intent"]["function"](
+                    project_root=str(project_root),
+                    user_phrase=secret_prompt,
+                    trigger_mode="semantic",
+                    source_client="codex",
+                    ctx=FakeSamplingContext(session),
+                )
+            )
+
+            self.assertEqual(response["sampling_semantic_intent"]["status"], "unavailable")
+            self.assertEqual(
+                response["work_profile"]["basis"]["host_semantic_intent"]["status"],
+                "unavailable",
+            )
+            self.assertEqual(response["host_semantic_intent"]["status"], "unavailable")
+            serialized = json.dumps(response, ensure_ascii=False)
+            self.assertNotIn(secret_prompt, serialized)
+            self.assertIn("<REDACTED_PROMPT_ECHO>", serialized)
 
     def test_stage_b1_registered_tool_delegates_guarded_apply(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -6,7 +6,12 @@ import argparse
 from collections.abc import Sequence
 from typing import Any, Callable
 
-from . import adapter, schemas
+try:
+    from mcp.server.fastmcp import Context as FastMCPContext  # type: ignore
+except ImportError:  # pragma: no cover - server startup reports the SDK error.
+    FastMCPContext = Any  # type: ignore
+
+from . import adapter, sampling_semantic, schemas
 
 
 SERVER_NAME = "JIKUO"
@@ -394,6 +399,157 @@ def register_router_tools(
     return server
 
 
+async def _sample_semantic_intent(
+    *,
+    ctx: Any,
+    user_phrase: str | None,
+    task_title: str | None,
+    summary: str | None,
+    source_client: str,
+    model_hint: str | None,
+    max_tokens: int,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    try:
+        from mcp import types as mcp_types  # type: ignore
+    except ImportError:
+        semantic_intent = sampling_semantic.unavailable_host_semantic_intent(
+            reason="mcp_sdk_types_unavailable",
+            source_client=source_client,
+        )
+        return semantic_intent, sampling_semantic.sampling_report(
+            status="unavailable",
+            errors=["mcp_sdk_types_unavailable"],
+        )
+
+    try:
+        prompt = sampling_semantic.build_sampling_prompt(
+            user_phrase=user_phrase,
+            task_title=task_title,
+            summary=summary,
+        )
+        model_preferences = None
+        if model_hint:
+            model_preferences = mcp_types.ModelPreferences(
+                hints=[mcp_types.ModelHint(name=model_hint)],
+                intelligencePriority=0.7,
+                speedPriority=0.2,
+                costPriority=0.1,
+            )
+        result = await ctx.session.create_message(
+            messages=[
+                mcp_types.SamplingMessage(
+                    role="user",
+                    content=mcp_types.TextContent(type="text", text=prompt),
+                )
+            ],
+            system_prompt=(
+                "You are classifying a user turn for JIKUO governance routing. "
+                "Return compact JSON only and do not repeat the user's raw prompt."
+            ),
+            include_context="none",
+            max_tokens=max(200, min(int(max_tokens or 700), 2000)),
+            temperature=0,
+            model_preferences=model_preferences,
+            related_request_id=getattr(ctx, "request_id", None),
+        )
+    except Exception as exc:  # pragma: no cover - exact client errors vary.
+        error_text = f"{type(exc).__name__}: {exc}"
+        if user_phrase and len(user_phrase.strip()) >= 8:
+            error_text = error_text.replace(user_phrase.strip(), "<REDACTED_PROMPT_ECHO>")
+        semantic_intent = sampling_semantic.unavailable_host_semantic_intent(
+            reason=error_text,
+            source_client=source_client,
+        )
+        return semantic_intent, sampling_semantic.sampling_report(
+            status="unavailable",
+            errors=[error_text],
+        )
+    return sampling_semantic.parse_sampling_response(
+        result,
+        user_phrase=user_phrase,
+        source_client=source_client,
+    )
+
+
+def register_sampling_tools(
+    server: Any,
+    *,
+    default_transport: str = schemas.LOCAL_STDIO_TRANSPORT,
+) -> Any:
+    """Register client-mediated MCP Sampling proof tools."""
+
+    tool_definitions = {tool["name"]: tool for tool in adapter.list_tools()}
+
+    @server.tool(
+        name="jikuo.probe_sampling_semantic_intent",
+        description=tool_description(
+            tool_definitions["jikuo.probe_sampling_semantic_intent"]
+        ),
+    )
+    async def jikuo_probe_sampling_semantic_intent(
+        project_root: str | None = None,
+        user_phrase: str | None = None,
+        trigger_mode: str | None = None,
+        task_title: str | None = None,
+        summary: str | None = None,
+        source_client: str | None = None,
+        model_hint: str | None = None,
+        max_tokens: int = 700,
+        ctx: FastMCPContext | None = None,
+    ) -> dict[str, Any]:
+        if ctx is None:
+            return _call(
+                "jikuo.probe_sampling_semantic_intent",
+                {
+                    "project_root": project_root,
+                    "user_phrase": user_phrase,
+                    "trigger_mode": trigger_mode,
+                    "task_title": task_title,
+                    "summary": summary,
+                    "source_client": source_client,
+                    "model_hint": model_hint,
+                    "max_tokens": max_tokens,
+                },
+                default_transport=default_transport,
+            )
+        semantic_intent, sampling_report = await _sample_semantic_intent(
+            ctx=ctx,
+            user_phrase=user_phrase,
+            task_title=task_title,
+            summary=summary,
+            source_client=source_client or "mcp_client",
+            model_hint=model_hint,
+            max_tokens=max_tokens,
+        )
+        response = _call(
+            "jikuo.route_user_request",
+            {
+                "project_root": project_root,
+                "user_phrase": user_phrase,
+                "host_semantic_intent": semantic_intent,
+                "trigger_mode": trigger_mode,
+                "task_title": task_title,
+                "summary": summary,
+            },
+            default_transport=default_transport,
+        )
+        response["tool_name"] = "jikuo.probe_sampling_semantic_intent"
+        response["stage"] = schemas.tool_definition(
+            "jikuo.probe_sampling_semantic_intent"
+        )["stage"]
+        response["field_classification"] = schemas.response_field_classification(
+            "jikuo.probe_sampling_semantic_intent"
+        )
+        return sampling_semantic.attach_sampling_result(
+            response,
+            report=sampling_report,
+            semantic_intent=semantic_intent,
+            user_phrase=user_phrase,
+        )
+
+    return server
+
+
 def register_stage_b1_tools(
     server: Any,
     *,
@@ -560,6 +716,7 @@ def create_server(
     register_stage_a_tools(server, default_transport=default_transport)
     register_configuration_tools(server, default_transport=default_transport)
     register_router_tools(server, default_transport=default_transport)
+    register_sampling_tools(server, default_transport=default_transport)
     register_stage_b1_tools(server, default_transport=default_transport)
     register_stage_b2_tools(server, default_transport=default_transport)
     return register_stage_b3_tools(server, default_transport=default_transport)

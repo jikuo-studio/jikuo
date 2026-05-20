@@ -8,9 +8,10 @@ are active, which ones triggered, what evidence is missing, which task-session
 is being worked, and where the user can independently verify the runtime card.
 
 JIKUO is currently an early standalone package in private preview. The current
-MCP MVP exposes 17 local stdio tools across no-write status/cards/proposals,
+MCP MVP exposes 18 local stdio tools across no-write status/cards/proposals,
 first-use configuration review, activation settings, conversation routing,
-policy suggestion review, and guarded-write apply paths.
+policy suggestion review, MCP Sampling semantic-provider probing, and
+guarded-write apply paths.
 
 This repository is not a public release yet. The package metadata remains
 `Proprietary` while the external source-available preview license and brand/IP
@@ -25,8 +26,9 @@ gate are being decided.
 - Task-session records for durable process memory without capturing raw chat
   transcripts.
 - Starter policy templates with provenance for first-use project bootstrap.
-- A local stdio MCP server exposing 17 tools for status, cards, proposals,
-  configuration review, activation settings, routing, and guarded writes.
+- A local stdio MCP server exposing 18 tools for status, cards, proposals,
+  configuration review, activation settings, routing, MCP Sampling semantic
+  provider probing, and guarded writes.
 - Accepted private-preview MCP use in Codex and Claude, plus proof docs for
   Cursor, VS Code + GitHub Copilot Agent mode, and regression checks.
 - Integration-neutral core APIs reserved for MCP, future Agent SDK wrappers,
@@ -68,7 +70,7 @@ or, after installation:
 jikuo-mcp
 ```
 
-The current MCP surface exposes 17 tools:
+The current MCP surface exposes 18 tools:
 
 Status, cards, and no-write proposals:
 
@@ -92,6 +94,10 @@ Conversation routing and policy suggestion review:
 
 - `jikuo.route_user_request`
 - `jikuo.propose_policy_suggestions`
+
+MCP Sampling semantic provider proof:
+
+- `jikuo.probe_sampling_semantic_intent`
 
 Guarded-write apply tools:
 
@@ -129,7 +135,7 @@ JIKUO before each user turn.
 - [`docs/README.md`](docs/README.md): internal documentation layout and mount
   rules.
 - [`docs/governance/jikuo_productization_task_map.md`](docs/governance/jikuo_productization_task_map.md):
-  active task map and capability registry.
+  legacy human-readable roadmap projection.
 - [`docs/registry/`](docs/registry/): draft structured registry shards for
   work orders, capabilities, scenario chains, and mount sets.
 - [`docs/schemas/execution_events_v0_draft.md`](docs/schemas/execution_events_v0_draft.md):

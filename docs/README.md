@@ -40,7 +40,9 @@ The following remain outside this repository's active documentation mount unless
 - `README.md`
 - `docs/README.md`
 - `docs/governance/jikuo_execution_mounts.md`
-- `docs/governance/jikuo_productization_task_map.md`
+- `docs/governance/jikuo_productization_task_map.md` as a legacy
+  human-readable projection only; structured task and capability authority
+  lives in `docs/registry/`
 - `docs/governance/jikuo_policy_governance_authority.md`
 - `docs/governance/jikuo_trust_privacy_provenance_baseline.md`
 - `docs/governance/jikuo_skeleton_kernel_boundary_and_backlog.md`

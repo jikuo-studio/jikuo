@@ -45,7 +45,7 @@ temporary project even when the tool package lives elsewhere.
 For each client, prove all of the following:
 
 1. The client can launch the local JIKUO MCP server.
-2. Tool discovery shows the current 17-tool surface.
+2. Tool discovery shows the current 18-tool surface.
 3. A no-write card tool displays `card_markdown` to the user.
 4. A router tool can classify an ordinary user setup request.
 5. `.jikuo/runtime/last_card.md` or `jikuo show --last-card` matches the latest card.
@@ -199,7 +199,7 @@ manual proof only and should not be committed.
 
 ## 7. Current Tool List
 
-The client should discover exactly these 17 tools:
+The client should discover exactly these 18 tools:
 
 1. `jikuo.status`
 2. `jikuo.get_runtime_status`
@@ -215,9 +215,10 @@ The client should discover exactly these 17 tools:
 12. `jikuo.apply_activation_settings_update`
 13. `jikuo.route_user_request`
 14. `jikuo.propose_policy_suggestions`
-15. `jikuo.apply_task_session_evidence_update`
-16. `jikuo.apply_policy_evolution_write`
-17. `jikuo.apply_policy_template_activation`
+15. `jikuo.probe_sampling_semantic_intent`
+16. `jikuo.apply_task_session_evidence_update`
+17. `jikuo.apply_policy_evolution_write`
+18. `jikuo.apply_policy_template_activation`
 
 Some clients render MCP names with a namespace such as
 `mcp__jikuo__jikuo_get_runtime_status_card`. That is acceptable if the
@@ -241,7 +242,7 @@ Steps:
 
 1. Confirm you can see the `jikuo` MCP tools.
    - List the tool count and tool names.
-   - Expected count: 17.
+   - Expected count: 18.
    - If you see fewer tools, say whether this looks like a stale GUI session
      and whether a new session or client restart is needed.
 
@@ -256,18 +257,26 @@ Steps:
    Report the router schema, classified obligations, and follow-up tools.
    In particular, say whether it recommends `jikuo.get_configuration_status`.
 
-4. Verify out-of-band runtime visibility.
+4. Optionally call `jikuo.probe_sampling_semantic_intent` with:
+   - project_root = `<PROJECT_ROOT>`
+   - user_phrase = `Please explain the design, update the hook proof docs, and summarize the remaining work.`
+   - trigger_mode = `semantic`
+   Report `sampling_semantic_intent.status`, the returned model name if any,
+   final policy scopes, and whether the tool fell back cleanly. This is a
+   client semantic-provider proof, not strict mounted proof.
+
+5. Verify out-of-band runtime visibility.
    Check or reference `<PROJECT_ROOT>\.jikuo\runtime\last_card.md`, or explain
    how the user can run `jikuo show --last-card`.
    Confirm whether it corresponds to the latest JIKUO card from this proof.
 
-5. Judge strict mounted status for this client.
+6. Judge strict mounted status for this client.
    Choose one:
    - MCP + instruction works, but strict pre-turn mounted is not verified.
    - A stable pre-turn hook / plugin / extension entry exists, but JIKUO has not implemented the adapter yet.
    - Strict pre-turn adapter is verified.
 
-6. Output a proof report with:
+7. Output a proof report with:
    - Client name
    - Client version if visible
    - OS
@@ -302,7 +311,7 @@ Copy this into a proof note after each manual run:
 ## Tool Discovery
 
 - Tool count:
-- Expected count: 17
+- Expected count: 18
 - Missing tools:
 - Extra tools:
 
@@ -316,8 +325,16 @@ Copy this into a proof note after each manual run:
 ## Router Proof
 
 - Tool called: `jikuo.route_user_request`
-- User phrase:
+- Compact user-turn summary, no raw prompt:
 - Router schema:
+
+## Sampling Semantic Proof
+
+- Tool called: `jikuo.probe_sampling_semantic_intent`
+- Sampling status: provided/unavailable/invalid/not-run
+- Model returned by client:
+- Final policy scopes:
+- Strict mounted implication: none; this only proves client-mediated semantic sampling during a tool call
 - Follow-up tools suggested:
 - Card displayed in chat: yes/no
 
@@ -498,6 +515,26 @@ Semantic classification proof:
   than AI semantic classification.
 - Do not let the hook decide active-policy applicability. JIKUO remains the
   final classification and policy-distribution authority.
+
+MCP Sampling provider proof:
+
+- MCP Sampling lets a server request `sampling/createMessage` from the client
+  during a tool call. Per the official MCP Sampling specification, the client
+  keeps control over model access, model choice, permissions, and human review.
+- `jikuo.probe_sampling_semantic_intent` uses that mechanism as an optional
+  semantic provider: it asks the MCP client for a compact
+  `host_semantic_intent`, then routes the turn through the existing no-write
+  JIKUO router with that classification when available.
+- If Sampling is unsupported, rejected, or invalid, the tool must return
+  `sampling_semantic_intent.status=unavailable` or `invalid` and continue with
+  honest deterministic fallback. That result is still useful compatibility
+  evidence.
+- This tool does not prove pre-turn hook execution. A normal MCP tool call
+  happens only after the host model/user chooses to call the tool, so it cannot
+  by itself satisfy strict mounted mode.
+- Proof notes should not copy raw prompts or transcripts. The tool response
+  redacts exact prompt echoes, and accepted proof records should keep only card
+  links, semantic status, model name if returned, and compact observations.
 
 Suggested compact semantic-intent evidence:
 
@@ -758,7 +795,7 @@ Record:
 
 | Result | Meaning | Next action |
 |---|---|---|
-| PASS | Client can launch JIKUO MCP, discover 17 tools, display cards, and route a user request | Record proof note and include it in compatibility docs |
+| PASS | Client can launch JIKUO MCP, discover 18 tools, display cards, and route a user request; Sampling may be provided or cleanly unavailable | Record proof note and include it in compatibility docs |
 | PARTIAL | Client can launch MCP but misses tools, hides cards, or cannot prove runtime parity | Record exact failure; do not claim full support yet |
 | BLOCKED | Client has no accessible MCP config surface or cannot start the stdio server | Record the blocker and retry after client update / config discovery |
 
@@ -768,6 +805,7 @@ still user/agent-mediated rather than a strict harness.
 
 ## 15. Source References
 
+- MCP Sampling specification: `https://modelcontextprotocol.io/specification/2025-06-18/client/sampling`
 - Claude Code MCP docs: `https://docs.claude.com/en/docs/claude-code/mcp`
 - Cursor MCP docs: `https://docs.cursor.com/advanced/model-context-protocol`
 - VS Code MCP configuration reference: `https://code.visualstudio.com/docs/copilot/reference/mcp-configuration`

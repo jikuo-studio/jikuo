@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from ... import activation_settings, agent_flow, policy_store, runtime_visibility
-from . import schemas
+from . import sampling_semantic, schemas
 
 
 def list_tools() -> list[dict[str, Any]]:
@@ -363,6 +363,35 @@ def _conversation_turn_response(
             review.get("candidate_count") if isinstance(review, dict) else 0
         )
     return response
+
+
+def _sampling_semantic_unavailable_response(
+    *,
+    arguments: dict[str, Any],
+    project_root: Path | None,
+    transport: str,
+) -> dict[str, Any]:
+    semantic_intent = sampling_semantic.unavailable_host_semantic_intent(
+        reason="adapter_call_has_no_mcp_client_sampling_context",
+        source_client=str(arguments.get("source_client") or "adapter"),
+    )
+    route_args = dict(arguments)
+    route_args["host_semantic_intent"] = semantic_intent
+    response = _conversation_turn_response(
+        tool_name="jikuo.probe_sampling_semantic_intent",
+        arguments=route_args,
+        project_root=project_root,
+        transport=transport,
+    )
+    return sampling_semantic.attach_sampling_result(
+        response,
+        report=sampling_semantic.sampling_report(
+            status="unavailable",
+            errors=["adapter_call_has_no_mcp_client_sampling_context"],
+        ),
+        semantic_intent=semantic_intent,
+        user_phrase=arguments.get("user_phrase"),
+    )
 
 
 def _runtime_status_card_response(
@@ -1019,6 +1048,13 @@ def call_tool(
     if tool_name in {"jikuo.route_user_request", "jikuo.propose_policy_suggestions"}:
         return _conversation_turn_response(
             tool_name=tool_name,
+            arguments=args,
+            project_root=resolved_root,
+            transport=resolved_transport,
+        )
+
+    if tool_name == "jikuo.probe_sampling_semantic_intent":
+        return _sampling_semantic_unavailable_response(
             arguments=args,
             project_root=resolved_root,
             transport=resolved_transport,

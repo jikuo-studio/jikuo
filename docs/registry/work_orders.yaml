@@ -137,7 +137,7 @@ entries:
     title: "SPRINT_050_WO-PER-JIKUO-CODEX-PLUGIN-01: Codex Plugin Pre-Turn Harness Review"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CODEX-PLUGIN-01_codex_plugin_pre_turn_harness_review.md"
     sprint: "SPRINT_050"
-    status: "Level 1 project-local proof files implemented, local stdin smoke passed, hook prompt transport moved to --user-phrase-stdin, local Level 2A host_semantic_intent input / work_profile merge path implemented for CLI, MCP, and Codex hook proof, and bilingual deterministic fallback keyword coverage expanded; official Codex hook surface reviewed; GUI proof, host-time semantic provider proof, and strict-mounted acceptance pending"
+    status: "Level 1 project-local proof files implemented, local stdin smoke passed, hook prompt transport moved to --user-phrase-stdin, local Level 2A host_semantic_intent input / work_profile merge path implemented for CLI, MCP, and Codex hook proof, bilingual deterministic fallback keyword coverage expanded, and Level 2B MCP Sampling semantic-provider probe implemented; official Codex hook surface reviewed; GUI proof, host-time semantic provider acceptance, and strict-mounted acceptance pending"
     impact_tags:
       - "strict_mounted_harness"
       - "client_proof"
@@ -818,7 +818,7 @@ entries:
     title: "SPRINT_050_WO-PER-JIKUO-MCP-01: MCP Wrapper MVP"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-MCP-01_mcp_wrapper_mvp.md"
     sprint: "SPRINT_050"
-    status: "MCP MVP body implemented and release-smoked; Stage A server wrapper accepted; Stage B1 task-session evidence guarded-write tool implemented after explicit user approval; Stage B2 policy evolution guarded-write tool implemented and externally smoke-accepted; Stage B3 policy-template activation guarded-write tool implemented and externally smoke-accepted; post-MVP configuration status, activation settings read / plan / apply, and router tools implemented"
+    status: "MCP MVP body implemented and release-smoked; Stage A server wrapper accepted; Stage B1 task-session evidence guarded-write tool implemented after explicit user approval; Stage B2 policy evolution guarded-write tool implemented and externally smoke-accepted; Stage B3 policy-template activation guarded-write tool implemented and externally smoke-accepted; post-MVP configuration status, activation settings read / plan / apply, router tools, and no-write MCP Sampling semantic-provider probe implemented"
     impact_tags: []
     implements_capabilities:
       - "CAP-POLICY-STORE-STATUS-01"
@@ -842,6 +842,7 @@ entries:
       - "CAP-LIVE-DESKTOP-POLICY-EVAL-01"
       - "CAP-POLICY-TEMPLATE-IMPORT-PLAN-01"
       - "CAP-POLICY-TEMPLATE-ACTIVATE-01"
+      - "CAP-MCP-SAMPLING-SEMANTIC-PROVIDER-01"
     capability_extraction_status: "extracted_from_work_order_body"
     required_mount_sets: []
   - id: "JIKUO-PKG-00"

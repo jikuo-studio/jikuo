@@ -101,6 +101,19 @@ If AI semantic intent and deterministic signals disagree, the runtime card
 should show the conflict instead of silently picking one. The policy evaluator
 must consume the final JIKUO work profile, not raw host claims.
 
+MCP Sampling is an optional classifier-provider route under this contract. It
+allows the JIKUO MCP server to request `sampling/createMessage` from a client
+during a tool call, but the client controls model access, model choice,
+permissions, and any human review. Therefore:
+
+- Sampling can provide `host_semantic_intent` for policy distribution quality;
+- Sampling support or failure must be reported as explicit classifier evidence;
+- Sampling unavailable must fall back to deterministic routing without claiming
+  AI-semantic routing;
+- Sampling by itself is not a strict mounted adapter, because an MCP tool call
+  is still user/model-mediated unless a separate host hook invokes it before
+  ordinary model work.
+
 Multi-intent turns are normal and must be modeled explicitly. One user turn has
 one lifecycle position, but it may contain multiple intent slices:
 
@@ -248,7 +261,7 @@ Minimum observable artifacts for an end-to-end proof:
 
 The next slice is not more kernel work. It is client proof:
 
-- verify the current 17-tool MCP surface in the selected GUI clients
+- verify the current 18-tool MCP surface in the selected GUI clients
 - verify Codex `UserPromptSubmit` hook proof as the current first Codex
   host-boundary candidate
 - preserve proof artifacts for users
