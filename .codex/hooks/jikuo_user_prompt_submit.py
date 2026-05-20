@@ -27,10 +27,17 @@ class HookInput:
     turn_id: str | None
     permission_mode: str | None
     model: str | None
+    host_semantic_intent: dict[str, Any] | None = None
 
 
 def _string_or_none(value: Any) -> str | None:
     if isinstance(value, str) and value:
+        return value
+    return None
+
+
+def _dict_or_none(value: Any) -> dict[str, Any] | None:
+    if isinstance(value, dict):
         return value
     return None
 
@@ -50,6 +57,8 @@ def extract_hook_input(payload: dict[str, Any], env: dict[str, str] | None = Non
         permission_mode=_string_or_none(payload.get("permission_mode"))
         or _string_or_none(payload.get("permissionMode")),
         model=_string_or_none(payload.get("model")),
+        host_semantic_intent=_dict_or_none(payload.get("host_semantic_intent"))
+        or _dict_or_none(payload.get("hostSemanticIntent")),
     )
 
 
@@ -126,6 +135,17 @@ def build_agent_flow_command(
     ]
     if hook_input.prompt:
         command.append("--user-phrase-stdin")
+    if hook_input.host_semantic_intent:
+        command.extend(
+            [
+                "--host-semantic-intent-json",
+                json.dumps(
+                    hook_input.host_semantic_intent,
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                ),
+            ]
+        )
     return command
 
 
@@ -205,6 +225,19 @@ def _work_profile_summary(proposal: dict[str, Any]) -> str:
     return f"lifecycle_event={lifecycle}; policy_scopes={scopes_text}"
 
 
+def _semantic_intent_status(proposal: dict[str, Any]) -> str:
+    work_profile = proposal.get("work_profile")
+    if not isinstance(work_profile, dict):
+        return "unavailable"
+    basis = work_profile.get("basis")
+    if not isinstance(basis, dict):
+        return "unavailable"
+    semantic = basis.get("host_semantic_intent")
+    if not isinstance(semantic, dict):
+        return "unavailable"
+    return _string_or_none(semantic.get("status")) or "unavailable"
+
+
 def _required_followup_tools(proposal: dict[str, Any]) -> list[str]:
     router = proposal.get("conversation_router")
     if not isinstance(router, dict):
@@ -234,7 +267,7 @@ def render_additional_context(
         "JIKUO mounted pre-turn ran before substantive model work.",
         f"Trigger mode: {trigger_mode}.",
         f"Semantic intent status: {semantic_intent_status}.",
-        "Semantic classification note: no host AI semantic intent was provided by this Level 1 hook proof; deterministic JIKUO routing may be used as fallback/conflict evidence.",
+        semantic_classification_note(semantic_intent_status),
         f"Project root: {project_root}.",
         f"Session id: {hook_input.session_id or 'unavailable'}.",
         f"Turn id: {hook_input.turn_id or 'unavailable'}.",
@@ -248,6 +281,30 @@ def render_additional_context(
         "Privacy boundary: the hook passes the prompt to JIKUO over stdin and does not persist the raw prompt or transcript in hook-owned files.",
     ]
     return "\n".join(lines)
+
+
+def semantic_classification_note(semantic_intent_status: str) -> str:
+    if semantic_intent_status == "provided":
+        return (
+            "Semantic classification note: host or classifier semantic intent was "
+            "provided to JIKUO; JIKUO remains the final work-profile and policy "
+            "distribution authority."
+        )
+    if semantic_intent_status == "heuristic_fallback":
+        return (
+            "Semantic classification note: semantic intent came from a heuristic "
+            "fallback provider, not host AI; treat it as weaker routing evidence."
+        )
+    if semantic_intent_status == "invalid":
+        return (
+            "Semantic classification note: host semantic intent was present but "
+            "invalid, so deterministic JIKUO routing remains fallback/conflict evidence."
+        )
+    return (
+        "Semantic classification note: no host AI semantic intent was provided by "
+        "this hook proof; deterministic JIKUO routing may be used as "
+        "fallback/conflict evidence."
+    )
 
 
 def render_failure_context(error: Exception, hook_input: HookInput, project_root: Path) -> str:
@@ -338,7 +395,7 @@ def main(
                 hook_input,
                 project_root,
                 trigger_mode,
-                semantic_intent_status="unavailable",
+                semantic_intent_status=_semantic_intent_status(proposal),
             )
         )
     except Exception as exc:

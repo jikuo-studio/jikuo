@@ -482,6 +482,10 @@ Semantic classification proof:
 
 - The first proof may only prove mounted invocation. That is useful but it does
   not prove AI-semantic routing.
+- The local Level 2A input path now accepts compact `host_semantic_intent`
+  through CLI / MCP / Codex hook proof and merges it into `work_profile`; this
+  proves JIKUO can consume semantic evidence, not that a GUI host can provide
+  it before model work.
 - If the host exposes AI semantic intent before JIKUO runs, pass a compact
   `host_semantic_intent` object with source, confidence, lifecycle event,
   `policy_scopes`, intent class, operation class, output class, and compact
@@ -489,6 +493,9 @@ Semantic classification proof:
 - If the hook can only see the raw prompt, record
   `host_semantic_intent.status = unavailable` and let JIKUO report deterministic
   keyword routing as fallback.
+- Deterministic fallback has bilingual Chinese / English keyword coverage and
+  no-edit constraint phrases, but it remains fallback / conflict evidence rather
+  than AI semantic classification.
 - Do not let the hook decide active-policy applicability. JIKUO remains the
   final classification and policy-distribution authority.
 

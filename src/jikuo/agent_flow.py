@@ -209,6 +209,7 @@ NO_WRITE_ATOMS = {
     "CAP-CONVERSATION-TURN-ROUTER-01",
     "CAP-CONFIGURATION-REVIEW-01",
     "CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01",
+    "CAP-HOST-SEMANTIC-INTENT-WORK-PROFILE-01",
 }
 
 
@@ -3163,6 +3164,7 @@ def build_proposal(
     project_root: Path | None = None,
     user_phrase: str | None = None,
     trigger_mode: str | None = None,
+    host_semantic_intent: dict[str, Any] | None = None,
     produced_evidence: list[dict[str, Any]] | None = None,
     work_routing_category: str | None = None,
     work_routing_summary: str | None = None,
@@ -3324,7 +3326,24 @@ def build_proposal(
         jikuo_layer=jikuo_layer,
         changed_paths=changed_paths,
         added_paths=added_paths,
+        host_semantic_intent=host_semantic_intent,
     )
+    semantic_basis = (work_profile_projection.get("basis") or {}).get(
+        "host_semantic_intent"
+    ) or {}
+    if semantic_basis.get("status") in {"provided", "heuristic_fallback"}:
+        traces.append(
+            atom_trace(
+                loop_step_id="DPL-05",
+                atom_id="CAP-HOST-SEMANTIC-INTENT-WORK-PROFILE-01",
+                mode="no-write",
+                status="ok",
+                summary=(
+                    "merged host semantic intent into the no-write work_profile "
+                    "projection before policy distribution"
+                ),
+            )
+        )
     if work_routing:
         traces.append(
             atom_trace(
@@ -4137,9 +4156,23 @@ def render_work_profile(work_profile_projection: dict[str, Any]) -> list[str]:
     ]
     scopes = work_profile_projection.get("policy_scopes") or []
     lines.append(f"- Policy scopes: `{', '.join(str(scope) for scope in scopes)}`")
-    signals = (work_profile_projection.get("basis") or {}).get(
-        "deterministic_signals"
-    ) or []
+    basis = work_profile_projection.get("basis") or {}
+    semantic = basis.get("host_semantic_intent") or {}
+    lines.append(f"- Semantic intent status: `{semantic.get('status', 'unavailable')}`")
+    if semantic.get("provider"):
+        lines.append(f"- Semantic provider: `{semantic.get('provider')}`")
+    constraints = semantic.get("constraints") or []
+    if constraints:
+        lines.append(
+            f"- Semantic constraints: `{', '.join(str(item) for item in constraints)}`"
+        )
+    slices = semantic.get("intent_slices") or []
+    if slices:
+        lines.append(f"- Intent slices: `{len(slices)}`")
+    conflicts = basis.get("conflicts") or []
+    if conflicts:
+        lines.append(f"- Semantic/deterministic conflicts: `{len(conflicts)}`")
+    signals = basis.get("deterministic_signals") or []
     lines.append(f"- Deterministic signals: `{len(signals)}`")
     lines.append("")
     return lines
@@ -4396,6 +4429,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Read the user phrase from stdin instead of a command-line argument.",
     )
+    propose.add_argument(
+        "--host-semantic-intent-json",
+        default=None,
+        help="Compact host/classifier semantic intent JSON object; must not contain raw transcripts.",
+    )
     propose.add_argument("--trigger-mode", choices=sorted(TRIGGER_MODES), default=None)
     propose.add_argument("--format", choices=("markdown", "json"), default="markdown")
 
@@ -4521,6 +4559,16 @@ def main(argv: list[str] | None = None) -> int:
             parser.error("--user-phrase and --user-phrase-stdin are mutually exclusive")
         user_phrase = sys.stdin.read().rstrip("\r\n")
 
+    host_semantic_intent: dict[str, Any] | None = None
+    if args.host_semantic_intent_json:
+        try:
+            decoded_semantic_intent = json.loads(args.host_semantic_intent_json)
+        except json.JSONDecodeError as exc:
+            parser.error(f"--host-semantic-intent-json must be valid JSON: {exc}")
+        if not isinstance(decoded_semantic_intent, dict):
+            parser.error("--host-semantic-intent-json must decode to an object")
+        host_semantic_intent = decoded_semantic_intent
+
     proposal = build_proposal(
         raw_event=args.event,
         task_title=args.task_title,
@@ -4566,6 +4614,7 @@ def main(argv: list[str] | None = None) -> int:
         project_root=args.project_root,
         user_phrase=user_phrase,
         trigger_mode=args.trigger_mode,
+        host_semantic_intent=host_semantic_intent,
         produced_evidence=produced_evidence,
         work_routing_category=args.work_routing_category,
         work_routing_summary=args.work_routing_summary,

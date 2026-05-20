@@ -31,6 +31,12 @@ class CodexHookProofTests(unittest.TestCase):
             "turn_id": "turn-1",
             "permission_mode": "default",
             "model": "gpt-test",
+            "host_semantic_intent": {
+                "schema": "jikuo.host_semantic_intent.v0",
+                "provider": "host_ai",
+                "confidence": "high",
+                "work_profile": {"policy_scopes": ["editing"]},
+            },
         }
 
         hook_input = hook.extract_hook_input(payload, {})
@@ -42,6 +48,10 @@ class CodexHookProofTests(unittest.TestCase):
         self.assertEqual(hook_input.turn_id, "turn-1")
         self.assertEqual(hook_input.permission_mode, "default")
         self.assertEqual(hook_input.model, "gpt-test")
+        self.assertEqual(
+            hook_input.host_semantic_intent["work_profile"]["policy_scopes"],
+            ["editing"],
+        )
 
     def test_render_additional_context_omits_raw_prompt(self):
         hook = load_hook_module()
@@ -117,6 +127,37 @@ class CodexHookProofTests(unittest.TestCase):
         self.assertNotIn("--user-phrase", command)
         self.assertNotIn(raw_prompt, command)
 
+    def test_build_agent_flow_command_passes_compact_host_semantic_intent(self):
+        hook = load_hook_module()
+        raw_prompt = "SECRET_PROMPT_VALUE: implement proof"
+        hook_input = hook.HookInput(
+            hook_event_name="UserPromptSubmit",
+            prompt=raw_prompt,
+            cwd=ROOT,
+            session_id="session-semantic",
+            turn_id="turn-semantic",
+            permission_mode="default",
+            model=None,
+            host_semantic_intent={
+                "schema": "jikuo.host_semantic_intent.v0",
+                "provider": "host_ai",
+                "confidence": "high",
+                "work_profile": {"policy_scopes": ["editing"]},
+            },
+        )
+
+        command = hook.build_agent_flow_command(
+            hook_input,
+            ROOT,
+            "mounted",
+            env={"JIKUO_HOOK_PYTHON": "python"},
+        )
+
+        self.assertIn("--host-semantic-intent-json", command)
+        semantic_json = command[command.index("--host-semantic-intent-json") + 1]
+        self.assertEqual(json.loads(semantic_json)["provider"], "host_ai")
+        self.assertNotIn(raw_prompt, command)
+
     def test_main_emits_codex_additional_context_with_fake_runner(self):
         hook = load_hook_module()
         payload = {
@@ -140,6 +181,12 @@ class CodexHookProofTests(unittest.TestCase):
                 "work_profile": {
                     "lifecycle_event": "conversation_turn",
                     "policy_scopes": ["editing"],
+                    "basis": {
+                        "host_semantic_intent": {
+                            "status": "provided",
+                            "provider": "host_ai",
+                        }
+                    },
                 },
                 "triggered_policies": [],
                 "missing_evidence_reports": [],
@@ -161,6 +208,8 @@ class CodexHookProofTests(unittest.TestCase):
         )
         additional_context = output["hookSpecificOutput"]["additionalContext"]
         self.assertIn("JIKUO mounted pre-turn ran", additional_context)
+        self.assertIn("Semantic intent status: provided.", additional_context)
+        self.assertIn("JIKUO remains the final work-profile", additional_context)
         self.assertIn("Latest card: .jikuo/runtime/last_card.md", additional_context)
         self.assertNotIn(payload["prompt"], additional_context)
 

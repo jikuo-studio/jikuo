@@ -320,6 +320,7 @@ def _conversation_turn_response(
         project_root=project_root,
         transport=transport,
         user_phrase=arguments.get("user_phrase"),
+        host_semantic_intent=arguments.get("host_semantic_intent"),
         trigger_mode=arguments.get("trigger_mode"),
         task_title=arguments.get("task_title"),
         summary=arguments.get("summary"),

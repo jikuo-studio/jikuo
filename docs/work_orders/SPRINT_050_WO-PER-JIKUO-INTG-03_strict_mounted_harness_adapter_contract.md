@@ -142,17 +142,24 @@ because deterministic keywords include "change".
 Minimum implementation checklist for a later code slice:
 
 - add `host_semantic_intent` input to CLI, MCP adapter schemas, and hook proof
-  payloads;
+  payloads; implemented for the local Level 2A input slice on 2026-05-19;
 - add schema normalization for `intent_slices`, aggregate scopes, constraints,
-  confidence, provider, and compact rationale;
+  confidence, provider, and compact rationale; implemented as prompt-free
+  `basis.host_semantic_intent`;
 - merge host semantic intent in `work_profile.build_work_profile()` ahead of
-  keyword fallback;
+  keyword fallback; implemented for final aggregate scopes and negative
+  constraints;
 - record deterministic keyword/path/tool agreement or conflict in
-  `basis.deterministic_signals` / `basis.conflicts`;
+  `basis.deterministic_signals` / `basis.conflicts`; implemented for
+  keyword-vs-constraint conflicts, with bilingual keyword fallback coverage for
+  Chinese and English user turns;
 - keep policy evaluator input stable: final `lifecycle_event` plus aggregate
   `policy_scopes`;
 - add runtime-card rendering and tests for single-intent, multi-intent,
-  negative-constraint, host-unavailable fallback, and host/keyword conflict.
+  negative-constraint, host-unavailable fallback, and host/keyword conflict;
+  local tests now cover host-provided single-intent, multi-intent, and
+  negative-constraint conflicts, while real host-time provider proof remains
+  pending.
 
 The proof conclusion should distinguish:
 

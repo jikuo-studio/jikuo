@@ -292,6 +292,7 @@ TOOL_DEFINITIONS: dict[str, dict[str, Any]] = {
         input_fields={
             "project_root": LOCAL_ONLY,
             "user_phrase": REDACT_OPTIONAL,
+            "host_semantic_intent": REDACT_OPTIONAL,
             "trigger_mode": RETURN,
             "task_title": REDACT_OPTIONAL,
             "summary": REDACT_OPTIONAL,
@@ -317,6 +318,7 @@ TOOL_DEFINITIONS: dict[str, dict[str, Any]] = {
         input_fields={
             "project_root": LOCAL_ONLY,
             "user_phrase": REDACT_OPTIONAL,
+            "host_semantic_intent": REDACT_OPTIONAL,
             "trigger_mode": RETURN,
             "task_title": REDACT_OPTIONAL,
             "summary": REDACT_OPTIONAL,

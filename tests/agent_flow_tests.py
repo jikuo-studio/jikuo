@@ -611,6 +611,152 @@ class AgentFlowProposalTests(unittest.TestCase):
         )
         self.assertFalse(proposal["write_effect"]["writes_performed"])
 
+    def test_host_semantic_intent_guides_work_profile_before_keyword_fallback(self):
+        semantic_intent = {
+            "schema": "jikuo.host_semantic_intent.v0",
+            "source_client": "codex",
+            "source_event": "UserPromptSubmit",
+            "provider": "host_ai",
+            "confidence": "high",
+            "constraints": ["no_file_write"],
+            "intent_slices": [
+                {
+                    "id": "discuss_change",
+                    "policy_scopes": ["discussion"],
+                    "intent_class": "design_discussion",
+                    "operation_class": "no_change",
+                    "output_class": "explanation",
+                    "rationale_summary": "User asks to discuss the change without editing files.",
+                }
+            ],
+            "work_profile": {
+                "policy_scopes": ["discussion"],
+                "intent_class": "design_discussion",
+                "operation_class": "no_change",
+                "output_class": "explanation",
+            },
+        }
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-B",
+                str(TOOL),
+                "propose",
+                "--event",
+                "conversation_turn",
+                "--trigger-mode",
+                "mounted",
+                "--user-phrase",
+                "please modify the implementation but only discuss it; do not write files",
+                "--host-semantic-intent-json",
+                json.dumps(semantic_intent),
+                "--project-root",
+                str(READY_PROJECT),
+                "--format",
+                "json",
+            ],
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        proposal = json.loads(completed.stdout)
+        profile = proposal["work_profile"]
+        self.assertEqual(profile["intent_class"], "design_discussion")
+        self.assertEqual(profile["operation_class"], "no_change")
+        self.assertEqual(profile["output_class"], "explanation")
+        self.assertEqual(profile["policy_scopes"], ["discussion"])
+        self.assertEqual(profile["confidence"], "high")
+        semantic = profile["basis"]["host_semantic_intent"]
+        self.assertEqual(semantic["status"], "provided")
+        self.assertEqual(semantic["provider"], "host_ai")
+        self.assertEqual(semantic["constraints"], ["no_file_write"])
+        self.assertEqual(len(semantic["intent_slices"]), 1)
+        conflicts = profile["basis"]["conflicts"]
+        self.assertEqual(
+            conflicts[0]["signal"],
+            "editing_terms_blocked_by_edit_constraint",
+        )
+        self.assertIn("Semantic intent status: `provided`", proposal["chat_ready_markdown"])
+        self.assertIn("Semantic/deterministic conflicts: `1`", proposal["chat_ready_markdown"])
+        atom_ids = {trace["atom_id"] for trace in proposal["atom_trace"]}
+        self.assertIn("CAP-HOST-SEMANTIC-INTENT-WORK-PROFILE-01", atom_ids)
+
+    def test_host_semantic_intent_preserves_multi_intent_aggregate_scopes(self):
+        semantic_intent = {
+            "schema": "jikuo.host_semantic_intent.v0",
+            "source_client": "codex",
+            "source_event": "UserPromptSubmit",
+            "provider": "host_ai",
+            "confidence": "medium",
+            "multi_intent": True,
+            "primary_intent_ref": "update_docs",
+            "intent_slices": [
+                {
+                    "id": "explain_design",
+                    "policy_scopes": ["discussion"],
+                    "intent_class": "design_explanation",
+                    "operation_class": "read_only",
+                    "output_class": "explanation",
+                },
+                {
+                    "id": "update_docs",
+                    "policy_scopes": ["editing"],
+                    "intent_class": "implementation_request",
+                    "operation_class": "documentation_update",
+                    "output_class": "repository_change",
+                },
+                {
+                    "id": "summarize_progress",
+                    "policy_scopes": ["progress_summary"],
+                    "intent_class": "progress_summary",
+                    "operation_class": "summarize",
+                    "output_class": "summary",
+                },
+            ],
+        }
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-B",
+                str(TOOL),
+                "propose",
+                "--event",
+                "conversation_turn",
+                "--trigger-mode",
+                "mounted",
+                "--user-phrase",
+                "please handle this turn",
+                "--host-semantic-intent-json",
+                json.dumps(semantic_intent),
+                "--project-root",
+                str(READY_PROJECT),
+                "--format",
+                "json",
+            ],
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        proposal = json.loads(completed.stdout)
+        profile = proposal["work_profile"]
+        self.assertEqual(
+            profile["policy_scopes"],
+            ["discussion", "editing", "progress_summary"],
+        )
+        semantic = profile["basis"]["host_semantic_intent"]
+        self.assertTrue(semantic["multi_intent"])
+        self.assertEqual(semantic["primary_intent_ref"], "update_docs")
+        self.assertEqual(len(semantic["intent_slices"]), 3)
+        self.assertIn("Intent slices: `3`", proposal["chat_ready_markdown"])
+
     def test_work_profile_does_not_treat_no_write_as_editing(self):
         completed = subprocess.run(
             [
@@ -646,6 +792,124 @@ class AgentFlowProposalTests(unittest.TestCase):
         self.assertEqual(proposal["work_profile"]["intent_class"], "discussion")
         self.assertEqual(proposal["work_profile"]["operation_class"], "no_tool")
         self.assertEqual(proposal["work_profile"]["policy_scopes"], ["discussion"])
+
+    def test_bilingual_keyword_fallback_detects_chinese_editing_and_progress(self):
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-B",
+                str(TOOL),
+                "propose",
+                "--event",
+                "conversation_turn",
+                "--trigger-mode",
+                "mounted",
+                "--user-phrase",
+                (
+                    "\u8bf7\u66f4\u65b0\u6587\u6863\uff0c"
+                    "\u56de\u586b\u6ce8\u518c\u4fe1\u606f\uff0c"
+                    "\u7136\u540e\u603b\u7ed3\u8fdb\u5ea6\u548c\u5269\u4f59\u4ee3\u529e"
+                ),
+                "--project-root",
+                str(READY_PROJECT),
+                "--format",
+                "json",
+            ],
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        proposal = json.loads(completed.stdout)
+        profile = proposal["work_profile"]
+        self.assertEqual(profile["intent_class"], "editing")
+        self.assertIn("editing", profile["policy_scopes"])
+        self.assertIn("progress_summary", profile["policy_scopes"])
+        signals = {
+            item["signal"]
+            for item in profile["basis"]["deterministic_signals"]
+        }
+        self.assertIn("editing_terms", signals)
+        self.assertIn("progress_summary_terms", signals)
+
+    def test_bilingual_keyword_fallback_respects_chinese_no_edit_constraint(self):
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-B",
+                str(TOOL),
+                "propose",
+                "--event",
+                "conversation_turn",
+                "--trigger-mode",
+                "mounted",
+                "--user-phrase",
+                "\u53ea\u8ba8\u8bba\u600e\u4e48\u4fee\u6539\uff0c\u4e0d\u8981\u52a8\u6587\u4ef6",
+                "--project-root",
+                str(READY_PROJECT),
+                "--format",
+                "json",
+            ],
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        proposal = json.loads(completed.stdout)
+        profile = proposal["work_profile"]
+        self.assertEqual(profile["policy_scopes"], ["discussion"])
+        self.assertNotIn("editing", profile["policy_scopes"])
+        self.assertEqual(
+            profile["basis"]["conflicts"][0]["signal"],
+            "editing_terms_blocked_by_edit_constraint",
+        )
+        signals = {
+            item["signal"]
+            for item in profile["basis"]["deterministic_signals"]
+        }
+        self.assertIn("deterministic_edit_blocking_terms", signals)
+
+    def test_bilingual_keyword_fallback_detects_expanded_english_editing_terms(self):
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-B",
+                str(TOOL),
+                "propose",
+                "--event",
+                "conversation_turn",
+                "--trigger-mode",
+                "mounted",
+                "--user-phrase",
+                "please refactor the hook docs and add tests",
+                "--project-root",
+                str(READY_PROJECT),
+                "--format",
+                "json",
+            ],
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        proposal = json.loads(completed.stdout)
+        profile = proposal["work_profile"]
+        self.assertEqual(profile["intent_class"], "editing")
+        self.assertIn("editing", profile["policy_scopes"])
+        signals = {
+            item["signal"]
+            for item in profile["basis"]["deterministic_signals"]
+        }
+        self.assertIn("editing_terms", signals)
 
     def test_conversation_turn_router_detects_policy_and_task_obligations(self):
         completed = subprocess.run(

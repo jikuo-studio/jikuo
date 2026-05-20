@@ -17,16 +17,22 @@ notes. Durable writes remain behind guarded JIKUO commands.
 
 ## Current Proof Level
 
-This is a Level 1 mounted invocation proof:
+This is a Level 1 mounted invocation proof plus a local Level 2A semantic-input
+transport path:
 
 - `UserPromptSubmit` should run before substantive Codex model work.
 - JIKUO should produce a `conversation_turn` runtime card.
 - Codex should receive the card links through `additionalContext`.
-- `semantic_intent_status` is reported as `unavailable`.
+- If hook stdin contains compact `host_semantic_intent` /
+  `hostSemanticIntent`, the hook forwards it to JIKUO for final work-profile
+  projection.
+- If no compact semantic intent is supplied, `semantic_intent_status` is
+  reported as `unavailable`.
 
-Do not claim AI-semantic routing from this hook. A later slice must add a
-host-semantic-intent or dedicated semantic-classifier input before JIKUO can
-prefer AI semantics over deterministic fallback.
+Do not claim Codex GUI AI-semantic routing from this hook. The current code can
+transport and label semantic intent, but it does not generate host-time AI
+classification by itself. A real GUI proof must still show whether Codex can
+provide that semantic object before JIKUO runs.
 
 ## Privacy Boundary
 
@@ -35,6 +41,10 @@ prompt is passed transiently to the local JIKUO CLI over stdin with
 `--user-phrase-stdin`, so the raw prompt is not placed in the child process
 argument list. A later reusable adapter can still replace the CLI hop with an
 MCP or in-process API call when the host provides a reliable boundary.
+
+Compact `host_semantic_intent` is passed through the CLI argument list when
+present. That object must contain only classification metadata and compact
+rationale, never the raw prompt or transcript.
 
 ## Configuration
 

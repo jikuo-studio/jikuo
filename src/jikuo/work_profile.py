@@ -14,6 +14,7 @@ from typing import Any
 
 
 WORK_PROFILE_SCHEMA = "jikuo.work_profile.v0"
+HOST_SEMANTIC_INTENT_SCHEMA = "jikuo.host_semantic_intent.v0"
 
 LIFECYCLE_EVENTS = {"conversation_turn", "task_start", "completion_review"}
 
@@ -25,73 +26,231 @@ COMPLETION_EVENTS = {
 }
 
 DISCUSSION_TERMS = {
+    "align",
+    "approach",
+    "architecture",
+    "brainstorm",
     "discuss",
     "explain",
-    "what do you think",
-    "design",
     "clarify",
+    "concept",
+    "design",
+    "meaning",
+    "plan",
+    "proposal",
     "review",
+    "what do you think",
+    "why",
+    "\u5bf9\u9f50",
     "\u8ba8\u8bba",
     "\u89e3\u91ca",
     "\u600e\u4e48\u770b",
     "\u8bbe\u8ba1",
     "\u6f84\u6e05",
+    "\u65b9\u6848",
+    "\u601d\u8def",
+    "\u67b6\u6784",
+    "\u6982\u5ff5",
+    "\u4e1a\u52a1\u610f\u4e49",
+    "\u68b3\u7406",
+    "\u5efa\u8bae",
+    "\u8bc4\u4f30",
+    "\u5ba1\u9605",
 }
 
 RESEARCH_TERMS = {
-    "read",
-    "inspect",
-    "look at",
-    "check",
     "analyze",
-    "search",
+    "audit",
     "browse",
+    "check",
+    "inspect",
+    "investigate",
+    "look at",
+    "read",
+    "research",
+    "run tests",
+    "search",
+    "test",
+    "validate",
+    "verify",
+    "\u5206\u6790",
+    "\u67e5\u770b",
     "\u770b\u4e00\u4e0b",
-    "\u9605\u8bfb",
+    "\u68c0\u67e5",
     "\u68c0\u7d22",
     "\u67e5\u7f51\u9875",
-    "\u5206\u6790",
+    "\u8c03\u7814",
+    "\u9605\u8bfb",
+    "\u9a8c\u8bc1",
+    "\u9a8c\u6536",
+    "\u6d4b\u8bd5",
+    "\u8dd1\u6d4b\u8bd5",
 }
 
 EDITING_TERMS = {
+    "add",
+    "adjust",
+    "backfill",
+    "change",
+    "commit",
+    "create",
+    "delete",
+    "document",
+    "edit",
     "implement",
     "modify",
+    "patch",
+    "refactor",
+    "register",
+    "remove",
+    "revise",
+    "update docs",
+    "update documentation",
+    "update file",
+    "update files",
     "fix",
     "write",
-    "commit",
     "continue work",
+    "write docs",
+    "\u5f00\u53d1",
     "\u5b9e\u73b0",
+    "\u7f16\u5199",
     "\u4fee\u6539",
+    "\u6539\u4e00\u4e0b",
+    "\u6539\u52a8",
+    "\u6539\u9020",
     "\u4fee\u590d",
+    "\u66f4\u65b0",
+    "\u8c03\u6574",
+    "\u91cd\u6784",
+    "\u65b0\u589e",
+    "\u6dfb\u52a0",
+    "\u5220\u9664",
+    "\u79fb\u9664",
+    "\u521b\u5efa",
+    "\u5199\u5165",
+    "\u843d\u5730",
+    "\u56de\u586b",
+    "\u8865\u9f50",
+    "\u6ce8\u518c",
     "\u63d0\u4ea4",
+    "\u63d0\u4ea4\u53d8\u66f4",
     "\u7ee7\u7eed\u5de5\u4f5c",
 }
 
 PROGRESS_TERMS = {
+    "backlog",
+    "checklist",
+    "next steps",
+    "remaining",
     "progress",
-    "todo",
-    "summary",
+    "progress summary",
     "status",
+    "todo",
+    "todos",
+    "summary",
     "\u8fdb\u5ea6",
+    "\u8fdb\u5c55",
     "\u4ee3\u529e",
+    "\u4ee3\u529e\u6e05\u5355",
+    "\u4efb\u52a1\u6e05\u5355",
+    "\u5269\u4f59\u4ee3\u529e",
+    "\u4e0b\u4e00\u6b65",
     "\u603b\u7ed3",
+    "\u603b\u7ed3\u4e00\u4e0b",
+    "\u76ee\u524d\u8fdb\u5ea6",
 }
 
 CONFIG_TERMS = {
-    "settings",
     "activation",
+    "client",
     "configure",
+    "enable",
+    "hook",
+    "install",
+    "mcp",
+    "mount",
+    "settings",
     "setup",
+    "trust",
+    "\u5ba2\u6237\u7aef",
+    "\u63a5\u5165",
     "\u914d\u7f6e",
     "\u521d\u59cb\u5316",
+    "\u6302\u8f7d",
+    "\u542f\u7528",
+    "\u8bbe\u7f6e",
+    "\u5b89\u88c5",
+    "\u9002\u914d",
 }
 
 POLICY_TERMS = {
+    "candidate policy",
+    "distribution",
+    "evaluator",
     "policy",
+    "policies",
     "rule",
+    "rules",
+    "trigger",
     "governance",
+    "\u5019\u9009policy",
+    "\u5019\u9009\u89c4\u5219",
+    "\u5206\u53d1",
+    "\u653f\u7b56",
     "\u89c4\u5219",
+    "\u89e6\u53d1",
     "\u6cbb\u7406",
+}
+
+TEXT_EDIT_BLOCKING_TERMS = {
+    "discussion only",
+    "do not change",
+    "do not commit",
+    "do not edit",
+    "do not modify",
+    "do not write",
+    "don't change",
+    "don't commit",
+    "don't edit",
+    "don't modify",
+    "don't write",
+    "no change",
+    "no commit",
+    "no edit",
+    "no file write",
+    "no write",
+    "no-write",
+    "only discuss",
+    "read only",
+    "without editing",
+    "\u4e0d\u52a8\u6587\u4ef6",
+    "\u4e0d\u63d0\u4ea4",
+    "\u4e0d\u5199\u6587\u4ef6",
+    "\u4e0d\u8981\u52a8\u6587\u4ef6",
+    "\u4e0d\u8981\u5199\u6587\u4ef6",
+    "\u4e0d\u8981\u4fee\u6539",
+    "\u4e0d\u8981\u6539",
+    "\u4e0d\u8981\u6539\u4ee3\u7801",
+    "\u4e0d\u8981\u63d0\u4ea4",
+    "\u4e0d\u9700\u8981\u6539\u4ee3\u7801",
+    "\u4ec5\u8ba8\u8bba",
+    "\u53ea\u8ba8\u8bba",
+    "\u53ea\u8bfb",
+    "\u53ea\u89e3\u91ca",
+    "\u53ea\u770b",
+    "\u5148\u4e0d\u6539",
+    "\u5148\u4e0d\u52a8",
+}
+
+EDIT_BLOCKING_CONSTRAINTS = {
+    "discussion_only",
+    "read_only",
+    "no_change",
+    "no_edit",
+    "no_file_write",
+    "no_write",
+    "no_commit",
 }
 
 
@@ -132,6 +291,157 @@ def _contains_term(text: str, term: str) -> bool:
     return term in text
 
 
+def _string_value(value: Any) -> str | None:
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return None
+
+
+def _string_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    output: list[str] = []
+    for item in value:
+        if isinstance(item, str) and item.strip() and item.strip() not in output:
+            output.append(item.strip())
+    return output
+
+
+def _ordered_unique(values: list[str]) -> list[str]:
+    output: list[str] = []
+    for value in values:
+        if value and value not in output:
+            output.append(value)
+    return output
+
+
+def _first_string(*values: Any) -> str | None:
+    for value in values:
+        text = _string_value(value)
+        if text:
+            return text
+    return None
+
+
+def _normalize_confidence(value: Any) -> str:
+    text = _string_value(value)
+    if text in {"high", "medium", "low", "unavailable"}:
+        return text
+    return "medium"
+
+
+def _normalize_intent_slices(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    slices: list[dict[str, Any]] = []
+    for index, item in enumerate(value, start=1):
+        if not isinstance(item, dict):
+            continue
+        slice_id = _string_value(item.get("id")) or f"intent_{index}"
+        slices.append(
+            {
+                "id": slice_id,
+                "policy_scopes": _string_list(item.get("policy_scopes")),
+                "intent_class": _string_value(item.get("intent_class")),
+                "operation_class": _string_value(item.get("operation_class")),
+                "output_class": _string_value(item.get("output_class")),
+                "constraints": _string_list(item.get("constraints")),
+                "rationale_summary": _string_value(item.get("rationale_summary")),
+            }
+        )
+    return slices
+
+
+def normalize_host_semantic_intent(raw: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Normalize host/classifier semantic intent into a prompt-free projection."""
+
+    if raw is None:
+        return None
+    if not isinstance(raw, dict):
+        return {
+            "schema": HOST_SEMANTIC_INTENT_SCHEMA,
+            "status": "invalid",
+            "provider": "unavailable",
+            "confidence": "unavailable",
+            "policy_scopes": [],
+            "constraints": [],
+            "intent_slices": [],
+            "work_profile": {},
+            "errors": ["host_semantic_intent must be a JSON object"],
+        }
+
+    provider = _string_value(raw.get("provider")) or "host_ai"
+    status = "heuristic_fallback" if provider == "heuristic_fallback" else "provided"
+    confidence = _normalize_confidence(raw.get("confidence"))
+    if confidence == "unavailable":
+        status = "unavailable"
+
+    nested_work_profile = raw.get("work_profile") if isinstance(raw.get("work_profile"), dict) else {}
+    intent_slices = _normalize_intent_slices(raw.get("intent_slices"))
+    primary_ref = _string_value(raw.get("primary_intent_ref"))
+    primary_slice = next(
+        (item for item in intent_slices if item.get("id") == primary_ref),
+        intent_slices[0] if intent_slices else {},
+    )
+
+    scopes = _ordered_unique(
+        _string_list(raw.get("policy_scopes"))
+        + _string_list(nested_work_profile.get("policy_scopes"))
+        + [
+            scope
+            for item in intent_slices
+            for scope in _string_list(item.get("policy_scopes"))
+        ]
+    )
+    constraints = _ordered_unique(
+        _string_list(raw.get("constraints"))
+        + [
+            constraint
+            for item in intent_slices
+            for constraint in _string_list(item.get("constraints"))
+        ]
+    )
+    work_profile = {
+        "policy_scopes": scopes,
+        "intent_class": _first_string(
+            nested_work_profile.get("intent_class"),
+            primary_slice.get("intent_class"),
+        ),
+        "operation_class": _first_string(
+            nested_work_profile.get("operation_class"),
+            primary_slice.get("operation_class"),
+        ),
+        "output_class": _first_string(
+            nested_work_profile.get("output_class"),
+            primary_slice.get("output_class"),
+        ),
+    }
+
+    if not scopes and not any(work_profile.values()) and status != "unavailable":
+        status = "invalid"
+
+    return {
+        "schema": HOST_SEMANTIC_INTENT_SCHEMA,
+        "status": status,
+        "source_client": _string_value(raw.get("source_client")),
+        "source_event": _string_value(raw.get("source_event")),
+        "provider": provider,
+        "confidence": confidence,
+        "lifecycle_event": _string_value(raw.get("lifecycle_event")),
+        "multi_intent": bool(raw.get("multi_intent") or len(intent_slices) > 1),
+        "primary_intent_ref": primary_ref,
+        "policy_scopes": scopes,
+        "constraints": constraints,
+        "intent_slices": intent_slices,
+        "work_profile": work_profile,
+        "rationale_summary": _string_value(raw.get("rationale_summary")),
+    }
+
+
+def _blocks_editing(constraints: list[str]) -> bool:
+    return bool(set(constraints) & EDIT_BLOCKING_CONSTRAINTS)
+
+
 def _path_output_class(paths: list[str]) -> str | None:
     suffixes = {Path(path).suffix.lower() for path in paths}
     if suffixes & {".py", ".js", ".ts", ".tsx", ".jsx", ".rs", ".go"}:
@@ -155,6 +465,7 @@ def build_work_profile(
     changed_paths: list[str] | None = None,
     added_paths: list[str] | None = None,
     agent_hint: dict[str, Any] | None = None,
+    host_semantic_intent: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a no-write work-profile projection.
 
@@ -173,6 +484,50 @@ def build_work_profile(
     operation_class = "no_tool" if lifecycle_event == "conversation_turn" else "read_only"
     output_class = "answer" if lifecycle_event == "conversation_turn" else "plan"
     policy_scopes: list[str] = []
+    semantic_intent = normalize_host_semantic_intent(host_semantic_intent)
+    semantic_status = (
+        semantic_intent.get("status") if isinstance(semantic_intent, dict) else "unavailable"
+    )
+    semantic_scopes = (
+        list(semantic_intent.get("policy_scopes") or [])
+        if isinstance(semantic_intent, dict)
+        else []
+    )
+    semantic_constraints = (
+        list(semantic_intent.get("constraints") or [])
+        if isinstance(semantic_intent, dict)
+        else []
+    )
+    semantic_blocks_editing = _blocks_editing(semantic_constraints)
+    text_blocks_editing = _contains_any(text, TEXT_EDIT_BLOCKING_TERMS)
+    effective_blocks_editing = semantic_blocks_editing or text_blocks_editing
+    semantic_conflicts: list[dict[str, str]] = []
+
+    if isinstance(semantic_intent, dict):
+        signals.append(
+            {
+                "signal": "host_semantic_intent_present",
+                "source": "host_semantic_intent",
+                "effect": f"semantic_intent_status={semantic_status}",
+            }
+        )
+        semantic_work_profile = semantic_intent.get("work_profile") or {}
+        if semantic_work_profile.get("intent_class"):
+            intent_class = str(semantic_work_profile["intent_class"])
+        if semantic_work_profile.get("operation_class"):
+            operation_class = str(semantic_work_profile["operation_class"])
+        if semantic_work_profile.get("output_class"):
+            output_class = str(semantic_work_profile["output_class"])
+        policy_scopes.extend(semantic_scopes)
+
+    if text_blocks_editing:
+        signals.append(
+            {
+                "signal": "deterministic_edit_blocking_terms",
+                "source": "user_phrase_or_task_title",
+                "effect": "recorded deterministic no-edit constraint for fallback classification",
+            }
+        )
 
     if agent_hint:
         signals.append(
@@ -184,6 +539,13 @@ def build_work_profile(
         )
 
     if paths:
+        if effective_blocks_editing:
+            semantic_conflicts.append(
+                {
+                    "signal": "changed_or_added_paths_present",
+                    "summary": "changed paths conflict with no-edit constraint",
+                }
+            )
         intent_class = "editing"
         operation_class = "write_file"
         output_class = _path_output_class(paths) or "change"
@@ -270,7 +632,25 @@ def build_work_profile(
             }
         )
 
-    if _contains_any(text, EDITING_TERMS):
+    editing_terms_present = _contains_any(text, EDITING_TERMS)
+    if editing_terms_present and effective_blocks_editing and not paths:
+        semantic_conflicts.append(
+            {
+                "signal": "editing_terms_blocked_by_edit_constraint",
+                "summary": (
+                    "deterministic editing keywords were observed but no-edit "
+                    "constraints forbid file edits"
+                ),
+            }
+        )
+        signals.append(
+            {
+                "signal": "editing_terms_blocked_by_edit_constraint",
+                "source": "user_phrase_or_task_title",
+                "effect": "kept non-editing scope because an edit-blocking constraint blocks editing",
+            }
+        )
+    elif editing_terms_present:
         intent_class = "editing"
         if operation_class != "write_file":
             operation_class = "local_command"
@@ -298,6 +678,19 @@ def build_work_profile(
     if intent_class == "discussion" and "discussion" not in policy_scopes:
         policy_scopes.append("discussion")
 
+    if isinstance(semantic_intent, dict):
+        semantic_work_profile = semantic_intent.get("work_profile") or {}
+        if semantic_work_profile.get("intent_class"):
+            intent_class = str(semantic_work_profile["intent_class"])
+        if semantic_work_profile.get("operation_class"):
+            operation_class = str(semantic_work_profile["operation_class"])
+        if semantic_work_profile.get("output_class"):
+            output_class = str(semantic_work_profile["output_class"])
+        combined_scopes = _ordered_unique(semantic_scopes + policy_scopes)
+        if effective_blocks_editing and "editing" not in semantic_scopes and not paths:
+            combined_scopes = [scope for scope in combined_scopes if scope != "editing"]
+        policy_scopes = combined_scopes
+
     fallback_expanded = False
     fallback_reason = "not_expanded"
     if not policy_scopes or intent_class == "other":
@@ -306,6 +699,12 @@ def build_work_profile(
         fallback_reason = "expanded_due_to_other_or_low_signal"
 
     confidence = "high" if paths or task_type_value else "medium" if signals else "low"
+    if isinstance(semantic_intent, dict) and semantic_intent.get("confidence") in {
+        "high",
+        "medium",
+        "low",
+    }:
+        confidence = str(semantic_intent["confidence"])
     if fallback_expanded:
         confidence = "low"
 
@@ -322,7 +721,19 @@ def build_work_profile(
         "fallback_expanded": fallback_expanded,
         "basis": {
             "agent_hint": agent_hint,
+            "host_semantic_intent": semantic_intent
+            or {
+                "schema": HOST_SEMANTIC_INTENT_SCHEMA,
+                "status": "unavailable",
+                "provider": "unavailable",
+                "confidence": "unavailable",
+                "policy_scopes": [],
+                "constraints": [],
+                "intent_slices": [],
+            },
+            "semantic_intent_status": semantic_status,
             "deterministic_signals": signals,
+            "conflicts": semantic_conflicts,
             "fallback": fallback_reason,
         },
         "non_effects": [

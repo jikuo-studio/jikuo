@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-CODEX-PLUGIN-01: Codex Plugin Pre-Turn Harness Review
 
-> **Status**: Level 1 project-local proof files implemented and local stdin smoke passed; official Codex hook surface reviewed on 2026-05-19; GUI proof and strict mounted acceptance still pending.
+> **Status**: Level 1 project-local proof files implemented and local stdin smoke passed; host semantic-intent input and work-profile merge path implemented for CLI / MCP / Codex hook proof; official Codex hook surface reviewed on 2026-05-19; GUI proof, host-time semantic provider proof, and strict mounted acceptance still pending.
 > **Date**: 2026-05-16
 > **Product meaning**: Determine whether a Codex plugin can make JIKUO run before every user turn, or whether it should only ship as an instruction / MCP setup aid. This prevents JIKUO from claiming strict mounted behavior that Codex cannot actually enforce.
 
@@ -221,13 +221,36 @@ Implementation target for the later code slice:
 
 - add an optional `host_semantic_intent` input to the conversation-turn router,
   agent-flow CLI, MCP adapter, and Codex hook proof script;
-- normalize it into a schema-checked dict without storing raw prompt text;
+- normalize it into a prompt-free schema-checked dict;
 - merge it inside `work_profile.build_work_profile()` before deterministic
-  fallback;
-- surface final `classification_basis`, `semantic_intent_status`,
-  `intent_slices`, `constraints`, and conflicts in runtime cards;
+  fallback affects final policy scopes;
+- surface `semantic_intent_status`, `intent_slices`, `constraints`, and
+  deterministic/semantic conflicts in runtime cards;
 - leave `policy_store.evaluate_work_profile_applicability()` consuming only the
   final `lifecycle_event` and aggregate `policy_scopes`.
+
+Implemented on 2026-05-19 as the Level 2A local semantic-input slice:
+
+- `agent_flow propose` accepts `--host-semantic-intent-json`;
+- MCP `jikuo.route_user_request` and `jikuo.propose_policy_suggestions` accept
+  `host_semantic_intent`;
+- the Codex proof hook accepts `host_semantic_intent` / `hostSemanticIntent` in
+  hook stdin and forwards the compact object to JIKUO;
+- `work_profile.build_work_profile()` records the normalized semantic object in
+  `basis.host_semantic_intent`, uses aggregate semantic policy scopes, preserves
+  `intent_slices`, honors negative constraints such as `no_file_write`, and
+  records keyword/semantic conflicts;
+- deterministic fallback now includes broader Chinese and English keyword
+  coverage for discussion, research, editing, progress, configuration, and
+  policy-governance turns, plus no-edit natural-language constraints such as
+  "only discuss" and "do not edit files";
+- runtime markdown renders semantic status, provider, constraints, slice count,
+  and conflict count.
+
+This is not yet Codex GUI AI-semantic proof. It only means JIKUO can consume a
+compact semantic classification when a host or classifier provides one. If no
+provider is available, the hook still reports `semantic_intent_status` as
+`unavailable` and deterministic routing remains the honest fallback.
 
 Proof levels:
 
@@ -327,6 +350,11 @@ applicability, perform durable writes, persist raw prompts, or claim
 AI-semantic routing. The current implementation passes the prompt transiently
 to the local CLI over stdin via `--user-phrase-stdin`, so prompt text is not
 placed in the child process argument list.
+
+The current implementation also passes compact `host_semantic_intent` through
+`--host-semantic-intent-json` when the hook input contains that field. The hook
+does not generate that semantic intent by itself; it only transports and labels
+it so JIKUO can merge it into the final work profile.
 
 An accepted proof note under `docs/integrations/proofs/` is still pending and
 must be based on a real Codex GUI run, not only unit tests.

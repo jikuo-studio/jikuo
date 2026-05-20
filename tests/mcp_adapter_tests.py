@@ -442,6 +442,43 @@ class MCPStageAAdapterTests(unittest.TestCase):
             self.assertFalse((project_root / ".jikuo" / "task_sessions").exists())
             self.assertFalse((project_root / ".jikuo" / "project_state.yaml").exists())
 
+    def test_route_user_request_accepts_host_semantic_intent(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+
+            response = adapter.call_tool(
+                "jikuo.route_user_request",
+                {
+                    "project_root": str(project_root),
+                    "user_phrase": "please change this but only discuss it",
+                    "trigger_mode": "mounted",
+                    "host_semantic_intent": {
+                        "schema": "jikuo.host_semantic_intent.v0",
+                        "source_client": "codex",
+                        "source_event": "UserPromptSubmit",
+                        "provider": "host_ai",
+                        "confidence": "high",
+                        "constraints": ["no_file_write"],
+                        "work_profile": {
+                            "policy_scopes": ["discussion"],
+                            "intent_class": "design_discussion",
+                            "operation_class": "no_change",
+                            "output_class": "explanation",
+                        },
+                    },
+                },
+            )
+
+            profile = response["work_profile"]
+            self.assertEqual(profile["policy_scopes"], ["discussion"])
+            self.assertEqual(profile["operation_class"], "no_change")
+            self.assertEqual(
+                profile["basis"]["host_semantic_intent"]["status"],
+                "provided",
+            )
+            self.assertIn("Semantic intent status: `provided`", response["card_markdown"])
+
     def test_route_user_request_prompts_activation_configuration_when_missing(self):
         with tempfile.TemporaryDirectory() as tmp:
             project_root = Path(tmp) / "project"
