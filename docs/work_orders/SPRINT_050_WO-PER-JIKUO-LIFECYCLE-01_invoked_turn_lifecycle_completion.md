@@ -1,9 +1,9 @@
 # SPRINT_050_WO-PER-JIKUO-LIFECYCLE-01: Invoked-Turn Lifecycle Completion
 
-> **Status**: LIFECYCLE-01B observed lifecycle record in implementation; no lifecycle runner or durable event ledger.
+> **Status**: LIFECYCLE-01B observed lifecycle record implemented; LIFECYCLE-01C action-grammar checkpoint contract under design; no lifecycle runner or durable event ledger.
 > **Date**: 2026-05-18
 > **JIKUO layer**: process governance / runtime visibility / policy governance.
-> **Business meaning**: Once JIKUO is invoked for a user turn, the user should see which lifecycle nodes actually produced cards and policy/evidence status. This is different from forcing every GUI client to invoke JIKUO or adding a lifecycle runner; host hook proof remains a separate adapter task.
+> **Business meaning**: Once JIKUO is invoked for a user turn, the user should see which lifecycle nodes actually produced cards and policy/evidence status. The next design step is to keep JIKUO lightweight by expressing AI work as an action grammar plus minimum checkpoints instead of a heavy fixed process. This is different from forcing every GUI client to invoke JIKUO or adding a lifecycle runner; host hook proof remains a separate adapter task.
 
 ---
 
@@ -182,6 +182,48 @@ Initial action grammar:
 Tracked insight:
 `docs/insights/INSIGHT-2026-05-21-from-lifecycle-to-action-grammar.md`.
 
+### 4.1.0B LIFECYCLE-01C Minimum Checkpoint Contract
+
+LIFECYCLE-01C turns the action grammar into a small operational contract. It
+does not add a new runner. It defines the minimum checkpoints that a host,
+agent, or future runner must make visible when JIKUO is invoked.
+
+The contract is intentionally action-oriented:
+
+| Checkpoint | Required verbs | Purpose | Expected surface |
+|---|---|---|---|
+| pre-work | see, classify, trigger | mount relevant context, classify the turn, and surface applicable policies before substantive work | `conversation_turn` card, work profile, policy trigger summary |
+| governed-work | think, act | perform reasoning and tool work under the visible policy/evidence constraints | agent reasoning, tool calls, optional task-start card |
+| pre-final | see, trigger, report | re-check completion obligations, evidence, main-document maintenance, and user-facing summary before final delivery or commit closure | `completion_review` card, missing evidence report, observed lifecycle footer |
+
+Minimum invariants:
+
+- A final response for governed JIKUO work should include an `Observed
+  Lifecycle` footer when runtime links are available.
+- Missing recommended nodes must be reported as missing observations, not
+  silently fabricated.
+- Policy distribution uses the final work-profile classification for the active
+  node; AI semantic classification can improve that input but remains a
+  separate reviewed dependency.
+- Deterministic keyword/path/tool signals are fallback and conflict evidence,
+  not a substitute for an AI semantic classifier.
+- Completion evidence remains explicit. It is satisfied only by structured
+  produced evidence or an approved evidence bridge, not by recent commits,
+  changed files, or proposal history alone.
+- `work_order_id`, `task_session_id`, and future DATA event ids remain explicit
+  bindings. They must not be inferred from card titles, paths, or recent
+  history.
+
+LIFECYCLE-01C acceptance:
+
+- this section is readable as the governing design for the next implementation
+  slice;
+- it explains why JIKUO uses checkpoints rather than a rigid lifecycle runner;
+- it names the three required checkpoints and their expected surfaces;
+- it preserves the LIFECYCLE-01B record-only runtime boundary;
+- it leaves AI semantic routing and lifecycle sequencing owner implementation
+  for separate reviewed slices.
+
 ### 4.1.1 Lifecycle Versus Scope
 
 Lifecycle nodes answer "where is this governed turn in the process?"
@@ -340,7 +382,8 @@ These slices are planning markers only. They require model approval first.
 2. `LIFECYCLE-01B`: record the observed lifecycle nodes and card links that
    actually occurred; do not add a runner.
 3. `LIFECYCLE-01C`: design the action-grammar / minimum-checkpoint contract for
-   see, classify, trigger, think, act, and report before adding new code.
+   see, classify, trigger, think, act, and report before adding new code. This
+   is the current design slice.
 4. `LIFECYCLE-01D`: design the lifecycle sequencing owner only if the
    action-grammar review still needs a runner / harness contract.
 5. `LIFECYCLE-01E`: make MCP responses expose the same observed lifecycle
@@ -358,6 +401,9 @@ These slices are planning markers only. They require model approval first.
 - Do not make task-session creation mandatory for observed lifecycle tracking.
 - Do not infer `work_order_id` or durable task association from recent proposal
   history.
+- Do not treat LIFECYCLE-01C checkpoints as automatic execution proof. They are
+  an acceptance contract until a host, runner, or explicit agent workflow
+  implements them.
 - Do not build a heavy task knowledge graph in this work order.
 - Do not claim GUI-client strict mounting is solved until host hook adapters are
   verified.

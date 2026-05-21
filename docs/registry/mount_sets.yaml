@@ -33,7 +33,7 @@ entries:
       - path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-DOCREG-01_layered_document_registry.md"
   - id: "MOUNT-LIFECYCLE-01"
     title: "Observed invoked-turn lifecycle context bundle"
-    status: "active for LIFECYCLE-01B record-only implementation"
+    status: "active for LIFECYCLE-01B record-only implementation and LIFECYCLE-01C checkpoint-contract design"
     documents:
       - path: "docs/governance/jikuo_execution_mounts.md"
       - path: "docs/governance/jikuo_policy_governance_authority.md"

@@ -296,11 +296,11 @@ entries:
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-ROUTER-01_trigger_mode_and_conversation_turn_router.md"
   - id: "CAP-INVOKED-TURN-LIFECYCLE-COMPLETION-01"
     title: "Observed invoked-turn lifecycle record"
-    status: "LIFECYCLE-01B observed lifecycle record in implementation; no lifecycle runner or durable event ledger"
+    status: "LIFECYCLE-01B observed lifecycle record implemented; LIFECYCLE-01C action-grammar checkpoint contract under design; no lifecycle runner or durable event ledger"
     metadata_status: "complete"
     entry_point: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIFECYCLE-01_invoked_turn_lifecycle_completion.md"
     write_effect: "runtime visibility projection only: observed lifecycle node/card links in .jikuo/runtime; no durable task-session, work-order, policy, or DATA-01 writes"
-    approval: "record-only observed lifecycle projection accepted; lifecycle runner and durable correlation remain separate reviewed work"
+    approval: "record-only observed lifecycle projection accepted; action-grammar checkpoint contract is design-only until separately implemented; lifecycle runner and durable correlation remain separate reviewed work"
     referenced_by_transitional_cache:
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIFECYCLE-01_invoked_turn_lifecycle_completion.md"
   - id: "CAP-DESKTOP-AGENT-INSTRUCTION-01"
