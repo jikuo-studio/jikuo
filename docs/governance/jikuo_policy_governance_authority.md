@@ -71,6 +71,11 @@ that message--answers, reads files, searches, analyzes, edits, proposes policy,
 or prepares a handoff--JIKUO should be able to model that work as a governed
 processing instance.
 
+`LIFECYCLE-01B` treats the first implemented MVP processing surface as an
+`observed_lifecycle`: a record-only runtime projection created only after JIKUO
+is actually invoked for a turn. It is not a lifecycle runner, not a durable task
+session, not a `work_order_id`, and not DATA-01 append-only event authority.
+
 The user-facing work lifecycle should be small and hard to miss:
 
 1. `conversation_turn`: the user message enters the governed project. JIKUO
@@ -509,11 +514,11 @@ Recommended future slices:
    `work_profile.policy_scopes`. `intent_class`, `operation_class`, and
    `output_class` remain explanatory projection fields until a later reviewed
    slice.
-5. `LIFECYCLE-01`: current priority. Define and implement the invoked-turn
-   lifecycle completion runner so that when JIKUO is pulled up, lifecycle nodes
-   and their policies complete consistently. This is about node-execution
-   completeness; it is not a promise that GUI clients can force JIKUO invocation
-   before hooks are proven.
+5. `LIFECYCLE-01`: current priority. Define and implement the record-only
+   observed lifecycle projection so that when JIKUO is pulled up, lifecycle
+   nodes that actually produced cards stay visible from the latest card. This is
+   about lifecycle observability; it is not a lifecycle runner and not a promise
+   that GUI clients can force JIKUO invocation before hooks are proven.
 6. `POLICY-MGMT-01`: keep the policy-management MVP lightweight: activate the
    two held user-authored candidates through existing no-write plan / guarded
    apply paths, and design official distribution boundaries. Do not build a

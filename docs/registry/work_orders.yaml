@@ -877,7 +877,7 @@ entries:
     title: "SPRINT_050_WO-PER-JIKUO-LIFECYCLE-01: Invoked-Turn Lifecycle Completion"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIFECYCLE-01_invoked_turn_lifecycle_completion.md"
     sprint: "SPRINT_050"
-    status: "Planned; business model and data model review before implementation"
+    status: "LIFECYCLE-01B observed lifecycle record in implementation; no lifecycle runner or durable event ledger"
     impact_tags:
       - "process_governance"
       - "runtime_visibility"
@@ -891,14 +891,15 @@ entries:
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-14_completion_review_policy_only_surfacing.md#1-why-this-slice-exists"
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-DATA-01_structured_execution_event_ledger_and_analytics_contract.md#3-problem-statement"
       - "docs/insights/INSIGHT-2026-05-17-work-unit-task-association-boundary.md"
+      - "docs/insights/INSIGHT-2026-05-19-completion-review-evidence-bridge-gap.md"
     authority_refs:
       - "docs/governance/jikuo_execution_mounts.md"
       - "docs/governance/jikuo_policy_governance_authority.md"
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIFECYCLE-01_invoked_turn_lifecycle_completion.md"
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-DATA-01_structured_execution_event_ledger_and_analytics_contract.md"
     stop_boundaries:
-      - "Do not implement code before lifecycle business model, data structure, layers, and chain are reviewed."
-      - "Do not make task_session_id mandatory for lifecycle completion."
+      - "Do not add a lifecycle runner before a separate design review."
+      - "Do not make task_session_id mandatory for observed lifecycle tracking."
       - "Do not infer work_order_id or task association from recent cards, paths, or proposal titles."
       - "Do not claim GUI clients force JIKUO invocation before host hook proof."
   - id: "JIKUO-POLICY-MGMT-01"

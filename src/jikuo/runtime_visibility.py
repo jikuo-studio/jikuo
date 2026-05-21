@@ -23,6 +23,7 @@ RUNTIME_VISIBILITY_REPORT_SCHEMA = "jikuo.runtime_visibility_report.v0"
 RUNTIME_STATE_SUMMARY_SCHEMA = "jikuo.runtime_state_summary.v0"
 CLIENT_DISPLAY_LINKS_SCHEMA = "jikuo.client_display_links.v0"
 TASK_SESSION_INDEX_STATUS_SCHEMA = "jikuo.task_session_index_status.v0"
+OBSERVED_LIFECYCLE_SCHEMA = "jikuo.observed_lifecycle.v0"
 RUNTIME_DIR_REF = ".jikuo/runtime"
 LAST_CARD_REF = ".jikuo/runtime/last_card.md"
 STATE_SUMMARY_REF = ".jikuo/runtime/state_summary.json"
@@ -40,6 +41,12 @@ LIFECYCLE_EVENT_ORDER = [
     "handoff",
 ]
 LIFECYCLE_EVENTS = set(LIFECYCLE_EVENT_ORDER)
+RECOMMENDED_OBSERVED_LIFECYCLE_EVENTS = [
+    "conversation_turn",
+    "task_start",
+    "completion_review",
+]
+TERMINAL_LIFECYCLE_EVENTS = {"completion_review", "handoff"}
 
 
 def utc_now_compact() -> str:
@@ -125,6 +132,9 @@ def build_state_summary(
     updated_at_utc: str,
 ) -> dict[str, Any]:
     policy_runtime_status = find_policy_runtime_status(proposal)
+    observed_lifecycle = runtime_report.get("observed_lifecycle") or observed_lifecycle_for_links(
+        runtime_report.get("lifecycle_card_links", [])
+    )
     return {
         "schema": RUNTIME_STATE_SUMMARY_SCHEMA,
         "updated_at_utc": updated_at_utc,
@@ -145,6 +155,7 @@ def build_state_summary(
         },
         "client_display_links": build_client_display_links(runtime_report),
         "lifecycle_card_links": runtime_report.get("lifecycle_card_links", []),
+        "observed_lifecycle": observed_lifecycle,
         "policy_runtime_status": policy_runtime_status,
         "counts": {
             "card_count": len(proposal.get("cards", [])),
@@ -235,6 +246,40 @@ def sort_lifecycle_card_links(items: list[dict[str, Any]]) -> list[dict[str, Any
     )
 
 
+def observed_lifecycle_for_links(items: list[dict[str, Any]]) -> dict[str, Any]:
+    events = [
+        str(item.get("lifecycle_event"))
+        for item in items
+        if item.get("lifecycle_event") in LIFECYCLE_EVENTS
+    ]
+    missing = [
+        event
+        for event in RECOMMENDED_OBSERVED_LIFECYCLE_EVENTS
+        if event not in events
+    ]
+    if not events:
+        status = "empty"
+    elif missing:
+        status = "observed_partial"
+    else:
+        status = "observed_all_recommended_nodes"
+    return {
+        "schema": OBSERVED_LIFECYCLE_SCHEMA,
+        "status": status,
+        "guarantee": "observed_only_not_orchestrated",
+        "recommended_events": list(RECOMMENDED_OBSERVED_LIFECYCLE_EVENTS),
+        "observed_events": events,
+        "missing_recommended_events": missing,
+        "card_count": len(events),
+        "non_effects": [
+            "does_not_force_lifecycle_node_execution",
+            "does_not_create_task_session_or_work_order_binding",
+            "does_not_write_data01_event_ledger",
+            "does_not_satisfy_policy_evidence_by_itself",
+        ],
+    }
+
+
 def load_previous_lifecycle_card_links(project_root: Path) -> list[dict[str, Any]]:
     state_path = runtime_root_for(project_root) / "state_summary.json"
     if not state_path.is_file():
@@ -298,6 +343,27 @@ def lifecycle_card_link_for_snapshot(
     return item
 
 
+def should_reset_observed_lifecycle(
+    current: dict[str, Any] | None,
+    previous: list[dict[str, Any]],
+) -> bool:
+    if not current:
+        return False
+    event = str(current.get("lifecycle_event") or "")
+    if event == "conversation_turn":
+        return True
+    previous_events = {
+        str(item.get("lifecycle_event"))
+        for item in previous
+        if item.get("lifecycle_event") in LIFECYCLE_EVENTS
+    }
+    if event == "task_start" and (
+        not previous_events or previous_events.intersection(TERMINAL_LIFECYCLE_EVENTS)
+    ):
+        return True
+    return False
+
+
 def lifecycle_card_links_for_snapshot(
     *,
     project_root: Path,
@@ -309,10 +375,9 @@ def lifecycle_card_links_for_snapshot(
         proposal=proposal,
         runtime_report=runtime_report,
     )
-    if current and current["lifecycle_event"] == "task_start":
+    previous = load_previous_lifecycle_card_links(project_root)
+    if should_reset_observed_lifecycle(current, previous):
         previous = []
-    else:
-        previous = load_previous_lifecycle_card_links(project_root)
     if not current:
         return sort_lifecycle_card_links(previous)
     by_event = {item["lifecycle_event"]: item for item in previous}
@@ -321,6 +386,10 @@ def lifecycle_card_links_for_snapshot(
 
 
 def build_client_display_links(runtime_report: dict[str, Any]) -> dict[str, Any]:
+    lifecycle_links = runtime_report.get("lifecycle_card_links", [])
+    observed_lifecycle = runtime_report.get(
+        "observed_lifecycle"
+    ) or observed_lifecycle_for_links(lifecycle_links)
     project_root_value = runtime_report.get("project_root")
     if not project_root_value:
         return {
@@ -328,7 +397,8 @@ def build_client_display_links(runtime_report: dict[str, Any]) -> dict[str, Any]
             "status": "unavailable",
             "reason": "runtime report has no project_root",
             "links": {},
-            "lifecycle_card_links": [],
+            "lifecycle_card_links": lifecycle_links,
+            "observed_lifecycle": observed_lifecycle,
         }
     if not runtime_report.get("write_performed"):
         return {
@@ -339,7 +409,8 @@ def build_client_display_links(runtime_report: dict[str, Any]) -> dict[str, Any]
                 "governed JIKUO runtime output."
             ),
             "links": {},
-            "lifecycle_card_links": [],
+            "lifecycle_card_links": lifecycle_links,
+            "observed_lifecycle": observed_lifecycle,
             "reason": runtime_report.get("reason"),
         }
     project_root = Path(str(project_root_value)).resolve()
@@ -371,7 +442,8 @@ def build_client_display_links(runtime_report: dict[str, Any]) -> dict[str, Any]
             "governed JIKUO runtime output."
         ),
         "links": {key: value for key, value in links.items() if value is not None},
-        "lifecycle_card_links": runtime_report.get("lifecycle_card_links", []),
+        "lifecycle_card_links": lifecycle_links,
+        "observed_lifecycle": observed_lifecycle,
         "reason": runtime_report.get("reason"),
     }
 
@@ -387,6 +459,7 @@ def skipped_report(*, project_root: Path, reason: str) -> dict[str, Any]:
         "state_summary_ref": STATE_SUMMARY_REF,
         "history_ref": None,
         "lifecycle_card_links": [],
+        "observed_lifecycle": observed_lifecycle_for_links([]),
         "project_root": str(project_root),
     }
 
@@ -420,6 +493,9 @@ def prepare_agent_flow_snapshot(
         project_root=resolved_root,
         proposal=proposal,
         runtime_report=report,
+    )
+    report["observed_lifecycle"] = observed_lifecycle_for_links(
+        report["lifecycle_card_links"]
     )
     return report
 
@@ -633,6 +709,23 @@ def format_state_summary(summary: dict[str, Any]) -> str:
             item = links.get(key)
             if item:
                 lines.append(f"- {item['label']}: {item['markdown']}")
+        observed_lifecycle = display_links.get("observed_lifecycle") or {}
+        if observed_lifecycle:
+            observed_events = observed_lifecycle.get("observed_events") or []
+            missing_events = observed_lifecycle.get("missing_recommended_events") or []
+            lines.extend(["", "### Observed Lifecycle", ""])
+            lines.append(f"- Status: `{observed_lifecycle.get('status', 'unknown')}`")
+            lines.append(
+                f"- Guarantee: `{observed_lifecycle.get('guarantee', 'unknown')}`"
+            )
+            lines.append(
+                "- Observed events: "
+                + (", ".join(f"`{event}`" for event in observed_events) or "`none`")
+            )
+            lines.append(
+                "- Missing recommended events: "
+                + (", ".join(f"`{event}`" for event in missing_events) or "`none`")
+            )
         lifecycle_links = display_links.get("lifecycle_card_links") or []
         if lifecycle_links:
             lines.extend(["", "### Lifecycle Card Links", ""])

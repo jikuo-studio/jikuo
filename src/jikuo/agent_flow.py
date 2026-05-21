@@ -4066,6 +4066,23 @@ def render_client_display_links(display_links: dict[str, Any]) -> list[str]:
         item = links.get(key)
         if item:
             lines.append(f"- {item['label']}: {item['markdown']}")
+    observed_lifecycle = display_links.get("observed_lifecycle") or {}
+    if observed_lifecycle:
+        observed_events = observed_lifecycle.get("observed_events") or []
+        missing_events = observed_lifecycle.get("missing_recommended_events") or []
+        lines.extend(["", "### Observed Lifecycle", ""])
+        lines.append(f"- Status: `{observed_lifecycle.get('status', 'unknown')}`")
+        lines.append(
+            f"- Guarantee: `{observed_lifecycle.get('guarantee', 'unknown')}`"
+        )
+        lines.append(
+            "- Observed events: "
+            + (", ".join(f"`{event}`" for event in observed_events) or "`none`")
+        )
+        lines.append(
+            "- Missing recommended events: "
+            + (", ".join(f"`{event}`" for event in missing_events) or "`none`")
+        )
     lifecycle_links = display_links.get("lifecycle_card_links") or []
     if lifecycle_links:
         lines.extend(["", "### Lifecycle Card Links", ""])
