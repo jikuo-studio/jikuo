@@ -200,6 +200,16 @@ def quote_yaml(value: Any) -> str:
     return json.dumps(str(value), ensure_ascii=False)
 
 
+def is_scalar_list(value: Any) -> bool:
+    return isinstance(value, list) and all(
+        not isinstance(item, (dict, list)) for item in value
+    )
+
+
+def quote_yaml_list(value: list[Any]) -> str:
+    return json.dumps(value, ensure_ascii=False)
+
+
 def render_yaml_lines(value: Any, indent: int = 0) -> list[str]:
     pad = " " * indent
     if isinstance(value, dict):
@@ -207,6 +217,9 @@ def render_yaml_lines(value: Any, indent: int = 0) -> list[str]:
             return [f"{pad}{{}}"]
         lines: list[str] = []
         for key, item in value.items():
+            if is_scalar_list(item):
+                lines.append(f"{pad}{key}: {quote_yaml_list(item)}")
+                continue
             if isinstance(item, (dict, list)):
                 lines.append(f"{pad}{key}:")
                 lines.extend(render_yaml_lines(item, indent + 2))
@@ -225,6 +238,10 @@ def render_yaml_lines(value: Any, indent: int = 0) -> list[str]:
                 first = True
                 for key, child in item.items():
                     prefix = "- " if first else "  "
+                    if is_scalar_list(child):
+                        lines.append(f"{pad}{prefix}{key}: {quote_yaml_list(child)}")
+                        first = False
+                        continue
                     if isinstance(child, (dict, list)):
                         lines.append(f"{pad}{prefix}{key}:")
                         lines.extend(render_yaml_lines(child, indent + 4))
@@ -328,6 +345,32 @@ def scalar_list(value: Any) -> list[str]:
     if isinstance(value, str):
         return [value]
     return []
+
+
+def ordered_nonempty_strings(values: list[str] | None) -> list[str]:
+    output: list[str] = []
+    for value in values or []:
+        text = str(value).strip()
+        if text and text not in output:
+            output.append(text)
+    return output
+
+
+def build_work_profile_applicability_entries(
+    *,
+    lifecycle_events: list[str] | None = None,
+    policy_scopes: list[str] | None = None,
+) -> list[dict[str, Any]]:
+    normalized_lifecycle_events = ordered_nonempty_strings(lifecycle_events)
+    normalized_policy_scopes = ordered_nonempty_strings(policy_scopes)
+    if not normalized_lifecycle_events and not normalized_policy_scopes:
+        return []
+    return [
+        {
+            "lifecycle_events": normalized_lifecycle_events,
+            "policy_scopes": normalized_policy_scopes,
+        }
+    ]
 
 
 def normalize_work_profile_applicability(raw: Any) -> dict[str, Any] | None:
@@ -683,6 +726,8 @@ def build_policy_write_plan(
     jikuo_layer: str | None = None,
     changed_path_pattern: str | None = None,
     added_path_pattern: str | None = None,
+    work_profile_lifecycle_events: list[str] | None = None,
+    work_profile_policy_scopes: list[str] | None = None,
     action_type: str = "render_pre_task_review",
     evidence_type: str = "card_rendered",
 ) -> dict[str, Any]:
@@ -753,6 +798,10 @@ def build_policy_write_plan(
         changed_path_pattern=changed_path_pattern,
         added_path_pattern=added_path_pattern,
     )
+    work_profile_applicability = build_work_profile_applicability_entries(
+        lifecycle_events=work_profile_lifecycle_events,
+        policy_scopes=work_profile_policy_scopes,
+    )
     proposed_policy: dict[str, Any] = {
         "schema_version": POLICY_SCHEMA,
         "policy_id": resolved_policy_id,
@@ -792,6 +841,8 @@ def build_policy_write_plan(
             "level": "review_required",
         },
     }
+    if work_profile_applicability:
+        proposed_policy["applies_to_work_profile"] = work_profile_applicability
     status = "refused" if refusals else "review"
     return {
         "schema": POLICY_WRITE_PLAN_SCHEMA,
@@ -2152,6 +2203,8 @@ def write_policy_from_plan(
     jikuo_layer: str | None = None,
     changed_path_pattern: str | None = None,
     added_path_pattern: str | None = None,
+    work_profile_lifecycle_events: list[str] | None = None,
+    work_profile_policy_scopes: list[str] | None = None,
     action_type: str = "render_pre_task_review",
     evidence_type: str = "card_rendered",
     confirmed: bool = False,
@@ -2168,6 +2221,8 @@ def write_policy_from_plan(
         jikuo_layer=jikuo_layer,
         changed_path_pattern=changed_path_pattern,
         added_path_pattern=added_path_pattern,
+        work_profile_lifecycle_events=work_profile_lifecycle_events,
+        work_profile_policy_scopes=work_profile_policy_scopes,
         action_type=action_type,
         evidence_type=evidence_type,
     )
@@ -3504,6 +3559,16 @@ def build_parser() -> argparse.ArgumentParser:
     plan_write.add_argument("--jikuo-layer", default=None)
     plan_write.add_argument("--changed-path-pattern", default=None)
     plan_write.add_argument("--added-path-pattern", default=None)
+    plan_write.add_argument(
+        "--work-profile-lifecycle-event",
+        action="append",
+        default=[],
+    )
+    plan_write.add_argument(
+        "--work-profile-policy-scope",
+        action="append",
+        default=[],
+    )
     plan_write.add_argument("--action-type", default="render_pre_task_review")
     plan_write.add_argument("--evidence-type", default="card_rendered")
     plan_write.add_argument("--format", choices=("text", "json"), default="text")
@@ -3573,6 +3638,16 @@ def build_parser() -> argparse.ArgumentParser:
     write_policy.add_argument("--jikuo-layer", default=None)
     write_policy.add_argument("--changed-path-pattern", default=None)
     write_policy.add_argument("--added-path-pattern", default=None)
+    write_policy.add_argument(
+        "--work-profile-lifecycle-event",
+        action="append",
+        default=[],
+    )
+    write_policy.add_argument(
+        "--work-profile-policy-scope",
+        action="append",
+        default=[],
+    )
     write_policy.add_argument("--action-type", default="render_pre_task_review")
     write_policy.add_argument("--evidence-type", default="card_rendered")
     write_policy.add_argument("--confirm-write-policy", action="store_true")
@@ -3621,6 +3696,8 @@ def main(argv: list[str] | None = None) -> int:
             jikuo_layer=args.jikuo_layer,
             changed_path_pattern=args.changed_path_pattern,
             added_path_pattern=args.added_path_pattern,
+            work_profile_lifecycle_events=args.work_profile_lifecycle_event,
+            work_profile_policy_scopes=args.work_profile_policy_scope,
             action_type=args.action_type,
             evidence_type=args.evidence_type,
         )
@@ -3674,6 +3751,8 @@ def main(argv: list[str] | None = None) -> int:
             jikuo_layer=args.jikuo_layer,
             changed_path_pattern=args.changed_path_pattern,
             added_path_pattern=args.added_path_pattern,
+            work_profile_lifecycle_events=args.work_profile_lifecycle_event,
+            work_profile_policy_scopes=args.work_profile_policy_scope,
             action_type=args.action_type,
             evidence_type=args.evidence_type,
             confirmed=args.confirm_write_policy,

@@ -228,3 +228,17 @@ Result:
 - `agent_flow.py propose --event policy_write_plan` smoke rendered a `policy_write_plan` card and included `CAP-POLICY-STORE-WRITE-PROPOSE-01`; proposal remained no-write.
 - checker smoke passed in report-only mode; `R-006` fields/sections OK, `R-012` Sprint index document present with manual declaration review, and `R-013` JIKUO layer/kernel fields/sections OK with manual declaration review.
 - root `.jikuo/policies/` and fixture `.jikuo/policies/` remained absent.
+
+## 9.1 Work-Profile Applicability Follow-Up
+
+On 2026-05-21, `CAP-POLICY-STORE-WRITE-PROPOSE-01` was extended so no-write
+policy plans and guarded writer command previews can include:
+
+- `--work-profile-lifecycle-event`;
+- `--work-profile-policy-scope`.
+
+The generated policy YAML uses `applies_to_work_profile` with inline scalar
+lists so the project-local minimal YAML reader can round-trip the field before
+the evaluator consumes it. This follow-up does not change evaluator behavior,
+does not activate any held candidate policy, and does not perform durable
+policy writes by itself.

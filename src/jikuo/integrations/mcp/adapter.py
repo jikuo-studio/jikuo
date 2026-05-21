@@ -939,6 +939,12 @@ def call_tool(
             policy_jikuo_layer=args.get("policy_jikuo_layer"),
             policy_changed_path_pattern=args.get("policy_changed_path_pattern"),
             policy_added_path_pattern=args.get("policy_added_path_pattern"),
+            policy_work_profile_lifecycle_events=_string_list_arg(
+                args.get("policy_work_profile_lifecycle_events")
+            ),
+            policy_work_profile_policy_scopes=_string_list_arg(
+                args.get("policy_work_profile_policy_scopes")
+            ),
             policy_action_type=str(
                 args.get("policy_action_type") or "render_pre_task_review"
             ),

@@ -2587,6 +2587,8 @@ def build_policy_write_plan_cards(
     policy_jikuo_layer: str | None,
     policy_changed_path_pattern: str | None,
     policy_added_path_pattern: str | None,
+    policy_work_profile_lifecycle_events: list[str] | None,
+    policy_work_profile_policy_scopes: list[str] | None,
     policy_action_type: str,
     policy_evidence_type: str,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]:
@@ -2600,6 +2602,8 @@ def build_policy_write_plan_cards(
         jikuo_layer=policy_jikuo_layer,
         changed_path_pattern=policy_changed_path_pattern,
         added_path_pattern=policy_added_path_pattern,
+        work_profile_lifecycle_events=policy_work_profile_lifecycle_events,
+        work_profile_policy_scopes=policy_work_profile_policy_scopes,
         action_type=policy_action_type,
         evidence_type=policy_evidence_type,
     )
@@ -2642,9 +2646,36 @@ def build_policy_write_plan_cards(
     if policy_jikuo_layer:
         command_parts.extend(["--jikuo-layer", command_arg(policy_jikuo_layer)])
     if policy_changed_path_pattern:
-        command_parts.extend(["--changed-path-pattern", command_arg(policy_changed_path_pattern)])
+        command_parts.extend(
+            ["--changed-path-pattern", command_arg(policy_changed_path_pattern)]
+        )
     if policy_added_path_pattern:
-        command_parts.extend(["--added-path-pattern", command_arg(policy_added_path_pattern)])
+        command_parts.extend(
+            ["--added-path-pattern", command_arg(policy_added_path_pattern)]
+        )
+    for lifecycle_event in policy_work_profile_lifecycle_events or []:
+        command_parts.extend(
+            ["--work-profile-lifecycle-event", command_arg(lifecycle_event)]
+        )
+    for policy_scope in policy_work_profile_policy_scopes or []:
+        command_parts.extend(["--work-profile-policy-scope", command_arg(policy_scope)])
+    shown_inputs = [
+        f"policy_ref: {policy_ref}",
+        f"policy_title: {policy_title}",
+        f"trigger_event: {policy_trigger_event}",
+        f"action_type: {policy_action_type}",
+        f"evidence_type: {policy_evidence_type}",
+    ]
+    if policy_work_profile_lifecycle_events:
+        shown_inputs.append(
+            "work_profile_lifecycle_events: "
+            + ", ".join(policy_work_profile_lifecycle_events)
+        )
+    if policy_work_profile_policy_scopes:
+        shown_inputs.append(
+            "work_profile_policy_scopes: "
+            + ", ".join(policy_work_profile_policy_scopes)
+        )
     card = generic_card(
         card_kind="policy_write_plan",
         status=plan["status"],
@@ -2654,13 +2685,7 @@ def build_policy_write_plan_cards(
             if plan["status"] != "refused"
             else "Policy write plan could not be prepared safely."
         ),
-        shown_inputs=[
-            f"policy_ref: {policy_ref}",
-            f"policy_title: {policy_title}",
-            f"trigger_event: {policy_trigger_event}",
-            f"action_type: {policy_action_type}",
-            f"evidence_type: {policy_evidence_type}",
-        ],
+        shown_inputs=shown_inputs,
         shown_outputs=write_outputs,
         refusal_reasons=plan["refusal_reasons"],
         next_actions=plan["next_actions"],
@@ -3156,6 +3181,8 @@ def build_proposal(
     policy_jikuo_layer: str | None = None,
     policy_changed_path_pattern: str | None = None,
     policy_added_path_pattern: str | None = None,
+    policy_work_profile_lifecycle_events: list[str] | None = None,
+    policy_work_profile_policy_scopes: list[str] | None = None,
     policy_action_type: str = "render_pre_task_review",
     policy_evidence_type: str = "card_rendered",
     policy_evolution_operation: str = "refine_policy",
@@ -3263,6 +3290,8 @@ def build_proposal(
             policy_jikuo_layer=policy_jikuo_layer,
             policy_changed_path_pattern=policy_changed_path_pattern,
             policy_added_path_pattern=policy_added_path_pattern,
+            policy_work_profile_lifecycle_events=policy_work_profile_lifecycle_events,
+            policy_work_profile_policy_scopes=policy_work_profile_policy_scopes,
             policy_action_type=policy_action_type,
             policy_evidence_type=policy_evidence_type,
         )
@@ -4418,6 +4447,16 @@ def build_parser() -> argparse.ArgumentParser:
     propose.add_argument("--policy-jikuo-layer", default=None)
     propose.add_argument("--policy-changed-path-pattern", default=None)
     propose.add_argument("--policy-added-path-pattern", default=None)
+    propose.add_argument(
+        "--policy-work-profile-lifecycle-event",
+        action="append",
+        default=[],
+    )
+    propose.add_argument(
+        "--policy-work-profile-policy-scope",
+        action="append",
+        default=[],
+    )
     propose.add_argument("--policy-action-type", default="render_pre_task_review")
     propose.add_argument("--policy-evidence-type", default="card_rendered")
     propose.add_argument(
@@ -4629,6 +4668,8 @@ def main(argv: list[str] | None = None) -> int:
         policy_jikuo_layer=args.policy_jikuo_layer,
         policy_changed_path_pattern=args.policy_changed_path_pattern,
         policy_added_path_pattern=args.policy_added_path_pattern,
+        policy_work_profile_lifecycle_events=args.policy_work_profile_lifecycle_event,
+        policy_work_profile_policy_scopes=args.policy_work_profile_policy_scope,
         policy_action_type=args.policy_action_type,
         policy_evidence_type=args.policy_evidence_type,
         policy_evolution_operation=args.policy_evolution_operation,

@@ -907,7 +907,7 @@ entries:
     title: "SPRINT_050_WO-PER-JIKUO-POLICY-MGMT-01: Policy Management MVP"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-POLICY-MGMT-01_policy_management_mvp.md"
     sprint: "SPRINT_050"
-    status: "Planned lightweight policy track; follows JIKUO-LIFECYCLE-01 for implementation priority"
+    status: "Policy writer scope-field prerequisite implemented; held-candidate activation remains review-only"
     impact_tags:
       - "policy_governance"
       - "policy_distribution"

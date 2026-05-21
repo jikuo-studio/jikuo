@@ -148,7 +148,7 @@ Policy-aware agent flow projection:
 - current projection contract location: `docs/governance/jikuo_policy_aware_agent_flow_contract.md`
 - mount this document before future `agent_flow.py` policy-aware implementation, MCP wrapper, Skill / Plugin packaging, frontend run-control, or checker integration work
 - this contract defines policy context, policy store status, triggered policy, required action, evidence status, missing evidence, and fallback projection for desktop proposal cards
-- the current runner implements read-only policy-store status projection, exact lifecycle trigger evaluation, report-only condition evaluation, report-only inline evidence matching, guarded persistence proposal, explicit task-session policy evidence ingestion, proposal-only policy write-plan cards, and guarded writer command previews from this contract
+- the current runner implements read-only policy-store status projection, exact lifecycle trigger evaluation, report-only condition evaluation, report-only inline evidence matching, guarded persistence proposal, explicit task-session policy evidence ingestion, proposal-only policy write-plan cards, work-profile applicability fields in write-plan projections, and guarded writer command previews from this contract
 - this contract and fallback do not write policy stores, execute actions, persist evidence, or implement UI, Skill, MCP, Plugin, or gates
 
 For desktop invocation work, also mount:

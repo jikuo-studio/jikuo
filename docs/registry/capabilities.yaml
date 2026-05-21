@@ -565,7 +565,7 @@ entries:
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-DOCS-01_product_doc_rehome_and_reference_migration.md"
   - id: "CAP-POLICY-CANDIDATE-PROMOTION-01"
     title: "Held policy candidate activation path"
-    status: "planned lightweight policy track; follows LIFECYCLE-01"
+    status: "review-only activation track; policy writer now supports work-profile scoped no-write plans"
     metadata_status: "complete"
     entry_point: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-POLICY-MGMT-01_policy_management_mvp.md"
     write_effect: "none in planning; later guarded slices may write policy plans, decisions, approved policies, or manifest refs only after explicit approval"
@@ -838,9 +838,9 @@ entries:
     referenced_by_transitional_cache_truncated: true
   - id: "CAP-POLICY-STORE-WRITE-PROPOSE-01"
     title: "Policy write plan proposal MVP"
-    status: "implemented no-write proposal"
+    status: "implemented no-write proposal with work-profile applicability fields"
     metadata_status: "complete"
-    entry_point: "python -B -m jikuo.policy_store plan-write ...; python -B -m jikuo.agent_flow propose --event policy_write_plan ..."
+    entry_point: "python -B -m jikuo.policy_store plan-write ... --work-profile-lifecycle-event ... --work-profile-policy-scope ...; python -B -m jikuo.agent_flow propose --event policy_write_plan ..."
     write_effect: "none in propose; future guarded writer may write policy files and manifest"
     approval: "approval required for future writer"
     referenced_by_transitional_cache:

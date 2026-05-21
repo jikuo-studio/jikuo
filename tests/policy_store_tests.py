@@ -906,6 +906,12 @@ class PolicyStoreStatusTests(unittest.TestCase):
                 "configurable_rule_kernel",
                 "--changed-path-pattern",
                 "docs/jikuo/**",
+                "--work-profile-lifecycle-event",
+                "task_start",
+                "--work-profile-policy-scope",
+                "discussion",
+                "--work-profile-policy-scope",
+                "editing",
                 "--format",
                 "json",
             ],
@@ -946,6 +952,15 @@ class PolicyStoreStatusTests(unittest.TestCase):
             )
         )
         self.assertEqual(len(report["proposed_policy"]["conditions"]), 3)
+        self.assertEqual(
+            report["proposed_policy"]["applies_to_work_profile"],
+            [
+                {
+                    "lifecycle_events": ["task_start"],
+                    "policy_scopes": ["discussion", "editing"],
+                }
+            ],
+        )
         self.assertFalse((MISSING_PROJECT / ".jikuo" / "policies").exists())
 
     def test_plan_write_refuses_existing_policy_collision_without_write(self):
@@ -1355,6 +1370,10 @@ class PolicyStoreStatusTests(unittest.TestCase):
                     "work_order_delivery",
                     "--jikuo-layer",
                     "configurable_rule_kernel",
+                    "--work-profile-lifecycle-event",
+                    "task_start",
+                    "--work-profile-policy-scope",
+                    "editing",
                     "--confirm-write-policy",
                     "--approval-phrase",
                     "<exact user phrase as spoken>",
@@ -1392,6 +1411,12 @@ class PolicyStoreStatusTests(unittest.TestCase):
                 / "POLICY-work-order-pre-task-review.yaml"
             )
             self.assertTrue(policy_file.exists())
+            policy_text = policy_file.read_text(encoding="utf-8")
+            self.assertIn("applies_to_work_profile:", policy_text)
+            self.assertIn('lifecycle_events:', policy_text)
+            self.assertIn('"task_start"', policy_text)
+            self.assertIn('policy_scopes:', policy_text)
+            self.assertIn('"editing"', policy_text)
             proposal_path = project_root / result["proposal_ref"]
             self.assertTrue(proposal_path.exists())
             proposal_text = proposal_path.read_text(encoding="utf-8")
@@ -1435,6 +1460,14 @@ class PolicyStoreStatusTests(unittest.TestCase):
                     "work_order_delivery",
                     "--jikuo-layer",
                     "configurable_rule_kernel",
+                    "--work-profile-json",
+                    json.dumps(
+                        {
+                            "schema": "jikuo.work_profile.v0",
+                            "lifecycle_event": "task_start",
+                            "policy_scopes": ["editing"],
+                        }
+                    ),
                     "--format",
                     "json",
                 ],

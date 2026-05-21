@@ -166,6 +166,8 @@ def register_stage_a_tools(
         policy_jikuo_layer: str | None = None,
         policy_changed_path_pattern: str | None = None,
         policy_added_path_pattern: str | None = None,
+        policy_work_profile_lifecycle_events: list[str] | None = None,
+        policy_work_profile_policy_scopes: list[str] | None = None,
         policy_action_type: str | None = None,
         policy_evidence_type: str | None = None,
     ) -> dict[str, Any]:
@@ -181,6 +183,12 @@ def register_stage_a_tools(
                 "policy_jikuo_layer": policy_jikuo_layer,
                 "policy_changed_path_pattern": policy_changed_path_pattern,
                 "policy_added_path_pattern": policy_added_path_pattern,
+                "policy_work_profile_lifecycle_events": (
+                    policy_work_profile_lifecycle_events or []
+                ),
+                "policy_work_profile_policy_scopes": (
+                    policy_work_profile_policy_scopes or []
+                ),
                 "policy_action_type": policy_action_type,
                 "policy_evidence_type": policy_evidence_type,
             },

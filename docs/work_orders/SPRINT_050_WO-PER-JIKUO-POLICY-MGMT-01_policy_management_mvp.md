@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-POLICY-MGMT-01: Policy Management MVP
 
-> **Status**: Planned lightweight policy track; follows LIFECYCLE-01 for implementation priority.
+> **Status**: Policy writer scope-field prerequisite implemented; held-candidate activation remains review-only.
 > **Date**: 2026-05-18
 > **JIKUO layer**: policy governance / policy distribution.
 > **Business meaning**: JIKUO's first usable version needs the current user-authored candidate policies to enter active scope through the existing guarded flow, and it needs a clear official distribution boundary so useful policies can reach user projects without copying JIKUO dogfood policies or overwriting user-owned local policies.
@@ -52,6 +52,10 @@ Completed prerequisites:
   `work_profile.policy_scopes` while preserving exact conditions as additional
   filters;
 - `POLICY-CATALOG-01`: starter policy source-boundary guard is implemented.
+- `CAP-POLICY-STORE-WRITE-PROPOSE-01`: policy write plans can now include
+  `applies_to_work_profile.lifecycle_events` and
+  `applies_to_work_profile.policy_scopes` in no-write plans and guarded
+  writer command previews.
 
 Held cleanup set:
 
@@ -64,14 +68,17 @@ They are also the first concrete examples of `process_contract` policy needs:
 they govern how the agent should reason, critique, and evaluate model boundaries
 before accepting a proposed solution or adding structure.
 
-For these candidates, "the field took effect" must be evidence-based, not
-evaluator-based. `POLICY-MGMT-01A` should produce no-write plans that define:
+For these candidates, "the process-contract field took effect" must be
+evidence-based, while trigger distribution should still be scope-aware.
+`POLICY-MGMT-01A` should produce no-write plans that define:
 
 - `first_principles_alignment_evidence` for the echo-chamber / first-principles
   candidate;
 - `data_model_boundary_review_evidence` for the data-model drift candidate;
 - the required final-response obligations that prove the response contract was
   honored.
+- `applies_to_work_profile` lifecycle/scope filters narrow enough to avoid
+  broad `task_start` noise before the policy is activated.
 
 ---
 
@@ -82,13 +89,26 @@ Recommended smallest slices:
 1. `LIFECYCLE-01`: current priority before policy activation work. Make
    invoked-turn lifecycle nodes complete consistently when JIKUO is pulled up.
 2. `POLICY-MGMT-01A`: produce no-write policy plans for the two held
-   process-contract candidates using the existing policy-plan path. No
-   active-policy write until approved.
+   process-contract candidates using the existing policy-plan path with
+   `applies_to_work_profile` lifecycle/scope filters. No active-policy write
+   until approved.
 3. `POLICY-MGMT-01B`: apply or merge each held candidate only after explicit
    user approval and guarded apply / evolution.
 4. `POLICY-MGMT-01C`: define official distribution review: dogfood-only,
    official-starter, optional-template, or deferred, preserving package
    provenance and local-policy ownership.
+
+### 4.1 Current Held-Candidate Plan Shapes
+
+The current no-write review shapes are:
+
+| Candidate | Proposed policy ref | Trigger distribution | Required evidence |
+|---|---|---|---|
+| First-principles / critical alignment | `POLICY-jikuo-first-principles-critical-alignment` | `task_start` with `policy_scopes: ["discussion"]` | `first_principles_alignment_evidence` |
+| Data-model drift alarm | `POLICY-jikuo-data-model-drift-alarm` | `task_start` with `policy_scopes: ["discussion", "editing"]` | `data_model_boundary_review_evidence` |
+
+These are review artifacts only. They do not activate the policies or write
+`.jikuo/policies/approved` until the user approves an exact guarded write.
 
 ---
 

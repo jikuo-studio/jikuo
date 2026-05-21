@@ -113,6 +113,15 @@ class MCPStageAAdapterTests(unittest.TestCase):
         self.assertIn("jikuo.route_user_request", names)
         self.assertIn("jikuo.propose_policy_suggestions", names)
         by_name = {tool["name"]: tool for tool in tools}
+        policy_write_fields = by_name["jikuo.propose_policy_write_plan"]["input_fields"]
+        self.assertEqual(
+            policy_write_fields["policy_work_profile_lifecycle_events"],
+            schemas.RETURN,
+        )
+        self.assertEqual(
+            policy_write_fields["policy_work_profile_policy_scopes"],
+            schemas.RETURN,
+        )
         for name in schemas.STAGE_A_TOOL_NAMES:
             self.assertEqual(by_name[name]["stage"], "A")
             self.assertEqual(by_name[name]["write_mode"], "no-write")
@@ -655,6 +664,8 @@ class MCPStageAAdapterTests(unittest.TestCase):
                         "policy_ref": "POLICY-mcp-adapter-smoke",
                         "policy_title": "MCP adapter smoke",
                         "policy_source_ref": "<exact user phrase as spoken>",
+                        "policy_work_profile_lifecycle_events": ["task_start"],
+                        "policy_work_profile_policy_scopes": ["discussion", "editing"],
                     },
                 ),
                 (
@@ -686,6 +697,17 @@ class MCPStageAAdapterTests(unittest.TestCase):
                         response["runtime_snapshot_ref"],
                         ".jikuo/runtime/last_card.md",
                     )
+                    if tool_name == "jikuo.propose_policy_write_plan":
+                        plan = response["data_details"]["cards"][0]["policy_write_plan"]
+                        self.assertEqual(
+                            plan["proposed_policy"]["applies_to_work_profile"],
+                            [
+                                {
+                                    "lifecycle_events": ["task_start"],
+                                    "policy_scopes": ["discussion", "editing"],
+                                }
+                            ],
+                        )
 
             self.assertFalse((project_root / ".jikuo" / "task_sessions").exists())
             self.assertFalse(

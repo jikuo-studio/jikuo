@@ -3194,6 +3194,12 @@ class AgentFlowProposalTests(unittest.TestCase):
                 "configurable_rule_kernel",
                 "--policy-changed-path-pattern",
                 "docs/jikuo/**",
+                "--policy-work-profile-lifecycle-event",
+                "task_start",
+                "--policy-work-profile-policy-scope",
+                "discussion",
+                "--policy-work-profile-policy-scope",
+                "editing",
                 "--project-root",
                 str(READY_PROJECT),
                 "--format",
@@ -3220,6 +3226,15 @@ class AgentFlowProposalTests(unittest.TestCase):
         self.assertEqual(plan["policy_ref"], "POLICY-three-phase-audit")
         self.assertEqual(len(plan["proposed_policy"]["conditions"]), 3)
         self.assertEqual(
+            plan["proposed_policy"]["applies_to_work_profile"],
+            [
+                {
+                    "lifecycle_events": ["task_start"],
+                    "policy_scopes": ["discussion", "editing"],
+                }
+            ],
+        )
+        self.assertEqual(
             plan["write_set"][0]["path"],
             ".jikuo/policies/approved/POLICY-three-phase-audit.yaml",
         )
@@ -3231,6 +3246,16 @@ class AgentFlowProposalTests(unittest.TestCase):
         self.assertIn("write-policy", command["command_preview"])
         self.assertIn("--confirm-write-policy", command["command_preview"])
         self.assertIn("--approval-phrase", command["command_preview"])
+        self.assertIn("--work-profile-lifecycle-event", command["command_preview"])
+        self.assertIn("--work-profile-policy-scope", command["command_preview"])
+        self.assertIn(
+            "work_profile_lifecycle_events: task_start",
+            proposal["cards"][0]["shown_inputs"],
+        )
+        self.assertIn(
+            "work_profile_policy_scopes: discussion, editing",
+            proposal["cards"][0]["shown_inputs"],
+        )
         atom_ids = {trace["atom_id"] for trace in proposal["atom_trace"]}
         self.assertIn("CAP-POLICY-STORE-WRITE-PROPOSE-01", atom_ids)
         self.assertFalse((READY_PROJECT / ".jikuo" / "policies").exists())

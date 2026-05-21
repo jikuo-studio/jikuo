@@ -184,6 +184,30 @@ class MCPServerWrapperTests(unittest.TestCase):
             self.assertNotIn(str(project_root.resolve()), str(response))
             self.assertTrue((project_root / ".jikuo" / "runtime" / "last_card.md").is_file())
 
+    def test_policy_write_plan_registered_tool_passes_work_profile_fields(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = copy_fixture(POLICY_ACTIVE_PROJECT, tmp)
+            fake = server.create_server(fastmcp_cls=FakeFastMCP)
+
+            response = fake.tools["jikuo.propose_policy_write_plan"]["function"](
+                project_root=str(project_root),
+                policy_ref="POLICY-server-work-profile-smoke",
+                policy_title="Server work profile smoke",
+                policy_work_profile_lifecycle_events=["task_start"],
+                policy_work_profile_policy_scopes=["discussion", "editing"],
+            )
+
+            plan = response["data_details"]["cards"][0]["policy_write_plan"]
+            self.assertEqual(
+                plan["proposed_policy"]["applies_to_work_profile"],
+                [
+                    {
+                        "lifecycle_events": ["task_start"],
+                        "policy_scopes": ["discussion", "editing"],
+                    }
+                ],
+            )
+
     def test_configuration_status_registered_tool_delegates_adapter(self):
         with tempfile.TemporaryDirectory() as tmp:
             project_root = copy_fixture(POLICY_ACTIVE_PROJECT, tmp)
