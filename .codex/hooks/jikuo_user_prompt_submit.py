@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Callable, TextIO
 
 
-DEFAULT_TIMEOUT_SECONDS = 20
+DEFAULT_TIMEOUT_SECONDS = 70
 DEFAULT_TRIGGER_MODE = "mounted"
 HOOK_EVENT_NAME = "UserPromptSubmit"
 

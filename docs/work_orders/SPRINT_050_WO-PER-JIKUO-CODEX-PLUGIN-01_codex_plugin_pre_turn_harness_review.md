@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-CODEX-PLUGIN-01: Codex Plugin Pre-Turn Harness Review
 
-> **Status**: Level 1 project-local proof files implemented and local stdin smoke passed; host semantic-intent input and work-profile merge path implemented for CLI / MCP / Codex hook proof; MCP Sampling semantic-provider probe implemented as an optional client-mediated proof path; official Codex hook surface reviewed on 2026-05-19; GUI hook proof, host-time semantic provider acceptance, and strict mounted acceptance still pending.
+> **Status**: Level 1 project-local proof files implemented and local stdin smoke passed; host semantic-intent input and work-profile merge path implemented for CLI / MCP / Codex hook proof; MCP Sampling semantic-provider probe implemented as an optional client-mediated proof path; official Codex hook surface reviewed on 2026-05-19; Codex GUI pre-turn `additionalContext` injection accepted after timeout remediation on 2026-05-21; host-time semantic provider acceptance, multi-intent semantic proof, and full lifecycle strict-mounted acceptance still pending.
 > **Date**: 2026-05-16
 > **Product meaning**: Determine whether a Codex plugin can make JIKUO run before every user turn, or whether it should only ship as an instruction / MCP setup aid. This prevents JIKUO from claiming strict mounted behavior that Codex cannot actually enforce.
 
@@ -379,8 +379,29 @@ The current implementation also passes compact `host_semantic_intent` through
 does not generate that semantic intent by itself; it only transports and labels
 it so JIKUO can merge it into the final work profile.
 
-An accepted proof note under `docs/integrations/proofs/` is still pending and
-must be based on a real Codex GUI run, not only unit tests.
+A proof note under `docs/integrations/proofs/` now accepts the narrower Codex
+GUI pre-turn `additionalContext` injection surface. Full strict-mounted
+lifecycle proof is still pending and must be based on a real Codex GUI run that
+also links completion-review lifecycle output, not only unit tests.
+
+Current Codex Desktop observation:
+
+- `docs/integrations/proofs/PROOF-2026-05-21-codex-gui-hook-current-thread-observation.md`
+  records the 2026-05-21 current-thread observation. Before hook enablement, no
+  automatic hook-produced pre-turn card was observed before manual JIKUO calls.
+  After the user enabled the Codex GUI hook, the hook first injected visible
+  degraded context but the JIKUO command timed out. This proved hook invocation
+  and visible degradation.
+- Timeout remediation updated the hook-owned JIKUO subprocess timeout to 70
+  seconds and the Codex hook wrapper timeout to 90 seconds. A fresh GUI probe
+  then showed successful JIKUO `additionalContext` before the assistant answer,
+  with `semantic_intent_status=unavailable`, one triggered policy, zero missing
+  evidence, and history card
+  `.jikuo/runtime/history/20260521T004612Z_proposal_264d3469ea.md`.
+- This accepts the Codex GUI pre-turn hook / `additionalContext` surface for
+  this project-local proof configuration. It does not accept host-time
+  AI-semantic routing, multi-intent semantic slicing, or full lifecycle
+  strict-mounted behavior.
 
 Current local verification:
 
@@ -393,13 +414,15 @@ Current local verification:
 - `agent_flow propose --user-phrase-stdin` is covered by regression tests and
   is the preferred Codex hook transport for prompt text.
 
-This verification proves the script behavior only. It does not prove the Codex
-GUI has loaded, trusted, or executed the hook.
+This local verification proves the script behavior only. The Codex GUI
+observation above separately proves that the enabled project-local hook can
+inject pre-turn JIKUO `additionalContext`; it still does not prove host-time
+AI-semantic routing or full lifecycle strict-mounted behavior.
 
 ## 4.3 Codex GUI End-To-End Trigger Flow
 
-When the Codex hook, semantic-intent, and multi-intent work is implemented, the
-Codex GUI path should behave as one governed turn pipeline:
+When the remaining semantic-intent, multi-intent, and lifecycle-runner work is
+implemented, the Codex GUI path should behave as one governed turn pipeline:
 
 1. User submits a prompt in Codex GUI.
 2. Codex fires the project-local `UserPromptSubmit` hook before the model starts

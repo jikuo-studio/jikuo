@@ -34,6 +34,11 @@ transport and label semantic intent, but it does not generate host-time AI
 classification by itself. A real GUI proof must still show whether Codex can
 provide that semantic object before JIKUO runs.
 
+As of 2026-05-21, the project-local Codex GUI proof has accepted the narrower
+pre-turn `additionalContext` injection surface after timeout remediation. Full
+strict-mounted lifecycle acceptance still requires a linked completion-review
+card and separate semantic-provider / multi-intent proof.
+
 ## Privacy Boundary
 
 The hook does not write the raw prompt or transcript to hook-owned files. The
@@ -59,15 +64,19 @@ Optional environment variables:
   interpreter running the hook.
 - `JIKUO_HOOK_TRIGGER_MODE`: trigger mode passed to JIKUO. Defaults to
   `mounted`.
-- `JIKUO_HOOK_TIMEOUT_SECONDS`: subprocess timeout. Defaults to `20`.
+- `JIKUO_HOOK_TIMEOUT_SECONDS`: subprocess timeout. Defaults to `70`.
+  The project-local Codex hook wrapper currently allows `90` seconds so a cold
+  Python/JIKUO startup can finish before Codex reports hook failure.
 
 ## Acceptance Boundary
 
-This file existing in the repository is not proof by itself. A Codex GUI proof
-is accepted only after a real prompt shows:
+This file existing in the repository is not proof by itself. A Codex GUI
+pre-turn surface proof is accepted only after a real prompt shows:
 
 - the hook ran before model work;
 - a new `.jikuo/runtime/history/*.md` card was produced;
 - Codex received `additionalContext` with runtime links;
 - failure is visible rather than silent;
-- a later completion-review card is linked before final delivery.
+
+Full strict-mounted lifecycle proof additionally needs a later
+completion-review card linked before final delivery.

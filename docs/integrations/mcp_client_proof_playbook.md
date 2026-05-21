@@ -353,9 +353,11 @@ Copy this into a proof note after each manual run:
 - Non-blocking observations:
 ```
 
-Store accepted proof notes under `docs/integrations/proofs/` after user review.
-Keep screenshots and temporary scripts under ignored local paths unless the user
-explicitly approves committing them.
+Store reviewed proof notes under `docs/integrations/proofs/` after user review.
+Accepted notes must be marked as accepted. Failed or blocked observations may be
+kept there too, but they must be marked `not_accepted` and must not be used as
+strict-mounted evidence. Keep screenshots and temporary scripts under ignored
+local paths unless the user explicitly approves committing them.
 
 ## 10. Claude Code GUI Proof
 
@@ -643,11 +645,12 @@ Project-local proof files now implemented for the current repository:
 tests\codex_hook_tests.py
 ```
 
-These files are only Level 1 adapter proof scaffolding. They do not prove Codex
-GUI strict mounted behavior until the project `.codex/` layer is trusted, a real
-Codex prompt produces a pre-turn JIKUO card, Codex receives the injected
-`additionalContext`, and a later completion-review card is linked in the proof
-report.
+These files began as Level 1 adapter proof scaffolding. The 2026-05-21 Codex
+GUI observation accepted the narrower pre-turn `additionalContext` injection
+surface after timeout remediation. They do not prove full lifecycle strict
+mounted behavior until a later completion-review card is linked in the proof
+report, and they do not prove host-time AI semantic routing or multi-intent
+semantic handling.
 
 Accepted proof notes should still be written under:
 

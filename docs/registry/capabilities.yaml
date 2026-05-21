@@ -199,11 +199,11 @@ entries:
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-FLOW-02_desktop_app_primary_operating_loop.md"
   - id: "CAP-CODEX-PLUGIN-HARNESS-REVIEW-01"
     title: "Codex hook strict-harness feasibility review"
-    status: "level 1 project-local UserPromptSubmit proof files implemented, local stdin smoke passed, hook prompt transport moved to --user-phrase-stdin, local Level 2A host_semantic_intent input path implemented, and Level 2B MCP Sampling semantic-provider probe implemented; GUI proof, host-time AI-semantic provider acceptance, and strict-mounted acceptance still pending"
+    status: "level 1 project-local UserPromptSubmit proof files implemented, local stdin smoke passed, hook prompt transport moved to --user-phrase-stdin, local Level 2A host_semantic_intent input path implemented, Level 2B MCP Sampling semantic-provider probe implemented, and Codex GUI pre-turn additionalContext injection accepted after timeout remediation; host-time AI-semantic provider acceptance, multi-intent semantic proof, and full lifecycle strict-mounted acceptance still pending"
     metadata_status: "complete"
     entry_point: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CODEX-PLUGIN-01_codex_plugin_pre_turn_harness_review.md"
     write_effect: "project-local .codex hook proof files and unit tests; no durable JIKUO writes"
-    approval: "no plugin implementation, strict-support claim, AI-semantic routing claim, multi-intent routing claim, or end-to-end GUI proof claim until the relevant proof is accepted"
+    approval: "accepted Codex GUI pre-turn additionalContext proof is not full lifecycle strict-mounted proof; no plugin implementation, AI-semantic routing claim, multi-intent routing claim, or end-to-end lifecycle proof claim until the relevant proof is accepted"
     referenced_by_transitional_cache:
       - "docs/governance/jikuo_productization_task_map.md"
   - id: "CAP-HOST-SEMANTIC-INTENT-WORK-PROFILE-01"
