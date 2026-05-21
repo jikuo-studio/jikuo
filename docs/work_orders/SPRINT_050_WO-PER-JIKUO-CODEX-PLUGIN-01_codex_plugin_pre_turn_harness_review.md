@@ -456,8 +456,10 @@ implemented, the Codex GUI path should behave as one governed turn pipeline:
 12. Before final delivery or commit, Codex runs `completion_review` so main-doc
     maintenance, evidence gaps, lifecycle links, and progress-summary business
     meaning are visible.
-13. The final user response includes the relevant lifecycle card links and a
-    concise summary of triggered policies, missing evidence, changes, and tests.
+13. The final user response includes a concise summary of triggered policies,
+    missing evidence, changes, and tests, then ends with an `Observed Lifecycle`
+    footer that lists the relevant lifecycle card links as `node_name:
+    card_link`.
 
 End-to-end acceptance requires all of the following:
 

@@ -223,7 +223,13 @@ class MCPStageAAdapterTests(unittest.TestCase):
                 ],
                 ["task_start"],
             )
-            self.assertIn("### Lifecycle Card Links", response["card_markdown"])
+            self.assertIn("### Observed Lifecycle", response["card_markdown"])
+            self.assertNotIn("### Lifecycle Card Links", response["card_markdown"])
+            lifecycle_footer_line = (
+                "- `task_start`: "
+                f"{response['client_display_links']['lifecycle_card_links'][0]['markdown']}"
+            )
+            self.assertTrue(response["card_markdown"].rstrip().endswith(lifecycle_footer_line))
             self.assertEqual(
                 response["data_details"]["client_display_links"][
                     "lifecycle_card_links"
@@ -440,7 +446,13 @@ class MCPStageAAdapterTests(unittest.TestCase):
                 ],
                 ["conversation_turn"],
             )
-            self.assertIn("### Lifecycle Card Links", response["card_markdown"])
+            self.assertIn("### Observed Lifecycle", response["card_markdown"])
+            self.assertNotIn("### Lifecycle Card Links", response["card_markdown"])
+            lifecycle_footer_line = (
+                "- `conversation_turn`: "
+                f"{response['client_display_links']['lifecycle_card_links'][0]['markdown']}"
+            )
+            self.assertTrue(response["card_markdown"].rstrip().endswith(lifecycle_footer_line))
             self.assertEqual(
                 response["display"]["card_priority_order"][1],
                 "conversation_turn_router",
@@ -513,7 +525,13 @@ class MCPStageAAdapterTests(unittest.TestCase):
                 "unavailable",
             )
             self.assertEqual(response["host_semantic_intent"]["status"], "unavailable")
-            self.assertIn("### Lifecycle Card Links", response["card_markdown"])
+            self.assertIn("### Observed Lifecycle", response["card_markdown"])
+            self.assertNotIn("### Lifecycle Card Links", response["card_markdown"])
+            lifecycle_footer_line = (
+                "- `conversation_turn`: "
+                f"{response['client_display_links']['lifecycle_card_links'][0]['markdown']}"
+            )
+            self.assertTrue(response["card_markdown"].rstrip().endswith(lifecycle_footer_line))
 
     def test_route_user_request_prompts_activation_configuration_when_missing(self):
         with tempfile.TemporaryDirectory() as tmp:

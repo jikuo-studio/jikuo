@@ -4066,37 +4066,21 @@ def render_client_display_links(display_links: dict[str, Any]) -> list[str]:
         item = links.get(key)
         if item:
             lines.append(f"- {item['label']}: {item['markdown']}")
-    observed_lifecycle = display_links.get("observed_lifecycle") or {}
-    if observed_lifecycle:
-        observed_events = observed_lifecycle.get("observed_events") or []
-        missing_events = observed_lifecycle.get("missing_recommended_events") or []
-        lines.extend(["", "### Observed Lifecycle", ""])
-        lines.append(f"- Status: `{observed_lifecycle.get('status', 'unknown')}`")
-        lines.append(
-            f"- Guarantee: `{observed_lifecycle.get('guarantee', 'unknown')}`"
-        )
-        lines.append(
-            "- Observed events: "
-            + (", ".join(f"`{event}`" for event in observed_events) or "`none`")
-        )
-        lines.append(
-            "- Missing recommended events: "
-            + (", ".join(f"`{event}`" for event in missing_events) or "`none`")
-        )
-    lifecycle_links = display_links.get("lifecycle_card_links") or []
-    if lifecycle_links:
-        lines.extend(["", "### Lifecycle Card Links", ""])
-        for item in lifecycle_links:
-            lines.append(
-                f"- `{item.get('lifecycle_event')}`: {item.get('markdown')} "
-                f"(triggered_policies=`{item.get('triggered_policy_count', 0)}`, "
-                f"missing_evidence=`{item.get('missing_evidence_count', 0)}`)"
-            )
     if not links:
         lines.append(f"- Status: `{display_links.get('status', 'unavailable')}`")
         if display_links.get("reason"):
             lines.append(f"- Reason: {display_links['reason']}")
     lines.append("")
+    return lines
+
+
+def render_observed_lifecycle_footer(display_links: dict[str, Any]) -> list[str]:
+    lifecycle_links = display_links.get("lifecycle_card_links") or []
+    if not lifecycle_links:
+        return []
+    lines = ["", "### Observed Lifecycle", ""]
+    for item in lifecycle_links:
+        lines.append(f"- `{item.get('lifecycle_event')}`: {item.get('markdown')}")
     return lines
 
 
@@ -4349,6 +4333,8 @@ def render_markdown(proposal: dict[str, Any]) -> str:
     lines.append("## Next Actions")
     lines.append("")
     lines.extend(f"- {item}" for item in proposal["next_actions"])
+    if display_links:
+        lines.extend(render_observed_lifecycle_footer(display_links))
     return "\n".join(lines).rstrip() + "\n"
 
 

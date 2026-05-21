@@ -114,6 +114,74 @@ durable task session, and lighter than the future DATA-01 event ledger. It is a
 runtime/process projection that prevents the user from seeing only the final
 card while earlier node checks are hidden.
 
+### 4.1.0 Known Architecture Gap: Sequencing Owner
+
+LIFECYCLE-01B exposed a separate architecture gap: MCP tools and `agent_flow`
+do not guarantee lifecycle node ordering.
+
+Current responsibility split:
+
+- MCP exposes callable tool surfaces.
+- `agent_flow` handles one invoked event and produces a node-local governance
+  projection.
+- `runtime_visibility` records cards that actually happened.
+
+No current layer owns the full turn sequence:
+
+```text
+conversation_turn -> task_start -> completion_review
+```
+
+This means an `observed_lifecycle` can honestly show `conversation_turn` and
+`completion_review` while missing `task_start` if the host, MCP caller, or agent
+did not explicitly invoke the task-start tool. That is not a rendering failure
+and not a policy-evaluator failure. It is a lifecycle orchestration gap.
+
+Future work must define a sequencing owner before claiming lifecycle
+completeness. Candidate owners include a thin host hook runner, a JIKUO
+`lifecycle_runner` command called by hooks, or a hybrid harness that forces
+pre-turn and pre-final checks while JIKUO validates missing nodes.
+
+Tracked insight:
+`docs/insights/INSIGHT-2026-05-21-lifecycle-sequencing-owner-gap.md`.
+
+### 4.1.0A Architecture Calibration: Action Grammar
+
+LIFECYCLE-01B also raised a broader design correction: fixed lifecycle may be
+the wrong primary abstraction for AI work.
+
+AI work is better understood as an action grammar. Different user turns compose
+the same small verbs in different orders:
+
+```text
+see -> classify -> trigger policy -> think -> act -> observe -> think -> act -> report
+```
+
+Examples:
+
+- "What do you think?" may only need `see -> think -> report`.
+- "Update docs and commit" needs `see -> classify -> trigger policy -> think
+  -> act -> verify -> report`.
+
+This means LIFECYCLE should not become a heavy fixed process diagram. It should
+stay a minimum sustainable governance layer: enough checkpoints to keep context,
+intent, policy triggers, execution, evidence, and reporting aligned, without
+forcing every turn through the same rigid route.
+
+Initial action grammar:
+
+| Verb | Meaning | JIKUO surface |
+|---|---|---|
+| see | mount user context, configured docs, inferred relevant docs, and runtime cards | DOCREG, mount sets, hook context |
+| classify | determine user intent from AI semantic input plus fallback signals | `work_profile`, router, semantic provider |
+| trigger | distribute applicable policies from intent, context, and action scope | `policy_store`, runtime cards |
+| think | reason, design, compare alternatives, and plan under policy constraints | Agent reasoning, visible plan when useful |
+| act | call tools, edit files, run tests, update docs, produce evidence | MCP tools, CLI, guarded apply paths |
+| report | summarize results, evidence, missing items, and follow-ups | runtime cards, progress summary, observed footer |
+
+Tracked insight:
+`docs/insights/INSIGHT-2026-05-21-from-lifecycle-to-action-grammar.md`.
+
 ### 4.1.1 Lifecycle Versus Scope
 
 Lifecycle nodes answer "where is this governed turn in the process?"
@@ -231,6 +299,7 @@ The accepted layering for this model is:
 | `work_profile` | classifies lifecycle event plus policy scopes from host hints and deterministic signals |
 | `policy_store` evaluator | evaluates active policies for each node; no special lifecycle-run authority |
 | `runtime_visibility` | writes latest card, state summary, history cards, lifecycle card links, and `observed_lifecycle` |
+| lifecycle runner / harness owner | future explicit owner of cross-node ordering; not implemented in LIFECYCLE-01B |
 | DATA-01 event ledger | future append-only source of truth; not implemented in this slice |
 | task session | optional durable task-sidecar; not required for observed lifecycle tracking |
 | work order registry | long-lived task authority; explicit binding only |
@@ -243,12 +312,18 @@ The accepted lightweight implementation slice should:
   proposal builders without adding a lifecycle orchestration command;
 - record only lifecycle cards that actually happened;
 - add an `observed_lifecycle` projection beside existing lifecycle card links;
+- render the observed lifecycle as a final customer-facing footer in generated
+  Markdown, using only `node_name: card_link` lines so the user can see the
+  actual observed chain without opening the runtime card first;
 - reset the observed record at `conversation_turn`, or at a direct `task_start`
   after a terminal observed node such as `completion_review` or `handoff`;
 - carry observed card links through later node cards and non-lifecycle runtime
   snapshots;
 - allow explicit task-session bind/create/defer state to pass through unchanged;
 - surface completion evidence status without requiring task-session creation.
+
+It should not claim that lifecycle completeness is guaranteed. Completeness
+requires a later runner / harness sequencing owner.
 
 Do not implement AI semantic routing as part of this slice. AI semantic routing
 belongs to the host / classifier input design and must be reviewed separately
@@ -264,11 +339,15 @@ These slices are planning markers only. They require model approval first.
    model, data structure, layers, and chain.
 2. `LIFECYCLE-01B`: record the observed lifecycle nodes and card links that
    actually occurred; do not add a runner.
-3. `LIFECYCLE-01C`: make MCP responses expose the same observed lifecycle
+3. `LIFECYCLE-01C`: design the action-grammar / minimum-checkpoint contract for
+   see, classify, trigger, think, act, and report before adding new code.
+4. `LIFECYCLE-01D`: design the lifecycle sequencing owner only if the
+   action-grammar review still needs a runner / harness contract.
+5. `LIFECYCLE-01E`: make MCP responses expose the same observed lifecycle
    projection as the CLI/runtime projection.
-4. `LIFECYCLE-01D`: align DATA-01B event records with the lifecycle correlation
+6. `LIFECYCLE-01F`: align DATA-01B event records with the lifecycle correlation
    model, if the user approves event writes.
-5. `LIFECYCLE-01E`: revisit strict host hooks after Codex and Claude adapter
+7. `LIFECYCLE-01G`: revisit strict host hooks after Codex and Claude adapter
    mechanisms are verified.
 
 ---

@@ -78,8 +78,20 @@ class RuntimeVisibilityTests(unittest.TestCase):
             )
             self.assertIn("## JIKUO Runtime Links", proposal["chat_ready_markdown"])
             self.assertIn("### Observed Lifecycle", proposal["chat_ready_markdown"])
-            self.assertIn("### Lifecycle Card Links", proposal["chat_ready_markdown"])
             self.assertIn("`task_start`", proposal["chat_ready_markdown"])
+            self.assertNotIn("### Lifecycle Card Links", proposal["chat_ready_markdown"])
+            self.assertNotIn("(triggered_policies=`", proposal["chat_ready_markdown"])
+            lifecycle_footer_line = (
+                "- `task_start`: "
+                f"{display_links['lifecycle_card_links'][0]['markdown']}"
+            )
+            self.assertGreater(
+                proposal["chat_ready_markdown"].rfind("### Observed Lifecycle"),
+                proposal["chat_ready_markdown"].rfind("## Next Actions"),
+            )
+            self.assertTrue(
+                proposal["chat_ready_markdown"].rstrip().endswith(lifecycle_footer_line),
+            )
             self.assertIn(
                 display_links["links"]["last_card"]["markdown"],
                 proposal["chat_ready_markdown"],
@@ -303,14 +315,33 @@ class RuntimeVisibilityTests(unittest.TestCase):
                 "### Observed Lifecycle",
                 completion_proposal["chat_ready_markdown"],
             )
-            self.assertIn(
+            self.assertNotIn(
                 "### Lifecycle Card Links",
+                completion_proposal["chat_ready_markdown"],
+            )
+            self.assertNotIn(
+                "(triggered_policies=`",
                 completion_proposal["chat_ready_markdown"],
             )
             self.assertIn("`conversation_turn`", completion_proposal["chat_ready_markdown"])
             self.assertIn("`task_start`", completion_proposal["chat_ready_markdown"])
             self.assertIn("`verification_review`", completion_proposal["chat_ready_markdown"])
             self.assertIn("`completion_review`", completion_proposal["chat_ready_markdown"])
+            completion_footer_line = (
+                "- `completion_review`: "
+                f"{lifecycle_links[-1]['markdown']}"
+            )
+            self.assertGreater(
+                completion_proposal["chat_ready_markdown"].rfind(
+                    "### Observed Lifecycle"
+                ),
+                completion_proposal["chat_ready_markdown"].rfind("## Next Actions"),
+            )
+            self.assertTrue(
+                completion_proposal["chat_ready_markdown"].rstrip().endswith(
+                    completion_footer_line
+                ),
+            )
 
             runtime_visibility.persist_agent_flow_snapshot(
                 project_root=project_root,
@@ -372,11 +403,20 @@ class RuntimeVisibilityTests(unittest.TestCase):
             )
             self.assertEqual(show_markdown.returncode, 0, show_markdown.stderr)
             self.assertIn("### Observed Lifecycle", show_markdown.stdout)
-            self.assertIn("### Lifecycle Card Links", show_markdown.stdout)
+            self.assertNotIn("### Lifecycle Card Links", show_markdown.stdout)
+            self.assertNotIn("(triggered_policies=`", show_markdown.stdout)
             self.assertIn("`conversation_turn`", show_markdown.stdout)
             self.assertIn("`task_start`", show_markdown.stdout)
             self.assertIn("`verification_review`", show_markdown.stdout)
             self.assertIn("`completion_review`", show_markdown.stdout)
+            state_lifecycle_links = state_summary["client_display_links"][
+                "lifecycle_card_links"
+            ]
+            state_footer_line = (
+                "- `completion_review`: "
+                f"{state_lifecycle_links[-1]['markdown']}"
+            )
+            self.assertTrue(show_markdown.stdout.rstrip().endswith(state_footer_line))
 
             next_start = subprocess.run(
                 [
