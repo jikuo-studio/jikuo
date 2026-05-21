@@ -94,6 +94,12 @@ They are now the first manual activation set for lightweight
 `POLICY-MGMT-01`. Do not introduce a heavier candidate registry before
 `LIFECYCLE-01` clarifies lifecycle facts and node completion.
 
+After the semantic-routing correction on 2026-05-21, both held candidates should
+be read as `process_contract` policy candidates. They are not only about what
+the agent should deliver; they constrain how the agent should reason, critique,
+sequence, and evaluate before acting. Their next step is `POLICY-MGMT-01A`
+no-write policy planning, not direct active-policy YAML editing.
+
 ### POLICY-CANDIDATE-first-principles-critical-alignment
 
 User-facing intent:
@@ -126,6 +132,27 @@ This protects users who can perceive product and governance needs but may not
 know the best engineering shape. JIKUO should help them avoid accidentally
 turning a provisional solution into durable architecture.
 
+Process-contract mapping:
+
+- `requested_outcome`: avoid echo-chamber implementation of provisional user
+  proposals.
+- `process_contract`: align concepts and use first-principles critique before
+  accepting implementation details.
+- `execution_boundary`: stop before durable design or code changes when the
+  concept boundary is still unclear.
+- `response_contract`: explain the root problem, recommendation, alternatives,
+  and residual risk without overexposing private reasoning.
+
+Proof-of-effect target:
+
+- visible projection: runtime card or policy plan names the process contract;
+- planning use: the visible plan distinguishes user principle, proposed
+  solution, root failure mode, alternatives, and recommended next step;
+- evidence verification: `first_principles_alignment_evidence` is checked at
+  completion;
+- boundary flag: unclear concept boundary causes stop/defer rather than
+  immediate durable architecture or code changes.
+
 ### POLICY-CANDIDATE-data-model-drift-alarm
 
 User-facing intent:
@@ -155,6 +182,28 @@ JIKUO is expected to support runtime cards, future dashboards, BI-style
 analysis, and bug reports. Those features require clean facts. If the data
 model tilts away from the actual user-work chain, later analytics will inherit
 the confusion.
+
+Process-contract mapping:
+
+- `requested_outcome`: keep field/schema/layer growth aligned to the real
+  user-work chain.
+- `process_contract`: reconstruct source of truth, projection, derived view,
+  and transitional cache boundaries before adding structure.
+- `execution_boundary`: pause schema or registry expansion when relationships
+  are blurry.
+- `response_contract`: name the boundary decision and whether the fix is a
+  small field addition or a model-boundary rebuild.
+
+Proof-of-effect target:
+
+- visible projection: runtime card or policy plan names the model-boundary
+  review;
+- planning use: the plan identifies source of truth, projection, derived view,
+  and transitional cache before adding fields;
+- evidence verification: `data_model_boundary_review_evidence` is checked at
+  completion;
+- boundary flag: blurry schema/event/scope relationships cause stop/defer or a
+  model-boundary rebuild recommendation instead of automatic field growth.
 
 ---
 

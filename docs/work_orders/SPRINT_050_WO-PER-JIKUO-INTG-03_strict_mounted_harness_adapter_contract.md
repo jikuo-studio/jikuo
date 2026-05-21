@@ -106,7 +106,7 @@ must consume the final JIKUO work profile, not raw host claims.
 The semantic-routing contract is:
 
 ```text
-user_intent -> policy_scope -> execution_boundary -> response_contract
+user_intent -> policy_scope -> process_contract -> execution_boundary -> response_contract
 ```
 
 This is intentionally different from treating the agent's internal action
@@ -118,6 +118,10 @@ grammar as the policy-routing source:
   active policies should be considered. Examples include `discussion`,
   `editing`, `progress_summary`, `verification`, `document_governance`, and
   `policy_management`.
+- `process_contract` states how the agent is expected to think, evaluate,
+  sequence, or decide before and during work. Examples include first-principles
+  critique, concept alignment before implementation details, or data-model
+  source-of-truth review before adding fields.
 - `execution_boundary` states what effects are allowed, blocked, or require
   explicit confirmation before the agent acts.
 - `response_contract` states what the final answer must report: evidence,
@@ -127,10 +131,12 @@ grammar as the policy-routing source:
 `see`, `think`, `act`, and `speak/report` are still useful as dynamic execution
 and evidence vocabulary, but they are not the primary policy-scope taxonomy.
 Every turn eventually speaks back to the user, so "speak" cannot be the scope
-by itself. The response is the policy-governed delivery surface: universal
-policies and current-intent policies shape what must be said. When an `act`
-step has real side effects, the same policy scope must also govern execution
-before and during the action, not only the final report.
+by itself. However, policy can govern both what the agent should achieve and
+how the agent should think or proceed. The response is the policy-governed
+delivery surface: universal policies and current-intent policies shape what
+must be said. When an `act` step has real side effects, the same policy scope
+must also govern execution before and during the action, not only the final
+report.
 
 MCP Sampling is an optional classifier-provider route under this contract. It
 allows the JIKUO MCP server to request `sampling/createMessage` from a client
@@ -158,12 +164,17 @@ host_semantic_intent:
       intent_class: design_discussion
       operation_class: read_only
       output_class: explanation
+      requested_outcome: align the design direction before implementation
+      process_contract: critique the proposal against the business goal before accepting details
+      execution_boundary: read-only
+      response_contract: summarize assumptions, alternatives, recommendation, and risk
     - id: update_docs
       policy_scopes: [editing]
       intent_class: implementation_request
       operation_class: documentation_update
       output_class: repository_change
       requested_outcome: update mounted-hook documentation
+      process_contract: keep policy-governance and document-governance boundaries separate
       execution_boundary: repository writes allowed after governed pre-work
       response_contract: report changed docs, checks, card links, and follow-ups
     - id: summarize
@@ -202,14 +213,38 @@ Minimum implementation checklist for a later code slice:
   Chinese and English user turns;
 - keep policy evaluator input stable: final `lifecycle_event` plus aggregate
   `policy_scopes`;
-- keep `requested_outcome`, `execution_boundary`, and `response_contract` as
-  router / card explanation fields until a separate reviewed slice decides
-  whether they need schema enforcement;
+- keep `requested_outcome`, `process_contract`, `execution_boundary`, and
+  `response_contract` as router / card explanation fields until a separate
+  reviewed slice decides whether they need schema enforcement;
 - add runtime-card rendering and tests for single-intent, multi-intent,
   negative-constraint, host-unavailable fallback, and host/keyword conflict;
   local tests now cover host-provided single-intent, multi-intent, and
   negative-constraint conflicts, while real host-time provider proof remains
   pending.
+
+### 3.2.2 Contract-Field Consumption Proof
+
+`requested_outcome`, `process_contract`, `execution_boundary`, and
+`response_contract` must not become inert labels. A client or classifier proof
+is accepted only when the slice can show how these fields are consumed at the
+right layer:
+
+1. Transport/projection: the compact semantic object is normalized into
+   `basis.host_semantic_intent` and rendered in runtime cards without raw prompt
+   persistence.
+2. Planning use: the agent's task-start plan or no-write proposal references
+   the relevant contract before acting.
+3. Evidence verification: active policies can require evidence that the
+   contract was followed, and `completion_review` reports that evidence as
+   `ok`, `missing`, `deferred`, or `not_applicable`.
+4. Boundary enforcement/flagging: `execution_boundary` can produce a no-write
+   stop, guarded-write requirement, conflict report, or missing-evidence report
+   when the requested action violates the contract.
+
+Do not make these fields direct evaluator inputs in this work order. The policy
+evaluator remains scoped to final `lifecycle_event` plus aggregate
+`policy_scopes`; the richer contract is consumed by planning, runtime cards,
+required actions, and evidence checks.
 
 The proof conclusion should distinguish:
 

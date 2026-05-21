@@ -60,6 +60,18 @@ Held cleanup set:
 
 These two candidates are intentionally not active. They should be resolved only
 through explicit no-write policy plans and guarded apply / evolution decisions.
+They are also the first concrete examples of `process_contract` policy needs:
+they govern how the agent should reason, critique, and evaluate model boundaries
+before accepting a proposed solution or adding structure.
+
+For these candidates, "the field took effect" must be evidence-based, not
+evaluator-based. `POLICY-MGMT-01A` should produce no-write plans that define:
+
+- `first_principles_alignment_evidence` for the echo-chamber / first-principles
+  candidate;
+- `data_model_boundary_review_evidence` for the data-model drift candidate;
+- the required final-response obligations that prove the response contract was
+  honored.
 
 ---
 
@@ -69,8 +81,9 @@ Recommended smallest slices:
 
 1. `LIFECYCLE-01`: current priority before policy activation work. Make
    invoked-turn lifecycle nodes complete consistently when JIKUO is pulled up.
-2. `POLICY-MGMT-01A`: produce no-write policy plans for the two held candidates
-   using the existing policy-plan path. No active-policy write until approved.
+2. `POLICY-MGMT-01A`: produce no-write policy plans for the two held
+   process-contract candidates using the existing policy-plan path. No
+   active-policy write until approved.
 3. `POLICY-MGMT-01B`: apply or merge each held candidate only after explicit
    user approval and guarded apply / evolution.
 4. `POLICY-MGMT-01C`: define official distribution review: dogfood-only,

@@ -167,6 +167,9 @@ Semantic-routing calibration:
 
 - policy routing starts from user intent, then produces policy scope, execution
   boundary, and response contract;
+- "what the user wants the agent to do" and "how the user wants the agent to
+  think / evaluate / proceed" are both policy concerns; the second class should
+  be represented as `process_contract` before it becomes any evaluator input;
 - the action grammar explains how the AI reads context, reasons, acts, observes
   results, and reports evidence;
 - `see / think / act / report` are not the primary policy-scope categories,
@@ -227,6 +230,9 @@ Minimum invariants:
 - `work_order_id`, `task_session_id`, and future DATA event ids remain explicit
   bindings. They must not be inferred from card titles, paths, or recent
   history.
+- Contract fields are proved through visible projection, planning use,
+  evidence verification, and boundary enforcement/flagging. They are not treated
+  as direct evaluator inputs in this work order.
 
 LIFECYCLE-01C acceptance:
 

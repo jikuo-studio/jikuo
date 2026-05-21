@@ -202,6 +202,12 @@ which context was read, which reasoning or tools were used, and what evidence
 must be reported. The auditable routing result remains the final
 `work_profile.policy_scopes` produced by JIKUO.
 
+Policy can still govern method and reasoning. "What the user wants the agent to
+achieve" is a policy concern, and "how the user wants the agent to think,
+evaluate, sequence, or decide" is also a policy concern. JIKUO should represent
+that second class as `process_contract` in router / card explanation before
+making it an evaluator input.
+
 The response is the policy-governed delivery surface. Universal policies may
 shape every response, such as runtime-card visibility, guarded-write reminders,
 or missing-evidence disclosure. Current-intent policies add obligations for the
@@ -236,6 +242,10 @@ AI calls should provide a structured hint where possible:
 {
   "agent_hint": {
     "requested_outcome": "explain the design without editing files",
+    "process_contract": [
+      "align concepts before implementation details",
+      "critique the proposal against the business goal"
+    ],
     "intent_class": ["discussion"],
     "operation_class": ["no_tool"],
     "output_class": ["answer"],
@@ -354,13 +364,53 @@ such as `task_start`, `completion_review`, `configuration_review`, or
 next. `work_profile` says what kind of governed work is happening and which
 policy scopes should be considered.
 
-`requested_outcome`, `execution_boundary`, and `response_contract` may appear
-as router/card explanation fields when AI semantic input is available. They are
-not a replacement for `policy_scopes`, and they are not POLTRIG-03 evaluator
-inputs. Until a reviewed schema slice says otherwise, the evaluator still
-consumes only `work_profile.lifecycle_event` and
-`work_profile.policy_scopes`, with exact policy conditions as additional
-filters.
+`requested_outcome`, `process_contract`, `execution_boundary`, and
+`response_contract` may appear as router/card explanation fields when AI
+semantic input is available. They are not a replacement for `policy_scopes`,
+and they are not POLTRIG-03 evaluator inputs. Until a reviewed schema slice
+says otherwise, the evaluator still consumes only
+`work_profile.lifecycle_event` and `work_profile.policy_scopes`, with exact
+policy conditions as additional filters.
+
+The two held user-authored policy candidates are examples of process-contract
+policy needs:
+
+- `POLICY-CANDIDATE-first-principles-critical-alignment` constrains how the
+  agent should reason before accepting a proposal.
+- `POLICY-CANDIDATE-data-model-drift-alarm` constrains how the agent should
+  evaluate field/schema/layer growth before adding structure.
+
+### 6.7 Policy-Contract Field Consumption Proof
+
+`requested_outcome`, `process_contract`, `execution_boundary`, and
+`response_contract` are useful only when the system can show where they were
+used. Until a separate reviewed slice changes evaluator scope, their proof of
+effect must be staged, not implied.
+
+| Proof level | Meaning | Minimum evidence |
+|---|---|---|
+| Visible projection | JIKUO received or derived the field and rendered it without storing raw prompt text. | Work-profile / runtime-card field display, state summary, or history card. |
+| Planning use | The agent used the field to shape the visible plan or work order before acting. | Plan text, task-start summary, or guarded proposal that names the relevant contract. |
+| Evidence verification | A policy required proof that the contract was followed, and completion review checked it. | `required_evidence` item with `ok`, `missing`, `deferred`, or `not_applicable` status. |
+| Boundary enforcement or flagging | The field blocked, gated, or visibly flagged an action that would violate the contract. | No-write/guarded-write result, missing-evidence report, conflict report, or explicit stop. |
+
+The field-specific target is:
+
+- `requested_outcome`: prove that the reported result addresses the user's
+  intended outcome, not only the literal command shape.
+- `process_contract`: prove that the required reasoning or evaluation method
+  happened through a named evidence type, such as
+  `first_principles_alignment_evidence` or
+  `data_model_boundary_review_evidence`.
+- `execution_boundary`: prove that allowed effects, guarded effects, and blocked
+  effects were respected.
+- `response_contract`: prove that the final answer included the promised
+  evidence, risks, assumptions, card links, or follow-up decisions.
+
+This proof ladder keeps the architecture light. The evaluator continues to
+consume final `work_profile.lifecycle_event` plus aggregate
+`work_profile.policy_scopes`; policy authors express the richer contract through
+required actions, required evidence, and runtime-card explanation.
 
 ---
 

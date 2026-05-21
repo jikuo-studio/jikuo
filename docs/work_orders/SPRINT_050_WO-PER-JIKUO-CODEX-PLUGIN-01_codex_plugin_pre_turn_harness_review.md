@@ -134,7 +134,7 @@ Semantic routing should map user intent to policy scope, not internal agent
 verbs directly:
 
 ```text
-user_intent -> policy_scope -> execution_boundary -> response_contract
+user_intent -> policy_scope -> process_contract -> execution_boundary -> response_contract
 ```
 
 The host or classifier may describe what the user wants, what constraints the
@@ -142,8 +142,10 @@ user set, and what output evidence the user expects. JIKUO then compiles that
 input into final `work_profile.policy_scopes` and visible runtime explanation.
 The agent's dynamic `see / think / act / speak` loop is execution vocabulary:
 it explains how work is performed and reported, but it is not the primary
-policy-scope axis. The final answer is always governed by universal response
-policies plus the policies selected for the current user intent.
+policy-scope axis. Policy can still govern how the agent thinks, evaluates,
+and sequences work through `process_contract`. The final answer is always
+governed by universal response policies plus the policies selected for the
+current user intent.
 
 Target compact shape:
 
@@ -166,6 +168,7 @@ host_semantic_intent:
       operation_class: design_review
       output_class: explanation
       requested_outcome: compare options without repository writes
+      process_contract: align concepts and critique the proposal before implementation details
       execution_boundary: read-only
       response_contract: explain recommendation, risks, and open questions
       rationale_summary: compact slice explanation
@@ -175,6 +178,7 @@ host_semantic_intent:
       operation_class: documentation_update
       output_class: repository_change
       requested_outcome: update project documentation
+      process_contract: keep source-of-truth, projection, and transitional-cache boundaries explicit
       execution_boundary: repository writes allowed after governed pre-work
       response_contract: report changed files, checks, evidence, and card links
       rationale_summary: compact slice explanation
@@ -272,6 +276,20 @@ This is not yet Codex GUI AI-semantic proof. It only means JIKUO can consume a
 compact semantic classification when a host or classifier provides one. If no
 provider is available, the hook still reports `semantic_intent_status` as
 `unavailable` and deterministic routing remains the honest fallback.
+
+Contract-field proof for the Codex GUI chain is narrower than general policy
+proof. The hook only transports and surfaces fields; it must not decide policy
+applicability. Acceptance for later slices should show:
+
+- `requested_outcome`, `process_contract`, `execution_boundary`, and
+  `response_contract` are present in the compact semantic payload or honestly
+  absent;
+- JIKUO renders the normalized fields in card/state output without raw prompt
+  persistence;
+- the agent plan or completion summary names how the relevant contract shaped
+  work;
+- any hard effect boundary is enforced through no-write, guarded-write, or
+  missing-evidence reporting in JIKUO, not inside the hook script.
 
 Proof levels:
 
