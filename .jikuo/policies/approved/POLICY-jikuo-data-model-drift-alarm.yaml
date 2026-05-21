@@ -1,0 +1,27 @@
+schema_version: "jikuo.configurable_rule_policy.v0"
+policy_id: "POLICY-jikuo-data-model-drift-alarm"
+version: 1
+status: "active_report_only"
+title: "Data-model drift alarm"
+scenario_package: "engineering_governance"
+source_refs:
+  - type: "user_natural_language"
+    ref: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-DOCREG-01_layered_document_registry.md#policy-candidate-data-model-drift-alarm"
+triggers:
+  - trigger_id: "TRG-conversation-turn"
+    type: "task_lifecycle_event"
+    event: "conversation_turn"
+conditions: []
+required_actions:
+  - action_id: "ACT-perform-data-model-boundary-review"
+    type: "perform_data_model_boundary_review"
+required_evidence:
+  - evidence_id: "EVD-data-model-boundary-review-evidence"
+    type: "data_model_boundary_review_evidence"
+    satisfies_action: "ACT-perform-data-model-boundary-review"
+enforcement:
+  phase: "report_only"
+  level: "review_required"
+applies_to_work_profile:
+  - lifecycle_events: []
+    policy_scopes: ["editing"]

@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-POLICY-MGMT-01: Policy Management MVP
 
-> **Status**: Policy writer scope-field prerequisite implemented; held-candidate activation remains review-only.
+> **Status**: Two held candidates activated as `active_report_only`; official distribution design remains next.
 > **Date**: 2026-05-18
 > **JIKUO layer**: policy governance / policy distribution.
 > **Business meaning**: JIKUO's first usable version needs the current user-authored candidate policies to enter active scope through the existing guarded flow, and it needs a clear official distribution boundary so useful policies can reach user projects without copying JIKUO dogfood policies or overwriting user-owned local policies.
@@ -21,7 +21,8 @@ This work order complements:
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-DOCREG-01_layered_document_registry.md` section `3.1 Held Policy-Governance Candidates`;
 - `.jikuo/policies/manifest.yaml`.
 
-It does not activate policy records by itself.
+This work order records the activation path and acceptance evidence; durable
+policy writes are performed only by the guarded policy writer.
 
 ---
 
@@ -57,16 +58,32 @@ Completed prerequisites:
   `applies_to_work_profile.policy_scopes` in no-write plans and guarded
   writer command previews.
 
-Held cleanup set:
+Held cleanup set, now activated:
 
 - `POLICY-CANDIDATE-first-principles-critical-alignment`;
 - `POLICY-CANDIDATE-data-model-drift-alarm`.
 
-These two candidates are intentionally not active. They should be resolved only
-through explicit no-write policy plans and guarded apply / evolution decisions.
-They are also the first concrete examples of `process_contract` policy needs:
+These two candidates were activated on 2026-05-22 through explicit no-write
+policy plans and guarded policy-writer approval. They are also the first
+concrete examples of `process_contract` policy needs:
 they govern how the agent should reason, critique, and evaluate model boundaries
 before accepting a proposed solution or adding structure.
+
+Scope decision recorded on 2026-05-21: do not expand the policy-scope taxonomy
+for these two candidates yet. They should use the existing stable scope classes:
+the first-principles / critical-alignment candidate belongs to `discussion`, and
+the data-model drift candidate belongs to `editing`. Their specific behavior
+remains expressed by policy title, required action, required evidence, and
+process / response contract text rather than by policy-name-like scope values.
+
+Lifecycle correction recorded on 2026-05-22: `task_start` may remain an
+observed execution marker, but it should not be the source of applicability for
+these intent-driven policies. The intended routing basis is user intent plus
+policy scope, runtime context, and response / process contract. The current
+writer / evaluator path can express the first lightweight form of that design:
+`conversation_turn` trigger plus scope-only `applies_to_work_profile`
+(`lifecycle_events: []`, `policy_scopes: [...]`). These plans were approved by
+the user and written through the guarded writer.
 
 For these candidates, "the process-contract field took effect" must be
 evidence-based, while trigger distribution should still be scope-aware.
@@ -77,8 +94,8 @@ evidence-based, while trigger distribution should still be scope-aware.
 - `data_model_boundary_review_evidence` for the data-model drift candidate;
 - the required final-response obligations that prove the response contract was
   honored.
-- `applies_to_work_profile` lifecycle/scope filters narrow enough to avoid
-  broad `task_start` noise before the policy is activated.
+- scope-only `applies_to_work_profile` filters narrow enough to avoid broad
+  `task_start` noise before the policy is activated.
 
 ---
 
@@ -86,37 +103,68 @@ evidence-based, while trigger distribution should still be scope-aware.
 
 Recommended smallest slices:
 
-1. `LIFECYCLE-01`: current priority before policy activation work. Make
-   invoked-turn lifecycle nodes complete consistently when JIKUO is pulled up.
-2. `POLICY-MGMT-01A`: produce no-write policy plans for the two held
+1. `POLICY-MGMT-01A`: produce no-write policy plans for the two held
    process-contract candidates using the existing policy-plan path with
-   `applies_to_work_profile` lifecycle/scope filters. No active-policy write
-   until approved.
-3. `POLICY-MGMT-01B`: apply or merge each held candidate only after explicit
-   user approval and guarded apply / evolution.
-4. `POLICY-MGMT-01C`: define official distribution review: dogfood-only,
+   scope-only `applies_to_work_profile` filters. Completed.
+2. `POLICY-MGMT-01B`: apply or merge each held candidate only after explicit
+   user approval and guarded apply / evolution. Completed for the first two
+   held candidates.
+3. `POLICY-MGMT-01C`: define official distribution review: dogfood-only,
    official-starter, optional-template, or deferred, preserving package
    provenance and local-policy ownership.
 
-### 4.1 Current Held-Candidate Plan Shapes
+### 4.1 Held-Candidate Plan Shapes
 
-The current no-write review shapes are:
+The current no-write review shapes use the implemented lightweight target:
+`conversation_turn` as the user-turn trigger plus scope-only
+`applies_to_work_profile`. They review title, action, evidence, write set, and
+scope choice without depending on a separate `task_start` projection.
 
 | Candidate | Proposed policy ref | Trigger distribution | Required evidence |
 |---|---|---|---|
-| First-principles / critical alignment | `POLICY-jikuo-first-principles-critical-alignment` | `task_start` with `policy_scopes: ["discussion"]` | `first_principles_alignment_evidence` |
-| Data-model drift alarm | `POLICY-jikuo-data-model-drift-alarm` | `task_start` with `policy_scopes: ["discussion", "editing"]` | `data_model_boundary_review_evidence` |
+| First-principles / critical alignment | `POLICY-jikuo-first-principles-critical-alignment` | `conversation_turn` with scope-only `policy_scopes: ["discussion"]` | `first_principles_alignment_evidence` |
+| Data-model drift alarm | `POLICY-jikuo-data-model-drift-alarm` | `conversation_turn` with scope-only `policy_scopes: ["editing"]` | `data_model_boundary_review_evidence` |
 
-These are review artifacts only. They do not activate the policies or write
-`.jikuo/policies/approved` until the user approves an exact guarded write.
+These no-write plans were review artifacts until the user approved the guarded
+write.
+
+Current no-write plan artifacts generated after the 2026-05-22 lifecycle /
+scope separation decision:
+
+| Candidate | Plan id | Runtime card |
+|---|---|---|
+| First-principles / critical alignment | `POLICYWRITEPLAN-1c88cb3e7c` | `.jikuo/runtime/history/20260521T163657Z_proposal_b39d277e5d.md` |
+| Data-model drift alarm | `POLICYWRITEPLAN-8cfb13f8a2` | `.jikuo/runtime/history/20260521T163707Z_proposal_f0603a790d.md` |
+
+The first plan proposes `conversation_turn` plus `policy_scopes:
+["discussion"]`; the second proposes `conversation_turn` plus `policy_scopes:
+["editing"]`. Both have `lifecycle_events: []` in
+`applies_to_work_profile`, so they do not depend on `task_start` as a policy
+applicability cause.
+
+Activation completed on 2026-05-22 with approval phrase: "好的，请更新两个候选policy至激活状态".
+
+| Candidate | Proposal snapshot | Decision record | Active policy |
+|---|---|---|---|
+| First-principles / critical alignment | `.jikuo/policies/proposals/POLICYPROPOSAL-44eae831b1.yaml` | `.jikuo/policies/decisions/POLICYDECISION-39cdfe5e92.yaml` | `.jikuo/policies/approved/POLICY-jikuo-first-principles-critical-alignment.yaml` |
+| Data-model drift alarm | `.jikuo/policies/proposals/POLICYPROPOSAL-2df0d0aeb7.yaml` | `.jikuo/policies/decisions/POLICYDECISION-c773dfc651.yaml` | `.jikuo/policies/approved/POLICY-jikuo-data-model-drift-alarm.yaml` |
+
+Evaluator smoke after activation:
+
+- `conversation_turn` + `policy_scopes: ["discussion"]` triggers
+  `POLICY-jikuo-first-principles-critical-alignment`;
+- `conversation_turn` + `policy_scopes: ["editing"]` triggers
+  `POLICY-jikuo-data-model-drift-alarm`;
+- `conversation_turn` + both scopes triggers both policies.
 
 ---
 
 ## 5. Stop Boundaries
 
-- Do not write `.jikuo/policies/approved` from this planning slice.
-- Do not mark a held candidate active without a no-write policy plan, explicit
-  user approval, and guarded apply.
+- Do not directly edit the activated policy YAML files to change semantics;
+  future narrowing, merging, or deprecation must use guarded policy evolution.
+- Do not add duplicate replacement policies for these candidates without first
+  reviewing whether guarded evolution is the correct path.
 - Do not build a new heavy candidate-disposition registry before `LIFECYCLE-01`
   makes lifecycle facts and node completion more explicit.
 - Do not copy `.jikuo/policies/approved` into official starter packs.
@@ -134,11 +182,12 @@ These are review artifacts only. They do not activate the policies or write
 ## 6. Acceptance For This Planning Slice
 
 - `docs/governance/jikuo_policy_governance_authority.md` names the MVP boundary
-  and held-candidate activation rule.
+  and records the candidate activation result.
 - `docs/governance/jikuo_execution_mounts.md` names `LIFECYCLE-01` as the
   current priority and keeps this work order lightweight.
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-DOCREG-01_layered_document_registry.md`
-  keeps the two held candidates but points their cleanup to this work order.
+  preserves the candidate origin text and records that both candidates are now
+  active report-only policies.
 - `docs/registry/work_orders.yaml`, `docs/registry/capabilities.yaml`, and
   `docs/registry/mount_sets.yaml` expose this task to future sessions.
 - `docs/governance/jikuo_productization_task_map.md` remains untouched except

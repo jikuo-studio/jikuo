@@ -110,6 +110,22 @@ Important distinction:
 - a governed work unit should traverse the lifecycle, while the scope should
   remain available to the later completion review.
 
+Design correction recorded on 2026-05-22:
+
+- `task_start` may remain as an observed execution marker. It can show that the
+  agent has begun processing a turn, and it can still carry task-session /
+  work-routing / start-processing projection evidence.
+- `task_start` should not be treated as the business source of policy
+  applicability for intent-driven policies. User intent, policy scope, mounted
+  runtime context, guarded-write context, and final response contract are the
+  policy-distribution concerns.
+- Therefore `task_start + discussion` may appear together as two independent
+  facts: processing has begun, and the work nature is discussion. The former
+  should not cause or suppress the latter.
+- Current code still allows policies to declare lifecycle events through
+  `applies_to_work_profile.lifecycle_events`; that is a compatibility boundary,
+  not the long-term policy-routing model.
+
 Current implementation gap and safety boundary:
 
 - today, `agent_flow` and MCP proposal calls evaluate one explicitly requested
@@ -138,8 +154,8 @@ still not explicit enough to support high-quality policy insight.
 
 For the current MVP, policy management means:
 
-1. activate the two held user-authored candidates through the existing no-write
-   policy plan and guarded apply paths;
+1. keep the two formerly held user-authored candidates active through the
+   guarded policy-write records that created them;
 2. design official distribution boundaries so reusable policies can become
    package templates or starter-pack entries without copying JIKUO dogfood
    policies into user projects.
@@ -149,14 +165,28 @@ asking JIKUO to generate new policy insights from incomplete lifecycle data.
 Runtime `policy_candidate` cards remain report-only evidence and cannot become
 active policies by themselves.
 
-The two held candidates in `DOCREG-01` are the first manual activation set:
+The two held candidates in `DOCREG-01` became the first manual activation set on
+2026-05-22:
 
-- `POLICY-CANDIDATE-first-principles-critical-alignment`
-- `POLICY-CANDIDATE-data-model-drift-alarm`
+- `POLICY-jikuo-first-principles-critical-alignment`
+- `POLICY-jikuo-data-model-drift-alarm`
 
-Keep them held until each one has a no-write policy plan, explicit user
-approval, and guarded apply. Do not invent a separate candidate lifecycle before
-`LIFECYCLE-01` makes turn lifecycle facts more explicit.
+For the first activation pass, do not add new policy-name-like scope values for
+these candidates. Use the existing stable scope classes:
+
+- first-principles / critical alignment belongs to `discussion`;
+- data-model drift alarm belongs to `editing`.
+
+The narrower behavior is expressed through policy title, required action,
+required evidence, and `process_contract` / `response_contract` text. This keeps
+`policy_scopes` as broad routing classes instead of turning them into policy
+identifiers.
+
+Both were written as `active_report_only` through no-write policy plans,
+explicit user approval, and guarded policy writer output. Future changes should
+use guarded policy evolution rather than direct YAML edits. Do not invent a
+separate candidate lifecycle before `LIFECYCLE-01` makes turn lifecycle facts
+more explicit.
 
 ---
 
@@ -177,6 +207,17 @@ The current abstract policy-scope classes are:
 
 The design goal is not perfect classification. The design goal is to prevent
 silent policy miss.
+
+Scope naming rule:
+
+- `policy_scopes` should name stable work / risk / response contexts, not the
+  title of a specific policy.
+- A policy-specific concept such as first-principles critique or data-model
+  boundary review should normally appear as `process_contract`, required
+  action, required evidence, and response obligation.
+- Add a new scope only when several policies need the same reusable routing
+  context and the existing `discussion`, `editing`, and `progress_summary`
+  classes are demonstrably too broad.
 
 ---
 
@@ -215,6 +256,20 @@ specific scope, such as changed files and tests for `editing`, business meaning
 for `progress_summary`, or assumptions and trade-offs for `discussion`. If a
 turn includes side effects, the same policy scope must govern the action before
 and during execution, not only the final wording.
+
+The same separation applies to lifecycle markers. `conversation_turn`,
+`task_start`, and `completion_review` can describe when a projection was
+produced. They are not, by themselves, the reason a reasoning, data-modeling,
+response, mounted-mode, or guarded-write policy should apply. Long-term policy
+distribution should be modeled as:
+
+```text
+user_intent + runtime_context + response_contract
+  -> policy_scope / required_actions / required_evidence
+```
+
+where `runtime_context` includes facts such as mounted mode, guarded writes,
+tool effects, and final response delivery.
 
 ---
 
@@ -380,6 +435,13 @@ policy needs:
 - `POLICY-CANDIDATE-data-model-drift-alarm` constrains how the agent should
   evaluate field/schema/layer growth before adding structure.
 
+Under the corrected model, these candidates should not depend on whether a
+separate `task_start` projection happened. Their applicability is a function of
+the user intent / policy scope and the required process contract. The first
+lightweight implementation shape is `conversation_turn` plus scope-only
+`applies_to_work_profile`, which preserves `task_start` as an observed marker
+instead of a distribution cause.
+
 ### 6.7 Policy-Contract Field Consumption Proof
 
 `requested_outcome`, `process_contract`, `execution_boundary`, and
@@ -407,10 +469,11 @@ The field-specific target is:
 - `response_contract`: prove that the final answer included the promised
   evidence, risks, assumptions, card links, or follow-up decisions.
 
-This proof ladder keeps the architecture light. The evaluator continues to
-consume final `work_profile.lifecycle_event` plus aggregate
-`work_profile.policy_scopes`; policy authors express the richer contract through
-required actions, required evidence, and runtime-card explanation.
+This proof ladder keeps the architecture light. The evaluator consumes the
+implemented trigger event and `work_profile.policy_scopes`; a declared
+`work_profile.lifecycle_event` is consumed only when the policy author declares
+`lifecycle_events`. Policy authors express the richer contract through required
+actions, required evidence, and runtime-card explanation.
 
 ---
 
@@ -436,16 +499,15 @@ The preferred future direction is for policies to declare scope applicability:
 
 ```yaml
 applies_to_work_profile:
-  - lifecycle_events: ["task_start"]
-    policy_scopes: ["editing"]
+  - policy_scopes: ["editing"]
 ```
 
 or:
 
 ```yaml
 applies_to_work_profile:
-  - lifecycle_events: ["task_start"]
-    policy_scopes: ["discussion", "progress_summary"]
+  - lifecycle_events: ["completion_review"]
+    policy_scopes: ["progress_summary"]
 ```
 
 The evaluator can then match policies against `policy_scopes` generated by the
@@ -458,8 +520,20 @@ Practical rule:
 implemented event routes the current tool path;
 work_profile.lifecycle_event says where this sits in the user-work lifecycle;
 work_profile.policy_scopes says which policy groups should be considered;
+declared lifecycle_events are optional hard filters for policies that truly
+belong to a lifecycle node;
 conditions and evidence decide whether a specific policy is satisfied.
 ```
+
+Compatibility warning:
+
+- In current code, a declared `lifecycle_events` value can still gate policy
+  applicability.
+- This is useful for existing task-session, runtime-card, and completion-review
+  policies, but it is too strong for intent-driven reasoning policies.
+- Intent-driven reasoning policies should use `conversation_turn` plus
+  scope-only applicability unless a lifecycle filter is genuinely part of the
+  policy.
 
 ---
 
@@ -615,13 +689,12 @@ evidence type, and user-visible need are approved.
 
 ---
 
-## 12. Candidate Policies Held For Later Activation
+## 12. Candidate Policies Activated From Held Set
 
-The current held candidates are maintained in the transitional task-sequencing
-authority, not as active policy-store entries:
+The previous held candidates are now active report-only policy-store entries:
 
-- `POLICY-CANDIDATE-first-principles-critical-alignment`
-- `POLICY-CANDIDATE-data-model-drift-alarm`
+- `POLICY-jikuo-first-principles-critical-alignment`
+- `POLICY-jikuo-data-model-drift-alarm`
 
 See
 `docs/work_orders/SPRINT_050_WO-PER-JIKUO-DOCREG-01_layered_document_registry.md`
@@ -629,13 +702,14 @@ section "Held Policy-Governance Candidates" for the current candidate text.
 
 Current status:
 
-- both candidates are `held`, not active;
+- both candidates are active as `active_report_only`;
 - both are scoped to `POLICY-MGMT-01` as the first manual activation set;
-- valid near-term outcomes are: approve through a no-write policy plan and
-  guarded apply, merge into an existing active policy through guarded evolution,
-  reject, or keep deferred with a reason;
-- no outcome may be inferred from discussion alone, and no heavier candidate
-  registry should be introduced before `LIFECYCLE-01` clarifies lifecycle facts.
+- first-principles uses `conversation_turn` plus scope-only `discussion`;
+- data-model drift uses `conversation_turn` plus scope-only `editing`;
+- future outcomes are: keep, narrow, merge, supersede, or deprecate through
+  guarded policy evolution;
+- no heavier candidate registry should be introduced before `LIFECYCLE-01`
+  clarifies lifecycle facts.
 
 This authority document keeps the principle: concept alignment and root-cause
 reasoning precede implementation detail acceptance, and data-model drift must

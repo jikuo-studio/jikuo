@@ -3260,6 +3260,70 @@ class AgentFlowProposalTests(unittest.TestCase):
         self.assertIn("CAP-POLICY-STORE-WRITE-PROPOSE-01", atom_ids)
         self.assertFalse((READY_PROJECT / ".jikuo" / "policies").exists())
 
+    def test_policy_write_plan_projects_scope_only_conversation_turn_card(self):
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-B",
+                str(TOOL),
+                "propose",
+                "--event",
+                "policy_write_plan",
+                "--policy-ref",
+                "POLICY-intent-scope-review",
+                "--policy-title",
+                "Intent scope review",
+                "--policy-source-ref",
+                "<exact user phrase as spoken>",
+                "--policy-trigger-event",
+                "conversation_turn",
+                "--policy-work-profile-policy-scope",
+                "discussion",
+                "--policy-action-type",
+                "perform_intent_scope_review",
+                "--policy-evidence-type",
+                "intent_scope_review_evidence",
+                "--project-root",
+                str(READY_PROJECT),
+                "--format",
+                "json",
+            ],
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        proposal = json.loads(completed.stdout)
+        plan = proposal["cards"][0]["policy_write_plan"]
+        self.assertEqual(
+            plan["proposed_policy"]["triggers"][0]["event"],
+            "conversation_turn",
+        )
+        self.assertEqual(
+            plan["proposed_policy"]["applies_to_work_profile"],
+            [
+                {
+                    "lifecycle_events": [],
+                    "policy_scopes": ["discussion"],
+                }
+            ],
+        )
+        command = proposal["cards"][0]["command_proposal"]
+        self.assertIn('--trigger-event "conversation_turn"', command["command_preview"])
+        self.assertIn("--work-profile-policy-scope", command["command_preview"])
+        self.assertNotIn("--work-profile-lifecycle-event", command["command_preview"])
+        self.assertIn(
+            "work_profile_policy_scopes: discussion",
+            proposal["cards"][0]["shown_inputs"],
+        )
+        self.assertNotIn(
+            "work_profile_lifecycle_events: task_start",
+            proposal["cards"][0]["shown_inputs"],
+        )
+
     def test_policy_dead_zone_classifies_policy_write_plan_as_non_governance(self):
         with tempfile.TemporaryDirectory() as tmp:
             project_root = Path(tmp) / "active_project"

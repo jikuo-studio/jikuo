@@ -907,7 +907,7 @@ entries:
     title: "SPRINT_050_WO-PER-JIKUO-POLICY-MGMT-01: Policy Management MVP"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-POLICY-MGMT-01_policy_management_mvp.md"
     sprint: "SPRINT_050"
-    status: "Policy writer scope-field prerequisite implemented; held-candidate activation remains review-only"
+    status: "Two held candidates activated as active_report_only through scope-only no-write plans and guarded policy writer output; official distribution design remains next"
     impact_tags:
       - "policy_governance"
       - "policy_distribution"
@@ -927,7 +927,8 @@ entries:
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-POLICY-MGMT-01_policy_management_mvp.md"
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-POLICY-CATALOG-01_self_bootstrap_policy_promotion_review.md"
     stop_boundaries:
-      - "Do not activate held policy candidates without a no-write plan, explicit user approval, and guarded apply."
+      - "Do not directly edit activated candidate policy YAML files to change semantics; use guarded policy evolution."
+      - "Do not regress intent-driven candidate plans to lifecycle-coupled task_start applicability."
       - "Do not build a heavy candidate-disposition registry before JIKUO-LIFECYCLE-01 clarifies lifecycle facts."
       - "Do not copy JIKUO self-bootstrap .jikuo/policies into official starter packs or user projects."
       - "Do not change evaluator behavior in this work order without a separate POLTRIG review."

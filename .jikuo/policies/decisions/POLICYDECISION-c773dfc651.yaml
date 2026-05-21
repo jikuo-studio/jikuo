@@ -1,0 +1,17 @@
+schema_version: "jikuo.policy_decision.v0"
+decision_id: "POLICYDECISION-c773dfc651"
+proposal_ref: ".jikuo/policies/proposals/POLICYPROPOSAL-2df0d0aeb7.yaml"
+policy_ref: "POLICY-jikuo-data-model-drift-alarm"
+decision: "approve_write"
+target:
+  kind: "approved_policy"
+  ref: "POLICY-jikuo-data-model-drift-alarm"
+effect: "append_policy POLICY-jikuo-data-model-drift-alarm and update policy-store manifest active refs"
+non_effect: "does not execute policy actions, persist evidence, or promote gates"
+approval_phrase: "好的，请更新两个候选policy至激活状态"
+created_at: "2026-05-21T16:46:54Z"
+source_plan_ref: "POLICYWRITEPLAN-8cfb13f8a2"
+source_plan_schema: "jikuo.policy_write_plan.v0"
+storage:
+  path: ".jikuo/policies/decisions/POLICYDECISION-c773dfc651.yaml"
+  policy_store_ref: ".jikuo/policies"

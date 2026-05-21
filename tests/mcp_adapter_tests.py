@@ -714,6 +714,36 @@ class MCPStageAAdapterTests(unittest.TestCase):
                 (project_root / ".jikuo" / "policies" / "approved" / "POLICY-mcp-adapter-smoke.yaml").exists()
             )
 
+    def test_policy_write_plan_adapter_accepts_scope_only_applicability(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = copy_fixture(POLICY_ACTIVE_PROJECT, tmp)
+
+            response = adapter.call_tool(
+                "jikuo.propose_policy_write_plan",
+                {
+                    "project_root": str(project_root),
+                    "policy_ref": "POLICY-mcp-scope-only-smoke",
+                    "policy_title": "MCP scope-only smoke",
+                    "policy_trigger_event": "conversation_turn",
+                    "policy_work_profile_policy_scopes": ["discussion"],
+                },
+            )
+
+            plan = response["data_details"]["cards"][0]["policy_write_plan"]
+            self.assertEqual(
+                plan["proposed_policy"]["triggers"][0]["event"],
+                "conversation_turn",
+            )
+            self.assertEqual(
+                plan["proposed_policy"]["applies_to_work_profile"],
+                [
+                    {
+                        "lifecycle_events": [],
+                        "policy_scopes": ["discussion"],
+                    }
+                ],
+            )
+
     def test_stage_b1_task_session_evidence_refuses_without_approval(self):
         with tempfile.TemporaryDirectory() as tmp:
             project_root = copy_fixture(POLICY_EVIDENCE_SESSION_PROJECT, tmp)

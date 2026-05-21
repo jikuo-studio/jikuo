@@ -79,26 +79,50 @@ Key decisions accepted for planning:
 ## 3.1 Held Policy-Governance Candidates
 
 These are user-proposed policy candidates captured during the policy-trigger and
-work-profile modeling discussion on 2026-05-17. They are held here because this
-work order is the current transitional task-sequencing authority. They are not
-active policies, and they must not be written into `.jikuo/policies/approved`
-until the user explicitly approves a policy-write plan.
+work-profile modeling discussion on 2026-05-17. They were held here while
+DOCREG-01 was the current transitional task-sequencing authority.
 
-Activation is intentionally deferred until each candidate has a no-write policy
-plan and an explicit guarded apply / evolution decision. The reason is
-practical: these candidates are about reasoning and modeling behavior, so
-activating them by ad hoc YAML edits would create noisy governance instead of
-useful protection.
+Activation was completed on 2026-05-22 through no-write policy plans and
+guarded policy writer approval. The reason for preserving this origin record is
+practical: these policies are about reasoning and modeling behavior, so their
+source rationale should remain visible even after activation.
 
-They are now the first manual activation set for lightweight
-`POLICY-MGMT-01`. Do not introduce a heavier candidate registry before
-`LIFECYCLE-01` clarifies lifecycle facts and node completion.
+They are the first manual activation set for lightweight `POLICY-MGMT-01`. Do
+not introduce a heavier candidate registry before `LIFECYCLE-01` clarifies
+lifecycle facts and node completion.
 
 After the semantic-routing correction on 2026-05-21, both held candidates should
 be read as `process_contract` policy candidates. They are not only about what
 the agent should deliver; they constrain how the agent should reason, critique,
-sequence, and evaluate before acting. Their next step is `POLICY-MGMT-01A`
-no-write policy planning, not direct active-policy YAML editing.
+sequence, and evaluate before acting. They are now active report-only policies;
+future changes should use guarded policy evolution, not direct active-policy
+YAML editing.
+
+Scope decision recorded on 2026-05-21: these candidates should not introduce
+new policy-name-like `policy_scopes`. Use the existing stable scope classes for
+the first activation pass: first-principles / critical alignment is a
+`discussion` policy, and data-model drift alarm is an `editing` policy. Their
+specific reasoning obligations belong in process-contract text and required
+evidence, not in new scope names.
+
+Lifecycle correction recorded on 2026-05-22: `task_start` can remain an
+observed execution marker, but these two candidate policies are not about the
+presence of that marker. They are about user intent and the reasoning /
+modeling contract the agent must follow. The current reviewed plan shape is
+therefore `conversation_turn` plus scope-only `applies_to_work_profile`
+(`lifecycle_events: []`, `policy_scopes: [...]`), not a lifecycle-coupled
+`task_start` plan.
+
+Activation artifacts:
+
+- first-principles / critical alignment:
+  `.jikuo/policies/approved/POLICY-jikuo-first-principles-critical-alignment.yaml`,
+  `.jikuo/policies/proposals/POLICYPROPOSAL-44eae831b1.yaml`,
+  `.jikuo/policies/decisions/POLICYDECISION-39cdfe5e92.yaml`;
+- data-model drift alarm:
+  `.jikuo/policies/approved/POLICY-jikuo-data-model-drift-alarm.yaml`,
+  `.jikuo/policies/proposals/POLICYPROPOSAL-2df0d0aeb7.yaml`,
+  `.jikuo/policies/decisions/POLICYDECISION-c773dfc651.yaml`.
 
 ### POLICY-CANDIDATE-first-principles-critical-alignment
 
@@ -153,6 +177,12 @@ Proof-of-effect target:
 - boundary flag: unclear concept boundary causes stop/defer rather than
   immediate durable architecture or code changes.
 
+Initial routing scope:
+
+- `policy_scopes: ["discussion"]`
+- lifecycle marker: not authoritative for applicability; the active policy uses
+  `conversation_turn` plus scope-only applicability.
+
 ### POLICY-CANDIDATE-data-model-drift-alarm
 
 User-facing intent:
@@ -204,6 +234,12 @@ Proof-of-effect target:
   completion;
 - boundary flag: blurry schema/event/scope relationships cause stop/defer or a
   model-boundary rebuild recommendation instead of automatic field growth.
+
+Initial routing scope:
+
+- `policy_scopes: ["editing"]`
+- lifecycle marker: not authoritative for applicability; the active policy uses
+  `conversation_turn` plus scope-only applicability.
 
 ---
 

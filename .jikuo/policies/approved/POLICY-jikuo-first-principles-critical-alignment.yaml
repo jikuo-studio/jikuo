@@ -1,0 +1,27 @@
+schema_version: "jikuo.configurable_rule_policy.v0"
+policy_id: "POLICY-jikuo-first-principles-critical-alignment"
+version: 1
+status: "active_report_only"
+title: "First-principles critical alignment"
+scenario_package: "engineering_governance"
+source_refs:
+  - type: "user_natural_language"
+    ref: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-DOCREG-01_layered_document_registry.md#policy-candidate-first-principles-critical-alignment"
+triggers:
+  - trigger_id: "TRG-conversation-turn"
+    type: "task_lifecycle_event"
+    event: "conversation_turn"
+conditions: []
+required_actions:
+  - action_id: "ACT-perform-first-principles-alignment"
+    type: "perform_first_principles_alignment"
+required_evidence:
+  - evidence_id: "EVD-first-principles-alignment-evidence"
+    type: "first_principles_alignment_evidence"
+    satisfies_action: "ACT-perform-first-principles-alignment"
+enforcement:
+  phase: "report_only"
+  level: "review_required"
+applies_to_work_profile:
+  - lifecycle_events: []
+    policy_scopes: ["discussion"]

@@ -138,6 +138,29 @@ def add_soft_only_work_profile_applicability(policy_path: Path) -> None:
     policy_path.write_text(text, encoding="utf-8")
 
 
+def add_scope_only_work_profile_applicability(policy_path: Path) -> None:
+    text = policy_path.read_text(encoding="utf-8")
+    text = text.replace(
+        "triggers:\n",
+        "\n".join(
+            [
+                "applies_to_work_profile:",
+                '  - policy_scopes: ["editing"]',
+                "triggers:",
+                "",
+            ]
+        ),
+        1,
+    )
+    policy_path.write_text(text, encoding="utf-8")
+
+
+def retarget_policy_trigger_event(policy_path: Path, event: str) -> None:
+    text = policy_path.read_text(encoding="utf-8")
+    text = text.replace('event: "task_start"', f'event: "{event}"', 1)
+    policy_path.write_text(text, encoding="utf-8")
+
+
 class PolicyStoreStatusTests(unittest.TestCase):
     def test_missing_policy_store_reports_missing_without_write(self):
         completed = run_status(MISSING_PROJECT)
@@ -448,6 +471,63 @@ class PolicyStoreStatusTests(unittest.TestCase):
             self.assertIn(
                 "policy_scope:editing",
                 triggered["work_profile_match"]["matched_refs"],
+            )
+
+    def test_scope_only_work_profile_applicability_does_not_require_lifecycle_match(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            shutil.copytree(ACTIVE_PROJECT, project_root)
+            policy_path = (
+                project_root
+                / ".jikuo"
+                / "policies"
+                / "approved"
+                / "POLICY-three-phase-audit.yaml"
+            )
+            add_scope_only_work_profile_applicability(policy_path)
+            retarget_policy_trigger_event(policy_path, "conversation_turn")
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "evaluate",
+                    "--event",
+                    "conversation_turn",
+                    "--project-root",
+                    str(project_root),
+                    "--work-profile-json",
+                    json.dumps(
+                        {
+                            "schema": "jikuo.work_profile.v0",
+                            "lifecycle_event": "conversation_turn",
+                            "policy_scopes": ["editing"],
+                        }
+                    ),
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            report = json.loads(completed.stdout)
+            self.assertEqual(len(report["triggered_policies"]), 1)
+            triggered = report["triggered_policies"][0]
+            self.assertEqual(triggered["policy_ref"], "POLICY-three-phase-audit")
+            self.assertEqual(
+                triggered["work_profile_match"]["expected"],
+                {"lifecycle_events": [], "policy_scopes": ["editing"]},
+            )
+            self.assertEqual(triggered["work_profile_match"]["status"], "matched")
+            self.assertEqual(
+                triggered["work_profile_match"]["matched_refs"],
+                ["policy_scope:editing"],
             )
 
     def test_evaluate_task_start_accepts_inline_card_rendered_evidence(self):
@@ -962,6 +1042,57 @@ class PolicyStoreStatusTests(unittest.TestCase):
             ],
         )
         self.assertFalse((MISSING_PROJECT / ".jikuo" / "policies").exists())
+
+    def test_plan_write_builds_scope_only_work_profile_policy_plan(self):
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-B",
+                str(TOOL),
+                "plan-write",
+                "--project-root",
+                str(MISSING_PROJECT),
+                "--policy-id",
+                "POLICY-intent-scope-review",
+                "--title",
+                "Intent scope review",
+                "--source-ref",
+                "<exact user phrase as spoken>",
+                "--trigger-event",
+                "conversation_turn",
+                "--work-profile-policy-scope",
+                "discussion",
+                "--action-type",
+                "perform_intent_scope_review",
+                "--evidence-type",
+                "intent_scope_review_evidence",
+                "--format",
+                "json",
+            ],
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        report = json.loads(completed.stdout)
+        self.assertEqual(report["schema"], "jikuo.policy_write_plan.v0")
+        self.assertEqual(report["status"], "review")
+        self.assertEqual(
+            report["proposed_policy"]["triggers"][0]["event"],
+            "conversation_turn",
+        )
+        self.assertEqual(
+            report["proposed_policy"]["applies_to_work_profile"],
+            [
+                {
+                    "lifecycle_events": [],
+                    "policy_scopes": ["discussion"],
+                }
+            ],
+        )
 
     def test_plan_write_refuses_existing_policy_collision_without_write(self):
         policy_file = (
