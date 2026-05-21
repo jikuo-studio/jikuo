@@ -130,6 +130,21 @@ The hook must not directly decide which policies apply. It may provide or
 request semantic classification, but JIKUO remains the policy-distribution
 authority.
 
+Semantic routing should map user intent to policy scope, not internal agent
+verbs directly:
+
+```text
+user_intent -> policy_scope -> execution_boundary -> response_contract
+```
+
+The host or classifier may describe what the user wants, what constraints the
+user set, and what output evidence the user expects. JIKUO then compiles that
+input into final `work_profile.policy_scopes` and visible runtime explanation.
+The agent's dynamic `see / think / act / speak` loop is execution vocabulary:
+it explains how work is performed and reported, but it is not the primary
+policy-scope axis. The final answer is always governed by universal response
+policies plus the policies selected for the current user intent.
+
 Target compact shape:
 
 ```yaml
@@ -150,12 +165,18 @@ host_semantic_intent:
       intent_class: design_discussion
       operation_class: design_review
       output_class: explanation
+      requested_outcome: compare options without repository writes
+      execution_boundary: read-only
+      response_contract: explain recommendation, risks, and open questions
       rationale_summary: compact slice explanation
     - id: intent_2
       policy_scopes: [editing]
       intent_class: implementation_request
       operation_class: documentation_update
       output_class: repository_change
+      requested_outcome: update project documentation
+      execution_boundary: repository writes allowed after governed pre-work
+      response_contract: report changed files, checks, evidence, and card links
       rationale_summary: compact slice explanation
   work_profile:
     policy_scopes: [discussion | editing | progress_summary]

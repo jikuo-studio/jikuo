@@ -195,6 +195,21 @@ Host adapters and AI clients must not be the authority for policy scope.
 The AI agent can help with semantic interpretation, but JIKUO core must produce
 the auditable classification result.
 
+Policy routing maps user intent to policy scope. It should not treat the
+agent's internal `see / think / act / speak` loop as the primary classification
+axis. Those verbs are dynamic execution and reporting vocabulary: they explain
+which context was read, which reasoning or tools were used, and what evidence
+must be reported. The auditable routing result remains the final
+`work_profile.policy_scopes` produced by JIKUO.
+
+The response is the policy-governed delivery surface. Universal policies may
+shape every response, such as runtime-card visibility, guarded-write reminders,
+or missing-evidence disclosure. Current-intent policies add obligations for the
+specific scope, such as changed files and tests for `editing`, business meaning
+for `progress_summary`, or assumptions and trade-offs for `discussion`. If a
+turn includes side effects, the same policy scope must govern the action before
+and during execution, not only the final wording.
+
 ---
 
 ## 6. Hint + Signal + Fallback Model
@@ -220,9 +235,12 @@ AI calls should provide a structured hint where possible:
 ```json
 {
   "agent_hint": {
+    "requested_outcome": "explain the design without editing files",
     "intent_class": ["discussion"],
     "operation_class": ["no_tool"],
     "output_class": ["answer"],
+    "execution_boundary": "read_only",
+    "response_contract": ["explain recommendation", "name assumptions"],
     "confidence": "medium",
     "reason": "user is asking for design judgement, not asking to edit files",
     "expected_write_effect": "none"
@@ -335,6 +353,14 @@ such as `task_start`, `completion_review`, `configuration_review`, or
 `policy_suggestion_review`. Follow-up obligations say which tool may be useful
 next. `work_profile` says what kind of governed work is happening and which
 policy scopes should be considered.
+
+`requested_outcome`, `execution_boundary`, and `response_contract` may appear
+as router/card explanation fields when AI semantic input is available. They are
+not a replacement for `policy_scopes`, and they are not POLTRIG-03 evaluator
+inputs. Until a reviewed schema slice says otherwise, the evaluator still
+consumes only `work_profile.lifecycle_event` and
+`work_profile.policy_scopes`, with exact policy conditions as additional
+filters.
 
 ---
 

@@ -101,6 +101,37 @@ If AI semantic intent and deterministic signals disagree, the runtime card
 should show the conflict instead of silently picking one. The policy evaluator
 must consume the final JIKUO work profile, not raw host claims.
 
+### 3.2.1 Intent-To-Scope Contract
+
+The semantic-routing contract is:
+
+```text
+user_intent -> policy_scope -> execution_boundary -> response_contract
+```
+
+This is intentionally different from treating the agent's internal action
+grammar as the policy-routing source:
+
+- `user_intent` is what the user is asking the AI to accomplish, including
+  explicit constraints such as "do not edit files" or "commit the change".
+- `policy_scope` is the governed distribution class that determines which
+  active policies should be considered. Examples include `discussion`,
+  `editing`, `progress_summary`, `verification`, `document_governance`, and
+  `policy_management`.
+- `execution_boundary` states what effects are allowed, blocked, or require
+  explicit confirmation before the agent acts.
+- `response_contract` states what the final answer must report: evidence,
+  changed files, tests, missing evidence, card links, follow-up decisions, or
+  business meaning.
+
+`see`, `think`, `act`, and `speak/report` are still useful as dynamic execution
+and evidence vocabulary, but they are not the primary policy-scope taxonomy.
+Every turn eventually speaks back to the user, so "speak" cannot be the scope
+by itself. The response is the policy-governed delivery surface: universal
+policies and current-intent policies shape what must be said. When an `act`
+step has real side effects, the same policy scope must also govern execution
+before and during the action, not only the final report.
+
 MCP Sampling is an optional classifier-provider route under this contract. It
 allows the JIKUO MCP server to request `sampling/createMessage` from a client
 during a tool call, but the client controls model access, model choice,
@@ -132,6 +163,9 @@ host_semantic_intent:
       intent_class: implementation_request
       operation_class: documentation_update
       output_class: repository_change
+      requested_outcome: update mounted-hook documentation
+      execution_boundary: repository writes allowed after governed pre-work
+      response_contract: report changed docs, checks, card links, and follow-ups
     - id: summarize
       policy_scopes: [progress_summary]
       intent_class: progress_summary
@@ -168,6 +202,9 @@ Minimum implementation checklist for a later code slice:
   Chinese and English user turns;
 - keep policy evaluator input stable: final `lifecycle_event` plus aggregate
   `policy_scopes`;
+- keep `requested_outcome`, `execution_boundary`, and `response_contract` as
+  router / card explanation fields until a separate reviewed slice decides
+  whether they need schema enforcement;
 - add runtime-card rendering and tests for single-intent, multi-intent,
   negative-constraint, host-unavailable fallback, and host/keyword conflict;
   local tests now cover host-provided single-intent, multi-intent, and

@@ -163,6 +163,20 @@ Examples:
 - "Update docs and commit" needs `see -> classify -> trigger policy -> think
   -> act -> verify -> report`.
 
+Semantic-routing calibration:
+
+- policy routing starts from user intent, then produces policy scope, execution
+  boundary, and response contract;
+- the action grammar explains how the AI reads context, reasons, acts, observes
+  results, and reports evidence;
+- `see / think / act / report` are not the primary policy-scope categories,
+  because they can repeat and interleave inside one governed turn;
+- every governed turn reports back to the user, so `report` is the delivery
+  surface shaped by policy rather than a standalone scope;
+- when `act` has repository, policy, registry, or other durable side effects,
+  policy must govern the action before and during execution, not only the final
+  summary.
+
 This means LIFECYCLE should not become a heavy fixed process diagram. It should
 stay a minimum sustainable governance layer: enough checkpoints to keep context,
 intent, policy triggers, execution, evidence, and reporting aligned, without
@@ -174,7 +188,7 @@ Initial action grammar:
 |---|---|---|
 | see | mount user context, configured docs, inferred relevant docs, and runtime cards | DOCREG, mount sets, hook context |
 | classify | determine user intent from AI semantic input plus fallback signals | `work_profile`, router, semantic provider |
-| trigger | distribute applicable policies from intent, context, and action scope | `policy_store`, runtime cards |
+| trigger | distribute applicable policies from user intent, policy scope, and context | `policy_store`, runtime cards |
 | think | reason, design, compare alternatives, and plan under policy constraints | Agent reasoning, visible plan when useful |
 | act | call tools, edit files, run tests, update docs, produce evidence | MCP tools, CLI, guarded apply paths |
 | report | summarize results, evidence, missing items, and follow-ups | runtime cards, progress summary, observed footer |
