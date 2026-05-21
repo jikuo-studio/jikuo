@@ -270,7 +270,9 @@ Implemented on 2026-05-19 as the Level 2A local semantic-input slice:
   policy-governance turns, plus no-edit natural-language constraints such as
   "only discuss" and "do not edit files";
 - runtime markdown renders semantic status, provider, constraints, slice count,
-  and conflict count.
+  conflict count, and the policy-contract fields
+  (`requested_outcome`, `process_contract`, `execution_boundary`,
+  `response_contract`) when provided.
 
 This is not yet Codex GUI AI-semantic proof. It only means JIKUO can consume a
 compact semantic classification when a host or classifier provides one. If no
@@ -285,7 +287,7 @@ applicability. Acceptance for later slices should show:
   `response_contract` are present in the compact semantic payload or honestly
   absent;
 - JIKUO renders the normalized fields in card/state output without raw prompt
-  persistence;
+  persistence; implemented for local runtime-card projection on 2026-05-21;
 - the agent plan or completion summary names how the relevant contract shaped
   work;
 - any hard effect boundary is enforced through no-write, guarded-write, or

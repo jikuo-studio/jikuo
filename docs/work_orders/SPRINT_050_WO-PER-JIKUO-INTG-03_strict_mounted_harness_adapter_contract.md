@@ -215,7 +215,8 @@ Minimum implementation checklist for a later code slice:
   `policy_scopes`;
 - keep `requested_outcome`, `process_contract`, `execution_boundary`, and
   `response_contract` as router / card explanation fields until a separate
-  reviewed slice decides whether they need schema enforcement;
+  reviewed slice decides whether they need schema enforcement; implemented as
+  local Work Profile / runtime-card projection on 2026-05-21;
 - add runtime-card rendering and tests for single-intent, multi-intent,
   negative-constraint, host-unavailable fallback, and host/keyword conflict;
   local tests now cover host-provided single-intent, multi-intent, and
@@ -230,8 +231,8 @@ is accepted only when the slice can show how these fields are consumed at the
 right layer:
 
 1. Transport/projection: the compact semantic object is normalized into
-   `basis.host_semantic_intent` and rendered in runtime cards without raw prompt
-   persistence.
+   `basis.host_semantic_intent`, projected into `work_profile.policy_contract`,
+   and rendered in runtime cards without raw prompt persistence.
 2. Planning use: the agent's task-start plan or no-write proposal references
    the relevant contract before acting.
 3. Evidence verification: active policies can require evidence that the

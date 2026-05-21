@@ -1099,6 +1099,22 @@ def build_policy_runtime_status_card(
             f"{work_profile_projection.get('lifecycle_event')} / "
             f"scopes={work_profile_projection.get('policy_scopes')}"
         )
+        contract = work_profile_projection.get("policy_contract") or {}
+        active_contract_keys = [
+            key
+            for key in (
+                "requested_outcome",
+                "process_contract",
+                "execution_boundary",
+                "response_contract",
+            )
+            if contract.get(key)
+        ]
+        if active_contract_keys:
+            shown_inputs.append(
+                "work_profile_contract_fields: "
+                f"{', '.join(active_contract_keys)}"
+            )
     shown_outputs = [
         f"active_policy_count: {active_count}",
         f"triggered_policy_count: {triggered_count}",
@@ -4157,6 +4173,26 @@ def render_work_profile(work_profile_projection: dict[str, Any]) -> list[str]:
     ]
     scopes = work_profile_projection.get("policy_scopes") or []
     lines.append(f"- Policy scopes: `{', '.join(str(scope) for scope in scopes)}`")
+    contract = work_profile_projection.get("policy_contract") or {}
+    if contract:
+        requested_outcome = contract.get("requested_outcome")
+        if requested_outcome:
+            lines.append(f"- Requested outcome: `{requested_outcome}`")
+        process_contract = contract.get("process_contract") or []
+        if process_contract:
+            lines.append(
+                "- Process contract: "
+                f"`{'; '.join(str(item) for item in process_contract)}`"
+            )
+        execution_boundary = contract.get("execution_boundary")
+        if execution_boundary:
+            lines.append(f"- Execution boundary: `{execution_boundary}`")
+        response_contract = contract.get("response_contract") or []
+        if response_contract:
+            lines.append(
+                "- Response contract: "
+                f"`{'; '.join(str(item) for item in response_contract)}`"
+            )
     basis = work_profile_projection.get("basis") or {}
     semantic = basis.get("host_semantic_intent") or {}
     lines.append(f"- Semantic intent status: `{semantic.get('status', 'unavailable')}`")

@@ -15,6 +15,12 @@ from typing import Any
 
 WORK_PROFILE_SCHEMA = "jikuo.work_profile.v0"
 HOST_SEMANTIC_INTENT_SCHEMA = "jikuo.host_semantic_intent.v0"
+POLICY_CONTRACT_KEYS = (
+    "requested_outcome",
+    "process_contract",
+    "execution_boundary",
+    "response_contract",
+)
 
 LIFECYCLE_EVENTS = {"conversation_turn", "task_start", "completion_review"}
 
@@ -346,10 +352,59 @@ def _normalize_intent_slices(value: Any) -> list[dict[str, Any]]:
                 "operation_class": _string_value(item.get("operation_class")),
                 "output_class": _string_value(item.get("output_class")),
                 "constraints": _string_list(item.get("constraints")),
+                "requested_outcome": _string_value(item.get("requested_outcome")),
+                "process_contract": _contract_list(item.get("process_contract")),
+                "execution_boundary": _string_value(item.get("execution_boundary")),
+                "response_contract": _contract_list(item.get("response_contract")),
                 "rationale_summary": _string_value(item.get("rationale_summary")),
             }
         )
     return slices
+
+
+def _contract_list(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return _string_list(value)
+    text = _string_value(value)
+    return [text] if text else []
+
+
+def _first_contract_list(*values: Any) -> list[str]:
+    for value in values:
+        items = _contract_list(value)
+        if items:
+            return items
+    return []
+
+
+def _normalize_policy_contract(
+    *,
+    raw: dict[str, Any],
+    nested_work_profile: dict[str, Any],
+    primary_slice: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "requested_outcome": _first_string(
+            raw.get("requested_outcome"),
+            nested_work_profile.get("requested_outcome"),
+            primary_slice.get("requested_outcome"),
+        ),
+        "process_contract": _first_contract_list(
+            raw.get("process_contract"),
+            nested_work_profile.get("process_contract"),
+            primary_slice.get("process_contract"),
+        ),
+        "execution_boundary": _first_string(
+            raw.get("execution_boundary"),
+            nested_work_profile.get("execution_boundary"),
+            primary_slice.get("execution_boundary"),
+        ),
+        "response_contract": _first_contract_list(
+            raw.get("response_contract"),
+            nested_work_profile.get("response_contract"),
+            primary_slice.get("response_contract"),
+        ),
+    }
 
 
 def normalize_host_semantic_intent(raw: dict[str, Any] | None) -> dict[str, Any] | None:
@@ -367,6 +422,7 @@ def normalize_host_semantic_intent(raw: dict[str, Any] | None) -> dict[str, Any]
             "constraints": [],
             "intent_slices": [],
             "work_profile": {},
+            "policy_contract": {},
             "errors": ["host_semantic_intent must be a JSON object"],
         }
 
@@ -416,6 +472,11 @@ def normalize_host_semantic_intent(raw: dict[str, Any] | None) -> dict[str, Any]
             primary_slice.get("output_class"),
         ),
     }
+    policy_contract = _normalize_policy_contract(
+        raw=raw,
+        nested_work_profile=nested_work_profile,
+        primary_slice=primary_slice,
+    )
 
     if not scopes and not any(work_profile.values()) and status != "unavailable":
         status = "invalid"
@@ -434,6 +495,7 @@ def normalize_host_semantic_intent(raw: dict[str, Any] | None) -> dict[str, Any]
         "constraints": constraints,
         "intent_slices": intent_slices,
         "work_profile": work_profile,
+        "policy_contract": policy_contract,
         "rationale_summary": _string_value(raw.get("rationale_summary")),
     }
 
@@ -717,6 +779,11 @@ def build_work_profile(
         "operation_class": operation_class,
         "output_class": output_class,
         "policy_scopes": policy_scopes,
+        "policy_contract": (
+            semantic_intent.get("policy_contract")
+            if isinstance(semantic_intent, dict)
+            else {}
+        ),
         "confidence": confidence,
         "fallback_expanded": fallback_expanded,
         "basis": {
@@ -730,6 +797,7 @@ def build_work_profile(
                 "policy_scopes": [],
                 "constraints": [],
                 "intent_slices": [],
+                "policy_contract": {},
             },
             "semantic_intent_status": semantic_status,
             "deterministic_signals": signals,

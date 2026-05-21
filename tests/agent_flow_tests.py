@@ -619,6 +619,16 @@ class AgentFlowProposalTests(unittest.TestCase):
             "provider": "host_ai",
             "confidence": "high",
             "constraints": ["no_file_write"],
+            "requested_outcome": "compare the implementation approach without writing files",
+            "process_contract": [
+                "align concepts before implementation details",
+                "critique the proposal against the business goal",
+            ],
+            "execution_boundary": "read_only",
+            "response_contract": [
+                "explain recommendation",
+                "name residual risk",
+            ],
             "intent_slices": [
                 {
                     "id": "discuss_change",
@@ -670,10 +680,28 @@ class AgentFlowProposalTests(unittest.TestCase):
         self.assertEqual(profile["output_class"], "explanation")
         self.assertEqual(profile["policy_scopes"], ["discussion"])
         self.assertEqual(profile["confidence"], "high")
+        contract = profile["policy_contract"]
+        self.assertEqual(
+            contract["requested_outcome"],
+            "compare the implementation approach without writing files",
+        )
+        self.assertEqual(
+            contract["process_contract"],
+            [
+                "align concepts before implementation details",
+                "critique the proposal against the business goal",
+            ],
+        )
+        self.assertEqual(contract["execution_boundary"], "read_only")
+        self.assertEqual(
+            contract["response_contract"],
+            ["explain recommendation", "name residual risk"],
+        )
         semantic = profile["basis"]["host_semantic_intent"]
         self.assertEqual(semantic["status"], "provided")
         self.assertEqual(semantic["provider"], "host_ai")
         self.assertEqual(semantic["constraints"], ["no_file_write"])
+        self.assertEqual(semantic["policy_contract"], contract)
         self.assertEqual(len(semantic["intent_slices"]), 1)
         conflicts = profile["basis"]["conflicts"]
         self.assertEqual(
@@ -681,6 +709,19 @@ class AgentFlowProposalTests(unittest.TestCase):
             "editing_terms_blocked_by_edit_constraint",
         )
         self.assertIn("Semantic intent status: `provided`", proposal["chat_ready_markdown"])
+        self.assertIn(
+            "Requested outcome: `compare the implementation approach without writing files`",
+            proposal["chat_ready_markdown"],
+        )
+        self.assertIn(
+            "Process contract: `align concepts before implementation details; critique the proposal against the business goal`",
+            proposal["chat_ready_markdown"],
+        )
+        self.assertIn("Execution boundary: `read_only`", proposal["chat_ready_markdown"])
+        self.assertIn(
+            "Response contract: `explain recommendation; name residual risk`",
+            proposal["chat_ready_markdown"],
+        )
         self.assertIn("Semantic/deterministic conflicts: `1`", proposal["chat_ready_markdown"])
         atom_ids = {trace["atom_id"] for trace in proposal["atom_trace"]}
         self.assertIn("CAP-HOST-SEMANTIC-INTENT-WORK-PROFILE-01", atom_ids)

@@ -208,7 +208,7 @@ entries:
       - "docs/governance/jikuo_productization_task_map.md"
   - id: "CAP-HOST-SEMANTIC-INTENT-WORK-PROFILE-01"
     title: "Host semantic-intent work-profile merge"
-    status: "implemented local Level 2A input slice with bilingual deterministic fallback keyword coverage; MCP Sampling provider proof can now supply compact host_semantic_intent when a client supports sampling; host-time hook provider and GUI proof pending"
+    status: "implemented local Level 2A input slice with bilingual deterministic fallback keyword coverage and runtime-card projection for policy-contract fields; MCP Sampling provider proof can now supply compact host_semantic_intent when a client supports sampling; host-time hook provider and GUI proof pending"
     metadata_status: "complete"
     entry_point: "src/jikuo/work_profile.py; python -B -m jikuo.agent_flow propose --event conversation_turn --host-semantic-intent-json ..."
     write_effect: "none"
