@@ -151,6 +151,7 @@ class MCPServerWrapperTests(unittest.TestCase):
         self.assertIn("jikuo.route_user_request", fake.tools)
         self.assertIn("jikuo.propose_policy_suggestions", fake.tools)
         self.assertIn("jikuo.probe_sampling_semantic_intent", fake.tools)
+        self.assertIn("jikuo.propose_policy_distribution_review", fake.tools)
         self.assertIn("jikuo.apply_task_session_evidence_update", fake.tools)
         self.assertIn("jikuo.apply_policy_evolution_write", fake.tools)
         self.assertIn("jikuo.apply_policy_template_activation", fake.tools)
@@ -235,6 +236,31 @@ class MCPServerWrapperTests(unittest.TestCase):
                     }
                 ],
             )
+
+    def test_policy_distribution_review_registered_tool_accepts_policy_query(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = copy_fixture(POLICY_ACTIVE_PROJECT, tmp)
+            fake = server.create_server(fastmcp_cls=FakeFastMCP)
+
+            response = fake.tools["jikuo.propose_policy_distribution_review"]["function"](
+                project_root=str(project_root),
+                policy_query="three phase audit policy",
+                distribution_decision="dogfood_only",
+            )
+
+            self.assertEqual(
+                response["tool_name"],
+                "jikuo.propose_policy_distribution_review",
+            )
+            self.assertEqual(
+                response["policy_distribution_review"]["policy_id"],
+                "POLICY-three-phase-audit",
+            )
+            self.assertEqual(
+                response["policy_distribution_source_resolution"]["resolution_basis"],
+                "policy_query_unique_match",
+            )
+            self.assertIn("Policy distribution review", response["card_markdown"])
 
     def test_configuration_status_registered_tool_delegates_adapter(self):
         with tempfile.TemporaryDirectory() as tmp:

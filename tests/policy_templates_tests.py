@@ -11,6 +11,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 TOOL = ROOT / "src" / "jikuo" / "policy_templates.py"
 TEMP_ROOT = ROOT / "tmp" / "jikuo_policy_templates_tests"
+sys.path.insert(0, str(ROOT / "src"))
+from jikuo import policy_templates  # noqa: E402
 
 
 @contextmanager
@@ -59,6 +61,108 @@ def write_policy(path: Path) -> None:
                 "enforcement:",
                 '  phase: "report_only"',
                 '  level: "review_required"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+
+def write_source_ref_only_policy(path: Path) -> None:
+    path.write_text(
+        "\n".join(
+            [
+                'schema_version: "jikuo.configurable_rule_policy.v0"',
+                'policy_id: "POLICY-source-ref-only"',
+                "version: 1",
+                'status: "active_report_only"',
+                'title: "Source ref only"',
+                'scenario_package: "engineering_governance"',
+                "source_refs:",
+                '  - type: "user_natural_language"',
+                '    ref: "docs/work_orders/source-context.md#candidate"',
+                "triggers:",
+                '  - trigger_id: "TRG-conversation-turn"',
+                '    type: "task_lifecycle_event"',
+                '    event: "conversation_turn"',
+                "conditions: []",
+                "required_actions:",
+                '  - action_id: "ACT-review"',
+                '    type: "review"',
+                "required_evidence:",
+                '  - evidence_id: "EVD-review"',
+                '    type: "review_evidence"',
+                '    satisfies_action: "ACT-review"',
+                "enforcement:",
+                '  phase: "report_only"',
+                '  level: "review_required"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+
+def write_policy_store_with_policies(root: Path, policies: list[tuple[str, str, str]]) -> None:
+    store = root / ".jikuo" / "policies"
+    approved = store / "approved"
+    approved.mkdir(parents=True, exist_ok=True)
+    refs: list[str] = []
+    for policy_id, title, action_type in policies:
+        (approved / f"{policy_id}.yaml").write_text(
+            "\n".join(
+                [
+                    'schema_version: "jikuo.configurable_rule_policy.v0"',
+                    f'policy_id: "{policy_id}"',
+                    "version: 1",
+                    'status: "active_report_only"',
+                    f'title: "{title}"',
+                    'scenario_package: "engineering_governance"',
+                    "source_refs:",
+                    '  - type: "test_fixture"',
+                    f'    ref: "tests:{policy_id}"',
+                    "triggers:",
+                    '  - trigger_id: "TRG-conversation-turn"',
+                    '    type: "task_lifecycle_event"',
+                    '    event: "conversation_turn"',
+                    "conditions: []",
+                    "required_actions:",
+                    '  - action_id: "ACT-review"',
+                    f'    type: "{action_type}"',
+                    "required_evidence:",
+                    '  - evidence_id: "EVD-review"',
+                    f'    type: "{action_type}_evidence"',
+                    '    satisfies_action: "ACT-review"',
+                    "enforcement:",
+                    '  phase: "report_only"',
+                    '  level: "review_required"',
+                    "",
+                ]
+            ),
+            encoding="utf-8",
+        )
+        refs.extend(
+            [
+                f'  - policy_id: "{policy_id}"',
+                "    version: 1",
+                f'    path: ".jikuo/policies/approved/{policy_id}.yaml"',
+            ]
+        )
+    (store / "manifest.yaml").write_text(
+        "\n".join(
+            [
+                'schema_version: "jikuo.policy_store_manifest.v0"',
+                'project_id: "policy_distribution_fixture"',
+                'store_root: ".jikuo/policies"',
+                "active_policy_refs:",
+                *refs,
+                "proposal_refs: []",
+                "deprecated_policy_refs: []",
+                "superseded_policy_refs: []",
+                'last_updated_at: "2026-05-24T00:00:00Z"',
+                "compatibility:",
+                '  unknown_fields: "preserve"',
+                '  writer: "test_fixture"',
                 "",
             ]
         ),
@@ -196,6 +300,209 @@ class PolicyTemplateTests(unittest.TestCase):
                 template["template_policy"]["scope_control"]["purpose"],
                 "prevent scope expansion",
             )
+
+    def test_distribution_review_marks_dogfood_only_without_write(self):
+        with temp_project_dir() as root:
+            source_policy = root / "POLICY-task-scope-control-before-packaging.yaml"
+            write_policy(source_policy)
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "review-distribution",
+                    "--source-policy",
+                    str(source_policy),
+                    "--decision",
+                    "dogfood_only",
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            report = json.loads(completed.stdout)
+            self.assertEqual(report["schema"], "jikuo.policy_distribution_review.v0")
+            self.assertEqual(report["status"], "review")
+            self.assertFalse(report["writes_performed"])
+            self.assertEqual(report["distribution_decision"], "dogfood_only")
+            self.assertFalse(report["distribution_path"]["template_export_required"])
+            self.assertFalse(report["distribution_path"]["starter_pack_manifest_change_required"])
+            self.assertFalse((root / "src").exists())
+            self.assertFalse((root / ".jikuo").exists())
+
+    def test_distribution_review_routes_official_starter_through_template_path(self):
+        with temp_project_dir() as root:
+            source_policy = root / "POLICY-task-scope-control-before-packaging.yaml"
+            write_policy(source_policy)
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "review-distribution",
+                    "--source-policy",
+                    str(source_policy),
+                    "--decision",
+                    "official_starter",
+                    "--source-project-ref",
+                    "JIKUO-dogfood",
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            report = json.loads(completed.stdout)
+            self.assertFalse(report["writes_performed"])
+            self.assertEqual(report["distribution_decision"], "official_starter")
+            path = report["distribution_path"]
+            self.assertTrue(path["template_export_required"])
+            self.assertTrue(path["starter_pack_manifest_change_required"])
+            self.assertEqual(path["user_project_activation_allowed"], "guarded_starter_init_only")
+            self.assertTrue(path["target_template_ref"].startswith("pkg://jikuo/policy_templates/"))
+            self.assertIn(
+                "do not copy project-local .jikuo/policies/approved files into starter packs",
+                report["review_obligations"],
+            )
+            serialized = json.dumps(report, ensure_ascii=False)
+            self.assertNotIn("IncubatingPrivateProject", serialized)
+            self.assertFalse((root / "src").exists())
+            self.assertFalse((root / ".jikuo").exists())
+
+    def test_distribution_review_does_not_treat_redacted_source_refs_as_bindings(self):
+        with temp_project_dir() as root:
+            source_policy = root / "POLICY-source-ref-only.yaml"
+            write_source_ref_only_policy(source_policy)
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "review-distribution",
+                    "--source-policy",
+                    str(source_policy),
+                    "--decision",
+                    "optional_template",
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            report = json.loads(completed.stdout)
+            self.assertEqual(report["template_portability"]["status"], "portable")
+            self.assertEqual(report["template_portability"]["detected_project_ref_count"], 0)
+            self.assertEqual(report["template_portability"]["required_binding_count"], 0)
+            self.assertEqual(report["warnings"], [])
+
+    def test_distribution_source_resolution_matches_natural_language_query(self):
+        with temp_project_dir() as root:
+            write_policy_store_with_policies(
+                root,
+                [
+                    (
+                        "POLICY-data-model-drift-alarm",
+                        "Data model drift alarm",
+                        "perform_data_model_boundary_review",
+                    ),
+                    (
+                        "POLICY-first-principles-critical-alignment",
+                        "First principles critical alignment",
+                        "perform_first_principles_alignment",
+                    ),
+                ],
+            )
+
+            report = policy_templates.resolve_distribution_source_policy(
+                project_root=root,
+                policy_query="data model boundary",
+            )
+
+            self.assertEqual(report["status"], "resolved")
+            self.assertEqual(report["resolution_basis"], "policy_query_unique_match")
+            self.assertEqual(report["policy_ref"], "POLICY-data-model-drift-alarm")
+            self.assertTrue(report["source_policy_path"].endswith("POLICY-data-model-drift-alarm.yaml"))
+
+    def test_distribution_source_resolution_returns_candidates_when_ambiguous(self):
+        with temp_project_dir() as root:
+            write_policy_store_with_policies(
+                root,
+                [
+                    (
+                        "POLICY-data-model-drift-alarm",
+                        "Data model drift alarm",
+                        "perform_data_model_boundary_review",
+                    ),
+                    (
+                        "POLICY-data-model-boundary-review",
+                        "Data model boundary review",
+                        "perform_data_model_boundary_review",
+                    ),
+                ],
+            )
+
+            report = policy_templates.resolve_distribution_source_policy(
+                project_root=root,
+                policy_query="data model",
+            )
+
+            self.assertEqual(report["status"], "needs_policy_selection")
+            self.assertIn("policy_query_matched_multiple_policies", report["refusal_reasons"])
+            self.assertEqual(len(report["candidates"]), 2)
+
+    def test_distribution_review_refuses_missing_source_policy_without_write(self):
+        with temp_project_dir() as root:
+            source_policy = root / "missing.yaml"
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "review-distribution",
+                    "--source-policy",
+                    str(source_policy),
+                    "--decision",
+                    "optional_template",
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 2, completed.stderr)
+            report = json.loads(completed.stdout)
+            self.assertEqual(report["status"], "refused")
+            self.assertFalse(report["writes_performed"])
+            self.assertIn(
+                f"source policy does not exist: {source_policy.resolve()}",
+                report["refusal_reasons"],
+            )
+            self.assertFalse((root / "src").exists())
+            self.assertFalse((root / ".jikuo").exists())
 
     def test_export_requires_confirmation_and_approval(self):
         with temp_project_dir() as root:

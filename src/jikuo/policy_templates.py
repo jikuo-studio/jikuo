@@ -14,6 +14,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import sys
 from typing import Any
 
@@ -30,6 +31,8 @@ POLICY_TEMPLATE_IMPORT_PLAN_SCHEMA = "jikuo.policy_template_import_plan.v0"
 POLICY_TEMPLATE_EXPORT_RESULT_SCHEMA = "jikuo.policy_template_export_result.v0"
 POLICY_TEMPLATE_ACTIVATION_RESULT_SCHEMA = "jikuo.policy_template_activation_result.v0"
 POLICY_TEMPLATE_SOURCE_INSPECTION_SCHEMA = "jikuo.policy_template_source_inspection.v0"
+POLICY_DISTRIBUTION_REVIEW_SCHEMA = "jikuo.policy_distribution_review.v0"
+POLICY_DISTRIBUTION_SOURCE_RESOLUTION_SCHEMA = "jikuo.policy_distribution_source_resolution.v0"
 PROJECT_CONTEXT_SCHEMA = "jikuo.project_context.v0"
 RESOLVED_POLICY_SCHEMA = "jikuo.resolved_policy.v0"
 PROJECT_CONTEXT_REF = ".jikuo/project_context.yaml"
@@ -40,6 +43,18 @@ CONTRACT_REFS = [
     "pkg://jikuo/governance/jikuo_project_context_binding_and_policy_template_portability.md",
     "pkg://jikuo/governance/jikuo_trust_privacy_provenance_baseline.md",
     "pkg://jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-20_project_context_binding_and_policy_template_portability.md",
+]
+POLICY_DISTRIBUTION_DECISIONS = {
+    "dogfood_only",
+    "official_starter",
+    "optional_template",
+    "deferred",
+}
+POLICY_DISTRIBUTION_CONTRACT_REFS = [
+    *CONTRACT_REFS,
+    "pkg://jikuo/governance/jikuo_policy_governance_authority.md",
+    "pkg://jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-POLICY-MGMT-01_policy_management_mvp.md",
+    "pkg://jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-POLICY-CATALOG-01_self_bootstrap_policy_promotion_review.md",
 ]
 
 
@@ -306,8 +321,9 @@ def build_template_record(
         title = policy_id
 
     template_id = template_id_for_policy(policy_id, namespace)
-    project_refs = detect_project_refs(policy)
-    required_bindings = infer_required_bindings(policy)
+    template_policy_preview = normalize_template_policy(policy, template_id)
+    project_refs = detect_project_refs(template_policy_preview)
+    required_bindings = infer_required_bindings(template_policy_preview)
     portability_status = "portable"
     if project_refs:
         portability_status = "binding_required"
@@ -401,6 +417,402 @@ def build_extract_plan(
         ]
         if status == "review"
         else ["resolve refusal reasons before exporting a policy template"],
+    }
+
+
+def source_category_for_policy(source_policy_path: Path, policy: dict[str, Any]) -> str:
+    normalized_path = source_policy_path.as_posix()
+    status = policy.get("status")
+    if "/.jikuo/policies/approved/" in normalized_path:
+        return "project_local_active"
+    if status == "active_report_only":
+        return "active_report_only"
+    if status in {"candidate", "proposed", "draft"}:
+        return "candidate"
+    return "unknown"
+
+
+def source_refs_summary(policy: dict[str, Any]) -> list[dict[str, Any]]:
+    summaries: list[dict[str, Any]] = []
+    for item in policy.get("source_refs") or []:
+        if not isinstance(item, dict):
+            continue
+        summaries.append(
+            {
+                "type": item.get("type"),
+                "ref": item.get("ref"),
+            }
+        )
+    return summaries
+
+
+def policy_ref_to_approved_path(project_root: Path, policy_ref: str) -> Path:
+    filename = policy_ref if policy_ref.endswith(".yaml") else f"{policy_ref}.yaml"
+    return project_root / policy_store.POLICY_STORE_ROOT / "approved" / filename
+
+
+def _query_tokens(text: str) -> list[str]:
+    tokens = re.findall(r"[A-Za-z0-9_-]+|[\u4e00-\u9fff]+", text.lower())
+    return [token for token in tokens if len(token) >= 2]
+
+
+def _policy_search_text(policy_path: Path, policy: dict[str, Any]) -> str:
+    parts: list[str] = [
+        str(policy.get("policy_id") or ""),
+        str(policy.get("title") or ""),
+        str(policy.get("status") or ""),
+        str(policy_path),
+    ]
+    parts.extend(iter_scalar_strings(policy.get("source_refs") or []))
+    parts.extend(iter_scalar_strings(policy.get("required_actions") or []))
+    parts.extend(iter_scalar_strings(policy.get("required_evidence") or []))
+    parts.extend(iter_scalar_strings(policy.get("applies_to_work_profile") or []))
+    return " ".join(parts).lower()
+
+
+def _policy_query_score(query: str, policy_path: Path, policy: dict[str, Any]) -> int:
+    haystack = _policy_search_text(policy_path, policy)
+    tokens = _query_tokens(query)
+    if not tokens:
+        return 0
+    score = 0
+    policy_id = str(policy.get("policy_id") or "").lower()
+    title = str(policy.get("title") or "").lower()
+    for token in tokens:
+        if token in title:
+            score += 6
+        if token in policy_id:
+            score += 5
+        if token in haystack:
+            score += 2
+    if query.strip().lower() in title or query.strip().lower() in policy_id:
+        score += 10
+    return score
+
+
+def active_distribution_policy_candidates(project_root: Path) -> tuple[list[dict[str, Any]], list[str]]:
+    resolved_root = project_root.expanduser().resolve()
+    report = policy_store.inspect_policy_store(project_root=resolved_root)
+    candidates: list[dict[str, Any]] = []
+    warnings = list(report.get("warnings") or [])
+    for ref in report.get("active_policy_refs") or []:
+        if not isinstance(ref, dict):
+            continue
+        raw_path = ref.get("path")
+        if not isinstance(raw_path, str) or not raw_path:
+            continue
+        policy_path = (resolved_root / raw_path).resolve()
+        policy = read_yaml_subset(policy_path) if policy_path.is_file() else {}
+        candidates.append(
+            {
+                "policy_id": policy.get("policy_id") or ref.get("policy_id"),
+                "title": policy.get("title") or ref.get("title"),
+                "status": policy.get("status") or ref.get("status"),
+                "path": str(policy_path),
+                "source_refs_summary": source_refs_summary(policy),
+            }
+        )
+    return candidates, warnings
+
+
+def resolve_distribution_source_policy(
+    *,
+    project_root: Path,
+    policy_ref: str | None = None,
+    source_policy_path: Path | None = None,
+    policy_query: str | None = None,
+    max_candidates: int = 5,
+) -> dict[str, Any]:
+    resolved_root = project_root.expanduser().resolve()
+    warnings: list[str] = []
+    refusals: list[str] = []
+    if source_policy_path is not None:
+        resolved_source = source_policy_path.expanduser().resolve()
+        return {
+            "schema": POLICY_DISTRIBUTION_SOURCE_RESOLUTION_SCHEMA,
+            "schema_version": POLICY_DISTRIBUTION_SOURCE_RESOLUTION_SCHEMA,
+            "status": "resolved" if resolved_source.is_file() else "refused",
+            "resolution_basis": "explicit_source_policy_path",
+            "source_policy_path": str(resolved_source),
+            "policy_ref": policy_ref,
+            "policy_query": policy_query,
+            "candidates": [],
+            "refusal_reasons": []
+            if resolved_source.is_file()
+            else [f"source policy does not exist: {resolved_source}"],
+            "warnings": warnings,
+            "non_effects": [
+                "does not write files",
+                "does not activate policy distribution",
+            ],
+        }
+
+    if policy_ref:
+        resolved_source = policy_ref_to_approved_path(resolved_root, policy_ref).resolve()
+        return {
+            "schema": POLICY_DISTRIBUTION_SOURCE_RESOLUTION_SCHEMA,
+            "schema_version": POLICY_DISTRIBUTION_SOURCE_RESOLUTION_SCHEMA,
+            "status": "resolved" if resolved_source.is_file() else "refused",
+            "resolution_basis": "explicit_policy_ref",
+            "source_policy_path": str(resolved_source),
+            "policy_ref": policy_ref,
+            "policy_query": policy_query,
+            "candidates": [],
+            "refusal_reasons": []
+            if resolved_source.is_file()
+            else [f"policy ref did not resolve to an approved policy: {policy_ref}"],
+            "warnings": warnings,
+            "non_effects": [
+                "does not write files",
+                "does not activate policy distribution",
+            ],
+        }
+
+    candidates, store_warnings = active_distribution_policy_candidates(resolved_root)
+    warnings.extend(store_warnings)
+    if not policy_query:
+        return {
+            "schema": POLICY_DISTRIBUTION_SOURCE_RESOLUTION_SCHEMA,
+            "schema_version": POLICY_DISTRIBUTION_SOURCE_RESOLUTION_SCHEMA,
+            "status": "needs_policy_selection",
+            "resolution_basis": "no_policy_query_supplied",
+            "source_policy_path": None,
+            "policy_ref": None,
+            "policy_query": policy_query,
+            "candidates": candidates[:max_candidates],
+            "refusal_reasons": ["policy_ref_or_policy_query_required"],
+            "warnings": warnings,
+            "non_effects": [
+                "does not write files",
+                "does not activate policy distribution",
+            ],
+        }
+
+    scored: list[tuple[int, dict[str, Any]]] = []
+    for candidate in candidates:
+        path = Path(str(candidate.get("path") or ""))
+        policy = read_yaml_subset(path) if path.is_file() else {}
+        score = _policy_query_score(policy_query, path, policy)
+        if score > 0:
+            scored.append((score, {**candidate, "match_score": score}))
+    scored.sort(key=lambda item: item[0], reverse=True)
+    ranked = [item for _, item in scored[:max_candidates]]
+    if not ranked:
+        refusals.append("policy_query_did_not_match_active_policy")
+        return {
+            "schema": POLICY_DISTRIBUTION_SOURCE_RESOLUTION_SCHEMA,
+            "schema_version": POLICY_DISTRIBUTION_SOURCE_RESOLUTION_SCHEMA,
+            "status": "needs_policy_selection",
+            "resolution_basis": "policy_query_no_match",
+            "source_policy_path": None,
+            "policy_ref": None,
+            "policy_query": policy_query,
+            "candidates": candidates[:max_candidates],
+            "refusal_reasons": refusals,
+            "warnings": warnings,
+            "non_effects": [
+                "does not write files",
+                "does not activate policy distribution",
+            ],
+        }
+
+    top_score = int(ranked[0].get("match_score") or 0)
+    tied = [item for item in ranked if int(item.get("match_score") or 0) == top_score]
+    if len(tied) > 1:
+        return {
+            "schema": POLICY_DISTRIBUTION_SOURCE_RESOLUTION_SCHEMA,
+            "schema_version": POLICY_DISTRIBUTION_SOURCE_RESOLUTION_SCHEMA,
+            "status": "needs_policy_selection",
+            "resolution_basis": "policy_query_ambiguous",
+            "source_policy_path": None,
+            "policy_ref": None,
+            "policy_query": policy_query,
+            "candidates": ranked,
+            "refusal_reasons": ["policy_query_matched_multiple_policies"],
+            "warnings": warnings,
+            "non_effects": [
+                "does not write files",
+                "does not activate policy distribution",
+            ],
+        }
+
+    return {
+        "schema": POLICY_DISTRIBUTION_SOURCE_RESOLUTION_SCHEMA,
+        "schema_version": POLICY_DISTRIBUTION_SOURCE_RESOLUTION_SCHEMA,
+        "status": "resolved",
+        "resolution_basis": "policy_query_unique_match",
+        "source_policy_path": ranked[0].get("path"),
+        "policy_ref": ranked[0].get("policy_id"),
+        "policy_query": policy_query,
+        "candidates": ranked,
+        "refusal_reasons": [],
+        "warnings": warnings,
+        "non_effects": [
+            "does not write files",
+            "does not activate policy distribution",
+        ],
+    }
+
+
+def distribution_path_for_decision(
+    *,
+    decision: str,
+    target_template_ref: str | None,
+    starter_pack_id: str,
+) -> dict[str, Any]:
+    if decision == "dogfood_only":
+        return {
+            "category": "dogfood_only",
+            "template_export_required": False,
+            "starter_pack_manifest_change_required": False,
+            "user_project_activation_allowed": False,
+            "path": [
+                "record distribution review as dogfood-only",
+                "keep policy active only in the source project if still useful",
+            ],
+        }
+    if decision == "official_starter":
+        return {
+            "category": "official_starter",
+            "template_export_required": True,
+            "starter_pack_manifest_change_required": True,
+            "target_template_ref": target_template_ref,
+            "starter_pack_id": starter_pack_id,
+            "user_project_activation_allowed": "guarded_starter_init_only",
+            "path": [
+                "run policy template extraction review",
+                "export a package template only after explicit maintainer approval",
+                "review starter-pack manifest addition separately",
+                "activate in a user project only through guarded starter initialization",
+            ],
+        }
+    if decision == "optional_template":
+        return {
+            "category": "optional_template",
+            "template_export_required": True,
+            "starter_pack_manifest_change_required": False,
+            "target_template_ref": target_template_ref,
+            "user_project_activation_allowed": "guarded_template_activation_only",
+            "path": [
+                "run policy template extraction review",
+                "export a package template only after explicit maintainer approval",
+                "offer import through no-write template preview",
+                "activate in a user project only through guarded template activation",
+            ],
+        }
+    return {
+        "category": "deferred",
+        "template_export_required": False,
+        "starter_pack_manifest_change_required": False,
+        "user_project_activation_allowed": False,
+        "path": [
+            "record deferred distribution review",
+            "revisit after clearer product fit or project evidence exists",
+        ],
+    }
+
+
+def build_distribution_review(
+    *,
+    source_policy_path: Path,
+    decision: str,
+    target_dir: Path | None = None,
+    namespace: str = DEFAULT_NAMESPACE,
+    source_project_ref: str | None = None,
+    starter_pack_id: str = "engineering_governance",
+    rationale: str | None = None,
+) -> dict[str, Any]:
+    resolved_source = source_policy_path.expanduser().resolve()
+    warnings: list[str] = []
+    refusals: list[str] = []
+    if decision not in POLICY_DISTRIBUTION_DECISIONS:
+        refusals.append(f"unsupported_distribution_decision:{decision}")
+    if not resolved_source.is_file():
+        policy: dict[str, Any] = {}
+        refusals.append(f"source policy does not exist: {resolved_source}")
+    else:
+        policy = read_yaml_subset(resolved_source)
+
+    schema = policy.get("schema_version") or policy.get("schema")
+    if policy and schema != policy_store.POLICY_SCHEMA:
+        refusals.append(f"unsupported source policy schema: {schema}")
+    policy_id = policy.get("policy_id")
+    if policy and (not isinstance(policy_id, str) or not policy_id):
+        refusals.append("source_policy_id_missing")
+
+    extract_plan: dict[str, Any] | None = None
+    target_template_ref: str | None = None
+    portability: dict[str, Any] = {}
+    required_binding_count = 0
+    if policy and decision in {"official_starter", "optional_template"}:
+        extract_plan = build_extract_plan(
+            source_policy_path=resolved_source,
+            target_dir=target_dir,
+            namespace=namespace,
+            source_project_ref=source_project_ref,
+        )
+        warnings.extend(extract_plan.get("warnings") or [])
+        target_template_ref = extract_plan.get("target_template_ref")
+        proposed_template = extract_plan.get("proposed_template")
+        if isinstance(proposed_template, dict):
+            raw_portability = proposed_template.get("portability")
+            portability = raw_portability if isinstance(raw_portability, dict) else {}
+            required_bindings = proposed_template.get("required_bindings")
+            required_binding_count = len(required_bindings) if isinstance(required_bindings, list) else 0
+        if extract_plan.get("status") == "refused":
+            refusals.append("policy_template_extraction_not_reviewable")
+
+    status = "refused" if refusals else "review"
+    distribution_path = distribution_path_for_decision(
+        decision=decision,
+        target_template_ref=target_template_ref,
+        starter_pack_id=starter_pack_id,
+    )
+    return {
+        "schema": POLICY_DISTRIBUTION_REVIEW_SCHEMA,
+        "schema_version": POLICY_DISTRIBUTION_REVIEW_SCHEMA,
+        "report_only": True,
+        "status": status,
+        "source_policy_path": str(resolved_source),
+        "source_policy_sha256": file_sha256(resolved_source) if resolved_source.is_file() else None,
+        "source_category": source_category_for_policy(resolved_source, policy) if policy else "unknown",
+        "source_project_ref": source_project_ref,
+        "policy_id": policy_id,
+        "title": policy.get("title"),
+        "policy_status": policy.get("status"),
+        "source_refs_summary": source_refs_summary(policy),
+        "distribution_decision": decision,
+        "review_rationale": rationale,
+        "distribution_path": distribution_path,
+        "template_portability": {
+            "status": portability.get("status"),
+            "detected_project_ref_count": len(portability.get("detected_project_refs") or []),
+            "warning_count": len(portability.get("warnings") or []),
+            "required_binding_count": required_binding_count,
+        }
+        if decision in {"official_starter", "optional_template"}
+        else None,
+        "review_obligations": [
+            "decide whether the policy is JIKUO dogfood-only or reusable",
+            "preserve provenance and privacy boundaries before publication",
+            "do not copy project-local .jikuo/policies/approved files into starter packs",
+            "do not activate anything in a user project from this review",
+        ],
+        "approval_required_for_publication": decision in {"official_starter", "optional_template"},
+        "write_allowed_by_command": False,
+        "writes_performed": False,
+        "refusal_reasons": sorted(set(refusals)),
+        "warnings": warnings,
+        "source_refs": POLICY_DISTRIBUTION_CONTRACT_REFS,
+        "non_effects": [
+            "does not export a package template",
+            "does not update starter pack manifests",
+            "does not create or activate project policies",
+            "does not supersede, deprecate, or rewrite the source policy",
+        ],
+        "next_actions": distribution_path["path"]
+        if status == "review"
+        else ["resolve refusal reasons before retrying distribution review"],
     }
 
 
@@ -1277,6 +1689,20 @@ def build_parser() -> argparse.ArgumentParser:
     export_template.add_argument("--approval-phrase", default=None)
     export_template.add_argument("--format", choices=("text", "json"), default="text")
 
+    review_distribution = subparsers.add_parser("review-distribution")
+    review_distribution.add_argument("--source-policy", type=Path, required=True)
+    review_distribution.add_argument(
+        "--decision",
+        choices=sorted(POLICY_DISTRIBUTION_DECISIONS),
+        required=True,
+    )
+    review_distribution.add_argument("--target-dir", type=Path, default=None)
+    review_distribution.add_argument("--namespace", default=DEFAULT_NAMESPACE)
+    review_distribution.add_argument("--source-project-ref", default=None)
+    review_distribution.add_argument("--starter-pack-id", default="engineering_governance")
+    review_distribution.add_argument("--rationale", default=None)
+    review_distribution.add_argument("--format", choices=("text", "json"), default="text")
+
     plan_import = subparsers.add_parser("plan-import")
     plan_import.add_argument("--template", type=Path, required=True)
     plan_import.add_argument("--project-root", type=Path, default=None)
@@ -1305,6 +1731,13 @@ def format_text(report: dict[str, Any]) -> str:
         lines.append(f"Target template: {report['target_template_path']}")
     if report.get("template_ref"):
         lines.append(f"Template ref: {report['template_ref']}")
+    if report.get("distribution_decision"):
+        lines.append(f"Distribution decision: {report['distribution_decision']}")
+    if report.get("distribution_path"):
+        path = report["distribution_path"]
+        lines.append(f"Distribution category: {path.get('category')}")
+        if path.get("target_template_ref"):
+            lines.append(f"Target template ref: {path.get('target_template_ref')}")
     if report.get("binding_status"):
         lines.append("Bindings:")
         for binding in report["binding_status"]:
@@ -1343,6 +1776,17 @@ def main(argv: list[str] | None = None) -> int:
             confirmed=args.confirm_export_template,
             approval_phrase=args.approval_phrase,
         )
+    elif args.command == "review-distribution":
+        report = build_distribution_review(
+            source_policy_path=args.source_policy,
+            decision=args.decision,
+            target_dir=args.target_dir,
+            namespace=args.namespace,
+            source_project_ref=args.source_project_ref,
+            starter_pack_id=args.starter_pack_id,
+            rationale=args.rationale,
+        )
+        exit_code = 0 if report["status"] != "refused" else 2
     elif args.command == "plan-import":
         report = build_import_plan(
             template_path=args.template,

@@ -679,6 +679,14 @@ class MCPStageAAdapterTests(unittest.TestCase):
                     },
                 ),
                 (
+                    "jikuo.propose_policy_distribution_review",
+                    {
+                        "project_root": str(project_root),
+                        "policy_query": "three phase audit policy",
+                        "distribution_decision": "dogfood_only",
+                    },
+                ),
+                (
                     "jikuo.propose_policy_template_import_plan",
                     {
                         "project_root": str(project_root),
@@ -707,6 +715,15 @@ class MCPStageAAdapterTests(unittest.TestCase):
                                     "policy_scopes": ["discussion", "editing"],
                                 }
                             ],
+                        )
+                    if tool_name == "jikuo.propose_policy_distribution_review":
+                        self.assertEqual(
+                            response["policy_distribution_review"]["policy_id"],
+                            "POLICY-three-phase-audit",
+                        )
+                        self.assertEqual(
+                            response["policy_distribution_source_resolution"]["resolution_basis"],
+                            "policy_query_unique_match",
                         )
 
             self.assertFalse((project_root / ".jikuo" / "task_sessions").exists())

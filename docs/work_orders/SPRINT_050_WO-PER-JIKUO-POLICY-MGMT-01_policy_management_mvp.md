@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-POLICY-MGMT-01: Policy Management MVP
 
-> **Status**: Two held candidates activated as `active_report_only`; official distribution design remains next.
+> **Status**: Two held candidates activated as `active_report_only`; Policy Management MVP closeout design and no-write distribution review with GUI/MCP natural-language source resolution implemented.
 > **Date**: 2026-05-18
 > **JIKUO layer**: policy governance / policy distribution.
 > **Business meaning**: JIKUO's first usable version needs the current user-authored candidate policies to enter active scope through the existing guarded flow, and it needs a clear official distribution boundary so useful policies can reach user projects without copying JIKUO dogfood policies or overwriting user-owned local policies.
@@ -142,7 +142,10 @@ The first plan proposes `conversation_turn` plus `policy_scopes:
 `applies_to_work_profile`, so they do not depend on `task_start` as a policy
 applicability cause.
 
-Activation completed on 2026-05-22 with approval phrase: "好的，请更新两个候选policy至激活状态".
+Activation completed on 2026-05-22 after explicit user approval in the
+development session. The approval phrase is preserved in the guarded decision
+records; this work order records only the fact of approval and the artifact
+refs.
 
 | Candidate | Proposal snapshot | Decision record | Active policy |
 |---|---|---|---|
@@ -157,6 +160,124 @@ Evaluator smoke after activation:
   `POLICY-jikuo-data-model-drift-alarm`;
 - `conversation_turn` + both scopes triggers both policies.
 
+### 4.2 Policy Source Categories
+
+Policy management must not treat all active policies as distributable product
+assets. The MVP categories are:
+
+| Category | Meaning | MVP handling |
+|---|---|---|
+| `project_local` | Active policy owned by the current project. | Keep in `.jikuo/policies/approved`; never overwrite from package updates. |
+| `jikuo_dogfood` | Policy used to govern JIKUO's own development. | Not distributable until explicitly reviewed. |
+| `official_starter` | Broad policy appropriate for new projects. | Offer through starter-pack preview and guarded activation. |
+| `optional_template` | Scenario-specific reusable policy. | Offer through template import preview and guarded activation. |
+| `deprecated` / `superseded` | Audit-retained historical record. | Keep for traceability; do not recommend for activation. |
+| `insight` / `candidate` | Report-only idea before approval. | Needs no-write plan and guarded approval before active use. |
+
+### 4.3 Official Distribution Flow
+
+The MVP distribution flow is intentionally small:
+
+```text
+active or candidate policy
+-> distribution review
+-> dogfood-only / official_starter / optional_template / deferred
+-> user-project no-write preview
+-> guarded activation
+```
+
+Distribution review must record:
+
+- source policy, proposal, decision, and manifest refs;
+- target category and why it is reusable or dogfood-only;
+- expected target projects or scenarios;
+- conflict posture when a user project already has a local policy with the same
+  purpose;
+- evidence type that proves the policy works after activation.
+
+No official distribution path may directly copy JIKUO's current
+`.jikuo/policies/approved` files into user projects. Reusable policies must be
+converted into package templates or starter-pack entries first, then resolved
+through no-write preview in the target project.
+
+The current no-write implementation is:
+
+```powershell
+python -B -m jikuo.policy_templates review-distribution `
+  --source-policy ".jikuo/policies/approved/<POLICY-ID>.yaml" `
+  --decision dogfood_only|official_starter|optional_template|deferred `
+  --format json
+```
+
+This command only produces a `jikuo.policy_distribution_review.v0` report. It
+does not export a package template, update a starter-pack manifest, activate a
+policy in a user project, or rewrite the source policy. `official_starter` and
+`optional_template` outcomes route to the existing template extraction /
+template activation or starter-pack initialization paths; they are not
+publication by themselves.
+
+GUI / MCP users normally will not know a policy file path or `POLICY-*` id.
+The user-facing path is therefore:
+
+```text
+user natural-language request
+-> host AI interprets the requested policy purpose
+-> JIKUO receives policy_query or an explicit policy_ref/source_policy
+-> JIKUO resolves a single active policy or returns candidates
+-> no-write distribution review card
+-> guarded export / starter publication / activation follow-up
+```
+
+The MCP / agent-flow proposal surface is:
+
+```powershell
+python -B -m jikuo.agent_flow propose `
+  --event policy_distribution_review `
+  --distribution-policy-query "natural-language policy purpose" `
+  --distribution-decision dogfood_only|official_starter|optional_template|deferred `
+  --format json
+```
+
+`jikuo.propose_policy_distribution_review` exposes the same no-write surface to
+MCP clients. It accepts `policy_ref`, `source_policy`, or natural-language
+`policy_query`. The host AI may translate the user's natural-language request
+into a compact `policy_query`, but the current JIKUO resolver is deterministic
+candidate matching, not an LLM semantic classifier. If the query does not match
+exactly one active policy, JIKUO returns a candidate list and refusal reasons
+instead of silently binding the review to the wrong policy.
+
+### 4.4 Active-Policy Maintenance Outcomes
+
+Once a policy is active, maintenance uses guarded evolution, not direct edits.
+
+| Situation | Required path |
+|---|---|
+| Too broad | Narrow scope or supersede through guarded evolution. |
+| Duplicate or overlapping | Merge conceptually, then supersede / deprecate one record. |
+| JIKUO-only | Mark dogfood-only in distribution review. |
+| Reusable | Promote to official starter or optional template after review. |
+| Obsolete | Deprecate through guarded evolution. |
+
+### 4.5 MVP Closeout Acceptance
+
+Policy Management MVP closeout is accepted when:
+
+- candidate-to-active path is demonstrated through the two activated policies;
+- policy source categories are documented in this work order and the governance
+  authority;
+- official distribution flow is documented as opt-in preview plus guarded
+  activation;
+- `python -B -m jikuo.policy_templates review-distribution ...` produces a
+  no-write review report for dogfood-only, official-starter, optional-template,
+  or deferred outcomes;
+- `python -B -m jikuo.agent_flow propose --event policy_distribution_review ...`
+  and MCP `jikuo.propose_policy_distribution_review` expose the same no-write
+  review to GUI clients, including natural-language `policy_query` resolution
+  with ambiguity refusal;
+- active-policy maintenance outcomes are documented;
+- registry capability metadata points future implementation to this closeout
+  design.
+
 ---
 
 ## 5. Stop Boundaries
@@ -165,6 +286,9 @@ Evaluator smoke after activation:
   future narrowing, merging, or deprecation must use guarded policy evolution.
 - Do not add duplicate replacement policies for these candidates without first
   reviewing whether guarded evolution is the correct path.
+- Do not publish JIKUO dogfood policies as official starter policies without
+  distribution review.
+- Do not treat starter-pack or template availability as user-project activation.
 - Do not build a new heavy candidate-disposition registry before `LIFECYCLE-01`
   makes lifecycle facts and node completion more explicit.
 - Do not copy `.jikuo/policies/approved` into official starter packs.
@@ -179,10 +303,12 @@ Evaluator smoke after activation:
 
 ---
 
-## 6. Acceptance For This Planning Slice
+## 6. Acceptance For MVP Closeout Documentation
 
 - `docs/governance/jikuo_policy_governance_authority.md` names the MVP boundary
   and records the candidate activation result.
+- The same governance authority defines policy source categories, distribution
+  review flow, and active-policy maintenance outcomes.
 - `docs/governance/jikuo_execution_mounts.md` names `LIFECYCLE-01` as the
   current priority and keeps this work order lightweight.
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-DOCREG-01_layered_document_registry.md`
@@ -190,5 +316,9 @@ Evaluator smoke after activation:
   active report-only policies.
 - `docs/registry/work_orders.yaml`, `docs/registry/capabilities.yaml`, and
   `docs/registry/mount_sets.yaml` expose this task to future sessions.
+- `CAP-POLICY-DISTRIBUTION-MVP-01` and
+  `CAP-POLICY-DISTRIBUTION-REVIEW-01` point future implementation to this
+  design and the no-write distribution review surfaces instead of treating
+  distribution as direct copy.
 - `docs/governance/jikuo_productization_task_map.md` remains untouched except
   for explicitly approved projection maintenance.

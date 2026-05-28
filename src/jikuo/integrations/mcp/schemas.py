@@ -26,6 +26,17 @@ CARD_PRIORITY_ORDER = (
     "task_start_processing",
     "task_session_completion_acceptance",
     "task_session_start_preview",
+    "task_session_binding",
+    "task_session_lifecycle_unavailable",
+    "task_continue_refusal",
+    "task_continue_status",
+    "task_session_evidence_append",
+    "policy_evidence_check",
+    "policy_write_plan",
+    "policy_evolution_plan",
+    "policy_distribution_review",
+    "policy_template_import_plan",
+    "starter_policy_pack_init_plan",
 )
 
 STAGE_A_TOOL_NAMES = (
@@ -36,6 +47,7 @@ STAGE_A_TOOL_NAMES = (
     "jikuo.propose_task_start",
     "jikuo.propose_policy_write_plan",
     "jikuo.propose_policy_evolution_plan",
+    "jikuo.propose_policy_distribution_review",
     "jikuo.propose_policy_template_import_plan",
 )
 
@@ -221,6 +233,30 @@ TOOL_DEFINITIONS: dict[str, dict[str, Any]] = {
             "template": RETURN,
         },
         output_fields={"work_profile": RETURN},
+        card_returning=True,
+    ),
+    "jikuo.propose_policy_distribution_review": _tool(
+        name="jikuo.propose_policy_distribution_review",
+        description=(
+            "Build a no-write policy distribution review from a policy id, source policy path, "
+            "or natural-language policy query. This does not publish templates, update starter "
+            "packs, or activate user-project policies."
+        ),
+        input_fields={
+            "project_root": LOCAL_ONLY,
+            "policy_ref": RETURN,
+            "source_policy": LOCAL_ONLY,
+            "policy_query": REDACT_OPTIONAL,
+            "distribution_decision": RETURN,
+            "source_project_ref": REDACT_OPTIONAL,
+            "starter_pack_id": RETURN,
+            "rationale": REDACT_OPTIONAL,
+        },
+        output_fields={
+            "work_profile": RETURN,
+            "policy_distribution_review": RETURN,
+            "policy_distribution_source_resolution": RETURN,
+        },
         card_returning=True,
     ),
     "jikuo.get_configuration_status": _tool(

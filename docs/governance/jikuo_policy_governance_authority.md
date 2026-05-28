@@ -562,17 +562,84 @@ JIKUO development repository.
 
 Policy sources should remain separated:
 
-| Source | Intended use |
-|---|---|
-| JIKUO self-bootstrap policy store | Governs JIKUO's own development only. |
-| Official starter packs / catalog | Reviewed reusable policy templates that users may opt into. |
-| Project-local `.jikuo/policies/approved` | User-owned active project policy store. |
-| Imported templates | Resolved into project-local policy proposals before activation. |
-| Insights | Ideas or candidates, not active policies. |
+| Category | Intended use | Distribution posture |
+|---|---|---|
+| `project_local` | User-owned active project policy store in `.jikuo/policies/approved`. | Never overwritten by updates; changes require local guarded writes or guarded evolution. |
+| `jikuo_dogfood` | Policies that govern JIKUO's own development and self-bootstrap work. | Not shipped directly to user projects. Must be reviewed before becoming reusable. |
+| `official_starter` | Small, broadly useful policies suitable for first-use starter packs. | Offered as opt-in preview, then guarded activation in the target project. |
+| `optional_template` | Scenario-specific reusable policy templates. | Imported through no-write preview and guarded activation; not default. |
+| `deprecated` / `superseded` | Historical policy records retained for audit. | Not recommended for new activation. |
+| `insight` / `candidate` | Ideas, repeated needs, or candidate policies before approval. | Report-only; cannot become active without no-write plan and guarded approval. |
 
 Official updates may offer new starter packs or template revisions, but must not
 overwrite user-approved local policies. Catalog sync must remain opt-in and
 reviewable.
+
+MVP distribution flow:
+
+```text
+active or candidate policy
+-> distribution review
+-> dogfood-only / official_starter / optional_template / deferred
+-> user-project no-write preview
+-> guarded activation
+```
+
+Distribution review must answer:
+
+- whether the policy is JIKUO-specific dogfood or reusable user value;
+- which projects or scenarios the policy is appropriate for;
+- what source policy / proposal / decision records prove provenance;
+- whether activation would conflict with existing user-owned local policies;
+- which evidence type proves the policy is working after activation.
+
+Distribution review is implemented first as a no-write CLI report:
+
+```powershell
+python -B -m jikuo.policy_templates review-distribution `
+  --source-policy ".jikuo/policies/approved/<POLICY-ID>.yaml" `
+  --decision dogfood_only|official_starter|optional_template|deferred `
+  --format json
+```
+
+The report schema is `jikuo.policy_distribution_review.v0`. The command may
+recommend template extraction, optional template activation, or starter-pack
+review, but it cannot publish templates, mutate starter manifests, activate user
+project policies, or rewrite the source policy.
+
+GUI and MCP users should not be expected to provide internal policy labels or
+file paths. The user-facing distribution path must support natural-language
+requests:
+
+```text
+user natural-language request
+-> host AI interprets requested policy purpose
+-> JIKUO receives policy_query or an explicit policy_ref/source_policy
+-> deterministic active-policy source resolution
+-> distribution review card, or candidate-list refusal when ambiguous
+```
+
+The current MCP / agent-flow surface is
+`jikuo.propose_policy_distribution_review` and
+`agent_flow propose --event policy_distribution_review`. These surfaces accept
+`policy_ref`, `source_policy`, or natural-language `policy_query`, then return a
+no-write `jikuo.policy_distribution_review.v0` card when exactly one active
+policy resolves. If no unique match exists, they return
+`jikuo.policy_distribution_source_resolution.v0` with candidates and refusal
+reasons. This resolver is auditable deterministic matching over active policy
+metadata and content; it is not the same as AI semantic intent parsing. A host
+AI may help turn the user's natural language into a compact `policy_query`, but
+JIKUO must refuse ambiguity rather than guessing the source policy.
+
+Active-policy maintenance outcomes:
+
+| Situation | Required path |
+|---|---|
+| Policy is too broad | Guarded evolution with scope narrowing or supersession. |
+| Policy is duplicated | Merge conceptually, then deprecate or supersede through guarded evolution. |
+| Policy is JIKUO-only | Mark dogfood-only in distribution review; do not publish as starter. |
+| Policy is reusable | Convert to official starter or optional template only after review. |
+| Policy is no longer useful | Deprecate through guarded evolution while preserving audit records. |
 
 ---
 
@@ -616,6 +683,17 @@ Current JIKUO has:
   conditions preserved as additional filters;
 - runtime cards that show work-profile inputs and scope-match reports for
   triggered-policy decisions;
+- two formerly held `DOCREG-01` policy candidates activated as
+  `active_report_only` through no-write plans and guarded policy writer output;
+- lightweight official distribution design covering source categories,
+  distribution review, and active-policy maintenance outcomes;
+- no-write `policy_templates review-distribution` reports that classify a
+  policy as dogfood-only, official starter, optional template, or deferred
+  without publishing or activating it;
+- no-write `policy_distribution_review` agent-flow / MCP proposal cards that
+  let GUI clients request the same review by `policy_ref`, `source_policy`, or
+  natural-language `policy_query`, with ambiguity refusal instead of hidden
+  guessing;
 - MCP surfaces for route, status, proposals, and guarded writes.
 
 Current JIKUO does not yet have:
@@ -623,10 +701,8 @@ Current JIKUO does not yet have:
 - lifecycle-node completion orchestration that ensures a pulled-up JIKUO turn
   reaches completion review in addition to task start;
 - structured `agent_hint` input on every router path;
-- no-write plans and guarded applies for the two held `DOCREG-01` policy
-  candidates;
-- an official distribution design that reviews reusable policies before package
-  template / starter-pack publication and guarded project-local activation;
+- guarded starter/template publication tooling that consumes distribution review
+  outcomes and updates package templates or starter manifests;
 - full hint/signal/fallback routing detail in runtime cards and structured
   execution events;
 - strict host adapters that guarantee every user turn supplies the hint and calls
@@ -669,10 +745,14 @@ Recommended future slices:
    nodes that actually produced cards stay visible from the latest card. This is
    about lifecycle observability; it is not a lifecycle runner and not a promise
    that GUI clients can force JIKUO invocation before hooks are proven.
-6. `POLICY-MGMT-01`: keep the policy-management MVP lightweight: activate the
-   two held user-authored candidates through existing no-write plan / guarded
-   apply paths, and design official distribution boundaries. Do not build a
-   heavy candidate-disposition registry before lifecycle facts are explicit.
+6. `POLICY-MGMT-01`: keep the policy-management MVP lightweight. Current status:
+   two user-authored candidates are active report-only policies; the closeout
+   design now defines policy source categories, official distribution flow, and
+   active-policy maintenance outcomes. No-write distribution review is available
+   through CLI, agent-flow proposal, and MCP, including natural-language
+   `policy_query` source resolution with ambiguity refusal. Future implementation
+   should add guarded starter-template publication without building a heavy
+   candidate-disposition registry before lifecycle facts are explicit.
 7. `POLTRIG-04`: update MCP and host adapter surfaces to require or strongly
    encourage agent hints.
 8. `POLTRIG-05`: surface hint/signal/fallback basis in runtime cards and

@@ -334,7 +334,7 @@ Minimum observable artifacts for an end-to-end proof:
 
 The next slice is not more kernel work. It is client proof:
 
-- verify the current 18-tool MCP surface in the selected GUI clients
+- verify the current 19-tool MCP surface in the selected GUI clients
 - verify Codex `UserPromptSubmit` hook proof as the current first Codex
   host-boundary candidate
 - preserve proof artifacts for users

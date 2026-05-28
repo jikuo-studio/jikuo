@@ -267,6 +267,15 @@ def _proposal_response(
     )
     if isinstance(with_markdown.get("work_profile"), dict):
         response["work_profile"] = with_markdown["work_profile"]
+    for card in with_markdown.get("cards") or []:
+        if not isinstance(card, dict):
+            continue
+        for key in (
+            "policy_distribution_review",
+            "policy_distribution_source_resolution",
+        ):
+            if isinstance(card.get(key), dict):
+                response[key] = card[key]
     return response
 
 
@@ -980,6 +989,22 @@ def call_tool(
             replacement_evidence_type=str(
                 args.get("replacement_evidence_type") or "card_rendered"
             ),
+        )
+
+    if tool_name == "jikuo.propose_policy_distribution_review":
+        return _proposal_response(
+            tool_name=tool_name,
+            raw_event="policy_distribution_review",
+            arguments=args,
+            project_root=resolved_root,
+            transport=resolved_transport,
+            policy_ref=args.get("policy_ref"),
+            distribution_source_policy_path=_path_or_none(args.get("source_policy")),
+            distribution_policy_query=args.get("policy_query"),
+            distribution_decision=str(args.get("distribution_decision") or "deferred"),
+            distribution_source_project_ref=args.get("source_project_ref"),
+            starter_pack_id=str(args.get("starter_pack_id") or "engineering_governance"),
+            distribution_rationale=args.get("rationale"),
         )
 
     if tool_name == "jikuo.propose_policy_template_import_plan":

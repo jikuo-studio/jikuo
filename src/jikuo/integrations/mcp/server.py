@@ -241,6 +241,37 @@ def register_stage_a_tools(
         )
 
     @server.tool(
+        name="jikuo.propose_policy_distribution_review",
+        description=tool_description(
+            tool_definitions["jikuo.propose_policy_distribution_review"]
+        ),
+    )
+    def jikuo_propose_policy_distribution_review(
+        project_root: str | None = None,
+        policy_ref: str | None = None,
+        source_policy: str | None = None,
+        policy_query: str | None = None,
+        distribution_decision: str | None = None,
+        source_project_ref: str | None = None,
+        starter_pack_id: str | None = None,
+        rationale: str | None = None,
+    ) -> dict[str, Any]:
+        return _call(
+            "jikuo.propose_policy_distribution_review",
+            {
+                "project_root": project_root,
+                "policy_ref": policy_ref,
+                "source_policy": source_policy,
+                "policy_query": policy_query,
+                "distribution_decision": distribution_decision,
+                "source_project_ref": source_project_ref,
+                "starter_pack_id": starter_pack_id,
+                "rationale": rationale,
+            },
+            default_transport=default_transport,
+        )
+
+    @server.tool(
         name="jikuo.propose_policy_template_import_plan",
         description=tool_description(
             tool_definitions["jikuo.propose_policy_template_import_plan"]

@@ -1935,6 +1935,96 @@ class AgentFlowProposalTests(unittest.TestCase):
             atom_ids = {trace["atom_id"] for trace in report["atom_trace"]}
             self.assertIn("CAP-AGENT-FLOW-APPLY-STARTER-POLICY-PACK-01", atom_ids)
 
+    def test_policy_distribution_review_resolves_natural_language_query_without_write(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "distribution_project"
+            shutil.copytree(POLICY_ACTIVE_PROJECT, project_root)
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "propose",
+                    "--event",
+                    "policy_distribution_review",
+                    "--project-root",
+                    str(project_root),
+                    "--distribution-policy-query",
+                    "three phase audit policy",
+                    "--distribution-decision",
+                    "dogfood_only",
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            proposal = json.loads(completed.stdout)
+            cards = [
+                card
+                for card in proposal["cards"]
+                if card["card_kind"] == "policy_distribution_review"
+            ]
+            self.assertEqual(len(cards), 1)
+            card = cards[0]
+            review = card["policy_distribution_review"]
+            resolution = card["policy_distribution_source_resolution"]
+            self.assertEqual(resolution["resolution_basis"], "policy_query_unique_match")
+            self.assertEqual(review["distribution_decision"], "dogfood_only")
+            self.assertFalse(review["writes_performed"])
+            self.assertEqual(review["policy_id"], "POLICY-three-phase-audit")
+            self.assertFalse(
+                (project_root / "src" / "jikuo" / "policy_templates").exists()
+            )
+            atom_ids = {trace["atom_id"] for trace in proposal["atom_trace"]}
+            self.assertIn("CAP-POLICY-DISTRIBUTION-REVIEW-01", atom_ids)
+
+    def test_policy_distribution_review_returns_candidates_when_query_is_missing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "distribution_project"
+            shutil.copytree(POLICY_ACTIVE_PROJECT, project_root)
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "propose",
+                    "--event",
+                    "policy_distribution_review",
+                    "--project-root",
+                    str(project_root),
+                    "--distribution-decision",
+                    "deferred",
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            proposal = json.loads(completed.stdout)
+            cards = [
+                card
+                for card in proposal["cards"]
+                if card["card_kind"] == "policy_distribution_source_resolution"
+            ]
+            self.assertEqual(len(cards), 1)
+            resolution = cards[0]["policy_distribution_source_resolution"]
+            self.assertEqual(resolution["status"], "needs_policy_selection")
+            self.assertIn("policy_ref_or_policy_query_required", resolution["refusal_reasons"])
+            self.assertEqual(resolution["candidates"][0]["policy_id"], "POLICY-three-phase-audit")
+
     def test_policy_template_import_plan_proposes_visible_guarded_activation(self):
         with tempfile.TemporaryDirectory() as tmp:
             project_root = Path(tmp) / "template_project"

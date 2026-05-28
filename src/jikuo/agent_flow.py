@@ -75,6 +75,7 @@ CARD_PRIORITY_ORDER = [
     "policy_evidence_check",
     "policy_write_plan",
     "policy_evolution_plan",
+    "policy_distribution_review",
     "policy_template_import_plan",
     "starter_policy_pack_init_plan",
 ]
@@ -114,6 +115,7 @@ POLICY_DEAD_ZONE_NON_GOVERNANCE_EVENTS = {
     "configuration_review",
     "index_preview",
     "policy_evolution_plan",
+    "policy_distribution_review",
     "policy_feedback_record",
     "policy_template_import_plan",
     "policy_write_plan",
@@ -161,6 +163,9 @@ EVENT_ALIASES = {
     "policy_evolution_plan": "policy_evolution_plan",
     "policy_refinement_plan": "policy_evolution_plan",
     "refine_policy": "policy_evolution_plan",
+    "policy_distribution_review": "policy_distribution_review",
+    "distribution_review": "policy_distribution_review",
+    "policy_distribution": "policy_distribution_review",
     "starter_policy_pack_init": "starter_policy_pack_init",
     "starter_init": "starter_policy_pack_init",
     "initialize_jikuo": "starter_policy_pack_init",
@@ -191,6 +196,7 @@ NO_WRITE_ATOMS = {
     "CAP-POLICY-STORE-STATUS-01",
     "CAP-POLICY-TRIGGER-EVALUATE-01",
     "CAP-POLICY-CONDITION-EVALUATOR-01",
+    "CAP-POLICY-DISTRIBUTION-REVIEW-01",
     "CAP-POLICY-EVIDENCE-CHECK-01",
     "CAP-POLICY-EVIDENCE-PERSIST-PROPOSE-01",
     "CAP-POLICY-FEEDBACK-PERSIST-PROPOSE-01",
@@ -3090,6 +3096,157 @@ def build_policy_template_import_plan_cards(
     return [card], traces, plan_refusals
 
 
+def build_policy_distribution_review_cards(
+    *,
+    project_root: Path | None,
+    policy_ref: str | None,
+    source_policy_path: Path | None,
+    policy_query: str | None,
+    decision: str,
+    source_project_ref: str | None,
+    starter_pack_id: str,
+    rationale: str | None,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]:
+    resolved_root = (project_root or Path.cwd()).expanduser().resolve()
+    resolution = policy_templates.resolve_distribution_source_policy(
+        project_root=resolved_root,
+        policy_ref=policy_ref,
+        source_policy_path=source_policy_path,
+        policy_query=policy_query,
+    )
+    if resolution.get("status") != "resolved":
+        candidates = resolution.get("candidates") or []
+        outputs = [
+            f"resolution_status: {resolution.get('status')}",
+            f"resolution_basis: {resolution.get('resolution_basis')}",
+            f"candidate_count: {len(candidates)}",
+        ]
+        outputs.extend(
+            f"candidate: {item.get('policy_id')} ({item.get('title')}) score={item.get('match_score', 'n/a')}"
+            for item in candidates
+        )
+        card = generic_card(
+            card_kind="policy_distribution_source_resolution",
+            status="review",
+            title="Policy distribution source needs selection",
+            summary=(
+                "Natural-language policy selection did not resolve to exactly one active policy; "
+                "choose a candidate before distribution review."
+            ),
+            shown_inputs=[
+                f"project_root: {resolved_root}",
+                f"policy_ref: {policy_ref or 'not_supplied'}",
+                f"policy_query: {policy_query or 'not_supplied'}",
+            ],
+            shown_outputs=outputs,
+            refusal_reasons=list(resolution.get("refusal_reasons") or []),
+            next_actions=[
+                "ask the host AI to select one candidate policy_id",
+                "retry policy_distribution_review with policy_ref or a more specific policy_query",
+            ],
+        )
+        card["policy_distribution_source_resolution"] = resolution
+        card["write_effect"] = {
+            "target": "none",
+            "effect": "renders candidate policy choices only; no durable write is performed",
+            "non_effects": resolution.get("non_effects") or [],
+        }
+        trace = atom_trace(
+            loop_step_id="DPL-05",
+            atom_id="CAP-POLICY-DISTRIBUTION-REVIEW-01",
+            mode="no-write",
+            status=str(resolution.get("status") or "review"),
+            summary="resolved natural-language policy distribution request to candidate policies without writing files",
+        )
+        return [card], [trace], list(resolution.get("refusal_reasons") or [])
+
+    source_path = Path(str(resolution["source_policy_path"]))
+    review = policy_templates.build_distribution_review(
+        source_policy_path=source_path,
+        decision=decision,
+        source_project_ref=source_project_ref,
+        starter_pack_id=starter_pack_id,
+        rationale=rationale,
+    )
+    distribution_path = review.get("distribution_path") or {}
+    portability = review.get("template_portability") or {}
+    outputs = [
+        f"resolution_basis: {resolution.get('resolution_basis')}",
+        f"policy_id: {review.get('policy_id')}",
+        f"title: {review.get('title')}",
+        f"source_category: {review.get('source_category')}",
+        f"distribution_decision: {review.get('distribution_decision')}",
+        f"approval_required_for_publication: {review.get('approval_required_for_publication')}",
+    ]
+    if distribution_path.get("target_template_ref"):
+        outputs.append(f"target_template_ref: {distribution_path.get('target_template_ref')}")
+    if portability:
+        outputs.append(f"template_portability_status: {portability.get('status')}")
+        outputs.append(
+            f"template_required_binding_count: {portability.get('required_binding_count')}"
+        )
+
+    card = generic_card(
+        card_kind="policy_distribution_review",
+        status=review["status"],
+        title="Policy distribution review",
+        summary=(
+            "A policy distribution decision has been reviewed without publishing or activating the policy."
+            if review["status"] != "refused"
+            else "Policy distribution review could not be prepared safely."
+        ),
+        shown_inputs=[
+            f"project_root: {resolved_root}",
+            f"policy_ref: {policy_ref or resolution.get('policy_ref') or 'not_supplied'}",
+            f"policy_query: {policy_query or 'not_supplied'}",
+            f"decision: {decision}",
+        ],
+        shown_outputs=outputs,
+        refusal_reasons=list(review.get("refusal_reasons") or []),
+        next_actions=list(review.get("next_actions") or []),
+    )
+    card["policy_distribution_review"] = review
+    card["policy_distribution_source_resolution"] = resolution
+    card["write_effect"] = {
+        "target": "none",
+        "effect": "renders a distribution review only; no durable write is performed",
+        "non_effects": review["non_effects"],
+    }
+    if decision in {"official_starter", "optional_template"} and review["status"] == "review":
+        card["command_proposal"] = {
+            "command_preview": " ".join(
+                [
+                    "python",
+                    "-B",
+                    "-m",
+                    "jikuo.policy_templates",
+                    "export-template",
+                    "--source-policy",
+                    command_arg(str(source_path)),
+                    "--source-project-ref",
+                    command_arg(source_project_ref or "JIKUO-dogfood"),
+                    "--confirm-export-template",
+                    "--approval-phrase",
+                    command_arg(APPROVAL_PHRASE_PLACEHOLDER),
+                    "--format",
+                    "json",
+                ]
+            ),
+            "approval_required": True,
+            "technical_confirmation_required": True,
+            "writes_if_approved": [str(distribution_path.get("target_template_ref") or "")],
+            "non_effects": review["non_effects"],
+        }
+    trace = atom_trace(
+        loop_step_id="DPL-05",
+        atom_id="CAP-POLICY-DISTRIBUTION-REVIEW-01",
+        mode="no-write",
+        status=review["status"],
+        summary="built policy distribution review without exporting templates or activating user policies",
+    )
+    return [card], [trace], list(review.get("refusal_reasons") or [])
+
+
 def build_audit_cards() -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]:
     card = generic_card(
         card_kind="audit_report_not_configured",
@@ -3185,6 +3342,11 @@ def build_proposal(
     policy_work_profile_policy_scopes: list[str] | None = None,
     policy_action_type: str = "render_pre_task_review",
     policy_evidence_type: str = "card_rendered",
+    distribution_source_policy_path: Path | None = None,
+    distribution_policy_query: str | None = None,
+    distribution_decision: str = "deferred",
+    distribution_rationale: str | None = None,
+    distribution_source_project_ref: str | None = None,
     policy_evolution_operation: str = "refine_policy",
     replacement_policy_ref: str | None = None,
     replacement_title: str | None = None,
@@ -3229,7 +3391,7 @@ def build_proposal(
                 summary="The local runner cannot map this event to a known JIKUO loop.",
                 refusal_reasons=[refusal],
                 next_actions=[
-                    "retry with conversation_turn, status, task_start, task_continue, index, evidence, policy_template_import_plan, verification, completion, handoff, or audit"
+                    "retry with conversation_turn, status, task_start, task_continue, index, evidence, policy_distribution_review, policy_template_import_plan, verification, completion, handoff, or audit"
                 ],
             )
         ]
@@ -3312,6 +3474,17 @@ def build_proposal(
             replacement_added_path_pattern=replacement_added_path_pattern,
             replacement_action_type=replacement_action_type,
             replacement_evidence_type=replacement_evidence_type,
+        )
+    elif event == "policy_distribution_review":
+        cards, traces, refusals = build_policy_distribution_review_cards(
+            project_root=project_root,
+            policy_ref=policy_ref,
+            source_policy_path=distribution_source_policy_path,
+            policy_query=distribution_policy_query,
+            decision=distribution_decision,
+            source_project_ref=distribution_source_project_ref,
+            starter_pack_id=starter_pack_id,
+            rationale=distribution_rationale,
         )
     elif event == "starter_policy_pack_init":
         cards, traces, refusals = build_starter_policy_pack_init_cards(
@@ -3571,6 +3744,8 @@ def next_actions_for(*, status: str, event: str | None) -> list[str]:
         return ["review policy write targets and non-effects before approving any future guarded writer"]
     if event == "policy_evolution_plan":
         return ["review policy evolution recommendation and any generated guarded command before approving a write"]
+    if event == "policy_distribution_review":
+        return ["review distribution category, source resolution, and non-effects before any template or starter publication"]
     if event == "policy_template_import_plan":
         return ["review resolved bindings, write targets, and the generated guarded activation command before approving a write"]
     if event in {"evidence_review", "verification_review", "completion_review", "handoff"}:
@@ -4459,6 +4634,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     propose.add_argument("--policy-action-type", default="render_pre_task_review")
     propose.add_argument("--policy-evidence-type", default="card_rendered")
+    propose.add_argument("--distribution-source-policy", type=Path, default=None)
+    propose.add_argument("--distribution-policy-query", default=None)
+    propose.add_argument(
+        "--distribution-decision",
+        choices=sorted(policy_templates.POLICY_DISTRIBUTION_DECISIONS),
+        default="deferred",
+    )
+    propose.add_argument("--distribution-rationale", default=None)
+    propose.add_argument("--distribution-source-project-ref", default=None)
     propose.add_argument(
         "--policy-evolution-operation",
         choices=sorted(policy_store.POLICY_EVOLUTION_OPERATIONS),
@@ -4672,6 +4856,11 @@ def main(argv: list[str] | None = None) -> int:
         policy_work_profile_policy_scopes=args.policy_work_profile_policy_scope,
         policy_action_type=args.policy_action_type,
         policy_evidence_type=args.policy_evidence_type,
+        distribution_source_policy_path=args.distribution_source_policy,
+        distribution_policy_query=args.distribution_policy_query,
+        distribution_decision=args.distribution_decision,
+        distribution_rationale=args.distribution_rationale,
+        distribution_source_project_ref=args.distribution_source_project_ref,
         policy_evolution_operation=args.policy_evolution_operation,
         replacement_policy_ref=args.replacement_policy_ref,
         replacement_title=args.replacement_title,

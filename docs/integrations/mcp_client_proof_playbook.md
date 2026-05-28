@@ -45,7 +45,7 @@ temporary project even when the tool package lives elsewhere.
 For each client, prove all of the following:
 
 1. The client can launch the local JIKUO MCP server.
-2. Tool discovery shows the current 18-tool surface.
+2. Tool discovery shows the current 19-tool surface.
 3. A no-write card tool displays `card_markdown` to the user.
 4. A router tool can classify an ordinary user setup request.
 5. `.jikuo/runtime/last_card.md` or `jikuo show --last-card` matches the latest card.
@@ -199,7 +199,7 @@ manual proof only and should not be committed.
 
 ## 7. Current Tool List
 
-The client should discover exactly these 18 tools:
+The client should discover exactly these 19 tools:
 
 1. `jikuo.status`
 2. `jikuo.get_runtime_status`
@@ -208,17 +208,18 @@ The client should discover exactly these 18 tools:
 5. `jikuo.propose_task_start`
 6. `jikuo.propose_policy_write_plan`
 7. `jikuo.propose_policy_evolution_plan`
-8. `jikuo.propose_policy_template_import_plan`
-9. `jikuo.get_configuration_status`
-10. `jikuo.get_activation_settings`
-11. `jikuo.plan_activation_settings_update`
-12. `jikuo.apply_activation_settings_update`
-13. `jikuo.route_user_request`
-14. `jikuo.propose_policy_suggestions`
-15. `jikuo.probe_sampling_semantic_intent`
-16. `jikuo.apply_task_session_evidence_update`
-17. `jikuo.apply_policy_evolution_write`
-18. `jikuo.apply_policy_template_activation`
+8. `jikuo.propose_policy_distribution_review`
+9. `jikuo.propose_policy_template_import_plan`
+10. `jikuo.get_configuration_status`
+11. `jikuo.get_activation_settings`
+12. `jikuo.plan_activation_settings_update`
+13. `jikuo.apply_activation_settings_update`
+14. `jikuo.route_user_request`
+15. `jikuo.propose_policy_suggestions`
+16. `jikuo.probe_sampling_semantic_intent`
+17. `jikuo.apply_task_session_evidence_update`
+18. `jikuo.apply_policy_evolution_write`
+19. `jikuo.apply_policy_template_activation`
 
 Some clients render MCP names with a namespace such as
 `mcp__jikuo__jikuo_get_runtime_status_card`. That is acceptable if the
@@ -242,7 +243,7 @@ Steps:
 
 1. Confirm you can see the `jikuo` MCP tools.
    - List the tool count and tool names.
-   - Expected count: 18.
+   - Expected count: 19.
    - If you see fewer tools, say whether this looks like a stale GUI session
      and whether a new session or client restart is needed.
 
@@ -311,7 +312,7 @@ Copy this into a proof note after each manual run:
 ## Tool Discovery
 
 - Tool count:
-- Expected count: 18
+- Expected count: 19
 - Missing tools:
 - Extra tools:
 
@@ -798,7 +799,7 @@ Record:
 
 | Result | Meaning | Next action |
 |---|---|---|
-| PASS | Client can launch JIKUO MCP, discover 18 tools, display cards, and route a user request; Sampling may be provided or cleanly unavailable | Record proof note and include it in compatibility docs |
+| PASS | Client can launch JIKUO MCP, discover 19 tools, display cards, and route a user request; Sampling may be provided or cleanly unavailable | Record proof note and include it in compatibility docs |
 | PARTIAL | Client can launch MCP but misses tools, hides cards, or cannot prove runtime parity | Record exact failure; do not claim full support yet |
 | BLOCKED | Client has no accessible MCP config surface or cannot start the stdio server | Record the blocker and retry after client update / config discovery |
 
