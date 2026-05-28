@@ -190,6 +190,82 @@ def write_taskmap_distinction_policy_store(root: Path) -> None:
     )
 
 
+def write_self_bootstrap_mcp_user_boundary_policy_store(root: Path) -> None:
+    store = root / ".jikuo" / "policies"
+    approved = store / "approved"
+    approved.mkdir(parents=True, exist_ok=True)
+    policy_id = "POLICY-jikuo-self-bootstrap-mcp-user-boundary"
+    (approved / f"{policy_id}.yaml").write_text(
+        "\n".join(
+            [
+                'schema_version: "jikuo.configurable_rule_policy.v0"',
+                f'policy_id: "{policy_id}"',
+                "version: 1",
+                'status: "active_report_only"',
+                'title: "JIKUO self-bootstrap MCP user boundary"',
+                'scenario_package: "engineering_governance"',
+                "source_refs:",
+                '  - type: "test_fixture"',
+                '    ref: "tests:self_bootstrap_mcp_user_boundary"',
+                "triggers:",
+                '  - trigger_id: "TRG-task-start"',
+                '    type: "task_lifecycle_event"',
+                '    event: "task_start"',
+                "conditions:",
+                '  - condition_id: "COND-task-type"',
+                '    type: "task_type_is"',
+                '    value: "jikuo_development"',
+                '  - condition_id: "COND-jikuo-layer"',
+                '    type: "jikuo_layer_is"',
+                '    value: "policy_governance"',
+                '  - condition_id: "COND-changed-path"',
+                '    type: "changed_path_matches"',
+                '    pattern: "**"',
+                '  - condition_id: "COND-added-path"',
+                '    type: "added_path_matches"',
+                '    pattern: "**"',
+                "required_actions:",
+                '  - action_id: "ACT-use-mcp-path-or-core-debug"',
+                '    type: "use_mcp_path_for_governed_jikuo_work_or_explicitly_label_core_debug"',
+                "required_evidence:",
+                '  - evidence_id: "EVD-jikuo-mcp-or-core-debug-path-evidence"',
+                '    type: "jikuo_mcp_or_core_debug_path_evidence"',
+                '    satisfies_action: "ACT-use-mcp-path-or-core-debug"',
+                "enforcement:",
+                '  phase: "report_only"',
+                '  level: "review_required"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (store / "manifest.yaml").write_text(
+        "\n".join(
+            [
+                'schema_version: "jikuo.policy_store_manifest.v0"',
+                'project_id: "agent_flow_self_bootstrap_mcp_fixture"',
+                'store_root: ".jikuo/policies"',
+                "active_policy_refs:",
+                f'  - policy_id: "{policy_id}"',
+                "    version: 1",
+                f'    path: ".jikuo/policies/approved/{policy_id}.yaml"',
+                "proposal_refs:",
+                "  []",
+                "deprecated_policy_refs:",
+                "  []",
+                "superseded_policy_refs:",
+                "  []",
+                'last_updated_at: "2026-05-28T00:00:00Z"',
+                "compatibility:",
+                '  unknown_fields: "preserve"',
+                '  writer: "test_fixture"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+
 def write_conversation_policy_suggestion_store(root: Path) -> None:
     store = root / ".jikuo" / "policies"
     approved = store / "approved"
@@ -2868,6 +2944,73 @@ class AgentFlowProposalTests(unittest.TestCase):
         self.assertFalse(
             (POLICY_REAL_CHAIN_PROJECT / ".jikuo" / "task_sessions").exists()
         )
+
+    def test_task_start_requires_explicit_core_debug_path_for_self_bootstrap_policy(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            shutil.copytree(READY_PROJECT, project_root)
+            write_self_bootstrap_mcp_user_boundary_policy_store(project_root)
+
+            base_args = [
+                sys.executable,
+                "-B",
+                str(TOOL),
+                "propose",
+                "--event",
+                "task_start",
+                "--task-title",
+                "Self-bootstrap path evidence probe",
+                "--project-root",
+                str(project_root),
+                "--task-type",
+                "jikuo_development",
+                "--jikuo-layer",
+                "policy_governance",
+                "--changed-path",
+                "src/jikuo/agent_flow.py",
+                "--added-path",
+                "docs/work_orders/self-bootstrap.md",
+                "--format",
+                "json",
+            ]
+            missing = subprocess.run(
+                base_args,
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertEqual(missing.returncode, 0, missing.stderr)
+            missing_proposal = json.loads(missing.stdout)
+            self.assertEqual(len(missing_proposal["triggered_policies"]), 1)
+            self.assertEqual(
+                missing_proposal["missing_evidence_reports"][0]["missing"][0][
+                    "required_type"
+                ],
+                "jikuo_mcp_or_core_debug_path_evidence",
+            )
+
+            satisfied = subprocess.run(
+                [*base_args[:-2], "--governance-path", "core_debug", "--format", "json"],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertEqual(satisfied.returncode, 0, satisfied.stderr)
+            proposal = json.loads(satisfied.stdout)
+            self.assertEqual(proposal["missing_evidence_reports"], [])
+            self.assertEqual(proposal["evidence_status"][0]["current_status"], "ok")
+            self.assertEqual(
+                proposal["evidence_status"][0]["required_type"],
+                "jikuo_mcp_or_core_debug_path_evidence",
+            )
+            self.assertIn(
+                "explicitly labelled core debug path",
+                proposal["evidence_status"][0]["summary"],
+            )
 
     def test_task_start_records_taskmap_insight_followup_distinction_evidence(self):
         with tempfile.TemporaryDirectory() as tmp:

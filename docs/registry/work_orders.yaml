@@ -1046,10 +1046,11 @@ entries:
     title: "SPRINT_050_WO-PER-JIKUO-SELF-BOOTSTRAP-02: Stable Self-Bootstrap Execution Strategy"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-SELF-BOOTSTRAP-02_stable_self_bootstrap_execution_strategy.md"
     sprint: "SPRINT_050"
-    status: "Planned; discuss strategy before implementation"
+    status: "Active self-bootstrap MCP/core-debug boundary policy approved; report-only evidence bridge implemented for MCP task-start and explicit core-debug CLI paths"
     impact_tags: []
-    implements_capabilities: []
-    capability_extraction_status: "no_capability_refs_found"
+    implements_capabilities:
+      - "CAP-STABLE-SELF-BOOTSTRAP-EXECUTION-01"
+    capability_extraction_status: "extracted_from_work_order_body"
     required_mount_sets: []
   - id: "JIKUO-SELF-BOOTSTRAP-03"
     title: "SPRINT_050_WO-PER-JIKUO-SELF-BOOTSTRAP-03: Harness Workspace Boundary Spike"

@@ -59,6 +59,7 @@ CONVERSATION_ROUTER_SCHEMA = "jikuo.conversation_turn_router.v0"
 POLICY_SUGGESTION_REVIEW_SCHEMA = "jikuo.proactive_policy_suggestion_review.v0"
 POLICY_FEEDBACK_TYPES = {"not_applicable", "defer", "needs_scope_narrowing"}
 TRIGGER_MODES = {"mounted", "semantic"}
+GOVERNANCE_PATHS = {"core_debug", "mcp"}
 CARD_PRIORITY_ORDER = [
     "policy_runtime_status",
     "conversation_turn_router",
@@ -627,6 +628,57 @@ def task_start_processing_evidence_for(
     }
 
 
+def jikuo_mcp_or_core_debug_path_evidence_for(
+    *,
+    event: str,
+    governance_path: str,
+) -> dict[str, Any]:
+    producer_tool = (
+        "jikuo MCP adapter"
+        if governance_path == "mcp"
+        else "python -B -m jikuo.agent_flow"
+    )
+    summary = (
+        "governed JIKUO work entered through the MCP adapter"
+        if governance_path == "mcp"
+        else "JIKUO core was invoked through an explicitly labelled core debug path"
+    )
+    return {
+        "evidence_id": stable_id(
+            "evidence",
+            "|".join(
+                [
+                    event,
+                    governance_path,
+                    "use_mcp_path_for_governed_jikuo_work_or_explicitly_label_core_debug",
+                ]
+            ),
+        ),
+        "evidence_type": "jikuo_mcp_or_core_debug_path_evidence",
+        "action_type": (
+            "use_mcp_path_for_governed_jikuo_work_or_explicitly_label_core_debug"
+        ),
+        "source": {
+            "kind": "jikuo_governance_invocation_path",
+            "ref": governance_path,
+        },
+        "producer": {
+            "actor": "agent",
+            "tool": producer_tool,
+        },
+        "status": "ok",
+        "summary": summary,
+        "governance_path": {
+            "path": governance_path,
+            "boundary": (
+                "mcp_user_path"
+                if governance_path == "mcp"
+                else "explicit_core_debug_path"
+            ),
+        },
+    }
+
+
 def proactive_policy_suggestion_evidence_for(
     *,
     event: str,
@@ -672,6 +724,7 @@ def produced_policy_evidence_for(
     event: str | None,
     cards: list[dict[str, Any]],
     work_routing: dict[str, Any] | None = None,
+    governance_path: str | None = None,
 ) -> list[dict[str, Any]]:
     if event == "conversation_turn":
         evidence: list[dict[str, Any]] = []
@@ -691,6 +744,18 @@ def produced_policy_evidence_for(
         return []
 
     evidence: list[dict[str, Any]] = []
+    normalized_governance_path = (
+        governance_path.strip().lower().replace("-", "_")
+        if isinstance(governance_path, str)
+        else None
+    )
+    if normalized_governance_path in GOVERNANCE_PATHS:
+        evidence.append(
+            jikuo_mcp_or_core_debug_path_evidence_for(
+                event=event,
+                governance_path=normalized_governance_path,
+            )
+        )
     if work_routing:
         evidence.append(
             taskmap_insight_followup_evidence_for(
@@ -3369,6 +3434,7 @@ def build_proposal(
     project_root: Path | None = None,
     user_phrase: str | None = None,
     trigger_mode: str | None = None,
+    governance_path: str | None = None,
     host_semantic_intent: dict[str, Any] | None = None,
     produced_evidence: list[dict[str, Any]] | None = None,
     work_routing_category: str | None = None,
@@ -3616,6 +3682,7 @@ def build_proposal(
             event=event,
             cards=cards,
             work_routing=work_routing,
+            governance_path=governance_path,
         )
         inline_produced_evidence.extend(produced_evidence or [])
         policy_context, policy_traces, policy_sections = build_policy_context(
@@ -4698,6 +4765,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Compact host/classifier semantic intent JSON object; must not contain raw transcripts.",
     )
     propose.add_argument("--trigger-mode", choices=sorted(TRIGGER_MODES), default=None)
+    propose.add_argument(
+        "--governance-path",
+        choices=sorted(GOVERNANCE_PATHS),
+        default=None,
+        help=(
+            "Explicitly label this task_start as a JIKUO MCP path or a core debug "
+            "path for self-bootstrap evidence matching."
+        ),
+    )
     propose.add_argument("--format", choices=("markdown", "json"), default="markdown")
 
     apply = subparsers.add_parser("apply")
@@ -4884,6 +4960,7 @@ def main(argv: list[str] | None = None) -> int:
         project_root=args.project_root,
         user_phrase=user_phrase,
         trigger_mode=args.trigger_mode,
+        governance_path=args.governance_path,
         host_semantic_intent=host_semantic_intent,
         produced_evidence=produced_evidence,
         work_routing_category=args.work_routing_category,

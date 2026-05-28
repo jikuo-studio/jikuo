@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-SELF-BOOTSTRAP-02: Stable Self-Bootstrap Execution Strategy
 
-> **Status**: Planned; discuss strategy before implementation.
+> **Status**: Active self-bootstrap MCP/core-debug boundary policy is approved; report-only evidence bridge for MCP vs explicit core-debug path is implemented in `agent_flow`.
 > **Date**: 2026-05-17
 > **Product meaning**: JIKUO development must not depend on the assistant remembering to behave well. The project needs a stable self-bootstrap workflow that makes JIKUO itself run at the start, during, and end of governed development slices.
 
@@ -50,6 +50,31 @@ associations. Until then, JIKUO development slices must manually run completion
 review before commit or final answer and must treat missing completion evidence
 as an unresolved review item, not as a harmless card detail.
 
+## 2.2 MCP User Boundary And Evidence Bridge
+
+Accepted on 2026-05-28: when JIKUO is being governed, the assistant should be
+treated as a user of the JIKUO MCP surface. Direct CLI / core calls are still
+valid during JIKUO core development and debugging, but they must be explicitly
+labelled as a core-debug path.
+
+This is now represented by the active report-only policy
+`POLICY-jikuo-self-bootstrap-mcp-user-boundary`. The policy intentionally uses
+a broad trigger because it is a self-bootstrap guardrail, not a narrow product
+feature rule.
+
+The first evidence bridge is intentionally thin:
+
+- MCP `jikuo.propose_task_start` calls produce
+  `jikuo_mcp_or_core_debug_path_evidence` with path `mcp`;
+- CLI `agent_flow.py propose --event task_start` produces the same evidence
+  only when invoked with `--governance-path core_debug`;
+- unlabelled CLI / core calls do not satisfy the policy.
+
+This keeps the rule practical while preserving the product boundary: governed
+work should flow through the MCP user surface, and core-debug work must say that
+it is core-debug work instead of silently bypassing JIKUO's user-facing
+protocol.
+
 ## 3. Strategy Questions For Discussion
 
 Discuss before coding:
@@ -67,6 +92,8 @@ Discuss before coding:
 - A self-bootstrap slice-start checklist exists and is mounted.
 - JIKUO's own activation settings are reviewed rather than implicit defaults.
 - The first tool call for a governed JIKUO development slice is a JIKUO route/config/task-start call unless explicitly deferred.
+- Governed JIKUO task-start work produces either MCP-path evidence or an
+  explicitly labelled core-debug-path evidence item.
 - Runtime card links are shown to the user after governed JIKUO calls.
 - Completion review and main-doc maintenance are checked before commit.
 - The workflow is practical in Codex without requiring a finished strict pre-turn adapter.

@@ -927,6 +927,7 @@ def call_tool(
             added_paths=list(args.get("added_paths") or []),
             summary=args.get("summary"),
             owner_agent=str(args.get("owner_agent") or "codex"),
+            governance_path="mcp",
             work_routing_category=args.get("work_routing_category"),
             work_routing_summary=args.get("work_routing_summary"),
             task_session_decision=args.get("task_session_decision"),

@@ -57,6 +57,82 @@ def write_mcp_project_context(root: Path) -> None:
     )
 
 
+def write_self_bootstrap_mcp_user_boundary_policy_store(root: Path) -> None:
+    store = root / ".jikuo" / "policies"
+    approved = store / "approved"
+    approved.mkdir(parents=True, exist_ok=True)
+    policy_id = "POLICY-jikuo-self-bootstrap-mcp-user-boundary"
+    (approved / f"{policy_id}.yaml").write_text(
+        "\n".join(
+            [
+                'schema_version: "jikuo.configurable_rule_policy.v0"',
+                f'policy_id: "{policy_id}"',
+                "version: 1",
+                'status: "active_report_only"',
+                'title: "JIKUO self-bootstrap MCP user boundary"',
+                'scenario_package: "engineering_governance"',
+                "source_refs:",
+                '  - type: "test_fixture"',
+                '    ref: "tests:mcp_self_bootstrap_mcp_user_boundary"',
+                "triggers:",
+                '  - trigger_id: "TRG-task-start"',
+                '    type: "task_lifecycle_event"',
+                '    event: "task_start"',
+                "conditions:",
+                '  - condition_id: "COND-task-type"',
+                '    type: "task_type_is"',
+                '    value: "jikuo_development"',
+                '  - condition_id: "COND-jikuo-layer"',
+                '    type: "jikuo_layer_is"',
+                '    value: "policy_governance"',
+                '  - condition_id: "COND-changed-path"',
+                '    type: "changed_path_matches"',
+                '    pattern: "**"',
+                '  - condition_id: "COND-added-path"',
+                '    type: "added_path_matches"',
+                '    pattern: "**"',
+                "required_actions:",
+                '  - action_id: "ACT-use-mcp-path-or-core-debug"',
+                '    type: "use_mcp_path_for_governed_jikuo_work_or_explicitly_label_core_debug"',
+                "required_evidence:",
+                '  - evidence_id: "EVD-jikuo-mcp-or-core-debug-path-evidence"',
+                '    type: "jikuo_mcp_or_core_debug_path_evidence"',
+                '    satisfies_action: "ACT-use-mcp-path-or-core-debug"',
+                "enforcement:",
+                '  phase: "report_only"',
+                '  level: "review_required"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (store / "manifest.yaml").write_text(
+        "\n".join(
+            [
+                'schema_version: "jikuo.policy_store_manifest.v0"',
+                'project_id: "mcp_self_bootstrap_fixture"',
+                'store_root: ".jikuo/policies"',
+                "active_policy_refs:",
+                f'  - policy_id: "{policy_id}"',
+                "    version: 1",
+                f'    path: ".jikuo/policies/approved/{policy_id}.yaml"',
+                "proposal_refs:",
+                "  []",
+                "deprecated_policy_refs:",
+                "  []",
+                "superseded_policy_refs:",
+                "  []",
+                'last_updated_at: "2026-05-28T00:00:00Z"',
+                "compatibility:",
+                '  unknown_fields: "preserve"',
+                '  writer: "test_fixture"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+
 def policy_evolution_args(
     project_root: Path,
     *,
@@ -304,6 +380,37 @@ class MCPStageAAdapterTests(unittest.TestCase):
                 "explicitly_deferred",
             )
             self.assertFalse((project_root / ".jikuo" / "task_sessions").exists())
+
+    def test_propose_task_start_marks_mcp_governance_path_evidence(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = copy_fixture(POLICY_ACTIVE_PROJECT, tmp)
+            write_self_bootstrap_mcp_user_boundary_policy_store(project_root)
+
+            response = adapter.call_tool(
+                "jikuo.propose_task_start",
+                {
+                    "project_root": str(project_root),
+                    "task_title": "MCP self-bootstrap evidence",
+                    "task_type": "jikuo_development",
+                    "jikuo_layer": "policy_governance",
+                    "changed_paths": ["src/jikuo/integrations/mcp/adapter.py"],
+                    "added_paths": ["docs/work_orders/self-bootstrap.md"],
+                },
+                transport=schemas.LOCAL_STDIO_TRANSPORT,
+            )
+
+            proposal = response["data_details"]
+            self.assertEqual(proposal["missing_evidence_reports"], [])
+            status_by_type = {
+                item["required_type"]: item for item in proposal["evidence_status"]
+            }
+            self.assertEqual(
+                status_by_type["jikuo_mcp_or_core_debug_path_evidence"][
+                    "current_status"
+                ],
+                "ok",
+            )
+            self.assertIn("MCP adapter", response["card_markdown"])
 
     def test_get_configuration_status_returns_review_and_runtime_card(self):
         with tempfile.TemporaryDirectory() as tmp:
