@@ -1310,11 +1310,14 @@ def trigger_decision_for(
         if event
         else "unsupported"
     )
+    user_phrase_status = "provided_redacted" if user_phrase else "not_provided"
+    user_phrase_projection = "<redacted_user_phrase>" if user_phrase else raw_event
     if event == "conversation_turn":
         return {
             "schema": TRIGGER_DECISION_SCHEMA,
             "trigger_source": "conversation_turn_router",
-            "user_phrase": user_phrase or raw_event,
+            "user_phrase": user_phrase_projection,
+            "user_phrase_status": user_phrase_status,
             "invocation_scenario": event,
             "confidence": "event_match",
             "confidence_basis": "canonical_event_mapping",
@@ -1343,7 +1346,8 @@ def trigger_decision_for(
         "trigger_source": "explicit_user_shortcut"
         if user_phrase
         else "explicit_user_natural_language",
-        "user_phrase": user_phrase or raw_event,
+        "user_phrase": user_phrase_projection,
+        "user_phrase_status": user_phrase_status,
         "invocation_scenario": event or "ambiguous",
         "confidence": "event_match" if event else "unmatched",
         "confidence_basis": "canonical_event_mapping",
@@ -1404,12 +1408,15 @@ def classify_conversation_turn(
     summary: str | None,
 ) -> tuple[dict[str, Any], list[str]]:
     input_text = (user_phrase or summary or task_title or "").strip()
+    input_summary = "<redacted_user_phrase>" if user_phrase else input_text
+    input_summary_status = "provided_redacted" if user_phrase else "provided_compact"
     if not input_text:
         router = {
             "schema": CONVERSATION_ROUTER_SCHEMA,
             "trigger_mode": trigger_mode,
             "router_status": "clarification_required",
             "input_summary": "",
+            "input_summary_status": "missing",
             "classification_basis": "missing_user_turn",
             "classified_obligations": [
                 {
@@ -1617,7 +1624,8 @@ def classify_conversation_turn(
         "schema": CONVERSATION_ROUTER_SCHEMA,
         "trigger_mode": trigger_mode,
         "router_status": router_status,
-        "input_summary": input_text,
+        "input_summary": input_summary,
+        "input_summary_status": input_summary_status,
         "classification_basis": "deterministic_keyword_router_v0",
         "classified_obligations": obligations,
         "required_followup_tools": followup_tools,

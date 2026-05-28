@@ -676,8 +676,13 @@ class AgentFlowProposalTests(unittest.TestCase):
         proposal = json.loads(completed.stdout)
         self.assertEqual(
             proposal["trigger_decision"]["user_phrase"],
-            "please show setup settings",
+            "<redacted_user_phrase>",
         )
+        self.assertEqual(
+            proposal["trigger_decision"]["user_phrase_status"],
+            "provided_redacted",
+        )
+        self.assertNotIn("please show setup settings", completed.stdout)
         router = proposal["conversation_router"]
         self.assertEqual(router["schema"], "jikuo.conversation_turn_router.v0")
         self.assertEqual(router["trigger_mode"], "mounted")
@@ -751,6 +756,10 @@ class AgentFlowProposalTests(unittest.TestCase):
         )
 
         self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertNotIn(
+            "please modify the implementation but only discuss it; do not write files",
+            completed.stdout,
+        )
         proposal = json.loads(completed.stdout)
         profile = proposal["work_profile"]
         self.assertEqual(profile["intent_class"], "design_discussion")
@@ -811,6 +820,68 @@ class AgentFlowProposalTests(unittest.TestCase):
         self.assertIn("Semantic/deterministic conflicts: `1`", proposal["chat_ready_markdown"])
         atom_ids = {trace["atom_id"] for trace in proposal["atom_trace"]}
         self.assertIn("CAP-HOST-SEMANTIC-INTENT-WORK-PROFILE-01", atom_ids)
+
+    def test_host_semantic_intent_projection_omits_raw_user_phrase(self):
+        raw_prompt = "SECRET_SEMANTIC_SMOKE_VALUE: update hook docs and summarize why"
+        semantic_intent = {
+            "schema": "jikuo.host_semantic_intent.v0",
+            "provider": "host_ai",
+            "confidence": "high",
+            "work_profile": {
+                "policy_scopes": ["editing", "progress_summary"],
+            },
+            "intent_slices": [
+                {
+                    "id": "update_docs",
+                    "user_expression": "update hook docs",
+                    "policy_scopes": ["editing"],
+                    "requested_outcome": "Update hook documentation.",
+                },
+                {
+                    "id": "summarize_meaning",
+                    "user_expression": "summarize why",
+                    "policy_scopes": ["progress_summary"],
+                    "response_contract": ["include technical and business meaning"],
+                },
+            ],
+        }
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-B",
+                str(TOOL),
+                "propose",
+                "--event",
+                "conversation_turn",
+                "--trigger-mode",
+                "mounted",
+                "--user-phrase",
+                raw_prompt,
+                "--host-semantic-intent-json",
+                json.dumps(semantic_intent),
+                "--project-root",
+                str(READY_PROJECT),
+                "--format",
+                "json",
+            ],
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertNotIn(raw_prompt, completed.stdout)
+        proposal = json.loads(completed.stdout)
+        semantic = proposal["work_profile"]["basis"]["host_semantic_intent"]
+        self.assertEqual(semantic["status"], "provided")
+        self.assertEqual(
+            proposal["work_profile"]["policy_scopes"],
+            ["editing", "progress_summary", "discussion"],
+        )
+        self.assertEqual(len(semantic["intent_slices"]), 2)
+        self.assertIn("user_expression=`update hook docs`", proposal["chat_ready_markdown"])
 
     def test_host_semantic_intent_preserves_multi_intent_aggregate_scopes(self):
         semantic_intent = {

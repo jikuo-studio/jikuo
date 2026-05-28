@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-AI-SEMROUTE-01: AI Semantic Routing MVP
 
-> **Status**: Design accepted; first projection slice implemented for short `user_expression`, MVP scope filtering, ordered `intent_slices` card rendering, and Codex hook wording. GUI / MCP smoke acceptance and any evaluator expansion remain pending.
+> **Status**: Design accepted; first projection slice implemented for short `user_expression`, MVP scope filtering, ordered `intent_slices` card rendering, Codex hook wording, no-write smoke for `semantic_intent_status=provided`, and raw `user_phrase` redaction in trigger/router projections. Real host-time GUI / MCP semantic provider smoke and any evaluator expansion remain pending.
 > **Date**: 2026-05-28
 > **JIKUO layer**: integration / policy distribution.
 > **Business meaning**: JIKUO should stay thin. The host AI understands the user's natural-language intent; JIKUO receives a compact semantic object, records it, explains policy routing, and keeps deterministic fallback honest.
@@ -209,10 +209,17 @@ existing host-semantic-intent pipeline against this MVP contract:
 - focused tests cover short expression preservation, invalid scope filtering,
   multi-intent order preservation, and raw prompt omission from hook output.
 
+Follow-up smoke in this slice verified that a compact `host_semantic_intent`
+can project `semantic_intent_status=provided`, aggregate MVP scopes, and ordered
+intent slices while redacting the raw `user_phrase` from trigger/router
+projections. The runtime card may render short `user_expression` values, but
+`trigger_decision.user_phrase` and `conversation_router.input_summary` must
+remain `<redacted_user_phrase>` when the source is the current user prompt.
+
 Remaining implementation work:
 
 - run 2-3 GUI / MCP smoke tests with real host-provided or Sampling-provided
-  semantic intent;
+  semantic intent, not only a local no-write synthetic semantic object;
 - decide whether wrapper / plugin work should make host-time classification
   mandatory before JIKUO invocation;
 - keep richer fields out of evaluator inputs until real smoke evidence shows a
