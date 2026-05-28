@@ -2025,6 +2025,49 @@ class AgentFlowProposalTests(unittest.TestCase):
             self.assertIn("policy_ref_or_policy_query_required", resolution["refusal_reasons"])
             self.assertEqual(resolution["candidates"][0]["policy_id"], "POLICY-three-phase-audit")
 
+    def test_policy_distribution_review_accepts_distribution_policy_ref_alias(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "distribution_project"
+            shutil.copytree(POLICY_ACTIVE_PROJECT, project_root)
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "propose",
+                    "--event",
+                    "policy_distribution_review",
+                    "--project-root",
+                    str(project_root),
+                    "--distribution-policy-ref",
+                    "POLICY-three-phase-audit",
+                    "--distribution-decision",
+                    "optional_template",
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            proposal = json.loads(completed.stdout)
+            cards = [
+                card
+                for card in proposal["cards"]
+                if card["card_kind"] == "policy_distribution_review"
+            ]
+            self.assertEqual(len(cards), 1)
+            resolution = cards[0]["policy_distribution_source_resolution"]
+            review = cards[0]["policy_distribution_review"]
+            self.assertEqual(resolution["resolution_basis"], "explicit_policy_ref")
+            self.assertEqual(review["policy_id"], "POLICY-three-phase-audit")
+            self.assertEqual(review["distribution_decision"], "optional_template")
+
     def test_policy_template_import_plan_proposes_visible_guarded_activation(self):
         with tempfile.TemporaryDirectory() as tmp:
             project_root = Path(tmp) / "template_project"

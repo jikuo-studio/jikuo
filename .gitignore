@@ -6,6 +6,10 @@
 /.codex_tmp/
 /browser_profiles/
 /node_modules/
+/docs/training/
+/package.json
+/package-lock.json
+/scripts/
 
 # Python bytecode
 __pycache__/

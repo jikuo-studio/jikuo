@@ -1,0 +1,36 @@
+schema_version: "jikuo.configurable_rule_policy.v0"
+policy_id: "POLICY-jikuo-self-bootstrap-mcp-user-boundary"
+version: 1
+status: "active_report_only"
+title: "JIKUO self-bootstrap MCP user boundary"
+scenario_package: "engineering_governance"
+source_refs:
+  - type: "user_natural_language"
+    ref: "user_policy:self_bootstrap_ai_uses_jikuo_mcp_when_governed_cli_only_for_core_development"
+triggers:
+  - trigger_id: "TRG-task-start"
+    type: "task_lifecycle_event"
+    event: "task_start"
+conditions:
+  - condition_id: "COND-policy-jikuo-self-bootstrap-mcp-user-boundary-task-type"
+    type: "task_type_is"
+    value: "jikuo_development"
+  - condition_id: "COND-policy-jikuo-self-bootstrap-mcp-user-boundary-jikuo-layer"
+    type: "jikuo_layer_is"
+    value: "policy_governance"
+  - condition_id: "COND-policy-jikuo-self-bootstrap-mcp-user-boundary-changed-path"
+    type: "changed_path_matches"
+    pattern: "**"
+  - condition_id: "COND-policy-jikuo-self-bootstrap-mcp-user-boundary-added-path"
+    type: "added_path_matches"
+    pattern: "**"
+required_actions:
+  - action_id: "ACT-use-mcp-path-for-governed-jikuo-work-or-explicitly-label-core-de"
+    type: "use_mcp_path_for_governed_jikuo_work_or_explicitly_label_core_debug"
+required_evidence:
+  - evidence_id: "EVD-jikuo-mcp-or-core-debug-path-evidence"
+    type: "jikuo_mcp_or_core_debug_path_evidence"
+    satisfies_action: "ACT-use-mcp-path-for-governed-jikuo-work-or-explicitly-label-core-de"
+enforcement:
+  phase: "report_only"
+  level: "review_required"

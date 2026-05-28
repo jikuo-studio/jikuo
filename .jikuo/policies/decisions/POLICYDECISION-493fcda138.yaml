@@ -1,0 +1,17 @@
+schema_version: "jikuo.policy_decision.v0"
+decision_id: "POLICYDECISION-493fcda138"
+proposal_ref: ".jikuo/policies/proposals/POLICYPROPOSAL-a77cd38ab2.yaml"
+policy_ref: "POLICY-jikuo-self-bootstrap-mcp-user-boundary"
+decision: "approve_write"
+target:
+  kind: "approved_policy"
+  ref: "POLICY-jikuo-self-bootstrap-mcp-user-boundary"
+effect: "append_policy POLICY-jikuo-self-bootstrap-mcp-user-boundary and update policy-store manifest active refs"
+non_effect: "does not execute policy actions, persist evidence, or promote gates"
+approval_phrase: "这是宽触发的规则。所以可以激活通过。"
+created_at: "2026-05-28T07:57:17Z"
+source_plan_ref: "POLICYWRITEPLAN-673ad20e69"
+source_plan_schema: "jikuo.policy_write_plan.v0"
+storage:
+  path: ".jikuo/policies/decisions/POLICYDECISION-493fcda138.yaml"
+  policy_store_ref: ".jikuo/policies"

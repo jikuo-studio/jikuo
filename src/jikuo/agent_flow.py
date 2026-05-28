@@ -4615,6 +4615,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
     )
     propose.add_argument("--policy-ref", default=None)
+    propose.add_argument("--distribution-policy-ref", dest="policy_ref", default=None)
     propose.add_argument("--policy-title", default=None)
     propose.add_argument("--policy-source-ref", default=None)
     propose.add_argument("--policy-trigger-event", default="task_start")

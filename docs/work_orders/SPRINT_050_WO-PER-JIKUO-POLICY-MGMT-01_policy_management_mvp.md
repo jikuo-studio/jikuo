@@ -246,6 +246,10 @@ candidate matching, not an LLM semantic classifier. If the query does not match
 exactly one active policy, JIKUO returns a candidate list and refusal reasons
 instead of silently binding the review to the wrong policy.
 
+CLI callers may use `--policy-ref` or the clearer
+`--distribution-policy-ref` alias when the host AI has already selected the
+source policy. Both flags resolve through the same explicit-policy-ref path.
+
 ### 4.4 Active-Policy Maintenance Outcomes
 
 Once a policy is active, maintenance uses guarded evolution, not direct edits.
