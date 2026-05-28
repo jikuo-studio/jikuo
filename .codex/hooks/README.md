@@ -6,13 +6,15 @@ It is a thin adapter, not a policy engine.
 The hook does four things:
 
 1. Reads minimal Codex hook input from stdin.
-2. Locates the project root.
+2. Locates the project root and normalizes the turn through
+   `jikuo.host_adapter.turn_input.v0`.
 3. Calls JIKUO no-write `conversation_turn` routing. By default this uses the
    in-process `jikuo.agent_flow` API to avoid GUI nested-Python subprocess
    hangs; `JIKUO_HOOK_EXECUTION_MODE=subprocess` keeps the old CLI path for
    diagnostics.
 4. Returns Codex `hookSpecificOutput.additionalContext` with JIKUO card links,
-   policy counts, missing evidence counts, and the next required actions.
+   policy counts, missing evidence counts, the next required actions, and a
+   `jikuo.host_adapter.turn_result.v0` summary.
 
 It does not create task sessions, policies, evidence records, commits, or proof
 notes. Durable writes remain behind guarded JIKUO commands.
@@ -25,6 +27,8 @@ transport path:
 - `UserPromptSubmit` should run before substantive Codex model work.
 - JIKUO should produce a `conversation_turn` runtime card.
 - Codex should receive the card links through `additionalContext`.
+- The project-local hook should consume the shared Host Adapter Turn
+  Input/Result contract before rendering Codex-specific context.
 - If hook stdin contains compact `host_semantic_intent` /
   `hostSemanticIntent`, the hook forwards it to JIKUO for final work-profile
   projection.

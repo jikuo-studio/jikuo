@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-HOSTADAPT-01: Host Adapter Contract
 
-> **Status**: Contract scaffold implemented for cross-client input/result normalization, raw prompt redaction, and Codex implementation-path planning. Host-specific wrappers/plugins remain future slices.
+> **Status**: Contract scaffold implemented for cross-client input/result normalization, raw prompt redaction, and Codex project-local hook consumption. Host-specific wrappers/plugins remain future slices.
 > **Date**: 2026-05-28
 > **JIKUO layer**: integration / strict mounted harness.
 > **Business meaning**: JIKUO should be portable across Codex, Claude, Cursor, VS Code, and future wrappers without baking one client's hook behavior into the core governance model.
@@ -125,7 +125,9 @@ Accepted capability:
 ```text
 Codex UserPromptSubmit
 -> project-local hook
+-> Host Adapter Turn Input normalization
 -> in-process JIKUO conversation_turn routing
+-> Host Adapter Turn Result normalization
 -> additionalContext with runtime links and policy summary
 ```
 
@@ -133,6 +135,8 @@ Accepted status:
 
 - pre-turn `additionalContext` is visible in Codex GUI;
 - in-process invocation avoids nested-Python timeout observed on 2026-05-28;
+- the project-local hook maps stdin into `jikuo.host_adapter.turn_input.v0`
+  and renders a `jikuo.host_adapter.turn_result.v0` summary;
 - failures remain visible instead of silent.
 
 Not accepted:
@@ -143,16 +147,14 @@ Not accepted:
 
 ### Feasible next Codex steps
 
-1. Map the existing hook payload into
-   `jikuo.host_adapter.turn_input.v0`.
-2. Continue returning `semantic_intent_status=unavailable` unless a real
+1. Continue returning `semantic_intent_status=unavailable` unless a real
    provider supplies compact `host_semantic_intent`.
-3. Add an optional explicit semantic-intent field for future Codex wrapper or
+2. Add an optional explicit semantic-intent field for future Codex wrapper or
    plugin channels. The project-local hook may transport it, but must not claim
    it generated the semantic classification.
-4. Use MCP Sampling as an optional Codex-adjacent probe when the client supports
+3. Use MCP Sampling as an optional Codex-adjacent probe when the client supports
    it. Sampling is useful classifier evidence, not strict pre-turn proof.
-5. Only promote Codex to host-time semantic provider after a wrapper/plugin or
+4. Only promote Codex to host-time semantic provider after a wrapper/plugin or
    official host capability proves:
    - classifier runs before JIKUO routing;
    - `semantic_intent_status=provided` appears in runtime cards;
@@ -195,8 +197,9 @@ hooks, but it should reuse the same contract fields.
 - `host_adapter_contract.normalize_turn_input()` redacts raw prompt input.
 - `host_adapter_contract.normalize_turn_result()` redacts raw prompt echoes in
   failure summaries.
-- Codex current path is represented as accepted pre-turn invocation with
-  semantic provider still unavailable.
+- Codex current path consumes the Host Adapter Turn Input/Result contract and
+  remains represented as accepted pre-turn invocation with semantic provider
+  still unavailable.
 - Registry and mount-set docs identify this work order as the cross-client
   adapter contract anchor.
 - No evaluator, policy-store, or durable-write behavior changes in this slice.

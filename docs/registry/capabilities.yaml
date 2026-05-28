@@ -230,7 +230,7 @@ entries:
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CODEX-PLUGIN-01_codex_plugin_pre_turn_harness_review.md"
   - id: "CAP-HOST-ADAPTER-CONTRACT-01"
     title: "Cross-client host adapter input/result contract"
-    status: "implemented scaffold: jikuo.host_adapter.turn_input.v0 and jikuo.host_adapter.turn_result.v0 normalization helpers redact raw prompt input, normalize compact host_semantic_intent when supplied, and record the Codex project-local hook as an accepted pre-turn additionalContext path with host-time semantic provider still pending"
+    status: "implemented scaffold and first consumer: jikuo.host_adapter.turn_input.v0 and jikuo.host_adapter.turn_result.v0 normalization helpers redact raw prompt input, normalize compact host_semantic_intent when supplied, and are consumed by the Codex project-local hook while host-time semantic provider remains pending"
     metadata_status: "complete"
     entry_point: "src/jikuo/integrations/host_adapter_contract.py"
     write_effect: "none"

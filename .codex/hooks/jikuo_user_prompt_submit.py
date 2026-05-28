@@ -139,6 +139,74 @@ def ensure_project_src_on_path(project_root: Path) -> None:
         sys.path.insert(0, src_text)
 
 
+def build_host_adapter_turn_input(
+    hook_input: HookInput,
+    project_root: Path,
+    trigger_mode: str,
+) -> dict[str, Any]:
+    ensure_project_src_on_path(project_root)
+    from jikuo.integrations import host_adapter_contract
+
+    return host_adapter_contract.normalize_turn_input(
+        {
+            "client_id": "codex",
+            "client_event": hook_input.hook_event_name,
+            "project_root": str(project_root),
+            "session_id": hook_input.session_id,
+            "turn_id": hook_input.turn_id,
+            "trigger_mode": trigger_mode,
+            "prompt": hook_input.prompt,
+            "host_semantic_intent": hook_input.host_semantic_intent,
+        }
+    )
+
+
+def semantic_intent_for_agent_flow(
+    hook_input: HookInput,
+    host_adapter_input: dict[str, Any],
+) -> dict[str, Any] | None:
+    if not hook_input.host_semantic_intent:
+        return None
+    semantic = host_adapter_input.get("host_semantic_intent")
+    return semantic if isinstance(semantic, dict) else None
+
+
+def build_host_adapter_turn_result(
+    proposal: dict[str, Any] | None,
+    *,
+    hook_input: HookInput,
+    project_root: Path,
+    trigger_mode: str,
+    status: str,
+    failure_summary: str | None = None,
+) -> dict[str, Any]:
+    ensure_project_src_on_path(project_root)
+    from jikuo.integrations import host_adapter_contract
+
+    proposal = proposal or {}
+    semantic_status = _semantic_intent_status(proposal)
+    latest = _display_link(proposal, "last_card") or _runtime_ref(proposal, "last_card_ref")
+    history = _display_link(proposal, "history_card") or _runtime_ref(proposal, "history_ref")
+    triggered = proposal.get("triggered_policies")
+    missing = proposal.get("missing_evidence_reports")
+    return host_adapter_contract.normalize_turn_result(
+        {
+            "status": status,
+            "semantic_intent_status": semantic_status,
+            "prompt": hook_input.prompt,
+            "failure_summary": failure_summary,
+            "card_links": [item for item in [latest, history] if item],
+            "policy_trigger_summary": {
+                "triggered_policy_count": len(triggered) if isinstance(triggered, list) else 0,
+            },
+            "missing_evidence_summary": {
+                "missing_evidence_count": len(missing) if isinstance(missing, list) else 0,
+            },
+            "next_required_actions": _required_followup_tools(proposal),
+        }
+    )
+
+
 def build_agent_flow_command(
     hook_input: HookInput,
     project_root: Path,
@@ -146,6 +214,12 @@ def build_agent_flow_command(
     env: dict[str, str] | None = None,
 ) -> list[str]:
     env = env or os.environ
+    host_adapter_input = build_host_adapter_turn_input(
+        hook_input,
+        project_root,
+        trigger_mode,
+    )
+    host_semantic_intent = semantic_intent_for_agent_flow(hook_input, host_adapter_input)
     python_exe = jikuo_subprocess_python(env)
     command = [
         python_exe,
@@ -164,12 +238,12 @@ def build_agent_flow_command(
     ]
     if hook_input.prompt:
         command.append("--user-phrase-stdin")
-    if hook_input.host_semantic_intent:
+    if host_semantic_intent:
         command.extend(
             [
                 "--host-semantic-intent-json",
                 json.dumps(
-                    hook_input.host_semantic_intent,
+                    host_semantic_intent,
                     ensure_ascii=False,
                     separators=(",", ":"),
                 ),
@@ -191,6 +265,11 @@ def run_agent_flow_in_process(
     formatter: ProposalFormatter | None = None,
 ) -> dict[str, Any]:
     try:
+        host_adapter_input = build_host_adapter_turn_input(
+            hook_input,
+            project_root,
+            trigger_mode,
+        )
         if builder is None or formatter is None:
             ensure_project_src_on_path(project_root)
             from jikuo import agent_flow
@@ -202,7 +281,10 @@ def run_agent_flow_in_process(
             project_root=project_root,
             user_phrase=hook_input.prompt or None,
             trigger_mode=trigger_mode,
-            host_semantic_intent=hook_input.host_semantic_intent,
+            host_semantic_intent=semantic_intent_for_agent_flow(
+                hook_input,
+                host_adapter_input,
+            ),
         )
         output = formatter(proposal, project_root=project_root)
     except HookExecutionError:
@@ -347,11 +429,25 @@ def render_additional_context(
     latest = _display_link(proposal, "last_card") or _runtime_ref(proposal, "last_card_ref")
     history = _display_link(proposal, "history_card") or _runtime_ref(proposal, "history_ref")
     followups = _required_followup_tools(proposal)
+    host_adapter_input = build_host_adapter_turn_input(hook_input, project_root, trigger_mode)
+    host_adapter_result = build_host_adapter_turn_result(
+        proposal,
+        hook_input=hook_input,
+        project_root=project_root,
+        trigger_mode=trigger_mode,
+        status="ok",
+    )
 
     lines = [
         "JIKUO mounted pre-turn ran before substantive model work.",
         f"Trigger mode: {trigger_mode}.",
         f"Semantic intent status: {semantic_intent_status}.",
+        (
+            "Host adapter contract: "
+            f"input_schema={host_adapter_input.get('schema')}; "
+            f"result_schema={host_adapter_result.get('schema')}; "
+            f"user_turn_summary_status={host_adapter_input.get('user_turn_summary_status')}."
+        ),
         semantic_classification_note(semantic_intent_status),
         (
             "Host semantic intent contract: when you call JIKUO tools later, pass "
@@ -405,12 +501,32 @@ def redact_prompt_echo(text: str, prompt: str) -> str:
 
 def render_failure_context(error: Exception, hook_input: HookInput, project_root: Path) -> str:
     failure_summary = redact_prompt_echo(str(error), hook_input.prompt)
+    trigger_mode = trigger_mode_from_env()
+    try:
+        host_adapter_input = build_host_adapter_turn_input(hook_input, project_root, trigger_mode)
+        host_adapter_result = build_host_adapter_turn_result(
+            None,
+            hook_input=hook_input,
+            project_root=project_root,
+            trigger_mode=trigger_mode,
+            status="degraded",
+            failure_summary=failure_summary,
+        )
+        host_adapter_line = (
+            "Host adapter contract: "
+            f"input_schema={host_adapter_input.get('schema')}; "
+            f"result_schema={host_adapter_result.get('schema')}; "
+            f"user_turn_summary_status={host_adapter_input.get('user_turn_summary_status')}."
+        )
+    except Exception:
+        host_adapter_line = "Host adapter contract: unavailable during failure rendering."
     return "\n".join(
         [
             "JIKUO mounted pre-turn failed or degraded before substantive model work.",
             f"Project root: {project_root}.",
             f"Session id: {hook_input.session_id or 'unavailable'}.",
             f"Turn id: {hook_input.turn_id or 'unavailable'}.",
+            host_adapter_line,
             f"Failure summary: {failure_summary}",
             f"Python executable: {sys.executable}.",
             f"Hook execution mode: {execution_mode_from_env()}.",

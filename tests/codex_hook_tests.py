@@ -98,6 +98,9 @@ class CodexHookProofTests(unittest.TestCase):
         self.assertNotIn(raw_prompt, context)
         self.assertIn("JIKUO mounted pre-turn ran", context)
         self.assertIn("Semantic intent status: unavailable.", context)
+        self.assertIn("Host adapter contract:", context)
+        self.assertIn("input_schema=jikuo.host_adapter.turn_input.v0", context)
+        self.assertIn("user_turn_summary_status=provided_redacted", context)
         self.assertIn("Host semantic intent contract:", context)
         self.assertIn("keep user_expression short", context)
         self.assertIn("Triggered policy count: 1.", context)
@@ -180,6 +183,37 @@ class CodexHookProofTests(unittest.TestCase):
         self.assertEqual(json.loads(semantic_json)["provider"], "host_ai")
         self.assertNotIn(raw_prompt, command)
 
+    def test_build_host_adapter_turn_input_maps_codex_payload_without_raw_prompt(self):
+        hook = load_hook_module()
+        raw_prompt = "SECRET_PROMPT_VALUE: map me into the adapter contract"
+        hook_input = hook.HookInput(
+            hook_event_name="UserPromptSubmit",
+            prompt=raw_prompt,
+            cwd=ROOT,
+            session_id="session-adapter",
+            turn_id="turn-adapter",
+            permission_mode="default",
+            model=None,
+            host_semantic_intent={
+                "schema": "jikuo.host_semantic_intent.v0",
+                "provider": "host_ai",
+                "confidence": "high",
+                "work_profile": {"policy_scopes": ["editing"]},
+            },
+        )
+
+        turn_input = hook.build_host_adapter_turn_input(hook_input, ROOT, "mounted")
+        serialized = json.dumps(turn_input, ensure_ascii=False)
+
+        self.assertEqual(turn_input["schema"], "jikuo.host_adapter.turn_input.v0")
+        self.assertEqual(turn_input["client_id"], "codex")
+        self.assertEqual(turn_input["client_event"], "UserPromptSubmit")
+        self.assertEqual(turn_input["trigger_mode"], "mounted")
+        self.assertEqual(turn_input["user_turn_summary"], "<redacted_user_turn>")
+        self.assertEqual(turn_input["user_turn_summary_status"], "provided_redacted")
+        self.assertEqual(turn_input["host_semantic_intent"]["status"], "provided")
+        self.assertNotIn(raw_prompt, serialized)
+
     def test_execution_mode_defaults_to_in_process_with_subprocess_opt_in(self):
         hook = load_hook_module()
 
@@ -244,6 +278,7 @@ class CodexHookProofTests(unittest.TestCase):
         self.assertEqual(calls["builder"]["user_phrase"], raw_prompt)
         self.assertEqual(calls["builder"]["trigger_mode"], "mounted")
         self.assertEqual(calls["builder"]["host_semantic_intent"]["provider"], "host_ai")
+        self.assertEqual(calls["builder"]["host_semantic_intent"]["status"], "provided")
         self.assertEqual(calls["formatter"]["project_root"], ROOT)
         self.assertEqual(result["runtime_visibility"]["last_card_ref"], ".jikuo/runtime/last_card.md")
 
@@ -298,6 +333,7 @@ class CodexHookProofTests(unittest.TestCase):
         additional_context = output["hookSpecificOutput"]["additionalContext"]
         self.assertIn("JIKUO mounted pre-turn ran", additional_context)
         self.assertIn("Semantic intent status: provided.", additional_context)
+        self.assertIn("Host adapter contract:", additional_context)
         self.assertIn("JIKUO remains the final work-profile", additional_context)
         self.assertIn("Latest card: .jikuo/runtime/last_card.md", additional_context)
         self.assertNotIn(payload["prompt"], additional_context)
