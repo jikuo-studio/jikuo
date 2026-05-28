@@ -567,7 +567,9 @@ End-to-end acceptance requires all of the following:
 ## 4.4 Cross-Client Adapter Shape
 
 The proof should keep a shared adapter contract separate from client-specific
-glue:
+glue. `JIKUO-HOSTADAPT-01` is now the cross-client authority for the reusable
+input/result schema; this section records the Codex-specific path against that
+contract:
 
 | Concept | Shared contract | Client-specific glue |
 |---|---|---|
@@ -580,6 +582,29 @@ glue:
 
 This keeps Codex as the first proof target without turning Codex behavior into
 the JIKUO architecture.
+
+Current Codex mapping:
+
+- Host event: `UserPromptSubmit`.
+- Contract input: `jikuo.host_adapter.turn_input.v0`.
+- Current semantic status: `unavailable` unless an explicit compact
+  `host_semantic_intent` is supplied by a future wrapper/plugin or supported
+  Sampling path.
+- JIKUO call: in-process `agent_flow` `conversation_turn` routing.
+- Contract result: `jikuo.host_adapter.turn_result.v0` projected into Codex
+  `hookSpecificOutput.additionalContext`.
+- Non-claim: the project-local hook does not access model reasoning before the
+  model runs and must not claim host-time semantic provider acceptance.
+
+Feasible Codex path:
+
+1. Keep project-local hook as L1 mounted invocation proof.
+2. Map hook stdin into the Host Adapter Turn Input contract.
+3. Transport explicit `host_semantic_intent` if a future Codex wrapper/plugin
+   supplies it.
+4. Use MCP Sampling only as client-mediated classifier evidence when supported.
+5. Promote Codex to host-time semantic provider only after a wrapper/plugin or
+   official host capability proves semantic classification before JIKUO routing.
 
 ## 5. Dependencies
 

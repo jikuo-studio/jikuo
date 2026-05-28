@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-INTG-03: Strict Mounted Harness Adapter Contract
 
-> **Status**: Contract / planning accepted; AI semantic routing MVP design is anchored in `JIKUO-AI-SEMROUTE-01`; implementation remains deferred to client proof and later adapter slices.
+> **Status**: Contract / planning accepted; AI semantic routing MVP design is anchored in `JIKUO-AI-SEMROUTE-01`; cross-client host adapter input/result scaffolding is anchored in `JIKUO-HOSTADAPT-01`; host-specific wrappers/plugins remain deferred to client proof and later adapter slices.
 > **Product meaning**: users who choose mounted mode should get real pre-turn JIKUO execution, not just an instruction that the host Agent may or may not follow.
 > **Boundary**: this slice defines the adapter contract. It does not implement a Claude hook, Codex plugin, Cursor extension, VS Code extension, Studio proxy, or Agent SDK wrapper.
 
@@ -75,6 +75,13 @@ the host-specific hook mechanism differs:
 | `jikuo_call` | MCP `jikuo.route_user_request` when reliable, CLI `python -B -m jikuo.agent_flow propose --event conversation_turn` as fallback |
 | `display_result` | card markdown or runtime links surfaced back to the user / model |
 | `failure_result` | visible block or degradation; silent bypass is a proof failure |
+
+`JIKUO-HOSTADAPT-01` now defines the reusable, cross-client version of this
+shape as `jikuo.host_adapter.turn_input.v0` and
+`jikuo.host_adapter.turn_result.v0`, with implementation placeholders in
+`src/jikuo/integrations/host_adapter_contract.py`. Host-specific adapters
+should map their native event payloads into that contract before adding
+client-specific behavior.
 
 ## 3.2 Classification Cooperation Contract
 

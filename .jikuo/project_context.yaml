@@ -101,6 +101,10 @@ document_roles:
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-AI-SEMROUTE-01_ai_semantic_routing_mvp.md"
     required: true
     note: "MVP contract for host_semantic_intent, ordered intent_slices, stable policy_scopes, Sampling fallback posture, and evaluator non-consumption boundary."
+  host_adapter_contract_work_order:
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-HOSTADAPT-01_host_adapter_contract.md"
+    required: true
+    note: "Cross-client Host Adapter Turn Input/Result contract and Codex implementation path anchor for future wrapper/plugin work."
   claude_hook_harness_review_work_order:
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CLAUDE-HOOK-01_claude_hook_strict_adapter_review.md"
     required: true

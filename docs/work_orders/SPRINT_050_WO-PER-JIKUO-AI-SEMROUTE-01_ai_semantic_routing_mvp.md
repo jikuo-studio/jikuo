@@ -57,6 +57,11 @@ user submits turn
 The current MVP should therefore prove the input contract before heavier
 wrapper / plugin work.
 
+`JIKUO-HOSTADAPT-01` defines that input contract at the cross-client adapter
+layer. AI semantic routing should reuse `jikuo.host_adapter.turn_input.v0` for
+host input normalization and keep `host_semantic_intent` as compact classifier
+evidence inside that envelope.
+
 ## 4. Host Semantic Intent Shape
 
 Minimum accepted shape:

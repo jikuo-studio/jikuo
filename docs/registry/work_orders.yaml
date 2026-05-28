@@ -191,6 +191,38 @@ entries:
       - "Do not expand MVP policy_scopes beyond discussion, editing, and progress_summary without a reviewed follow-up."
       - "Do not make intent_slices or contract fields direct evaluator inputs in this MVP."
       - "Do not add a dedicated correction/reroute workflow unless normal user follow-up turns prove insufficient."
+  - id: "JIKUO-HOSTADAPT-01"
+    title: "SPRINT_050_WO-PER-JIKUO-HOSTADAPT-01: Host Adapter Contract"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-HOSTADAPT-01_host_adapter_contract.md"
+    sprint: "SPRINT_050"
+    status: "Contract scaffold implemented for cross-client Host Adapter Turn Input/Result normalization, raw prompt redaction, and Codex implementation-path planning; host-specific wrappers/plugins remain future slices"
+    impact_tags:
+      - "strict_mounted_harness"
+      - "host_adapter"
+      - "ai_semantic_routing"
+      - "codex"
+    implements_capabilities:
+      - "CAP-HOST-ADAPTER-CONTRACT-01"
+      - "CAP-CODEX-PLUGIN-HARNESS-REVIEW-01"
+      - "CAP-HOST-SEMANTIC-INTENT-WORK-PROFILE-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets:
+      - "MOUNT-STRICT-HARNESS-PROOF"
+    originating_evidence_refs:
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-INTG-03_strict_mounted_harness_adapter_contract.md#3-1-shared-proof-contract"
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CODEX-PLUGIN-01_codex_plugin_pre_turn_harness_review.md#4-4-cross-client-adapter-shape"
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-AI-SEMROUTE-01_ai_semantic_routing_mvp.md#3-input-source-model"
+    authority_refs:
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-HOSTADAPT-01_host_adapter_contract.md"
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-INTG-03_strict_mounted_harness_adapter_contract.md"
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CODEX-PLUGIN-01_codex_plugin_pre_turn_harness_review.md"
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-AI-SEMROUTE-01_ai_semantic_routing_mvp.md"
+    stop_boundaries:
+      - "Do not make the host adapter contract call a model or decide policy applicability."
+      - "Do not persist raw prompts or transcripts in normalized adapter records."
+      - "Do not treat Codex-specific hook behavior as the architecture for every host."
+      - "Do not claim host-time semantic provider acceptance until a real provider smoke proves it."
+      - "Do not claim full lifecycle strict-mounted behavior until pre-turn and completion-review cards are linked for the same governed work."
   - id: "JIKUO-CORE-01"
     title: "SPRINT_050_WO-PER-JIKUO-CORE-01: Structured Result Model"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CORE-01_structured_result_model.md"
