@@ -7,8 +7,10 @@ The hook does four things:
 
 1. Reads minimal Codex hook input from stdin.
 2. Locates the project root.
-3. Calls `python -B -m jikuo.agent_flow propose --event conversation_turn` in
-   no-write mode.
+3. Calls JIKUO no-write `conversation_turn` routing. By default this uses the
+   in-process `jikuo.agent_flow` API to avoid GUI nested-Python subprocess
+   hangs; `JIKUO_HOOK_EXECUTION_MODE=subprocess` keeps the old CLI path for
+   diagnostics.
 4. Returns Codex `hookSpecificOutput.additionalContext` with JIKUO card links,
    policy counts, missing evidence counts, and the next required actions.
 
@@ -34,18 +36,22 @@ transport and label semantic intent, but it does not generate host-time AI
 classification by itself. A real GUI proof must still show whether Codex can
 provide that semantic object before JIKUO runs.
 
-As of 2026-05-21, the project-local Codex GUI proof has accepted the narrower
-pre-turn `additionalContext` injection surface after timeout remediation. Full
-strict-mounted lifecycle acceptance still requires a linked completion-review
-card and separate semantic-provider / multi-intent proof.
+The project-local Codex GUI proof has shown that `additionalContext` can be
+injected before the assistant answer. A 2026-05-28 GUI probe also showed that
+the old nested-Python subprocess path can time out even when the hook itself is
+loaded and visible, so the hook now defaults to in-process JIKUO invocation.
+Fresh GUI acceptance after this remediation is now accepted for the pre-turn
+additional-context surface. Linked completion-review, semantic-provider, and
+multi-intent proofs remain pending.
 
 ## Privacy Boundary
 
 The hook does not write the raw prompt or transcript to hook-owned files. The
-prompt is passed transiently to the local JIKUO CLI over stdin with
-`--user-phrase-stdin`, so the raw prompt is not placed in the child process
-argument list. A later reusable adapter can still replace the CLI hop with an
-MCP or in-process API call when the host provides a reliable boundary.
+prompt is passed transiently to the local JIKUO in-process API by default. In
+explicit subprocess diagnostic mode, it is passed to the local CLI over stdin
+with `--user-phrase-stdin`, so the raw prompt is not placed in the child
+process argument list. A later reusable adapter can still replace the
+project-local API call with MCP or another host-provided boundary.
 
 Compact `host_semantic_intent` is passed through the CLI argument list when
 present. That object must contain only classification metadata and compact
@@ -61,12 +67,16 @@ the Codex hook review UI or `/hooks` in CLI builds that expose it.
 Optional environment variables:
 
 - `JIKUO_HOOK_PYTHON`: Python executable used to invoke JIKUO. Defaults to the
-  interpreter running the hook.
+  interpreter running the hook. This only applies in subprocess diagnostic
+  mode.
+- `JIKUO_HOOK_EXECUTION_MODE`: `in_process` by default; set to `subprocess` or
+  `cli` only for diagnostics.
 - `JIKUO_HOOK_TRIGGER_MODE`: trigger mode passed to JIKUO. Defaults to
   `mounted`.
-- `JIKUO_HOOK_TIMEOUT_SECONDS`: subprocess timeout. Defaults to `70`.
-  The project-local Codex hook wrapper currently allows `90` seconds so a cold
-  Python/JIKUO startup can finish before Codex reports hook failure.
+- `JIKUO_HOOK_TIMEOUT_SECONDS`: subprocess timeout. Defaults to `70` and only
+  applies in subprocess diagnostic mode. The project-local Codex hook wrapper
+  currently allows `90` seconds so a cold Python/JIKUO startup can finish
+  before Codex reports hook failure.
 
 ## Acceptance Boundary
 

@@ -4477,6 +4477,36 @@ def render_work_profile(work_profile_projection: dict[str, Any]) -> list[str]:
     slices = semantic.get("intent_slices") or []
     if slices:
         lines.append(f"- Intent slices: `{len(slices)}`")
+        for item in slices:
+            if not isinstance(item, dict):
+                continue
+            slice_index = item.get("index") or "?"
+            slice_id = item.get("id") or "intent"
+            details = [
+                f"id=`{slice_id}`",
+            ]
+            scopes = item.get("policy_scopes") or []
+            if scopes:
+                details.append(
+                    "scopes=`" + ", ".join(str(scope) for scope in scopes) + "`"
+                )
+            user_expression = item.get("user_expression")
+            if user_expression:
+                details.append(f"user_expression=`{user_expression}`")
+            requested_outcome = item.get("requested_outcome")
+            if requested_outcome:
+                details.append(f"requested_outcome=`{requested_outcome}`")
+            execution_boundary = item.get("execution_boundary")
+            if execution_boundary:
+                details.append(f"execution_boundary=`{execution_boundary}`")
+            response_contract = item.get("response_contract") or []
+            if response_contract:
+                details.append(
+                    "response_contract=`"
+                    + "; ".join(str(contract) for contract in response_contract)
+                    + "`"
+                )
+            lines.append(f"  - `{slice_index}`: " + "; ".join(details))
     conflicts = basis.get("conflicts") or []
     if conflicts:
         lines.append(f"- Semantic/deterministic conflicts: `{len(conflicts)}`")

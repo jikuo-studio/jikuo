@@ -98,6 +98,8 @@ class CodexHookProofTests(unittest.TestCase):
         self.assertNotIn(raw_prompt, context)
         self.assertIn("JIKUO mounted pre-turn ran", context)
         self.assertIn("Semantic intent status: unavailable.", context)
+        self.assertIn("Host semantic intent contract:", context)
+        self.assertIn("keep user_expression short", context)
         self.assertIn("Triggered policy count: 1.", context)
         self.assertIn("Missing evidence report count: 1.", context)
         self.assertIn("jikuo.propose_task_start", context)
@@ -126,6 +128,26 @@ class CodexHookProofTests(unittest.TestCase):
         self.assertIn("--user-phrase-stdin", command)
         self.assertNotIn("--user-phrase", command)
         self.assertNotIn(raw_prompt, command)
+
+    def test_build_agent_flow_command_uses_preferred_windows_python_when_available(self):
+        hook = load_hook_module()
+        raw_prompt = "SECRET_PROMPT_VALUE: implement proof"
+        hook_input = hook.HookInput(
+            hook_event_name="UserPromptSubmit",
+            prompt=raw_prompt,
+            cwd=ROOT,
+            session_id="session-python",
+            turn_id="turn-python",
+            permission_mode="default",
+            model=None,
+        )
+
+        command = hook.build_agent_flow_command(hook_input, ROOT, "mounted", env={})
+
+        if hook.os.name == "nt" and hook.PREFERRED_WINDOWS_PYTHON.exists():
+            self.assertEqual(command[0], str(hook.PREFERRED_WINDOWS_PYTHON))
+        else:
+            self.assertEqual(command[0], sys.executable)
 
     def test_build_agent_flow_command_passes_compact_host_semantic_intent(self):
         hook = load_hook_module()
@@ -157,6 +179,73 @@ class CodexHookProofTests(unittest.TestCase):
         semantic_json = command[command.index("--host-semantic-intent-json") + 1]
         self.assertEqual(json.loads(semantic_json)["provider"], "host_ai")
         self.assertNotIn(raw_prompt, command)
+
+    def test_execution_mode_defaults_to_in_process_with_subprocess_opt_in(self):
+        hook = load_hook_module()
+
+        self.assertEqual(hook.execution_mode_from_env({}), "in_process")
+        self.assertEqual(
+            hook.execution_mode_from_env({"JIKUO_HOOK_EXECUTION_MODE": "subprocess"}),
+            "subprocess",
+        )
+        self.assertEqual(
+            hook.execution_mode_from_env({"JIKUO_HOOK_EXECUTION_MODE": "cli"}),
+            "subprocess",
+        )
+
+    def test_run_agent_flow_in_process_uses_agent_flow_builder_and_formatter(self):
+        hook = load_hook_module()
+        raw_prompt = "SECRET_PROMPT_VALUE: classify this turn"
+        hook_input = hook.HookInput(
+            hook_event_name="UserPromptSubmit",
+            prompt=raw_prompt,
+            cwd=ROOT,
+            session_id="session-in-process",
+            turn_id="turn-in-process",
+            permission_mode="default",
+            model=None,
+            host_semantic_intent={
+                "schema": "jikuo.host_semantic_intent.v0",
+                "provider": "host_ai",
+                "confidence": "high",
+                "work_profile": {"policy_scopes": ["editing"]},
+            },
+        )
+        calls = {}
+
+        def fake_builder(**kwargs):
+            calls["builder"] = kwargs
+            return {
+                "status": "review",
+                "work_profile": {
+                    "lifecycle_event": "conversation_turn",
+                    "policy_scopes": ["editing"],
+                },
+            }
+
+        def fake_formatter(proposal, *, project_root):
+            calls["formatter"] = {"proposal": proposal, "project_root": project_root}
+            return {
+                **proposal,
+                "runtime_visibility": {"last_card_ref": ".jikuo/runtime/last_card.md"},
+                "client_display_links": {"links": {}},
+            }
+
+        result = hook.run_agent_flow_in_process(
+            hook_input,
+            ROOT,
+            "mounted",
+            builder=fake_builder,
+            formatter=fake_formatter,
+        )
+
+        self.assertEqual(calls["builder"]["raw_event"], "conversation_turn")
+        self.assertEqual(calls["builder"]["project_root"], ROOT)
+        self.assertEqual(calls["builder"]["user_phrase"], raw_prompt)
+        self.assertEqual(calls["builder"]["trigger_mode"], "mounted")
+        self.assertEqual(calls["builder"]["host_semantic_intent"]["provider"], "host_ai")
+        self.assertEqual(calls["formatter"]["project_root"], ROOT)
+        self.assertEqual(result["runtime_visibility"]["last_card_ref"], ".jikuo/runtime/last_card.md")
 
     def test_main_emits_codex_additional_context_with_fake_runner(self):
         hook = load_hook_module()
@@ -242,6 +331,28 @@ class CodexHookProofTests(unittest.TestCase):
         self.assertIn("JIKUO mounted pre-turn failed", additional_context)
         self.assertIn("simulated failure", additional_context)
         self.assertNotIn(payload["prompt"], additional_context)
+
+    def test_failure_context_redacts_prompt_echo_from_errors(self):
+        hook = load_hook_module()
+        raw_prompt = "SECRET_PROMPT_VALUE: do not leak me"
+        hook_input = hook.HookInput(
+            hook_event_name="UserPromptSubmit",
+            prompt=raw_prompt,
+            cwd=ROOT,
+            session_id="session-redact",
+            turn_id="turn-redact",
+            permission_mode="default",
+            model=None,
+        )
+
+        context = hook.render_failure_context(
+            hook.HookExecutionError(f"boom {raw_prompt}"),
+            hook_input,
+            ROOT,
+        )
+
+        self.assertIn("<REDACTED_PROMPT_ECHO>", context)
+        self.assertNotIn(raw_prompt, context)
 
 
 if __name__ == "__main__":

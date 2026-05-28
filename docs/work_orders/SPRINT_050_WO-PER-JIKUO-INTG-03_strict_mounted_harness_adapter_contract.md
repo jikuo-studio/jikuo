@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-INTG-03: Strict Mounted Harness Adapter Contract
 
-> **Status**: Contract / planning accepted; implementation deferred to client proof and later adapter slices.
+> **Status**: Contract / planning accepted; AI semantic routing MVP design is anchored in `JIKUO-AI-SEMROUTE-01`; implementation remains deferred to client proof and later adapter slices.
 > **Product meaning**: users who choose mounted mode should get real pre-turn JIKUO execution, not just an instruction that the host Agent may or may not follow.
 > **Boundary**: this slice defines the adapter contract. It does not implement a Claude hook, Codex plugin, Cursor extension, VS Code extension, Studio proxy, or Agent SDK wrapper.
 
@@ -115,9 +115,8 @@ grammar as the policy-routing source:
 - `user_intent` is what the user is asking the AI to accomplish, including
   explicit constraints such as "do not edit files" or "commit the change".
 - `policy_scope` is the governed distribution class that determines which
-  active policies should be considered. Examples include `discussion`,
-  `editing`, `progress_summary`, `verification`, `document_governance`, and
-  `policy_management`.
+  active policies should be considered. The MVP scope taxonomy is intentionally
+  limited to `discussion`, `editing`, and `progress_summary`.
 - `process_contract` states how the agent is expected to think, evaluate,
   sequence, or decide before and during work. Examples include first-principles
   critique, concept alignment before implementation details, or data-model
@@ -151,6 +150,14 @@ permissions, and any human review. Therefore:
   is still user/model-mediated unless a separate host hook invokes it before
   ordinary model work.
 
+`JIKUO-AI-SEMROUTE-01` records the current MVP design decision: hook
+`additionalContext` may instruct the host AI to provide semantic intent, but it
+does not itself guarantee that host-time semantic classification happened.
+Sampling can enrich semantic intent after JIKUO has been called, but it is not
+the main guarantee. Future wrapper / plugin work should reuse the same
+`host_semantic_intent` contract rather than inventing a client-specific
+semantic payload.
+
 Multi-intent turns are normal and must be modeled explicitly. One user turn has
 one lifecycle position, but it may contain multiple intent slices:
 
@@ -160,6 +167,7 @@ host_semantic_intent:
   primary_intent_ref: update_docs
   intent_slices:
     - id: discuss_design
+      user_expression: align the design direction
       policy_scopes: [discussion]
       intent_class: design_discussion
       operation_class: read_only
@@ -169,6 +177,7 @@ host_semantic_intent:
       execution_boundary: read-only
       response_contract: summarize assumptions, alternatives, recommendation, and risk
     - id: update_docs
+      user_expression: update mounted-hook documentation
       policy_scopes: [editing]
       intent_class: implementation_request
       operation_class: documentation_update
@@ -178,6 +187,7 @@ host_semantic_intent:
       execution_boundary: repository writes allowed after governed pre-work
       response_contract: report changed docs, checks, card links, and follow-ups
     - id: summarize
+      user_expression: summarize progress
       policy_scopes: [progress_summary]
       intent_class: progress_summary
       operation_class: summarize
@@ -222,6 +232,11 @@ Minimum implementation checklist for a later code slice:
   local tests now cover host-provided single-intent, multi-intent, and
   negative-constraint conflicts, while real host-time provider proof remains
   pending.
+
+The MVP does not add a separate correction / reroute workflow. If the user
+finds the classification wrong, the next natural-language follow-up is a new
+`conversation_turn` and JIKUO routes again. Runtime history preserves the old
+projection as prior evidence instead of trying to roll it back.
 
 ### 3.2.2 Contract-Field Consumption Proof
 

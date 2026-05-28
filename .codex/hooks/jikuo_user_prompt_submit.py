@@ -12,6 +12,8 @@ from typing import Any, Callable, TextIO
 DEFAULT_TIMEOUT_SECONDS = 70
 DEFAULT_TRIGGER_MODE = "mounted"
 HOOK_EVENT_NAME = "UserPromptSubmit"
+DEFAULT_EXECUTION_MODE = "in_process"
+PREFERRED_WINDOWS_PYTHON = Path("C:/Python314/python.exe")
 
 
 class HookExecutionError(RuntimeError):
@@ -100,6 +102,15 @@ def timeout_from_env(env: dict[str, str] | None = None) -> int:
     return max(1, value)
 
 
+def execution_mode_from_env(env: dict[str, str] | None = None) -> str:
+    env = env or os.environ
+    raw_value = (env.get("JIKUO_HOOK_EXECUTION_MODE") or DEFAULT_EXECUTION_MODE).strip()
+    normalized = raw_value.lower().replace("-", "_")
+    if normalized in {"subprocess", "cli"}:
+        return "subprocess"
+    return DEFAULT_EXECUTION_MODE
+
+
 def pythonpath_for_project(project_root: Path, env: dict[str, str]) -> str:
     src_path = project_root / "src"
     existing = env.get("PYTHONPATH")
@@ -110,6 +121,24 @@ def pythonpath_for_project(project_root: Path, env: dict[str, str]) -> str:
     return existing or ""
 
 
+def jikuo_subprocess_python(env: dict[str, str]) -> str:
+    configured = env.get("JIKUO_HOOK_PYTHON")
+    if configured:
+        return configured
+    if os.name == "nt" and PREFERRED_WINDOWS_PYTHON.exists():
+        return str(PREFERRED_WINDOWS_PYTHON)
+    return sys.executable
+
+
+def ensure_project_src_on_path(project_root: Path) -> None:
+    src_path = project_root / "src"
+    if not src_path.exists():
+        return
+    src_text = str(src_path)
+    if src_text not in sys.path:
+        sys.path.insert(0, src_text)
+
+
 def build_agent_flow_command(
     hook_input: HookInput,
     project_root: Path,
@@ -117,7 +146,7 @@ def build_agent_flow_command(
     env: dict[str, str] | None = None,
 ) -> list[str]:
     env = env or os.environ
-    python_exe = env.get("JIKUO_HOOK_PYTHON") or sys.executable
+    python_exe = jikuo_subprocess_python(env)
     command = [
         python_exe,
         "-B",
@@ -149,7 +178,43 @@ def build_agent_flow_command(
     return command
 
 
-def run_agent_flow(
+ProposalBuilder = Callable[..., dict[str, Any]]
+ProposalFormatter = Callable[..., dict[str, Any]]
+
+
+def run_agent_flow_in_process(
+    hook_input: HookInput,
+    project_root: Path,
+    trigger_mode: str,
+    *,
+    builder: ProposalBuilder | None = None,
+    formatter: ProposalFormatter | None = None,
+) -> dict[str, Any]:
+    try:
+        if builder is None or formatter is None:
+            ensure_project_src_on_path(project_root)
+            from jikuo import agent_flow
+
+            builder = builder or agent_flow.build_proposal
+            formatter = formatter or agent_flow.proposal_with_chat_ready_markdown
+        proposal = builder(
+            raw_event="conversation_turn",
+            project_root=project_root,
+            user_phrase=hook_input.prompt or None,
+            trigger_mode=trigger_mode,
+            host_semantic_intent=hook_input.host_semantic_intent,
+        )
+        output = formatter(proposal, project_root=project_root)
+    except HookExecutionError:
+        raise
+    except Exception as exc:
+        raise HookExecutionError(f"JIKUO in-process call failed: {exc}") from exc
+    if not isinstance(output, dict):
+        raise HookExecutionError("JIKUO in-process call returned a non-object value")
+    return output
+
+
+def run_agent_flow_subprocess(
     hook_input: HookInput,
     project_root: Path,
     trigger_mode: str,
@@ -176,7 +241,10 @@ def run_agent_flow(
     except OSError as exc:
         raise HookExecutionError(f"JIKUO command could not start: {exc}") from exc
     except subprocess.TimeoutExpired as exc:
-        raise HookExecutionError("JIKUO command timed out") from exc
+        raise HookExecutionError(
+            "JIKUO command timed out "
+            f"after {timeout_from_env(process_env)}s; python={command[0]}"
+        ) from exc
 
     if completed.returncode != 0:
         stderr = (completed.stderr or "").strip().splitlines()
@@ -190,6 +258,23 @@ def run_agent_flow(
     if not isinstance(result, dict):
         raise HookExecutionError("JIKUO command returned a non-object JSON value")
     return result
+
+
+def run_agent_flow(
+    hook_input: HookInput,
+    project_root: Path,
+    trigger_mode: str,
+    env: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    process_env = dict(env or os.environ)
+    if execution_mode_from_env(process_env) == "subprocess":
+        return run_agent_flow_subprocess(
+            hook_input,
+            project_root,
+            trigger_mode,
+            process_env,
+        )
+    return run_agent_flow_in_process(hook_input, project_root, trigger_mode)
 
 
 def _display_link(proposal: dict[str, Any], link_name: str) -> str | None:
@@ -268,6 +353,11 @@ def render_additional_context(
         f"Trigger mode: {trigger_mode}.",
         f"Semantic intent status: {semantic_intent_status}.",
         semantic_classification_note(semantic_intent_status),
+        (
+            "Host semantic intent contract: when you call JIKUO tools later, pass "
+            "compact host_semantic_intent only if you have classified the turn; "
+            "keep user_expression short and do not include the raw prompt or transcript."
+        ),
         f"Project root: {project_root}.",
         f"Session id: {hook_input.session_id or 'unavailable'}.",
         f"Turn id: {hook_input.turn_id or 'unavailable'}.",
@@ -278,7 +368,7 @@ def render_additional_context(
         f"History card: {history or 'unavailable'}.",
         "Required follow-up tools: " + (", ".join(followups) if followups else "none reported."),
         "Durable writes remain guarded; this hook must not create task sessions, policies, commits, or evidence writes by itself.",
-        "Privacy boundary: the hook passes the prompt to JIKUO over stdin and does not persist the raw prompt or transcript in hook-owned files.",
+        "Privacy boundary: the hook passes the prompt to JIKUO in memory by default, or over stdin in subprocess diagnostic mode, and does not persist the raw prompt or transcript in hook-owned files.",
     ]
     return "\n".join(lines)
 
@@ -307,16 +397,26 @@ def semantic_classification_note(semantic_intent_status: str) -> str:
     )
 
 
+def redact_prompt_echo(text: str, prompt: str) -> str:
+    if prompt and len(prompt) >= 8 and prompt in text:
+        return text.replace(prompt, "<REDACTED_PROMPT_ECHO>")
+    return text
+
+
 def render_failure_context(error: Exception, hook_input: HookInput, project_root: Path) -> str:
+    failure_summary = redact_prompt_echo(str(error), hook_input.prompt)
     return "\n".join(
         [
             "JIKUO mounted pre-turn failed or degraded before substantive model work.",
             f"Project root: {project_root}.",
             f"Session id: {hook_input.session_id or 'unavailable'}.",
             f"Turn id: {hook_input.turn_id or 'unavailable'}.",
-            f"Failure summary: {error}",
+            f"Failure summary: {failure_summary}",
+            f"Python executable: {sys.executable}.",
+            f"Hook execution mode: {execution_mode_from_env()}.",
+            f"Hook timeout seconds: {timeout_from_env()}.",
             "Do not claim strict-mounted JIKUO ran for this turn unless a later visible card proves it.",
-            "Privacy boundary: the hook passes the prompt to JIKUO over stdin when available and does not persist the raw prompt or transcript in hook-owned files.",
+            "Privacy boundary: the hook passes the prompt to JIKUO in memory by default, or over stdin in subprocess diagnostic mode, and does not persist the raw prompt or transcript in hook-owned files.",
         ]
     )
 

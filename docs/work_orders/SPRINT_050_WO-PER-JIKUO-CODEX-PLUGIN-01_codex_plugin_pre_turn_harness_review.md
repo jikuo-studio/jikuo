@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-CODEX-PLUGIN-01: Codex Plugin Pre-Turn Harness Review
 
-> **Status**: Level 1 project-local proof files implemented and local stdin smoke passed; host semantic-intent input and work-profile merge path implemented for CLI / MCP / Codex hook proof; MCP Sampling semantic-provider probe implemented as an optional client-mediated proof path; official Codex hook surface reviewed on 2026-05-19; Codex GUI pre-turn `additionalContext` injection accepted after timeout remediation on 2026-05-21; host-time semantic provider acceptance, multi-intent semantic proof, and full lifecycle strict-mounted acceptance still pending.
+> **Status**: Level 1 project-local proof files implemented and local stdin smoke passed; host semantic-intent input and work-profile merge path implemented for CLI / MCP / Codex hook proof; MCP Sampling semantic-provider probe implemented as an optional client-mediated proof path; AI semantic routing MVP contract anchored in `JIKUO-AI-SEMROUTE-01`; official Codex hook surface reviewed on 2026-05-19; Codex GUI `additionalContext` visibility has been observed; a 2026-05-28 GUI probe exposed nested-Python subprocess timeout, so the hook now defaults to in-process JIKUO invocation; fresh GUI smoke accepted the in-process pre-turn additionalContext path; host-time semantic provider acceptance, multi-intent semantic proof, and full lifecycle strict-mounted acceptance still pending.
 > **Date**: 2026-05-16
 > **Product meaning**: Determine whether a Codex plugin can make JIKUO run before every user turn, or whether it should only ship as an instruction / MCP setup aid. This prevents JIKUO from claiming strict mounted behavior that Codex cannot actually enforce.
 
@@ -114,6 +114,13 @@ explicit. A mounted hook that only forwards a prompt to the current
 deterministic keyword router proves trigger stability, not semantic
 classification quality.
 
+`JIKUO-AI-SEMROUTE-01` is the MVP authority for the semantic-routing shape.
+The Codex hook can invoke JIKUO and inject `additionalContext`; it cannot, by
+itself, force the host AI to classify the turn before tool invocation. Host
+semantic intent is accepted only when the host AI, a client-mediated Sampling
+provider, or a future wrapper / plugin supplies a compact
+`host_semantic_intent` object.
+
 The intended cooperation model is:
 
 1. A host AI semantic classifier, when available before governance evaluation,
@@ -163,6 +170,7 @@ host_semantic_intent:
     - no_commit
   intent_slices:
     - id: intent_1
+      user_expression: short user phrase, not the full prompt
       policy_scopes: [discussion]
       intent_class: design_discussion
       operation_class: design_review
@@ -173,6 +181,7 @@ host_semantic_intent:
       response_contract: explain recommendation, risks, and open questions
       rationale_summary: compact slice explanation
     - id: intent_2
+      user_expression: short user phrase, not the full prompt
       policy_scopes: [editing]
       intent_class: implementation_request
       operation_class: documentation_update
@@ -197,6 +206,12 @@ AI identifies multiple user intents. JIKUO must aggregate the final
 slice for card explanation and future execution planning. `primary_intent_ref`
 is used only for ordering and summaries; it must not suppress other slice
 scopes during policy distribution.
+
+For the MVP, valid aggregate `policy_scopes` remain only `discussion`,
+`editing`, and `progress_summary`. More specific ideas such as
+first-principles alignment, data-model boundary review, distribution review, or
+verification are expressed as policy titles, required actions, evidence types,
+and response contracts, not as new scope labels.
 
 When a turn contains a negative constraint such as "do not edit files" or "only
 discuss", the host semantic intent should record it in `constraints`. JIKUO
@@ -279,6 +294,12 @@ compact semantic classification when a host or classifier provides one. If no
 provider is available, the hook still reports `semantic_intent_status` as
 `unavailable` and deterministic routing remains the honest fallback.
 
+If semantic classification is wrong, Codex should not rely on a special
+correction workflow. The user can correct the interpretation in ordinary
+natural language, producing a new `conversation_turn` that JIKUO routes again.
+The prior card remains runtime history, not a durable binding that must be
+rolled back.
+
 Contract-field proof for the Codex GUI chain is narrower than general policy
 proof. The hook only transports and surfaces fields; it must not decide policy
 applicability. Acceptance for later slices should show:
@@ -332,21 +353,26 @@ fire before substantive model execution and inject the JIKUO card context.
 
 ### JIKUO Call
 
-The proof script should call the local no-write router before the model works:
+The proof script should call the local no-write router before the model works.
+The current project-local hook defaults to the in-process API equivalent of:
 
 ```powershell
 python -B -m jikuo.agent_flow propose --event conversation_turn --project-root "<PROJECT_ROOT>" --trigger-mode mounted --user-phrase-stdin --format json
 ```
 
-The CLI path is the first proof target because a hook command is an external
-process. A later adapter may prefer MCP `jikuo.route_user_request` if the host
-offers a reliable in-process MCP client boundary to hooks.
+The CLI form remains a diagnostic fallback behind
+`JIKUO_HOOK_EXECUTION_MODE=subprocess`. It is not the preferred GUI path after
+the 2026-05-28 observation showed that Codex can load the hook and inject
+visible degradation while the nested Python CLI call still times out.
+A later adapter may prefer MCP `jikuo.route_user_request` if the host offers a
+reliable in-process MCP client boundary to hooks.
 
 Proof notes should record only card links, status, and compact summaries. They
-must not persist the full prompt text. The current hook passes the prompt to the
-local CLI over stdin, not through process arguments. A later reusable hook pack
-may still replace the CLI hop with MCP or an in-process API when the host offers
-a reliable boundary.
+must not persist the full prompt text. The current hook passes the prompt to
+the local JIKUO in-process API by default; in subprocess diagnostic mode, it
+passes the prompt to the local CLI over stdin, not through process arguments.
+A later reusable hook pack may still replace the project-local API call with
+MCP when the host offers a reliable boundary.
 
 ### Hook Output
 
@@ -403,7 +429,8 @@ These files implement the thin Codex adapter:
 
 - parse Codex `UserPromptSubmit` stdin JSON;
 - locate the project root;
-- call no-write `agent_flow propose --event conversation_turn`;
+- call no-write `agent_flow` `conversation_turn` routing in-process by
+  default, with subprocess CLI retained as an explicit diagnostic mode;
 - return `hookSpecificOutput.additionalContext` with runtime links, policy
   counts, missing-evidence counts, and guarded-write reminders;
 - report `semantic_intent_status=unavailable` until a later semantic proof
@@ -412,8 +439,9 @@ These files implement the thin Codex adapter:
 The hook is intentionally not a policy engine. It must not decide active-policy
 applicability, perform durable writes, persist raw prompts, or claim
 AI-semantic routing. The current implementation passes the prompt transiently
-to the local CLI over stdin via `--user-phrase-stdin`, so prompt text is not
-placed in the child process argument list.
+to the local in-process JIKUO API by default. If
+`JIKUO_HOOK_EXECUTION_MODE=subprocess` is set, prompt text is passed over stdin
+via `--user-phrase-stdin` and is not placed in the child process argument list.
 
 The current implementation also passes compact `host_semantic_intent` through
 `--host-semantic-intent-json` when the hook input contains that field. The hook
@@ -421,9 +449,12 @@ does not generate that semantic intent by itself; it only transports and labels
 it so JIKUO can merge it into the final work profile.
 
 A proof note under `docs/integrations/proofs/` now accepts the narrower Codex
-GUI pre-turn `additionalContext` injection surface. Full strict-mounted
-lifecycle proof is still pending and must be based on a real Codex GUI run that
-also links completion-review lifecycle output, not only unit tests.
+GUI pre-turn `additionalContext` injection surface for the 2026-05-21 observed
+environment. A later 2026-05-28 observation showed a GUI subprocess timeout
+regression/degradation and triggered the in-process remediation. Full
+strict-mounted lifecycle proof is still pending and must be based on a real
+Codex GUI run that also links completion-review lifecycle output, not only unit
+tests.
 
 Current Codex Desktop observation:
 
@@ -439,10 +470,21 @@ Current Codex Desktop observation:
   with `semantic_intent_status=unavailable`, one triggered policy, zero missing
   evidence, and history card
   `.jikuo/runtime/history/20260521T004612Z_proposal_264d3469ea.md`.
-- This accepts the Codex GUI pre-turn hook / `additionalContext` surface for
-  this project-local proof configuration. It does not accept host-time
-  AI-semantic routing, multi-intent semantic slicing, or full lifecycle
-  strict-mounted behavior.
+- A 2026-05-28 GUI probe again showed visible JIKUO `additionalContext`, but
+  the mounted context was degraded: `JIKUO command timed out after 70s;
+  python=C:\Python314\python.exe`. This proves the hook surface was loaded and
+  visible, but the nested Python CLI call is not stable enough as the default
+  GUI path.
+- `docs/integrations/proofs/PROOF-2026-05-28-codex-gui-hook-subprocess-timeout.md`
+  records the timeout observation and remediation boundary.
+- The current remediation keeps the visible failure boundary and changes the
+  default project-local hook call to in-process JIKUO invocation. Subprocess CLI
+  remains available only through `JIKUO_HOOK_EXECUTION_MODE=subprocess` for
+  diagnostics.
+- Fresh GUI success after the in-process remediation is accepted for the
+  project-local pre-turn `additionalContext` path. The proof does not accept
+  host-time AI-semantic routing, multi-intent semantic slicing, or full
+  lifecycle strict-mounted behavior.
 
 Current local verification:
 
@@ -452,13 +494,15 @@ Current local verification:
 - A local stdin smoke call to `.codex/hooks/jikuo_user_prompt_submit.py`
   returns `hookSpecificOutput.additionalContext` and creates a
   `conversation_turn` runtime history card.
-- `agent_flow propose --user-phrase-stdin` is covered by regression tests and
-  is the preferred Codex hook transport for prompt text.
+- in-process hook invocation is covered by regression tests and local stdin
+  smoke; `agent_flow propose --user-phrase-stdin` remains covered as the
+  subprocess diagnostic fallback.
 
-This local verification proves the script behavior only. The Codex GUI
-observation above separately proves that the enabled project-local hook can
-inject pre-turn JIKUO `additionalContext`; it still does not prove host-time
-AI-semantic routing or full lifecycle strict-mounted behavior.
+This local verification proves the script behavior. The Codex GUI observation
+above separately proves that the enabled project-local hook can inject pre-turn
+JIKUO `additionalContext`, including visible degradation for failed subprocess
+diagnostic paths and successful in-process remediation. This still does not
+prove host-time AI-semantic routing or full lifecycle strict-mounted behavior.
 
 ## 4.3 Codex GUI End-To-End Trigger Flow
 
@@ -474,9 +518,9 @@ implemented, the Codex GUI path should behave as one governed turn pipeline:
 4. The hook obtains `host_semantic_intent` if a host AI or dedicated classifier
    is available at hook time. If not, it records
    `semantic_intent_status=unavailable`.
-5. The hook calls JIKUO no-write routing, initially through
-   `agent_flow propose --event conversation_turn`, later through a stable
-   lifecycle-runner entry if accepted.
+5. The hook calls JIKUO no-write routing through the in-process `agent_flow`
+   API by default, or through subprocess CLI only in diagnostic mode. A later
+   stable lifecycle-runner entry may replace this once accepted.
 6. JIKUO builds the final work profile by merging explicit lifecycle context,
    host semantic intent, intent slices, negative constraints, deterministic
    path / keyword / tool signals, activation settings, and registry context.

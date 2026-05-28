@@ -486,17 +486,19 @@ trigger_mode = mounted
 host_semantic_intent = <provided | unavailable | heuristic_fallback>
 ```
 
-Minimal JIKUO command:
+Minimal subprocess-equivalent JIKUO command:
 
 ```powershell
 <PYTHON_EXE> -B -m jikuo.agent_flow propose --event conversation_turn --project-root "<PROJECT_ROOT>" --trigger-mode mounted --user-phrase-stdin --format json
 ```
 
 Proof notes should not copy the full prompt. Record card links, status, and a
-compact summary only. The current project-local hook passes prompt text to the
-CLI over stdin with `--user-phrase-stdin`, not through the child process
-argument list. A reusable hook pack may still switch to MCP or an in-process API
-when the target host provides a reliable boundary.
+compact summary only. The current project-local hook defaults to in-process
+JIKUO invocation to avoid GUI nested-Python subprocess hangs. If subprocess
+diagnostic mode is enabled, it passes prompt text to the CLI over stdin with
+`--user-phrase-stdin`, not through the child process argument list. A reusable
+hook pack may still switch to MCP when the target host provides a reliable
+boundary.
 
 Semantic classification proof:
 
@@ -648,7 +650,11 @@ tests\codex_hook_tests.py
 
 These files began as Level 1 adapter proof scaffolding. The 2026-05-21 Codex
 GUI observation accepted the narrower pre-turn `additionalContext` injection
-surface after timeout remediation. They do not prove full lifecycle strict
+surface after timeout remediation. A 2026-05-28 Codex GUI observation then
+showed visible degraded `additionalContext` caused by nested-Python subprocess
+timeout, so the hook now defaults to in-process JIKUO invocation. The fresh
+in-process GUI smoke is now accepted for the pre-turn `additionalContext`
+path. They do not prove full lifecycle strict
 mounted behavior until a later completion-review card is linked in the proof
 report, and they do not prove host-time AI semantic routing or multi-intent
 semantic handling.

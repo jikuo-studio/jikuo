@@ -97,6 +97,10 @@ document_roles:
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CODEX-PLUGIN-01_codex_plugin_pre_turn_harness_review.md"
     required: true
     note: "Codex proof task for determining whether plugin / hook surfaces can provide strict pre-turn JIKUO execution or only instruction / MCP setup assistance."
+  ai_semantic_routing_mvp_work_order:
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-AI-SEMROUTE-01_ai_semantic_routing_mvp.md"
+    required: true
+    note: "MVP contract for host_semantic_intent, ordered intent_slices, stable policy_scopes, Sampling fallback posture, and evaluator non-consumption boundary."
   claude_hook_harness_review_work_order:
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CLAUDE-HOOK-01_claude_hook_strict_adapter_review.md"
     required: true

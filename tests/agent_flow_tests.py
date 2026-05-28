@@ -708,6 +708,8 @@ class AgentFlowProposalTests(unittest.TestCase):
             "intent_slices": [
                 {
                     "id": "discuss_change",
+                    "index": 1,
+                    "user_expression": "discuss the implementation without writing files",
                     "policy_scopes": ["discussion"],
                     "intent_class": "design_discussion",
                     "operation_class": "no_change",
@@ -779,12 +781,20 @@ class AgentFlowProposalTests(unittest.TestCase):
         self.assertEqual(semantic["constraints"], ["no_file_write"])
         self.assertEqual(semantic["policy_contract"], contract)
         self.assertEqual(len(semantic["intent_slices"]), 1)
+        self.assertEqual(
+            semantic["intent_slices"][0]["user_expression"],
+            "discuss the implementation without writing files",
+        )
         conflicts = profile["basis"]["conflicts"]
         self.assertEqual(
             conflicts[0]["signal"],
             "editing_terms_blocked_by_edit_constraint",
         )
         self.assertIn("Semantic intent status: `provided`", proposal["chat_ready_markdown"])
+        self.assertIn(
+            "user_expression=`discuss the implementation without writing files`",
+            proposal["chat_ready_markdown"],
+        )
         self.assertIn(
             "Requested outcome: `compare the implementation approach without writing files`",
             proposal["chat_ready_markdown"],
@@ -814,13 +824,17 @@ class AgentFlowProposalTests(unittest.TestCase):
             "intent_slices": [
                 {
                     "id": "explain_design",
-                    "policy_scopes": ["discussion"],
+                    "index": 1,
+                    "user_expression": "review the design",
+                    "policy_scopes": ["discussion", "first_principles_alignment"],
                     "intent_class": "design_explanation",
                     "operation_class": "read_only",
                     "output_class": "explanation",
                 },
                 {
                     "id": "update_docs",
+                    "index": 2,
+                    "user_expression": "update the docs",
                     "policy_scopes": ["editing"],
                     "intent_class": "implementation_request",
                     "operation_class": "documentation_update",
@@ -828,6 +842,12 @@ class AgentFlowProposalTests(unittest.TestCase):
                 },
                 {
                     "id": "summarize_progress",
+                    "index": 3,
+                    "user_expression": (
+                        "summarize progress and business meaning with a very long "
+                        "expression that should be shortened before it is rendered "
+                        "into the runtime card because it must not become raw prompt storage"
+                    ),
                     "policy_scopes": ["progress_summary"],
                     "intent_class": "progress_summary",
                     "operation_class": "summarize",
@@ -872,7 +892,17 @@ class AgentFlowProposalTests(unittest.TestCase):
         self.assertTrue(semantic["multi_intent"])
         self.assertEqual(semantic["primary_intent_ref"], "update_docs")
         self.assertEqual(len(semantic["intent_slices"]), 3)
+        self.assertEqual(semantic["intent_slices"][0]["policy_scopes"], ["discussion"])
+        self.assertNotIn(
+            "first_principles_alignment",
+            json.dumps(semantic, ensure_ascii=False),
+        )
+        self.assertEqual(semantic["intent_slices"][1]["index"], 2)
+        self.assertLessEqual(len(semantic["intent_slices"][2]["user_expression"]), 120)
         self.assertIn("Intent slices: `3`", proposal["chat_ready_markdown"])
+        self.assertIn("`1`: id=`explain_design`; scopes=`discussion`", proposal["chat_ready_markdown"])
+        self.assertIn("`2`: id=`update_docs`; scopes=`editing`", proposal["chat_ready_markdown"])
+        self.assertIn("user_expression=`update the docs`", proposal["chat_ready_markdown"])
 
     def test_work_profile_does_not_treat_no_write_as_editing(self):
         completed = subprocess.run(

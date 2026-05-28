@@ -15,6 +15,8 @@ from typing import Any
 
 WORK_PROFILE_SCHEMA = "jikuo.work_profile.v0"
 HOST_SEMANTIC_INTENT_SCHEMA = "jikuo.host_semantic_intent.v0"
+MVP_POLICY_SCOPES = {"discussion", "editing", "progress_summary"}
+USER_EXPRESSION_MAX_CHARS = 120
 POLICY_CONTRACT_KEYS = (
     "requested_outcome",
     "process_contract",
@@ -313,6 +315,15 @@ def _string_list(value: Any) -> list[str]:
     return output
 
 
+def _policy_scope_list(value: Any) -> list[str]:
+    output: list[str] = []
+    for item in _string_list(value):
+        normalized = item.lower().replace("-", "_")
+        if normalized in MVP_POLICY_SCOPES and normalized not in output:
+            output.append(normalized)
+    return output
+
+
 def _ordered_unique(values: list[str]) -> list[str]:
     output: list[str] = []
     for value in values:
@@ -329,6 +340,26 @@ def _first_string(*values: Any) -> str | None:
     return None
 
 
+def _short_user_expression(value: Any) -> str | None:
+    text = _string_value(value)
+    if not text:
+        return None
+    compact = re.sub(r"\s+", " ", text).strip()
+    if len(compact) <= USER_EXPRESSION_MAX_CHARS:
+        return compact
+    return compact[: USER_EXPRESSION_MAX_CHARS - 3].rstrip() + "..."
+
+
+def _positive_index(value: Any, default: int) -> int:
+    if isinstance(value, int) and value > 0:
+        return value
+    if isinstance(value, str) and value.strip().isdigit():
+        number = int(value.strip())
+        if number > 0:
+            return number
+    return default
+
+
 def _normalize_confidence(value: Any) -> str:
     text = _string_value(value)
     if text in {"high", "medium", "low", "unavailable"}:
@@ -343,11 +374,14 @@ def _normalize_intent_slices(value: Any) -> list[dict[str, Any]]:
     for index, item in enumerate(value, start=1):
         if not isinstance(item, dict):
             continue
+        slice_index = _positive_index(item.get("index"), index)
         slice_id = _string_value(item.get("id")) or f"intent_{index}"
         slices.append(
             {
+                "index": slice_index,
                 "id": slice_id,
-                "policy_scopes": _string_list(item.get("policy_scopes")),
+                "user_expression": _short_user_expression(item.get("user_expression")),
+                "policy_scopes": _policy_scope_list(item.get("policy_scopes")),
                 "intent_class": _string_value(item.get("intent_class")),
                 "operation_class": _string_value(item.get("operation_class")),
                 "output_class": _string_value(item.get("output_class")),
@@ -441,12 +475,12 @@ def normalize_host_semantic_intent(raw: dict[str, Any] | None) -> dict[str, Any]
     )
 
     scopes = _ordered_unique(
-        _string_list(raw.get("policy_scopes"))
-        + _string_list(nested_work_profile.get("policy_scopes"))
+        _policy_scope_list(raw.get("policy_scopes"))
+        + _policy_scope_list(nested_work_profile.get("policy_scopes"))
         + [
             scope
             for item in intent_slices
-            for scope in _string_list(item.get("policy_scopes"))
+            for scope in _policy_scope_list(item.get("policy_scopes"))
         ]
     )
     constraints = _ordered_unique(
