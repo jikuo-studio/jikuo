@@ -73,6 +73,30 @@ a working pre-turn additional-context injection path for this repository.
 It still does not prove host-time AI semantic routing, multi-intent semantic
 slicing, or full lifecycle strict-mounted behavior.
 
+## Host Adapter Contract-Line GUI Probe
+
+After `jikuo.host_adapter.turn_input.v0` / `turn_result.v0` consumption was
+wired into the Codex project-local hook, the user submitted another Codex GUI
+turn in this repository. Codex showed successful injected JIKUO context before
+the assistant response.
+
+Observed injected context included:
+
+- `JIKUO mounted pre-turn ran before substantive model work.`
+- `Semantic intent status: unavailable.`
+- `Host adapter contract: input_schema=jikuo.host_adapter.turn_input.v0; result_schema=jikuo.host_adapter.turn_result.v0; user_turn_summary_status=provided_redacted.`
+- `Work profile: lifecycle_event=conversation_turn; policy_scopes=discussion.`
+- `Triggered policy count: 2.`
+- `Missing evidence report count: 1.`
+- History card:
+  `.jikuo/runtime/history/20260528T122001Z_proposal_264d3469ea.md`
+
+This accepts the contract-line GUI projection for the project-local Codex
+`UserPromptSubmit` hook path. It proves the visible Codex hook path now
+consumes and reports the shared Host Adapter Turn Input/Result contract for a
+real GUI turn. It still does not prove host-time AI semantic routing,
+multi-intent semantic slicing, or full lifecycle strict-mounted behavior.
+
 ## Next Required Proof Step
 
 Record a later completion-review card for the same governed work once the

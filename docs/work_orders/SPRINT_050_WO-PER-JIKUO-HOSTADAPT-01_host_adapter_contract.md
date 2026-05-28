@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-HOSTADAPT-01: Host Adapter Contract
 
-> **Status**: Contract scaffold implemented for cross-client input/result normalization, raw prompt redaction, and Codex project-local hook consumption. Host-specific wrappers/plugins remain future slices.
+> **Status**: Contract scaffold implemented for cross-client input/result normalization, raw prompt redaction, Codex project-local hook consumption, and Codex GUI contract-line projection proof. Host-specific wrappers/plugins remain future slices.
 > **Date**: 2026-05-28
 > **JIKUO layer**: integration / strict mounted harness.
 > **Business meaning**: JIKUO should be portable across Codex, Claude, Cursor, VS Code, and future wrappers without baking one client's hook behavior into the core governance model.
@@ -137,6 +137,9 @@ Accepted status:
 - in-process invocation avoids nested-Python timeout observed on 2026-05-28;
 - the project-local hook maps stdin into `jikuo.host_adapter.turn_input.v0`
   and renders a `jikuo.host_adapter.turn_result.v0` summary;
+- a 2026-05-28 Codex GUI smoke showed that contract summary line in model
+  `additionalContext`, with history card
+  `.jikuo/runtime/history/20260528T122001Z_proposal_264d3469ea.md`;
 - failures remain visible instead of silent.
 
 Not accepted:

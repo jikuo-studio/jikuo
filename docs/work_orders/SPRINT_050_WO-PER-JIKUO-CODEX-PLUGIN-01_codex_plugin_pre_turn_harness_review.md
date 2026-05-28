@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-CODEX-PLUGIN-01: Codex Plugin Pre-Turn Harness Review
 
-> **Status**: Level 1 project-local proof files implemented and local stdin smoke passed; host semantic-intent input and work-profile merge path implemented for CLI / MCP / Codex hook proof; MCP Sampling semantic-provider probe implemented as an optional client-mediated proof path; AI semantic routing MVP contract anchored in `JIKUO-AI-SEMROUTE-01`; official Codex hook surface reviewed on 2026-05-19; Codex GUI `additionalContext` visibility has been observed; a 2026-05-28 GUI probe exposed nested-Python subprocess timeout, so the hook now defaults to in-process JIKUO invocation; fresh GUI smoke accepted the in-process pre-turn additionalContext path; host-time semantic provider acceptance, multi-intent semantic proof, and full lifecycle strict-mounted acceptance still pending.
+> **Status**: Level 1 project-local proof files implemented and local stdin smoke passed; host semantic-intent input and work-profile merge path implemented for CLI / MCP / Codex hook proof; MCP Sampling semantic-provider probe implemented as an optional client-mediated proof path; AI semantic routing MVP contract anchored in `JIKUO-AI-SEMROUTE-01`; official Codex hook surface reviewed on 2026-05-19; Codex GUI `additionalContext` visibility has been observed; a 2026-05-28 GUI probe exposed nested-Python subprocess timeout, so the hook now defaults to in-process JIKUO invocation; fresh GUI smoke accepted the in-process pre-turn additionalContext path and later confirmed the Host Adapter contract line in `additionalContext`; host-time semantic provider acceptance, multi-intent semantic proof, and full lifecycle strict-mounted acceptance still pending.
 > **Date**: 2026-05-16
 > **Product meaning**: Determine whether a Codex plugin can make JIKUO run before every user turn, or whether it should only ship as an instruction / MCP setup aid. This prevents JIKUO from claiming strict mounted behavior that Codex cannot actually enforce.
 
@@ -485,6 +485,12 @@ Current Codex Desktop observation:
   project-local pre-turn `additionalContext` path. The proof does not accept
   host-time AI-semantic routing, multi-intent semantic slicing, or full
   lifecycle strict-mounted behavior.
+- After the Host Adapter Turn Input/Result contract was wired into the hook, a
+  fresh 2026-05-28 Codex GUI smoke showed the contract line in model-visible
+  `additionalContext`:
+  `Host adapter contract: input_schema=jikuo.host_adapter.turn_input.v0; result_schema=jikuo.host_adapter.turn_result.v0; user_turn_summary_status=provided_redacted.`
+  The observed history card was
+  `.jikuo/runtime/history/20260528T122001Z_proposal_264d3469ea.md`.
 
 Current local verification:
 

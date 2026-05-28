@@ -45,7 +45,9 @@ injected before the assistant answer. A 2026-05-28 GUI probe also showed that
 the old nested-Python subprocess path can time out even when the hook itself is
 loaded and visible, so the hook now defaults to in-process JIKUO invocation.
 Fresh GUI acceptance after this remediation is now accepted for the pre-turn
-additional-context surface. Linked completion-review, semantic-provider, and
+additional-context surface. A later GUI smoke also showed the Host Adapter
+contract line in `additionalContext`, accepting the visible contract projection
+for the project-local hook. Linked completion-review, semantic-provider, and
 multi-intent proofs remain pending.
 
 ## Privacy Boundary

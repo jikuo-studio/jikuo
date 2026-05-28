@@ -137,7 +137,7 @@ entries:
     title: "SPRINT_050_WO-PER-JIKUO-CODEX-PLUGIN-01: Codex Plugin Pre-Turn Harness Review"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CODEX-PLUGIN-01_codex_plugin_pre_turn_harness_review.md"
     sprint: "SPRINT_050"
-    status: "Level 1 project-local proof files implemented, local stdin smoke passed, hook prompt transport avoids process arguments, local Level 2A host_semantic_intent input / work_profile merge path implemented for CLI, MCP, and Codex hook proof, policy-contract fields now project into runtime-card Work Profile output, bilingual deterministic fallback keyword coverage expanded, and Level 2B MCP Sampling semantic-provider probe implemented; official Codex hook surface reviewed; 2026-05-21 current-thread observation first recorded visible timeout degradation, then accepted Codex GUI pre-turn additionalContext injection after timeout remediation; 2026-05-28 GUI observation exposed nested-Python subprocess timeout, so the project-local hook now defaults to in-process JIKUO invocation; fresh GUI smoke accepted the in-process pre-turn additionalContext path; host-time semantic provider acceptance, multi-intent semantic proof, and full lifecycle strict-mounted acceptance pending"
+    status: "Level 1 project-local proof files implemented, local stdin smoke passed, hook prompt transport avoids process arguments, local Level 2A host_semantic_intent input / work_profile merge path implemented for CLI, MCP, and Codex hook proof, policy-contract fields now project into runtime-card Work Profile output, bilingual deterministic fallback keyword coverage expanded, and Level 2B MCP Sampling semantic-provider probe implemented; official Codex hook surface reviewed; 2026-05-21 current-thread observation first recorded visible timeout degradation, then accepted Codex GUI pre-turn additionalContext injection after timeout remediation; 2026-05-28 GUI observation exposed nested-Python subprocess timeout, so the project-local hook now defaults to in-process JIKUO invocation; fresh GUI smoke accepted the in-process pre-turn additionalContext path and later confirmed the Host Adapter contract line in additionalContext; host-time semantic provider acceptance, multi-intent semantic proof, and full lifecycle strict-mounted acceptance pending"
     impact_tags:
       - "strict_mounted_harness"
       - "client_proof"
@@ -195,7 +195,7 @@ entries:
     title: "SPRINT_050_WO-PER-JIKUO-HOSTADAPT-01: Host Adapter Contract"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-HOSTADAPT-01_host_adapter_contract.md"
     sprint: "SPRINT_050"
-    status: "Contract scaffold implemented for cross-client Host Adapter Turn Input/Result normalization and raw prompt redaction; Codex project-local hook now consumes the contract and renders the result summary; host-specific wrappers/plugins remain future slices"
+    status: "Contract scaffold implemented for cross-client Host Adapter Turn Input/Result normalization and raw prompt redaction; Codex project-local hook now consumes the contract and renders the result summary, with GUI additionalContext contract-line smoke accepted; host-specific wrappers/plugins remain future slices"
     impact_tags:
       - "strict_mounted_harness"
       - "host_adapter"
