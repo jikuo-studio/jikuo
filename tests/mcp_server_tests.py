@@ -1,4 +1,5 @@
 import asyncio
+import inspect
 import json
 import shutil
 import tempfile
@@ -167,6 +168,50 @@ class MCPServerWrapperTests(unittest.TestCase):
         self.assertIn("card_markdown", card_description)
         self.assertIn("CRITICAL DISPLAY CONTRACT", config_description)
         self.assertNotIn("CRITICAL DISPLAY CONTRACT", plain_description)
+
+    def test_router_tool_exposes_and_passes_host_semantic_intent(self):
+        fake = server.create_server(fastmcp_cls=FakeFastMCP)
+        route_tool = fake.tools["jikuo.route_user_request"]["function"]
+        suggestion_tool = fake.tools["jikuo.propose_policy_suggestions"]["function"]
+
+        self.assertIn("host_semantic_intent", inspect.signature(route_tool).parameters)
+        self.assertIn("host_semantic_intent", inspect.signature(suggestion_tool).parameters)
+        self.assertIn(
+            "status=provided",
+            fake.tools["jikuo.route_user_request"]["description"],
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+
+            response = route_tool(
+                project_root=str(project_root),
+                user_phrase="please explain the docs",
+                trigger_mode="mounted",
+                host_semantic_intent={
+                    "schema": "jikuo.host_semantic_intent.v0",
+                    "provider": "host_ai",
+                    "confidence": "high",
+                    "constraints": ["no_file_write"],
+                    "work_profile": {
+                        "policy_scopes": ["discussion"],
+                        "operation_class": "no_change",
+                        "output_class": "explanation",
+                    },
+                    "requested_outcome": "Explain the implementation path.",
+                    "execution_boundary": "no_file_edit",
+                    "response_contract": "Concise explanation.",
+                    "user_expression": "asks about the implementation path",
+                },
+            )
+
+        self.assertEqual(
+            response["work_profile"]["basis"]["host_semantic_intent"]["status"],
+            "provided",
+        )
+        self.assertEqual(response["work_profile"]["policy_scopes"], ["discussion"])
+        self.assertEqual(response["semantic_intent_evidence"]["status"], "ok")
 
     def test_registered_tool_calls_adapter_without_mcp_sdk(self):
         with tempfile.TemporaryDirectory() as tmp:

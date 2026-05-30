@@ -15,6 +15,9 @@ from typing import Any
 
 WORK_PROFILE_SCHEMA = "jikuo.work_profile.v0"
 HOST_SEMANTIC_INTENT_SCHEMA = "jikuo.host_semantic_intent.v0"
+SEMANTIC_INTENT_CLASSIFICATION_EVIDENCE_SCHEMA = (
+    "jikuo.semantic_intent_classification_evidence.v0"
+)
 MVP_POLICY_SCOPES = {"discussion", "editing", "progress_summary"}
 USER_EXPRESSION_MAX_CHARS = 120
 POLICY_CONTRACT_KEYS = (
@@ -538,6 +541,80 @@ def _blocks_editing(constraints: list[str]) -> bool:
     return bool(set(constraints) & EDIT_BLOCKING_CONSTRAINTS)
 
 
+def semantic_intent_classification_evidence_for(
+    *,
+    lifecycle_event: str,
+    intent_class: str,
+    operation_class: str,
+    output_class: str,
+    policy_scopes: list[str],
+    semantic_intent: dict[str, Any] | None,
+    fallback_expanded: bool,
+) -> dict[str, Any]:
+    """Project whether host/AI semantic classification is required and present."""
+
+    semantic = semantic_intent if isinstance(semantic_intent, dict) else {}
+    semantic_status = str(semantic.get("status") or "unavailable")
+    provider = str(semantic.get("provider") or "unavailable")
+    constraints = _string_list(semantic.get("constraints"))
+    reasons: list[str] = []
+    if "editing" in policy_scopes:
+        reasons.append("editing_intent")
+    if "progress_summary" in policy_scopes:
+        reasons.append("progress_summary_intent")
+    if operation_class in {"write_file", "local_command", "documentation_update"}:
+        reasons.append("operation_may_change_project_state")
+    if output_class in {"change", "code_change", "doc_change", "configuration_change"}:
+        reasons.append("output_changes_project_state")
+    if lifecycle_event in {"policy_evidence_record", "policy_feedback_record"}:
+        reasons.append("guarded_policy_record_event")
+
+    required = bool(reasons)
+    if required and semantic_status == "provided":
+        status = "ok"
+    elif required and semantic_status == "heuristic_fallback":
+        status = "fallback_only"
+    elif required:
+        status = "missing"
+    elif semantic_status == "provided":
+        status = "ok"
+    elif semantic_status == "heuristic_fallback":
+        status = "fallback_only"
+    else:
+        status = "not_required"
+
+    if reasons:
+        reason = reasons[0] if len(reasons) == 1 else ",".join(reasons)
+    elif fallback_expanded:
+        reason = "fallback_expanded_but_semantic_classification_not_required"
+    elif _blocks_editing(constraints) or "discussion" in policy_scopes:
+        reason = "discussion_only_or_no_file_write"
+    else:
+        reason = "low_risk_turn"
+
+    followup = None
+    if required and status in {"missing", "fallback_only"}:
+        followup = "provide_host_semantic_intent_and_rerun_route"
+
+    return {
+        "schema": SEMANTIC_INTENT_CLASSIFICATION_EVIDENCE_SCHEMA,
+        "evidence_type": "semantic_intent_classification_evidence",
+        "action_type": "classify_user_intent_before_governed_work",
+        "required": required,
+        "status": status,
+        "provider": provider,
+        "semantic_intent_status": semantic_status,
+        "reason": reason,
+        "reasons": reasons,
+        "followup": followup,
+        "non_effects": [
+            "does_not_call_an_llm_provider",
+            "does_not_replace_policy_evaluator_conditions",
+            "does_not_block_execution_in_report_only_mode",
+        ],
+    }
+
+
 def _path_output_class(paths: list[str]) -> str | None:
     suffixes = {Path(path).suffix.lower() for path in paths}
     if suffixes & {".py", ".js", ".ts", ".tsx", ".jsx", ".rs", ".go"}:
@@ -804,6 +881,16 @@ def build_work_profile(
     if fallback_expanded:
         confidence = "low"
 
+    semantic_intent_evidence = semantic_intent_classification_evidence_for(
+        lifecycle_event=lifecycle_event,
+        intent_class=intent_class,
+        operation_class=operation_class,
+        output_class=output_class,
+        policy_scopes=policy_scopes,
+        semantic_intent=semantic_intent,
+        fallback_expanded=fallback_expanded,
+    )
+
     return {
         "schema": WORK_PROFILE_SCHEMA,
         "raw_event": raw_event,
@@ -818,6 +905,7 @@ def build_work_profile(
             if isinstance(semantic_intent, dict)
             else {}
         ),
+        "semantic_intent_evidence": semantic_intent_evidence,
         "confidence": confidence,
         "fallback_expanded": fallback_expanded,
         "basis": {

@@ -39,6 +39,15 @@ CARD_PRIORITY_ORDER = (
     "starter_policy_pack_init_plan",
 )
 
+HOST_SEMANTIC_INTENT_ARGUMENT_GUIDANCE = (
+    "When the host AI has classified the turn, pass host_semantic_intent as "
+    "compact classifier evidence: schema=jikuo.host_semantic_intent.v0, "
+    "status=provided, provider=host_ai, policy_scopes limited to discussion, "
+    "editing, and progress_summary, plus requested_outcome, execution_boundary, "
+    "response_contract, and a short user_expression. Never include the raw "
+    "prompt or transcript."
+)
+
 STAGE_A_TOOL_NAMES = (
     "jikuo.status",
     "jikuo.get_runtime_status",
@@ -335,7 +344,8 @@ TOOL_DEFINITIONS: dict[str, dict[str, Any]] = {
         description=(
             "Classify one user turn through the JIKUO conversation-turn router. "
             "Returns required obligations and MCP follow-up tool suggestions without "
-            "writing governance files or storing raw transcripts."
+            "writing governance files or storing raw transcripts. "
+            f"{HOST_SEMANTIC_INTENT_ARGUMENT_GUIDANCE}"
         ),
         input_fields={
             "project_root": LOCAL_ONLY,
@@ -351,6 +361,7 @@ TOOL_DEFINITIONS: dict[str, dict[str, Any]] = {
             "required_followup_tools": RETURN,
             "mcp_followup_tools": RETURN,
             "work_profile": RETURN,
+            "semantic_intent_evidence": RETURN,
         },
         card_returning=True,
         stage="R1",
@@ -361,7 +372,8 @@ TOOL_DEFINITIONS: dict[str, dict[str, Any]] = {
         description=(
             "Review one user turn for proactive policy suggestions. Returns "
             "reviewable candidates and compact evidence without writing policy files "
-            "or storing raw transcripts."
+            "or storing raw transcripts. "
+            f"{HOST_SEMANTIC_INTENT_ARGUMENT_GUIDANCE}"
         ),
         input_fields={
             "project_root": LOCAL_ONLY,
@@ -377,6 +389,7 @@ TOOL_DEFINITIONS: dict[str, dict[str, Any]] = {
             "policy_candidate_count": RETURN,
             "mcp_followup_tools": RETURN,
             "work_profile": RETURN,
+            "semantic_intent_evidence": RETURN,
         },
         card_returning=True,
         stage="R1",
@@ -406,6 +419,7 @@ TOOL_DEFINITIONS: dict[str, dict[str, Any]] = {
             "required_followup_tools": RETURN,
             "mcp_followup_tools": RETURN,
             "work_profile": RETURN,
+            "semantic_intent_evidence": RETURN,
             "sampling_semantic_intent": RETURN,
             "host_semantic_intent": RETURN,
         },

@@ -32,6 +32,9 @@ transport path:
 - If hook stdin contains compact `host_semantic_intent` /
   `hostSemanticIntent`, the hook forwards it to JIKUO for final work-profile
   projection.
+- If no semantic object is supplied, `additionalContext` instructs the host AI
+  to classify the turn before later JIKUO router tool calls and pass compact
+  `host_semantic_intent` with no raw prompt or transcript.
 - If no compact semantic intent is supplied, `semantic_intent_status` is
   reported as `unavailable`.
 

@@ -217,6 +217,7 @@ NO_WRITE_ATOMS = {
     "CAP-CONFIGURATION-REVIEW-01",
     "CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01",
     "CAP-HOST-SEMANTIC-INTENT-WORK-PROFILE-01",
+    "CAP-SEMANTIC-INTENT-CLASSIFICATION-EVIDENCE-01",
 }
 
 
@@ -371,6 +372,12 @@ def build_policy_context(
         "evidence_status_reason": report["evidence_status_reason"],
         "warnings": report["warnings"],
         "next_actions": next_actions,
+        "work_profile": work_profile_projection,
+        "work_profile_source": (
+            "agent_flow_work_profile_projection"
+            if work_profile_projection
+            else None
+        ),
     }, traces, {
         "triggered_policies": report["triggered_policies"],
         "required_actions": report["required_actions"],
@@ -1170,6 +1177,14 @@ def build_policy_runtime_status_card(
             f"{work_profile_projection.get('lifecycle_event')} / "
             f"scopes={work_profile_projection.get('policy_scopes')}"
         )
+        semantic_evidence = work_profile_projection.get("semantic_intent_evidence") or {}
+        if semantic_evidence:
+            shown_inputs.append(
+                "semantic_intent_evidence: "
+                f"required={semantic_evidence.get('required')} / "
+                f"status={semantic_evidence.get('status')} / "
+                f"provider={semantic_evidence.get('provider')}"
+            )
         contract = work_profile_projection.get("policy_contract") or {}
         active_contract_keys = [
             key
@@ -3623,6 +3638,9 @@ def build_proposal(
     semantic_basis = (work_profile_projection.get("basis") or {}).get(
         "host_semantic_intent"
     ) or {}
+    semantic_intent_evidence = (
+        work_profile_projection.get("semantic_intent_evidence") or {}
+    )
     if semantic_basis.get("status") in {"provided", "heuristic_fallback"}:
         traces.append(
             atom_trace(
@@ -3633,6 +3651,19 @@ def build_proposal(
                 summary=(
                     "merged host semantic intent into the no-write work_profile "
                     "projection before policy distribution"
+                ),
+            )
+        )
+    if semantic_intent_evidence:
+        traces.append(
+            atom_trace(
+                loop_step_id="DPL-05",
+                atom_id="CAP-SEMANTIC-INTENT-CLASSIFICATION-EVIDENCE-01",
+                mode="no-write",
+                status=str(semantic_intent_evidence.get("status") or "unknown"),
+                summary=(
+                    "reported whether AI semantic intent classification was "
+                    "required and supplied for this work profile"
                 ),
             )
         )
@@ -3755,6 +3786,15 @@ def build_proposal(
         "task_start",
     }
 
+    next_actions = next_actions_for(status=status, event=event)
+    if semantic_intent_evidence.get("followup"):
+        semantic_followup = (
+            "provide compact host_semantic_intent and rerun JIKUO routing before "
+            "claiming AI semantic routing for governed editing or progress work"
+        )
+        if semantic_followup not in next_actions:
+            next_actions.insert(0, semantic_followup)
+
     return {
         "schema": PROPOSAL_SCHEMA,
         "previous_schema": PREVIOUS_PROPOSAL_SCHEMA,
@@ -3781,6 +3821,7 @@ def build_proposal(
         "policy_feedback_options": policy_feedback_options,
         "conversation_router": conversation_router,
         "work_profile": work_profile_projection,
+        "semantic_intent_evidence": semantic_intent_evidence,
         "work_routing": work_routing,
         "atom_trace": traces,
         "cards": cards,
@@ -3800,7 +3841,7 @@ def build_proposal(
                 "does not update .jikuo/project_state.yaml",
             ],
         },
-        "next_actions": next_actions_for(status=status, event=event),
+        "next_actions": next_actions,
     }
 
 
@@ -4477,6 +4518,22 @@ def render_work_profile(work_profile_projection: dict[str, Any]) -> list[str]:
     lines.append(f"- Semantic intent status: `{semantic.get('status', 'unavailable')}`")
     if semantic.get("provider"):
         lines.append(f"- Semantic provider: `{semantic.get('provider')}`")
+    semantic_evidence = work_profile_projection.get("semantic_intent_evidence") or {}
+    if semantic_evidence:
+        lines.extend(
+            [
+                "",
+                "### Semantic Intent Evidence",
+                "",
+                f"- Required: `{str(semantic_evidence.get('required')).lower()}`",
+                f"- Status: `{semantic_evidence.get('status')}`",
+                f"- Provider: `{semantic_evidence.get('provider')}`",
+                f"- Reason: `{semantic_evidence.get('reason')}`",
+            ]
+        )
+        followup = semantic_evidence.get("followup")
+        if followup:
+            lines.append(f"- Next action: `{followup}`")
     constraints = semantic.get("constraints") or []
     if constraints:
         lines.append(

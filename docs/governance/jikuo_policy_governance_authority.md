@@ -427,6 +427,16 @@ says otherwise, the evaluator still consumes only
 `work_profile.lifecycle_event` and `work_profile.policy_scopes`, with exact
 policy conditions as additional filters.
 
+`semantic_intent_classification_evidence` is the report-only bridge between
+this authority and host-AI behavior. It does not perform classification and it
+does not expand evaluator inputs. Instead, it records whether a compact
+`host_semantic_intent` or dedicated provider was required and supplied for the
+current `work_profile`. Pure `discussion` turns may remain fallback-only, while
+`editing`, `progress_summary`, and project-state-changing work should surface
+`required=true`; if no semantic provider supplied intent, the card must show
+`status=missing` or `fallback_only` and a follow-up to rerun routing with
+compact `host_semantic_intent`.
+
 The two held user-authored policy candidates are examples of process-contract
 policy needs:
 

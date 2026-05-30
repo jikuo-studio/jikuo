@@ -350,6 +350,18 @@ def _conversation_turn_response(
     response["conversation_router"] = router
     if isinstance(data_details, dict) and isinstance(data_details.get("work_profile"), dict):
         response["work_profile"] = data_details["work_profile"]
+        if isinstance(
+            data_details["work_profile"].get("semantic_intent_evidence"),
+            dict,
+        ):
+            response["semantic_intent_evidence"] = data_details["work_profile"][
+                "semantic_intent_evidence"
+            ]
+    if isinstance(data_details, dict) and isinstance(
+        data_details.get("semantic_intent_evidence"),
+        dict,
+    ):
+        response["semantic_intent_evidence"] = data_details["semantic_intent_evidence"]
     response["mcp_followup_tools"] = mcp_followups
     if isinstance(router, dict):
         response["classified_obligations"] = list(

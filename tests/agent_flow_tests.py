@@ -842,6 +842,12 @@ class AgentFlowProposalTests(unittest.TestCase):
             "editing_terms_blocked_by_edit_constraint",
         )
         self.assertIn("Semantic intent status: `provided`", proposal["chat_ready_markdown"])
+        semantic_evidence = proposal["semantic_intent_evidence"]
+        self.assertFalse(semantic_evidence["required"])
+        self.assertEqual(semantic_evidence["status"], "ok")
+        self.assertEqual(semantic_evidence["provider"], "host_ai")
+        self.assertIn("### Semantic Intent Evidence", proposal["chat_ready_markdown"])
+        self.assertIn("- Status: `ok`", proposal["chat_ready_markdown"])
         self.assertIn(
             "user_expression=`discuss the implementation without writing files`",
             proposal["chat_ready_markdown"],
@@ -1136,6 +1142,61 @@ class AgentFlowProposalTests(unittest.TestCase):
         self.assertEqual(proposal["work_profile"]["intent_class"], "discussion")
         self.assertEqual(proposal["work_profile"]["operation_class"], "no_tool")
         self.assertEqual(proposal["work_profile"]["policy_scopes"], ["discussion"])
+        self.assertFalse(proposal["semantic_intent_evidence"]["required"])
+        self.assertEqual(proposal["semantic_intent_evidence"]["status"], "not_required")
+        self.assertIn("### Semantic Intent Evidence", proposal["chat_ready_markdown"])
+        self.assertIn("- Required: `false`", proposal["chat_ready_markdown"])
+
+    def test_semantic_intent_evidence_missing_for_editing_without_host_intent(self):
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-B",
+                str(TOOL),
+                "propose",
+                "--event",
+                "conversation_turn",
+                "--trigger-mode",
+                "mounted",
+                "--user-phrase",
+                "please update docs and summarize progress",
+                "--project-root",
+                str(READY_PROJECT),
+                "--format",
+                "json",
+            ],
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        proposal = json.loads(completed.stdout)
+        evidence = proposal["semantic_intent_evidence"]
+        self.assertTrue(evidence["required"])
+        self.assertEqual(evidence["status"], "missing")
+        self.assertEqual(evidence["provider"], "unavailable")
+        self.assertEqual(
+            evidence["followup"],
+            "provide_host_semantic_intent_and_rerun_route",
+        )
+        self.assertIn("editing_intent", evidence["reasons"])
+        self.assertIn("progress_summary_intent", evidence["reasons"])
+        self.assertEqual(
+            proposal["work_profile"]["semantic_intent_evidence"],
+            evidence,
+        )
+        self.assertIn(
+            "provide compact host_semantic_intent",
+            proposal["next_actions"][0],
+        )
+        self.assertIn("### Semantic Intent Evidence", proposal["chat_ready_markdown"])
+        self.assertIn("- Required: `true`", proposal["chat_ready_markdown"])
+        self.assertIn("- Status: `missing`", proposal["chat_ready_markdown"])
+        atom_ids = {trace["atom_id"] for trace in proposal["atom_trace"]}
+        self.assertIn("CAP-SEMANTIC-INTENT-CLASSIFICATION-EVIDENCE-01", atom_ids)
 
     def test_bilingual_keyword_fallback_detects_chinese_editing_and_progress(self):
         completed = subprocess.run(

@@ -508,6 +508,10 @@ Semantic classification proof:
   through CLI / MCP / Codex hook proof and merges it into `work_profile`; this
   proves JIKUO can consume semantic evidence, not that a GUI host can provide
   it before model work.
+- For MCP router tools, first verify that `jikuo.route_user_request` and
+  `jikuo.propose_policy_suggestions` expose a `host_semantic_intent` argument
+  in the client-visible tool schema. If the argument is absent, refresh or
+  restart the MCP client/server before judging host AI semantic transport.
 - If the host exposes AI semantic intent before JIKUO runs, pass a compact
   `host_semantic_intent` object with source, confidence, lifecycle event,
   `policy_scopes`, intent class, operation class, output class, and compact
@@ -515,11 +519,26 @@ Semantic classification proof:
 - If the hook can only see the raw prompt, record
   `host_semantic_intent.status = unavailable` and let JIKUO report deterministic
   keyword routing as fallback.
+- Check `semantic_intent_classification_evidence` in the JIKUO response or
+  card. For `editing` / `progress_summary` work it should report
+  `required=true`; if no host or Sampling provider supplied compact semantic
+  intent, it should report `status=missing` or `fallback_only` and a
+  `provide_host_semantic_intent_and_rerun_route` follow-up. This is report-only
+  evidence, not a blocking gate.
 - Deterministic fallback has bilingual Chinese / English keyword coverage and
   no-edit constraint phrases, but it remains fallback / conflict evidence rather
   than AI semantic classification.
 - Do not let the hook decide active-policy applicability. JIKUO remains the
   final classification and policy-distribution authority.
+
+Accepted cooperative GUI router proof:
+
+- `docs/integrations/proofs/PROOF-2026-05-31-codex-gui-mcp-router-host-semantic-intent.md`
+  records a separate Codex GUI session where `jikuo.route_user_request`
+  exposed `host_semantic_intent`, the host AI passed compact semantic intent,
+  and JIKUO returned `semantic_intent_evidence.status=ok`.
+- This proves the cooperative MCP tool-call path. It does not prove automatic
+  hook-time semantic classification or Sampling provider support.
 
 MCP Sampling provider proof:
 

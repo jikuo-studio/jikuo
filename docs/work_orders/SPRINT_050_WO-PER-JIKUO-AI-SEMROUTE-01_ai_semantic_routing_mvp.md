@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-AI-SEMROUTE-01: AI Semantic Routing MVP
 
-> **Status**: Design accepted; first projection slice implemented for short `user_expression`, MVP scope filtering, ordered `intent_slices` card rendering, Codex hook wording, no-write smoke for `semantic_intent_status=provided`, raw `user_phrase` redaction in trigger/router projections, local policy-distribution proof that host semantic scopes select different scope-aware policies, and explicit Codex-host-AI semantic-intent transport proof. Real automatic GUI / MCP semantic provider smoke and any evaluator expansion remain pending.
+> **Status**: Design accepted; first projection slice implemented for short `user_expression`, MVP scope filtering, ordered `intent_slices` card rendering, Codex hook wording, no-write smoke for `semantic_intent_status=provided`, raw `user_phrase` redaction in trigger/router projections, local policy-distribution proof that host semantic scopes select different scope-aware policies, explicit Codex-host-AI semantic-intent transport proof, MCP Sampling unavailable proof, report-only `semantic_intent_classification_evidence`, and accepted cooperative Codex GUI MCP router proof that `host_semantic_intent` can be exposed and passed. Automatic hook-time semantic classification, MCP Sampling provider support, and any evaluator expansion remain pending.
 > **Date**: 2026-05-28
 > **JIKUO layer**: integration / policy distribution.
 > **Business meaning**: JIKUO should stay thin. The host AI understands the user's natural-language intent; JIKUO receives a compact semantic object, records it, explains policy routing, and keeps deterministic fallback honest.
@@ -198,7 +198,57 @@ MVP design acceptance requires:
   scopes, and existing exact conditions;
 - future wrapper / plugin work reuses the same `host_semantic_intent` contract.
 
-## 11. Next Implementation Slice
+## 11. Semantic Intent Evidence Gate
+
+JIKUO can govern the requirement to classify intent even when it cannot itself
+obtain a host-time model judgment. The MVP therefore adds report-only
+`semantic_intent_classification_evidence` to every work-profile projection.
+
+The evidence answers:
+
+- whether AI semantic classification is required for this turn;
+- whether a compact `host_semantic_intent` or other provider supplied it;
+- whether the current result is only deterministic fallback;
+- what the next action is when governed work needs classification.
+
+Minimal shape:
+
+```yaml
+semantic_intent_classification_evidence:
+  schema: "jikuo.semantic_intent_classification_evidence.v0"
+  evidence_type: "semantic_intent_classification_evidence"
+  action_type: "classify_user_intent_before_governed_work"
+  required: true
+  status: "missing" # ok | missing | fallback_only | not_required
+  provider: "unavailable"
+  semantic_intent_status: "unavailable"
+  reason: "editing_intent"
+  followup: "provide_host_semantic_intent_and_rerun_route"
+```
+
+MVP requirement rules:
+
+- pure `discussion` turns may use deterministic fallback without requiring
+  AI semantic intent;
+- `editing` and `progress_summary` scopes require AI semantic intent evidence;
+- operations or outputs that may change project state require AI semantic
+  intent evidence;
+- the gate is report-only: it does not call a model provider, does not change
+  evaluator inputs, and does not block execution in this slice.
+
+The evidence is projected into:
+
+- `proposal.semantic_intent_evidence`;
+- `work_profile.semantic_intent_evidence`;
+- Work Profile Markdown under `### Semantic Intent Evidence`;
+- policy-runtime-card shown inputs;
+- MCP route / policy-suggestion / Sampling-probe responses.
+
+This keeps the shell thin while making missing classification visible. Future
+work may promote this from report-only to blocking once GUI / wrapper proof
+shows a reliable host-time semantic provider.
+
+## 12. Implemented Slices
 
 The first code slice did not change policy evaluator behavior. It verified the
 existing host-semantic-intent pipeline against this MVP contract:
@@ -211,6 +261,14 @@ existing host-semantic-intent pipeline against this MVP contract:
 - the Codex `UserPromptSubmit` hook `additionalContext` tells the host AI how
   to pass compact `host_semantic_intent` later without claiming the hook itself
   forces host-time classification;
+- the official MCP server router surfaces now expose the
+  `host_semantic_intent` argument in the callable function signature, so GUI
+  clients can see and pass the same compact semantic object that the SDK-free
+  adapter already accepted;
+- the router and policy-suggestion tool descriptions now include the compact
+  field contract (`status=provided`, `provider=host_ai`, MVP
+  `policy_scopes`, requested outcome, execution boundary, response contract,
+  and short `user_expression`) to guide cooperative host AI tool calls;
 - focused tests cover short expression preservation, invalid scope filtering,
   multi-intent order preservation, and raw prompt omission from hook output.
 
@@ -278,12 +336,52 @@ Sampling-provider failure:
 - Next diagnostic: refresh or restart the target MCP client/server until the
   probe tool is visible, then rerun the Sampling smoke.
 
+After refreshing the Codex MCP configuration, a cooperative GUI MCP router
+proof was accepted and recorded:
+
+- Proof note:
+  `docs/integrations/proofs/PROOF-2026-05-31-codex-gui-mcp-router-host-semantic-intent.md`;
+- Runtime card:
+  `.jikuo/runtime/history/20260530T125821Z_proposal_eac5ed540d.md`;
+- Observed router parameter visibility:
+  `route_user_request.host_semantic_intent=true`;
+- Observed status:
+  `semantic_intent_status=provided`;
+- Provider: `host_ai`;
+- Evidence:
+  `semantic_intent_evidence.status=ok`;
+- Result:
+  `work_profile.policy_scopes=discussion`.
+
+This accepts the cooperative GUI MCP tool-call path: Codex can see the router
+argument and pass compact semantic intent into JIKUO. It still does not accept
+automatic hook-time semantic classification or MCP Sampling support.
+
+A follow-up smoke after Codex config refresh exposed the Sampling probe tool
+through the target client, then returned `sampling_semantic_intent.status =
+unavailable` with `McpError: sampling/createMessage`. This proves the tool
+surface is current and the remaining issue is client Sampling support, not old
+source code or missing MCP registration.
+
+The report-only semantic intent evidence gate is implemented in:
+
+- `src/jikuo/work_profile.py`:
+  `semantic_intent_classification_evidence_for`;
+- `src/jikuo/agent_flow.py`: proposal root projection, Work Profile Markdown,
+  policy-runtime-card shown inputs, and no-write atom trace;
+- `src/jikuo/integrations/mcp/adapter.py` / `schemas.py`: MCP response
+  projection and privacy classification;
+- `tests.agent_flow_tests` / `tests.mcp_adapter_tests`: discussion
+  not-required, editing/progress missing, host-provided ok, and MCP response
+  projection coverage.
+
 Remaining implementation work:
 
 - run GUI / MCP smoke tests with automatic host-provided or Sampling-provided
   semantic intent, not only local no-write or cooperative explicit-provider
   semantic objects;
-- decide whether wrapper / plugin work should make host-time classification
-  mandatory before JIKUO invocation;
+- decide whether wrapper / plugin work should promote report-only
+  `semantic_intent_classification_evidence` into a blocking gate before
+  governed editing / progress work;
 - keep richer fields out of evaluator inputs until real smoke evidence shows a
   need for more than aggregate `policy_scopes`.

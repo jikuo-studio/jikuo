@@ -394,6 +394,7 @@ def register_router_tools(
     def jikuo_route_user_request(
         project_root: str | None = None,
         user_phrase: str | None = None,
+        host_semantic_intent: dict[str, Any] | None = None,
         trigger_mode: str | None = None,
         task_title: str | None = None,
         summary: str | None = None,
@@ -403,6 +404,7 @@ def register_router_tools(
             {
                 "project_root": project_root,
                 "user_phrase": user_phrase,
+                "host_semantic_intent": host_semantic_intent,
                 "trigger_mode": trigger_mode,
                 "task_title": task_title,
                 "summary": summary,
@@ -419,6 +421,7 @@ def register_router_tools(
     def jikuo_propose_policy_suggestions(
         project_root: str | None = None,
         user_phrase: str | None = None,
+        host_semantic_intent: dict[str, Any] | None = None,
         trigger_mode: str | None = None,
         task_title: str | None = None,
         summary: str | None = None,
@@ -428,6 +431,7 @@ def register_router_tools(
             {
                 "project_root": project_root,
                 "user_phrase": user_phrase,
+                "host_semantic_intent": host_semantic_intent,
                 "trigger_mode": trigger_mode,
                 "task_title": task_title,
                 "summary": summary,

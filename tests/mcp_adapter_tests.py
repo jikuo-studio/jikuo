@@ -189,6 +189,12 @@ class MCPStageAAdapterTests(unittest.TestCase):
         self.assertIn("jikuo.route_user_request", names)
         self.assertIn("jikuo.propose_policy_suggestions", names)
         by_name = {tool["name"]: tool for tool in tools}
+        for name in ("jikuo.route_user_request", "jikuo.propose_policy_suggestions"):
+            self.assertIn("host_semantic_intent", by_name[name]["input_fields"])
+            self.assertIn("status=provided", by_name[name]["description"])
+            self.assertIn("provider=host_ai", by_name[name]["description"])
+            self.assertIn("requested_outcome", by_name[name]["description"])
+            self.assertIn("Never include the raw prompt", by_name[name]["description"])
         policy_write_fields = by_name["jikuo.propose_policy_write_plan"]["input_fields"]
         self.assertEqual(
             policy_write_fields["policy_work_profile_lifecycle_events"],
@@ -613,7 +619,15 @@ class MCPStageAAdapterTests(unittest.TestCase):
                 profile["basis"]["host_semantic_intent"]["status"],
                 "provided",
             )
+            semantic_evidence = response["semantic_intent_evidence"]
+            self.assertFalse(semantic_evidence["required"])
+            self.assertEqual(semantic_evidence["status"], "ok")
+            self.assertEqual(
+                profile["semantic_intent_evidence"],
+                semantic_evidence,
+            )
             self.assertIn("Semantic intent status: `provided`", response["card_markdown"])
+            self.assertIn("### Semantic Intent Evidence", response["card_markdown"])
 
     def test_sampling_semantic_probe_reports_unavailable_without_mcp_context(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -624,7 +638,7 @@ class MCPStageAAdapterTests(unittest.TestCase):
                 "jikuo.probe_sampling_semantic_intent",
                 {
                     "project_root": str(project_root),
-                    "user_phrase": "Please update the hook docs.",
+                    "user_phrase": "Please update docs and summarize progress.",
                     "trigger_mode": "mounted",
                     "source_client": "codex",
                 },
@@ -641,7 +655,15 @@ class MCPStageAAdapterTests(unittest.TestCase):
                 "unavailable",
             )
             self.assertEqual(response["host_semantic_intent"]["status"], "unavailable")
+            semantic_evidence = response["semantic_intent_evidence"]
+            self.assertTrue(semantic_evidence["required"])
+            self.assertEqual(semantic_evidence["status"], "missing")
+            self.assertEqual(
+                semantic_evidence["followup"],
+                "provide_host_semantic_intent_and_rerun_route",
+            )
             self.assertIn("### Observed Lifecycle", response["card_markdown"])
+            self.assertIn("### Semantic Intent Evidence", response["card_markdown"])
             self.assertNotIn("### Lifecycle Card Links", response["card_markdown"])
             lifecycle_footer_line = (
                 "- `conversation_turn`: "
