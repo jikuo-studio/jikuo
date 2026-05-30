@@ -146,6 +146,7 @@ class MCPServerWrapperTests(unittest.TestCase):
         self.assertEqual(fake.name, server.SERVER_NAME)
         self.assertEqual(list(fake.tools), list(schemas.EXPOSED_TOOL_NAMES))
         self.assertIn("jikuo.get_configuration_status", fake.tools)
+        self.assertIn("jikuo.get_policy_management_status", fake.tools)
         self.assertIn("jikuo.get_activation_settings", fake.tools)
         self.assertIn("jikuo.plan_activation_settings_update", fake.tools)
         self.assertIn("jikuo.apply_activation_settings_update", fake.tools)
@@ -160,6 +161,23 @@ class MCPServerWrapperTests(unittest.TestCase):
         self.assertIn("jikuo.apply_policy_template_activation", fake.tools)
         self.assertIn("jikuo.apply_policy_template_publication", fake.tools)
         self.assertIn("jikuo.apply_starter_manifest_publication", fake.tools)
+
+    def test_policy_management_status_registered_tool_delegates_adapter(self):
+        fake = server.create_server(fastmcp_cls=FakeFastMCP)
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = copy_fixture(POLICY_ACTIVE_PROJECT, tmp)
+
+            response = fake.tools["jikuo.get_policy_management_status"]["function"](
+                project_root=str(project_root),
+                starter_pack_id="engineering_governance",
+            )
+
+        self.assertEqual(response["tool_name"], "jikuo.get_policy_management_status")
+        self.assertEqual(
+            response["policy_management_status"]["schema"],
+            "jikuo.policy_management_status.v0",
+        )
+        self.assertFalse(response["policy_management_status"]["writes_performed"])
 
     def test_card_tool_descriptions_include_display_contract(self):
         fake = server.create_server(fastmcp_cls=FakeFastMCP)

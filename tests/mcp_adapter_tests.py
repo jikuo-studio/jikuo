@@ -183,6 +183,7 @@ class MCPStageAAdapterTests(unittest.TestCase):
         self.assertIn("jikuo.apply_policy_evolution_write", names)
         self.assertIn("jikuo.apply_policy_template_activation", names)
         self.assertIn("jikuo.get_configuration_status", names)
+        self.assertIn("jikuo.get_policy_management_status", names)
         self.assertIn("jikuo.get_activation_settings", names)
         self.assertIn("jikuo.plan_activation_settings_update", names)
         self.assertIn("jikuo.apply_activation_settings_update", names)
@@ -214,6 +215,11 @@ class MCPStageAAdapterTests(unittest.TestCase):
         self.assertEqual(by_name["jikuo.get_configuration_status"]["stage"], "C1")
         self.assertEqual(
             by_name["jikuo.get_configuration_status"]["write_mode"],
+            "no-write",
+        )
+        self.assertEqual(by_name["jikuo.get_policy_management_status"]["stage"], "A")
+        self.assertEqual(
+            by_name["jikuo.get_policy_management_status"]["write_mode"],
             "no-write",
         )
         self.assertEqual(by_name["jikuo.get_activation_settings"]["stage"], "C1")
@@ -295,6 +301,24 @@ class MCPStageAAdapterTests(unittest.TestCase):
             self.assertEqual(response["policy_store_status"], "active")
             self.assertEqual(response["field_classification"]["local_paths"], schemas.LOCAL_ONLY)
             self.assertNotIn("local_paths", response)
+            self.assertFalse((project_root / ".jikuo" / "runtime").exists())
+
+    def test_policy_management_status_wraps_read_model_without_runtime_write(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = copy_fixture(POLICY_ACTIVE_PROJECT, tmp)
+
+            response = adapter.call_tool(
+                "jikuo.get_policy_management_status",
+                {"project_root": str(project_root)},
+            )
+
+            self.assertEqual(response["schema"], schemas.ADAPTER_RESULT_SCHEMA)
+            self.assertEqual(response["tool_name"], "jikuo.get_policy_management_status")
+            report = response["policy_management_status"]
+            self.assertEqual(report["schema"], "jikuo.policy_management_status.v0")
+            self.assertFalse(report["writes_performed"])
+            self.assertIn("summary_counts", report)
+            self.assertIn("available_operations", report)
             self.assertFalse((project_root / ".jikuo" / "runtime").exists())
 
     def test_propose_task_start_updates_runtime_only_and_sanitizes_unknown_transport(self):

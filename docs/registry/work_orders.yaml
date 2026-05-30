@@ -882,7 +882,7 @@ entries:
     title: "SPRINT_050_WO-PER-JIKUO-MCP-01: MCP Wrapper MVP"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-MCP-01_mcp_wrapper_mvp.md"
     sprint: "SPRINT_050"
-    status: "MCP MVP body implemented and release-smoked; Stage A server wrapper accepted; Stage B1 task-session evidence guarded-write tool implemented after explicit user approval; Stage B2 policy evolution guarded-write tool implemented and externally smoke-accepted; Stage B3 policy-template activation guarded-write tool implemented and externally smoke-accepted; post-MVP configuration status, activation settings read / plan / apply, router tools, no-write MCP Sampling semantic-provider probe, no-write policy distribution review, and guarded policy publication bridge tools implemented"
+    status: "MCP MVP body implemented and release-smoked; Stage A server wrapper accepted; Stage B1 task-session evidence guarded-write tool implemented after explicit user approval; Stage B2 policy evolution guarded-write tool implemented and externally smoke-accepted; Stage B3 policy-template activation guarded-write tool implemented and externally smoke-accepted; post-MVP configuration status, activation settings read / plan / apply, router tools, no-write MCP Sampling semantic-provider probe, no-write policy distribution review, guarded policy publication bridge tools, and policy-management status read model implemented"
     impact_tags: []
     implements_capabilities:
       - "CAP-POLICY-STORE-STATUS-01"
@@ -909,6 +909,7 @@ entries:
       - "CAP-MCP-SAMPLING-SEMANTIC-PROVIDER-01"
       - "CAP-POLICY-DISTRIBUTION-MVP-01"
       - "CAP-POLICY-DISTRIBUTION-REVIEW-01"
+      - "CAP-POLICY-MANAGEMENT-STATUS-READ-01"
     capability_extraction_status: "extracted_from_work_order_body"
     required_mount_sets: []
   - id: "JIKUO-PKG-00"
@@ -972,7 +973,7 @@ entries:
     title: "SPRINT_050_WO-PER-JIKUO-POLICY-MGMT-01: Policy Management MVP"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-POLICY-MGMT-01_policy_management_mvp.md"
     sprint: "SPRINT_050"
-    status: "Two held candidates activated as active_report_only; lightweight policy distribution and maintenance design documented; no-write distribution review with CLI, agent-flow proposal, MCP GUI surface, and natural-language policy_query source resolution implemented; guarded package-template publication CLI / agent-flow / MCP plan/apply implemented; guarded starter-pack manifest publication CLI / agent-flow / MCP plan/apply implemented"
+    status: "Two held candidates activated as active_report_only; lightweight policy distribution and maintenance design documented; no-write distribution review with CLI, agent-flow proposal, MCP GUI surface, and natural-language policy_query source resolution implemented; guarded package-template publication CLI / agent-flow / MCP plan/apply implemented; guarded starter-pack manifest publication CLI / agent-flow / MCP plan/apply implemented; no-write policy-management status read model implemented"
     impact_tags:
       - "policy_governance"
       - "policy_distribution"
@@ -981,6 +982,7 @@ entries:
       - "CAP-POLICY-CANDIDATE-PROMOTION-01"
       - "CAP-POLICY-DISTRIBUTION-MVP-01"
       - "CAP-POLICY-DISTRIBUTION-REVIEW-01"
+      - "CAP-POLICY-MANAGEMENT-STATUS-READ-01"
       - "CAP-POLICY-TEMPLATE-PUBLICATION-01"
       - "CAP-STARTER-MANIFEST-PUBLICATION-01"
     capability_extraction_status: "extracted_from_work_order_body"

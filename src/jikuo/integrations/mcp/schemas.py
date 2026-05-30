@@ -52,6 +52,7 @@ HOST_SEMANTIC_INTENT_ARGUMENT_GUIDANCE = (
 
 STAGE_A_TOOL_NAMES = (
     "jikuo.status",
+    "jikuo.get_policy_management_status",
     "jikuo.get_runtime_status",
     "jikuo.get_runtime_status_card",
     "jikuo.get_display_card",
@@ -157,6 +158,19 @@ TOOL_DEFINITIONS: dict[str, dict[str, Any]] = {
         description="Inspect project-local JIKUO policy-store status without writing files.",
         input_fields={"project_root": LOCAL_ONLY},
         output_fields={"policy_store_status": RETURN},
+    ),
+    "jikuo.get_policy_management_status": _tool(
+        name="jikuo.get_policy_management_status",
+        description=(
+            "Return the no-write Policy Management MVP read model for GUI/front-end "
+            "surfaces: active policies, package policy templates, starter-pack manifests, "
+            "and available guarded follow-up operations."
+        ),
+        input_fields={
+            "project_root": LOCAL_ONLY,
+            "starter_pack_id": RETURN,
+        },
+        output_fields={"policy_management_status": RETURN},
     ),
     "jikuo.get_runtime_status": _tool(
         name="jikuo.get_runtime_status",

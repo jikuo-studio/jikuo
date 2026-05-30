@@ -6,7 +6,13 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
-from ... import activation_settings, agent_flow, policy_store, runtime_visibility
+from ... import (
+    activation_settings,
+    agent_flow,
+    policy_management_status,
+    policy_store,
+    runtime_visibility,
+)
 from . import sampling_semantic, schemas
 
 
@@ -1021,6 +1027,22 @@ def call_tool(
             transport=resolved_transport,
         )
         response["policy_store_status"] = report.get("policy_store_status")
+        return response
+
+    if tool_name == "jikuo.get_policy_management_status":
+        report = policy_management_status.build_policy_management_status(
+            project_root=resolved_root,
+            starter_pack_id=str(args.get("starter_pack_id") or policy_management_status.DEFAULT_STARTER_PACK_ID),
+        )
+        root = Path(str(report["project_root"]))
+        response = _base_response(
+            tool_name=tool_name,
+            status=str(report.get("status") or "unknown"),
+            data_details=report,
+            project_root=root,
+            transport=resolved_transport,
+        )
+        response["policy_management_status"] = response["data_details"]
         return response
 
     if tool_name == "jikuo.get_runtime_status":

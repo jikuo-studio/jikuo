@@ -7,11 +7,21 @@ import sys
 from pathlib import Path
 
 if __package__:
-    from . import activation_settings, configuration_review, runtime_visibility
+    from . import (
+        activation_settings,
+        configuration_review,
+        policy_management_status,
+        runtime_visibility,
+    )
     from .integrations import instruction_files
 else:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    from jikuo import activation_settings, configuration_review, runtime_visibility
+    from jikuo import (
+        activation_settings,
+        configuration_review,
+        policy_management_status,
+        runtime_visibility,
+    )
     from jikuo.integrations import instruction_files
 
 
@@ -72,6 +82,22 @@ def build_parser() -> argparse.ArgumentParser:
     configure.add_argument("configure_command", choices=("status", "review"))
     configure.add_argument("--project-root", type=Path, default=None)
     configure.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    policy_management = subparsers.add_parser(
+        "policy-management",
+        help="Inspect JIKUO policy-management status.",
+    )
+    policy_management.add_argument("policy_management_command", choices=("status",))
+    policy_management.add_argument("--project-root", type=Path, default=None)
+    policy_management.add_argument(
+        "--starter-pack-id",
+        default=policy_management_status.DEFAULT_STARTER_PACK_ID,
+    )
+    policy_management.add_argument("--template-dir", type=Path, default=None)
+    policy_management.add_argument(
+        "--format",
+        choices=("markdown", "json"),
+        default="markdown",
+    )
     return parser
 
 
@@ -128,6 +154,16 @@ def main(argv: list[str] | None = None) -> int:
             configure_args.extend(["--project-root", str(args.project_root)])
         configure_args.extend(["--format", args.format])
         return configuration_review.main(configure_args)
+    if args.command == "policy-management":
+        status_args = [args.policy_management_command]
+        if args.project_root is not None:
+            status_args.extend(["--project-root", str(args.project_root)])
+        if args.starter_pack_id is not None:
+            status_args.extend(["--starter-pack-id", str(args.starter_pack_id)])
+        if args.template_dir is not None:
+            status_args.extend(["--template-dir", str(args.template_dir)])
+        status_args.extend(["--format", args.format])
+        return policy_management_status.main(status_args)
     parser.error(f"unsupported command: {args.command}")
     return 2
 

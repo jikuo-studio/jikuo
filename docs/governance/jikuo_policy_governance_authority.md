@@ -767,6 +767,10 @@ Current JIKUO has:
   `starter_manifest_publication_plan` agent-flow / MCP proposal cards, plus
   guarded `policy_template_publication` and `starter_manifest_publication`
   agent-flow / MCP apply paths;
+- no-write `jikuo.policy_management_status.v0` read model through CLI and MCP
+  so GUI/front-end surfaces can inspect active policies, package templates,
+  starter manifests, distribution state, and available guarded follow-ups from
+  one backend source;
 - MCP surfaces for route, status, proposals, and guarded writes.
 
 Current JIKUO does not yet have:
@@ -825,7 +829,10 @@ Recommended future slices:
    package-template publication and starter-pack manifest publication are
    available through CLI, agent-flow, and MCP plan/apply surfaces without
    building a heavy candidate-disposition registry before lifecycle facts are
-   explicit.
+   explicit. A no-write policy-management status read model is also available
+   through `python -B -m jikuo policy-management status` and
+   `jikuo.get_policy_management_status` for future GUI/global configuration
+   surfaces.
 7. `POLTRIG-04`: update MCP and host adapter surfaces to require or strongly
    encourage agent hints.
 8. `POLTRIG-05`: surface hint/signal/fallback basis in runtime cards and

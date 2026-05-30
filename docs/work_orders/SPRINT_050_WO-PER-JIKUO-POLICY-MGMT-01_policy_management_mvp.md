@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-POLICY-MGMT-01: Policy Management MVP
 
-> **Status**: Two held candidates activated as `active_report_only`; Policy Management MVP closeout design, no-write distribution review with GUI/MCP natural-language source resolution, guarded package-template publication CLI plus agent-flow/MCP bridge, and guarded starter-pack manifest publication CLI plus agent-flow/MCP bridge implemented.
+> **Status**: Two held candidates activated as `active_report_only`; Policy Management MVP closeout design, no-write distribution review with GUI/MCP natural-language source resolution, guarded package-template publication CLI plus agent-flow/MCP bridge, guarded starter-pack manifest publication CLI plus agent-flow/MCP bridge, and no-write policy-management status read model implemented.
 > **Date**: 2026-05-18
 > **JIKUO layer**: policy governance / policy distribution.
 > **Business meaning**: JIKUO's first usable version needs the current user-authored candidate policies to enter active scope through the existing guarded flow, and it needs a clear official distribution boundary so useful policies can reach user projects without copying JIKUO dogfood policies or overwriting user-owned local policies.
@@ -34,6 +34,7 @@ The policy-management MVP is intentionally small for now:
 |---|---|---|
 | Held-candidate activation | The two user-authored held candidates move through existing no-write policy plan and guarded apply / merge / reject / defer outcomes. | The current candidates are explicit user requirements; they do not need a new heavy candidate registry before activation. |
 | Official distribution design | Reviewed package templates and starter packs can be offered to user projects through opt-in preview and guarded activation. | Keeps JIKUO self-bootstrap policies separate from user-owned project policies. |
+| Policy-management read model | A no-write status surface returns active policies, package templates, starter manifests, distribution-state summaries, and available guarded follow-ups. | Gives the future GUI/global configuration view one stable backend source instead of requiring users or host AI to inspect scattered files. |
 
 Runtime `policy_candidate` cards remain report-only evidence. They should not
 drive automatic policy creation until lifecycle infrastructure can provide
@@ -112,6 +113,8 @@ Recommended smallest slices:
 3. `POLICY-MGMT-01C`: define official distribution review: dogfood-only,
    official-starter, optional-template, or deferred, preserving package
    provenance and local-policy ownership.
+4. `POLICY-MGMT-01G`: expose the policy-management status read model for
+   GUI/front-end use. Completed as a no-write CLI/MCP surface.
 
 ### 4.1 Held-Candidate Plan Shapes
 
@@ -319,7 +322,35 @@ CLI callers may use `--policy-ref` or the clearer
 `--distribution-policy-ref` alias when the host AI has already selected the
 source policy. Both flags resolve through the same explicit-policy-ref path.
 
-### 4.4 Active-Policy Maintenance Outcomes
+### 4.4 Policy-Management Status Read Model
+
+The MVP backend now exposes a read-only state model for future GUI and global
+configuration surfaces:
+
+```powershell
+python -B -m jikuo policy-management status --format json
+```
+
+and through MCP:
+
+```text
+jikuo.get_policy_management_status
+```
+
+The report schema is `jikuo.policy_management_status.v0`. It reads only:
+
+- project-local active policy refs from `.jikuo/policies/manifest.yaml`;
+- package-owned policy templates under `src/jikuo/policy_templates/...`;
+- package-owned starter-pack manifests under
+  `src/jikuo/starter_policy_packs/...`.
+
+It does not publish templates, update starter manifests, activate user-project
+policies, write runtime cards, or change evaluator behavior. Its business role
+is to give a thin front-end one stable backend source for "what policies exist,
+what templates are available, what starter packs include, and which guarded
+follow-up operation is next."
+
+### 4.5 Active-Policy Maintenance Outcomes
 
 Once a policy is active, maintenance uses guarded evolution, not direct edits.
 
@@ -331,7 +362,7 @@ Once a policy is active, maintenance uses guarded evolution, not direct edits.
 | Reusable | Promote to official starter or optional template after review. |
 | Obsolete | Deprecate through guarded evolution. |
 
-### 4.5 MVP Closeout Acceptance
+### 4.6 MVP Closeout Acceptance
 
 Policy Management MVP closeout is accepted when:
 
@@ -365,6 +396,9 @@ Policy Management MVP closeout is accepted when:
   manifest publication as a separate no-write visible card, while guarded apply
   remains `agent_flow apply --operation starter_manifest_publication` or MCP
   `jikuo.apply_starter_manifest_publication`;
+- `python -B -m jikuo policy-management status ...` and MCP
+  `jikuo.get_policy_management_status` expose the no-write
+  `jikuo.policy_management_status.v0` read model for GUI/front-end use;
 - active-policy maintenance outcomes are documented;
 - registry capability metadata points future implementation to this closeout
   design.

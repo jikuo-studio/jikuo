@@ -83,6 +83,25 @@ def register_stage_a_tools(
         )
 
     @server.tool(
+        name="jikuo.get_policy_management_status",
+        description=tool_description(
+            tool_definitions["jikuo.get_policy_management_status"]
+        ),
+    )
+    def jikuo_get_policy_management_status(
+        project_root: str | None = None,
+        starter_pack_id: str | None = None,
+    ) -> dict[str, Any]:
+        return _call(
+            "jikuo.get_policy_management_status",
+            {
+                "project_root": project_root,
+                "starter_pack_id": starter_pack_id,
+            },
+            default_transport=default_transport,
+        )
+
+    @server.tool(
         name="jikuo.get_runtime_status",
         description=tool_description(tool_definitions["jikuo.get_runtime_status"]),
     )

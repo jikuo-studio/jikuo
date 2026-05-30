@@ -8,7 +8,7 @@ are active, which ones triggered, what evidence is missing, which task-session
 is being worked, and where the user can independently verify the runtime card.
 
 JIKUO is currently an early standalone package in private preview. The current
-MCP MVP exposes 23 local stdio tools across no-write status/cards/proposals,
+MCP MVP exposes 24 local stdio tools across no-write status/cards/proposals,
 first-use configuration review, activation settings, conversation routing,
 policy suggestion review, MCP Sampling semantic-provider probing, and
 guarded-write apply paths.
@@ -26,7 +26,7 @@ gate are being decided.
 - Task-session records for durable process memory without capturing raw chat
   transcripts.
 - Starter policy templates with provenance for first-use project bootstrap.
-- A local stdio MCP server exposing 23 tools for status, cards, proposals,
+- A local stdio MCP server exposing 24 tools for status, cards, proposals,
   configuration review, activation settings, routing, MCP Sampling semantic
   provider probing, and guarded writes.
 - Accepted private-preview MCP use in Codex and Claude, plus proof docs for
@@ -70,11 +70,12 @@ or, after installation:
 jikuo-mcp
 ```
 
-The current MCP surface exposes 23 tools:
+The current MCP surface exposes 24 tools:
 
 Status, cards, and no-write proposals:
 
 - `jikuo.status`
+- `jikuo.get_policy_management_status`
 - `jikuo.get_runtime_status`
 - `jikuo.get_runtime_status_card`
 - `jikuo.get_display_card`
