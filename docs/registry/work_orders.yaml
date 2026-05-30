@@ -168,7 +168,7 @@ entries:
     title: "SPRINT_050_WO-PER-JIKUO-AI-SEMROUTE-01: AI Semantic Routing MVP"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-AI-SEMROUTE-01_ai_semantic_routing_mvp.md"
     sprint: "SPRINT_050"
-    status: "Design accepted; first projection, consumption, explicit-provider, report-only evidence-gate, router-tool-contract, and cooperative GUI-router proof slices implemented for short user_expression, MVP scope filtering, ordered intent_slices card rendering, Codex hook wording, raw user_phrase redaction in trigger/router projections, synthetic no-write semantic_intent_status=provided smoke, local proof that host semantic scopes change scope-aware policy distribution without expanding evaluator inputs, accepted Codex-host-AI explicit transport proof, MCP Sampling unavailable proof, semantic_intent_classification_evidence projection, MCP router server signatures/tool descriptions that expose and guide host_semantic_intent, and accepted separate Codex GUI proof that route_user_request can receive host_semantic_intent; automatic hook-time or Sampling semantic provider smoke remains pending"
+    status: "Design accepted; first projection, consumption, explicit-provider, report-only evidence-gate, router-tool-contract, cooperative GUI-router proof, and UTF-8 semantic-field proof slices implemented for short user_expression, MVP scope filtering, ordered intent_slices card rendering, Codex hook wording, raw user_phrase redaction in trigger/router projections, synthetic no-write semantic_intent_status=provided smoke, local proof that host semantic scopes change scope-aware policy distribution without expanding evaluator inputs, accepted Codex-host-AI explicit transport proof, MCP Sampling unavailable proof, semantic_intent_classification_evidence projection, MCP router server signatures/tool descriptions that expose and guide host_semantic_intent, accepted separate Codex GUI proof that route_user_request can receive host_semantic_intent, and local proof that Chinese semantic contract fields survive UTF-8 runtime-card rendering; automatic hook-time or Sampling semantic provider smoke remains pending"
     impact_tags:
       - "ai_semantic_routing"
       - "strict_mounted_harness"
@@ -184,6 +184,7 @@ entries:
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-INTG-03_strict_mounted_harness_adapter_contract.md#3-2-classification-cooperation-contract"
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-CODEX-PLUGIN-01_codex_plugin_pre_turn_harness_review.md#4-2-minimal-userpromptsubmit-proof-design"
       - "docs/integrations/proofs/PROOF-2026-05-31-codex-gui-mcp-router-host-semantic-intent.md"
+      - "docs/integrations/proofs/PROOF-2026-05-31-runtime-card-utf8-semantic-fields.md"
     authority_refs:
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-AI-SEMROUTE-01_ai_semantic_routing_mvp.md"
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-INTG-03_strict_mounted_harness_adapter_contract.md"

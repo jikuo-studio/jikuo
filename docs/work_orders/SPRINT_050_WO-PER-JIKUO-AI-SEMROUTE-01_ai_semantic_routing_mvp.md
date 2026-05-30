@@ -357,6 +357,21 @@ This accepts the cooperative GUI MCP tool-call path: Codex can see the router
 argument and pass compact semantic intent into JIKUO. It still does not accept
 automatic hook-time semantic classification or MCP Sampling support.
 
+A local UTF-8 follow-up proof was accepted after the pasted GUI proof showed
+mojibake in Chinese semantic contract fields:
+
+- Proof note:
+  `docs/integrations/proofs/PROOF-2026-05-31-runtime-card-utf8-semantic-fields.md`;
+- Coverage:
+  `tests.mcp_adapter_tests.MCPStageAAdapterTests.test_route_user_request_preserves_utf8_semantic_contract_fields`;
+- Result:
+  direct response Markdown and `.jikuo/runtime/last_card.md` UTF-8 reads both
+  preserved Chinese `requested_outcome` and `response_contract`.
+
+This means the known mojibake should be diagnosed first as GUI paste, terminal,
+attachment, or display-chain encoding unless a direct UTF-8 read of the runtime
+card is also corrupted.
+
 A follow-up smoke after Codex config refresh exposed the Sampling probe tool
 through the target client, then returned `sampling_semantic_intent.status =
 unavailable` with `McpError: sampling/createMessage`. This proves the tool

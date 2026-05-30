@@ -629,6 +629,50 @@ class MCPStageAAdapterTests(unittest.TestCase):
             self.assertIn("Semantic intent status: `provided`", response["card_markdown"])
             self.assertIn("### Semantic Intent Evidence", response["card_markdown"])
 
+    def test_route_user_request_preserves_utf8_semantic_contract_fields(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            requested_outcome = "验证 MCP router 是否能接收 host_semantic_intent"
+            response_contract = "只汇报 semantic_intent_evidence 和 card 链接"
+
+            response = adapter.call_tool(
+                "jikuo.route_user_request",
+                {
+                    "project_root": str(project_root),
+                    "task_title": "semantic utf8 smoke",
+                    "summary": "semantic utf8 smoke without raw prompt",
+                    "trigger_mode": "mounted",
+                    "host_semantic_intent": {
+                        "schema": "jikuo.host_semantic_intent.v0",
+                        "provider": "host_ai",
+                        "confidence": "high",
+                        "policy_scopes": ["discussion"],
+                        "requested_outcome": requested_outcome,
+                        "execution_boundary": "no_file_edit",
+                        "response_contract": response_contract,
+                        "user_expression": "用户要求测试中文语义字段渲染",
+                        "constraints": ["no_file_write"],
+                        "work_profile": {
+                            "policy_scopes": ["discussion"],
+                            "operation_class": "read_only",
+                            "output_class": "answer",
+                        },
+                    },
+                },
+            )
+
+            card_markdown = response["card_markdown"]
+            last_card = (project_root / ".jikuo" / "runtime" / "last_card.md").read_text(
+                encoding="utf-8"
+            )
+
+            self.assertIn(requested_outcome, card_markdown)
+            self.assertIn(response_contract, card_markdown)
+            self.assertIn(requested_outcome, last_card)
+            self.assertIn(response_contract, last_card)
+            self.assertEqual(response["semantic_intent_evidence"]["status"], "ok")
+
     def test_sampling_semantic_probe_reports_unavailable_without_mcp_context(self):
         with tempfile.TemporaryDirectory() as tmp:
             project_root = Path(tmp) / "project"

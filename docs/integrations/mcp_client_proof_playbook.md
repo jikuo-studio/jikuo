@@ -540,6 +540,15 @@ Accepted cooperative GUI router proof:
 - This proves the cooperative MCP tool-call path. It does not prove automatic
   hook-time semantic classification or Sampling provider support.
 
+UTF-8 semantic field proof:
+
+- `docs/integrations/proofs/PROOF-2026-05-31-runtime-card-utf8-semantic-fields.md`
+  records a local adapter smoke where Chinese `requested_outcome` and
+  `response_contract` values survived both response Markdown and direct
+  UTF-8 reads of `.jikuo/runtime/last_card.md`.
+- If pasted GUI proof text shows mojibake, compare it against a direct UTF-8
+  read of the linked runtime card before treating it as a JIKUO runtime bug.
+
 MCP Sampling provider proof:
 
 - MCP Sampling lets a server request `sampling/createMessage` from the client
