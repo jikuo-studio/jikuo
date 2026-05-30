@@ -27,6 +27,12 @@ else:
 
 STARTER_PACK_INIT_PLAN_SCHEMA = "jikuo.starter_policy_pack_init_plan.v0"
 STARTER_PACK_INIT_RESULT_SCHEMA = "jikuo.starter_policy_pack_init_result.v0"
+STARTER_PACK_MANIFEST_PUBLICATION_PLAN_SCHEMA = (
+    "jikuo.starter_pack_manifest_publication_plan.v0"
+)
+STARTER_PACK_MANIFEST_PUBLICATION_RESULT_SCHEMA = (
+    "jikuo.starter_pack_manifest_publication_result.v0"
+)
 STARTER_PACK_MANIFEST_SCHEMA = "jikuo.starter_policy_pack_manifest.v0"
 STARTER_POLICY_PROVENANCE_SCHEMA = "jikuo.policy_provenance.v0"
 OFFICIAL_STARTER_POLICY_PROVENANCE_SOURCE = "verified_jikuo_official"
@@ -234,6 +240,262 @@ def load_pack_policies(pack_id: str) -> tuple[list[dict[str, Any]], list[str]]:
             }
         )
     return policies, warnings
+
+
+def existing_manifest_template_entries(manifest: dict[str, Any]) -> list[dict[str, Any]]:
+    raw_templates = manifest.get("policy_templates")
+    if not isinstance(raw_templates, list):
+        return []
+    return [item for item in raw_templates if isinstance(item, dict)]
+
+
+def build_starter_manifest_publication_plan(
+    *,
+    template_ref: str,
+    pack_id: str = DEFAULT_PACK_ID,
+) -> dict[str, Any]:
+    warnings: list[str] = []
+    refusals: list[str] = []
+    manifest, manifest_warnings = load_pack_manifest(pack_id)
+    warnings.extend(manifest_warnings)
+    manifest_path = pack_manifest_path(pack_id)
+    if manifest is None:
+        manifest = {}
+        refusals.extend(manifest_warnings)
+
+    if any(warning.startswith("unsupported starter pack manifest schema:") for warning in warnings):
+        refusals.append("starter_pack_schema_not_supported")
+    if manifest and not isinstance(manifest.get("policy_templates"), list):
+        refusals.append("starter_pack_policy_templates_must_be_list")
+
+    template_path, template_warning = resolve_official_starter_template_path(template_ref)
+    if template_warning:
+        warnings.append(template_warning)
+        refusals.append("starter_pack_template_ref_boundary_violation")
+
+    template: dict[str, Any] = {}
+    policy_id: str | None = None
+    title: str | None = None
+    if template_path is not None:
+        if not template_path.is_file():
+            warnings.append(f"starter template not found: {template_path}")
+            refusals.append("starter_template_not_found")
+        else:
+            template = policy_templates.read_yaml_subset(template_path)
+            schema = template.get("schema_version") or template.get("schema")
+            if schema != policy_templates.POLICY_TEMPLATE_SCHEMA:
+                warnings.append(f"unsupported policy template schema: {schema}")
+                refusals.append("starter_template_schema_not_supported")
+            template_policy = template.get("template_policy")
+            if not isinstance(template_policy, dict):
+                refusals.append("template_policy_missing")
+            else:
+                raw_policy_id = template_policy.get("policy_id")
+                raw_title = template_policy.get("title")
+                if isinstance(raw_policy_id, str) and raw_policy_id:
+                    policy_id = raw_policy_id
+                else:
+                    refusals.append("template_policy_id_missing")
+                if isinstance(raw_title, str) and raw_title:
+                    title = raw_title
+                elif policy_id:
+                    title = policy_id
+
+    existing_entries = existing_manifest_template_entries(manifest)
+    for entry in existing_entries:
+        if entry.get("template_ref") == template_ref:
+            refusals.append(f"starter_pack_template_ref_already_present:{template_ref}")
+        if policy_id and entry.get("policy_id") == policy_id:
+            refusals.append(f"starter_pack_policy_id_already_present:{policy_id}")
+
+    status = "refused" if refusals else "review"
+    write_set = [
+        {
+            "path": str(manifest_path),
+            "operation": "update",
+            "effect": "add reviewed package template ref to starter pack manifest",
+        }
+    ]
+    guarded_command = (
+        "python -B -m jikuo.starter_policies publish-template "
+        f"--template-ref \"{template_ref}\" "
+        f"--pack-id {pack_id} "
+        "--confirm-manifest-publication "
+        '--approval-phrase "<exact user phrase as spoken>" '
+        "--format json"
+    )
+    return {
+        "schema": STARTER_PACK_MANIFEST_PUBLICATION_PLAN_SCHEMA,
+        "schema_version": STARTER_PACK_MANIFEST_PUBLICATION_PLAN_SCHEMA,
+        "report_only": True,
+        "status": status,
+        "pack_id": pack_id,
+        "manifest_path": str(manifest_path),
+        "template_ref": template_ref,
+        "template_path": str(template_path) if template_path is not None else None,
+        "policy_id": policy_id,
+        "title": title,
+        "existing_template_count": len(existing_entries),
+        "write_set": write_set,
+        "approval_required": True,
+        "write_allowed_by_command": False,
+        "writes_performed": False,
+        "guarded_apply_command_preview": guarded_command,
+        "refusal_reasons": sorted(set(refusals)),
+        "warnings": sorted(set(warnings)),
+        "source_refs": [
+            *CONTRACT_REFS,
+            "pkg://jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-POLICY-MGMT-01_policy_management_mvp.md",
+            "pkg://jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-POLICY-CATALOG-01_self_bootstrap_policy_promotion_review.md",
+        ],
+        "non_effects": [
+            "does not activate policies in user projects",
+            "does not create .jikuo/policies/",
+            "does not copy .jikuo/policies/approved files into starter packs",
+            "does not run starter policy initialization",
+        ],
+        "next_actions": [
+            "review starter-pack manifest target and package template provenance",
+            "publish the template ref only after explicit maintainer approval",
+            "activate in user projects only through a later guarded starter init",
+        ]
+        if status == "review"
+        else ["resolve refusal reasons before retrying starter manifest publication"],
+    }
+
+
+def build_manifest_publication_refusal_result(
+    *,
+    plan: dict[str, Any],
+    approval_phrase: str | None,
+    confirmed: bool,
+    refusals: list[str],
+) -> dict[str, Any]:
+    return {
+        "schema": STARTER_PACK_MANIFEST_PUBLICATION_RESULT_SCHEMA,
+        "schema_version": STARTER_PACK_MANIFEST_PUBLICATION_RESULT_SCHEMA,
+        "status": "refused",
+        "write_performed": False,
+        "pack_id": plan.get("pack_id"),
+        "manifest_path": plan.get("manifest_path"),
+        "template_ref": plan.get("template_ref"),
+        "policy_id": plan.get("policy_id"),
+        "written_paths": [],
+        "refusal_reasons": sorted(set(refusals)),
+        "warnings": plan.get("warnings") or [],
+        "approval_record": {
+            "phrase": approval_phrase,
+            "decision_target": "JIKUO starter pack manifest publication",
+            "decision_effect": "add one reviewed package template ref to an official starter pack manifest",
+            "decision_noneffect": "does not activate policies in user projects",
+            "source_plan_schema": STARTER_PACK_MANIFEST_PUBLICATION_PLAN_SCHEMA,
+            "command_confirmed": confirmed,
+        }
+        if approval_phrase
+        else None,
+        "non_effects": plan.get("non_effects") or [],
+        "next_actions": ["review refusal reasons before retrying starter manifest publication"],
+    }
+
+
+def publish_template_to_starter_manifest(
+    *,
+    template_ref: str,
+    pack_id: str = DEFAULT_PACK_ID,
+    confirmed: bool = False,
+    approval_phrase: str | None = None,
+) -> tuple[dict[str, Any], int]:
+    plan = build_starter_manifest_publication_plan(
+        template_ref=template_ref,
+        pack_id=pack_id,
+    )
+    refusals = list(plan.get("refusal_reasons") or [])
+    if not confirmed:
+        refusals.append("missing_confirmation_flag")
+    if not approval_phrase:
+        refusals.append("approval_evidence_missing")
+    if refusals:
+        return (
+            build_manifest_publication_refusal_result(
+                plan=plan,
+                approval_phrase=approval_phrase,
+                confirmed=confirmed,
+                refusals=refusals,
+            ),
+            2,
+        )
+
+    manifest_path = Path(str(plan["manifest_path"]))
+    try:
+        manifest = policy_templates.read_yaml_subset(manifest_path)
+        entries = existing_manifest_template_entries(manifest)
+        entries.append(
+            {
+                "template_ref": template_ref,
+                "policy_id": plan.get("policy_id"),
+                "title": plan.get("title"),
+            }
+        )
+        manifest["policy_templates"] = entries
+        manifest_path.write_text(
+            render_yaml_document(manifest),
+            encoding="utf-8",
+            newline="\n",
+        )
+    except Exception as exc:
+        return (
+            build_manifest_publication_refusal_result(
+                plan=plan,
+                approval_phrase=approval_phrase,
+                confirmed=confirmed,
+                refusals=[f"starter_manifest_publication_failed: {exc}"],
+            ),
+            2,
+        )
+
+    policies, warnings = load_pack_policies(pack_id)
+    published_policy_ids = {str(item.get("policy_id")) for item in policies}
+    return (
+        {
+            "schema": STARTER_PACK_MANIFEST_PUBLICATION_RESULT_SCHEMA,
+            "schema_version": STARTER_PACK_MANIFEST_PUBLICATION_RESULT_SCHEMA,
+            "status": "written",
+            "write_performed": True,
+            "pack_id": pack_id,
+            "manifest_path": str(manifest_path),
+            "template_ref": template_ref,
+            "policy_id": plan.get("policy_id"),
+            "title": plan.get("title"),
+            "written_paths": [str(manifest_path)],
+            "refusal_reasons": [],
+            "warnings": sorted(set([*(plan.get("warnings") or []), *warnings])),
+            "approval_record": {
+                "phrase": approval_phrase,
+                "decision_target": "JIKUO starter pack manifest publication",
+                "decision_effect": "add one reviewed package template ref to an official starter pack manifest",
+                "decision_noneffect": "does not activate policies in user projects",
+                "source_plan_schema": STARTER_PACK_MANIFEST_PUBLICATION_PLAN_SCHEMA,
+                "command_confirmed": confirmed,
+            },
+            "post_write_verification": {
+                "manifest_written": manifest_path.is_file(),
+                "template_ref_present": any(
+                    entry.get("template_ref") == template_ref
+                    for entry in existing_manifest_template_entries(
+                        policy_templates.read_yaml_subset(manifest_path)
+                    )
+                ),
+                "starter_pack_policy_loadable": str(plan.get("policy_id"))
+                in published_policy_ids,
+            },
+            "non_effects": plan.get("non_effects") or [],
+            "next_actions": [
+                "review starter pack preview before using it in a user project",
+                "activate in user projects only through guarded starter init",
+            ],
+        },
+        0,
+    )
 
 
 def policy_file_ref(policy_id: str) -> str:
@@ -729,6 +991,18 @@ def build_parser() -> argparse.ArgumentParser:
     init.add_argument("--confirm-starter-init", action="store_true")
     init.add_argument("--approval-phrase", default=None)
     init.add_argument("--format", choices=("text", "json"), default="text")
+
+    plan_publish = subparsers.add_parser("plan-publish-template")
+    plan_publish.add_argument("--template-ref", required=True)
+    plan_publish.add_argument("--pack-id", default=DEFAULT_PACK_ID)
+    plan_publish.add_argument("--format", choices=("text", "json"), default="text")
+
+    publish = subparsers.add_parser("publish-template")
+    publish.add_argument("--template-ref", required=True)
+    publish.add_argument("--pack-id", default=DEFAULT_PACK_ID)
+    publish.add_argument("--confirm-manifest-publication", action="store_true")
+    publish.add_argument("--approval-phrase", default=None)
+    publish.add_argument("--format", choices=("text", "json"), default="text")
     return parser
 
 
@@ -747,6 +1021,10 @@ def format_text(report: dict[str, Any]) -> str:
         lines.append("Write set:")
         for item in report["write_set"]:
             lines.append(f"- {item.get('path')}: {item.get('effect')}")
+    if report.get("template_ref"):
+        lines.append(f"Template ref: {report.get('template_ref')}")
+    if report.get("manifest_path"):
+        lines.append(f"Manifest: {report.get('manifest_path')}")
     if report.get("refusal_reasons"):
         lines.append("Refusals:")
         lines.extend(f"- {item}" for item in report["refusal_reasons"])
@@ -768,6 +1046,19 @@ def main(argv: list[str] | None = None) -> int:
             project_root=args.project_root,
             pack_id=args.pack_id,
             confirmed=args.confirm_starter_init,
+            approval_phrase=args.approval_phrase,
+        )
+    elif args.command == "plan-publish-template":
+        report = build_starter_manifest_publication_plan(
+            template_ref=args.template_ref,
+            pack_id=args.pack_id,
+        )
+        exit_code = 0 if report["status"] != "refused" else 2
+    elif args.command == "publish-template":
+        report, exit_code = publish_template_to_starter_manifest(
+            template_ref=args.template_ref,
+            pack_id=args.pack_id,
+            confirmed=args.confirm_manifest_publication,
             approval_phrase=args.approval_phrase,
         )
     else:

@@ -12,6 +12,10 @@ ROOT = Path(__file__).resolve().parents[1]
 TOOL = ROOT / "src" / "jikuo" / "starter_policies.py"
 POLICY_STORE_TOOL = ROOT / "src" / "jikuo" / "policy_store.py"
 TEMP_ROOT = ROOT / "tmp" / "jikuo_starter_policies_tests"
+PACKAGE_TEMPLATE_REF = (
+    "pkg://jikuo/policy_templates/engineering_governance/"
+    "POLICYTEMPLATE-local-policy-task-scope-control-before-packaging.yaml"
+)
 sys.path.insert(0, str(ROOT / "src"))
 from jikuo import starter_policies  # noqa: E402
 
@@ -54,7 +58,145 @@ def create_policy_write_ready_project(root: Path) -> None:
     )
 
 
+def write_test_starter_manifest(root: Path, *, pack_id: str = "test_pack") -> Path:
+    pack_root = root / "packs" / pack_id
+    pack_root.mkdir(parents=True)
+    manifest_path = pack_root / "manifest.yaml"
+    manifest_path.write_text(
+        "\n".join(
+            [
+                'schema_version: "jikuo.starter_policy_pack_manifest.v0"',
+                f'pack_id: "{pack_id}"',
+                'title: "Test starter pack"',
+                "policy_templates: []",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    return manifest_path
+
+
 class StarterPolicyPackTests(unittest.TestCase):
+    def test_starter_manifest_publication_plan_is_no_write(self):
+        with temp_project_dir() as root:
+            manifest_path = write_test_starter_manifest(root)
+            old_pack_root = starter_policies.STARTER_PACKS_ROOT
+            try:
+                starter_policies.STARTER_PACKS_ROOT = root / "packs"
+                report = starter_policies.build_starter_manifest_publication_plan(
+                    template_ref=PACKAGE_TEMPLATE_REF,
+                    pack_id="test_pack",
+                )
+            finally:
+                starter_policies.STARTER_PACKS_ROOT = old_pack_root
+
+            self.assertEqual(
+                report["schema"],
+                "jikuo.starter_pack_manifest_publication_plan.v0",
+            )
+            self.assertEqual(report["status"], "review")
+            self.assertFalse(report["writes_performed"])
+            self.assertFalse(report["write_allowed_by_command"])
+            self.assertEqual(report["manifest_path"], str(manifest_path))
+            self.assertEqual(report["template_ref"], PACKAGE_TEMPLATE_REF)
+            self.assertEqual(
+                report["policy_id"],
+                "POLICY-task-scope-control-before-packaging",
+            )
+            self.assertEqual(len(report["write_set"]), 1)
+            self.assertIn(
+                "does not activate policies in user projects",
+                report["non_effects"],
+            )
+            self.assertNotIn(PACKAGE_TEMPLATE_REF, manifest_path.read_text(encoding="utf-8"))
+
+    def test_starter_manifest_publication_refuses_project_local_template_refs(self):
+        with temp_project_dir() as root:
+            write_test_starter_manifest(root)
+            old_pack_root = starter_policies.STARTER_PACKS_ROOT
+            try:
+                starter_policies.STARTER_PACKS_ROOT = root / "packs"
+                report = starter_policies.build_starter_manifest_publication_plan(
+                    template_ref=(
+                        "pkg://jikuo/.jikuo/policies/approved/"
+                        "POLICY-jikuo-self-bootstrap-workflow.yaml"
+                    ),
+                    pack_id="test_pack",
+                )
+            finally:
+                starter_policies.STARTER_PACKS_ROOT = old_pack_root
+
+            self.assertEqual(report["status"], "refused")
+            self.assertIn(
+                "starter_pack_template_ref_boundary_violation",
+                report["refusal_reasons"],
+            )
+            self.assertIn(
+                "does not copy .jikuo/policies/approved files into starter packs",
+                report["non_effects"],
+            )
+
+    def test_starter_manifest_publication_requires_confirmation_and_approval(self):
+        with temp_project_dir() as root:
+            manifest_path = write_test_starter_manifest(root)
+            old_pack_root = starter_policies.STARTER_PACKS_ROOT
+            try:
+                starter_policies.STARTER_PACKS_ROOT = root / "packs"
+                report, exit_code = starter_policies.publish_template_to_starter_manifest(
+                    template_ref=PACKAGE_TEMPLATE_REF,
+                    pack_id="test_pack",
+                )
+            finally:
+                starter_policies.STARTER_PACKS_ROOT = old_pack_root
+
+            self.assertEqual(exit_code, 2)
+            self.assertFalse(report["write_performed"])
+            self.assertIn("missing_confirmation_flag", report["refusal_reasons"])
+            self.assertIn("approval_evidence_missing", report["refusal_reasons"])
+            self.assertNotIn(PACKAGE_TEMPLATE_REF, manifest_path.read_text(encoding="utf-8"))
+
+    def test_guarded_starter_manifest_publication_appends_package_template_ref(self):
+        with temp_project_dir() as root:
+            manifest_path = write_test_starter_manifest(root)
+            old_pack_root = starter_policies.STARTER_PACKS_ROOT
+            try:
+                starter_policies.STARTER_PACKS_ROOT = root / "packs"
+                report, exit_code = starter_policies.publish_template_to_starter_manifest(
+                    template_ref=PACKAGE_TEMPLATE_REF,
+                    pack_id="test_pack",
+                    confirmed=True,
+                    approval_phrase="<exact user phrase as spoken>",
+                )
+                duplicate = starter_policies.build_starter_manifest_publication_plan(
+                    template_ref=PACKAGE_TEMPLATE_REF,
+                    pack_id="test_pack",
+                )
+            finally:
+                starter_policies.STARTER_PACKS_ROOT = old_pack_root
+
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(
+                report["schema"],
+                "jikuo.starter_pack_manifest_publication_result.v0",
+            )
+            self.assertTrue(report["write_performed"])
+            self.assertEqual(report["written_paths"], [str(manifest_path)])
+            self.assertTrue(report["post_write_verification"]["template_ref_present"])
+            self.assertTrue(report["post_write_verification"]["starter_pack_policy_loadable"])
+            manifest_text = manifest_path.read_text(encoding="utf-8")
+            self.assertIn(PACKAGE_TEMPLATE_REF, manifest_text)
+            self.assertIn(
+                'policy_id: "POLICY-task-scope-control-before-packaging"',
+                manifest_text,
+            )
+            self.assertFalse((root / ".jikuo").exists())
+            self.assertEqual(duplicate["status"], "refused")
+            self.assertIn(
+                f"starter_pack_template_ref_already_present:{PACKAGE_TEMPLATE_REF}",
+                duplicate["refusal_reasons"],
+            )
+
     def test_starter_template_refs_must_come_from_official_package_templates(self):
         path, warning = starter_policies.resolve_official_starter_template_path(
             "pkg://jikuo/.jikuo/policies/approved/POLICY-jikuo-self-bootstrap-workflow.yaml"

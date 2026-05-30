@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-POLICY-MGMT-01: Policy Management MVP
 
-> **Status**: Two held candidates activated as `active_report_only`; Policy Management MVP closeout design, no-write distribution review with GUI/MCP natural-language source resolution, and guarded package-template publication CLI implemented.
+> **Status**: Two held candidates activated as `active_report_only`; Policy Management MVP closeout design, no-write distribution review with GUI/MCP natural-language source resolution, guarded package-template publication CLI, and guarded starter-pack manifest publication CLI implemented.
 > **Date**: 2026-05-18
 > **JIKUO layer**: policy governance / policy distribution.
 > **Business meaning**: JIKUO's first usable version needs the current user-authored candidate policies to enter active scope through the existing guarded flow, and it needs a clear official distribution boundary so useful policies can reach user projects without copying JIKUO dogfood policies or overwriting user-owned local policies.
@@ -249,8 +249,41 @@ does not copy `.jikuo/policies/approved` into starter packs.
 
 For `official_starter`, template publication leaves
 `starter_pack_manifest_change_status: follow_up_required`. Starter-pack manifest
-publication remains a separate guarded follow-up so the product can review
-default starter inclusion independently from template availability.
+publication is a separate guarded step so the product can review default starter
+inclusion independently from template availability.
+
+### 4.3.2 Guarded Starter-Pack Manifest Publication
+
+After a reviewed `official_starter` policy has been published as a package
+template, it may be added to a starter pack manifest through a package-maintainer
+guarded path.
+
+The no-write manifest publication plan is:
+
+```powershell
+python -B -m jikuo.starter_policies plan-publish-template `
+  --template-ref "pkg://jikuo/policy_templates/engineering_governance/<TEMPLATE>.yaml" `
+  --pack-id engineering_governance `
+  --format json
+```
+
+The guarded manifest publication apply is:
+
+```powershell
+python -B -m jikuo.starter_policies publish-template `
+  --template-ref "pkg://jikuo/policy_templates/engineering_governance/<TEMPLATE>.yaml" `
+  --pack-id engineering_governance `
+  --confirm-manifest-publication `
+  --approval-phrase "<exact user phrase as spoken>" `
+  --format json
+```
+
+These commands produce `jikuo.starter_pack_manifest_publication_plan.v0` and
+`jikuo.starter_pack_manifest_publication_result.v0`. They may update only the
+package-owned starter manifest, and they continue to reject `.jikuo/policies`
+refs, relative path escapes, absolute paths, duplicate template refs, and
+duplicate starter policy IDs. They do not initialize a user project and do not
+activate policies outside the later guarded starter-init path.
 
 GUI / MCP users normally will not know a policy file path or `POLICY-*` id.
 The user-facing path is therefore:
@@ -314,6 +347,10 @@ Policy Management MVP closeout is accepted when:
   `publish-template ... --confirm-publish-template --approval-phrase ...`
   produce no-write publication plans and guarded package-template publication
   results for reusable outcomes without activating user-project policies;
+- `python -B -m jikuo.starter_policies plan-publish-template ...` and
+  `publish-template ... --confirm-manifest-publication --approval-phrase ...`
+  produce no-write starter-manifest publication plans and guarded manifest
+  updates for package template refs without initializing user projects;
 - `python -B -m jikuo.agent_flow propose --event policy_distribution_review ...`
   and MCP `jikuo.propose_policy_distribution_review` expose the same no-write
   review to GUI clients, including natural-language `policy_query` resolution

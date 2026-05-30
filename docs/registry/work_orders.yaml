@@ -972,7 +972,7 @@ entries:
     title: "SPRINT_050_WO-PER-JIKUO-POLICY-MGMT-01: Policy Management MVP"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-POLICY-MGMT-01_policy_management_mvp.md"
     sprint: "SPRINT_050"
-    status: "Two held candidates activated as active_report_only; lightweight policy distribution and maintenance design documented; no-write distribution review with CLI, agent-flow proposal, MCP GUI surface, and natural-language policy_query source resolution implemented; guarded package-template publication CLI plan/apply implemented; guarded starter-pack manifest publication remains follow-up"
+    status: "Two held candidates activated as active_report_only; lightweight policy distribution and maintenance design documented; no-write distribution review with CLI, agent-flow proposal, MCP GUI surface, and natural-language policy_query source resolution implemented; guarded package-template publication CLI plan/apply implemented; guarded starter-pack manifest publication CLI plan/apply implemented; MCP / agent-flow publication bridge remains follow-up"
     impact_tags:
       - "policy_governance"
       - "policy_distribution"
@@ -982,6 +982,7 @@ entries:
       - "CAP-POLICY-DISTRIBUTION-MVP-01"
       - "CAP-POLICY-DISTRIBUTION-REVIEW-01"
       - "CAP-POLICY-TEMPLATE-PUBLICATION-01"
+      - "CAP-STARTER-MANIFEST-PUBLICATION-01"
     capability_extraction_status: "extracted_from_work_order_body"
     required_mount_sets:
       - "MOUNT-POLICY-MANAGEMENT-MVP"

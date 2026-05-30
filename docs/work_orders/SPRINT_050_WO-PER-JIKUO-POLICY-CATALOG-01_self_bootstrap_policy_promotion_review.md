@@ -1,6 +1,6 @@
 # JIKUO-POLICY-CATALOG-01: Self-Bootstrap Policy Promotion Review
 
-> **Status**: Accepted for code-level hardening; first boundary implementation in progress  
+> **Status**: Accepted for code-level hardening; starter init and starter-manifest publication boundaries implemented
 > **Date**: 2026-05-16  
 > **User scenario**: A user installs or updates JIKUO and must never have JIKUO's own dogfood policies silently copied over, merged into, or used to overwrite the user's project-local policies.  
 > **Business meaning**: Protects ordinary users from accidental policy takeover while still allowing useful JIKUO self-bootstrap practices to be reviewed and promoted into official starter packs or optional templates.
@@ -41,6 +41,16 @@ Starter policy initialization MUST:
 - preserve existing user policy files and active manifest refs
 - require explicit confirmation and approval evidence before writing
 
+Starter-pack manifest publication MUST:
+
+- accept only `pkg://jikuo/policy_templates/...` template refs
+- reject `.jikuo/policies/...`, relative path escape, absolute path, and
+  non-template package paths
+- refuse duplicate template refs and duplicate starter policy IDs
+- require explicit confirmation and approval evidence before updating a package
+  starter manifest
+- remain separate from user-project starter initialization
+
 Starter policy initialization MUST NOT:
 
 - read JIKUO self-bootstrap `.jikuo/policies/approved` as a starter source
@@ -74,6 +84,10 @@ This slice hardens starter initialization:
 - starter pack entries are constrained to `pkg://jikuo/policy_templates/...`
 - project-local `.jikuo/policies` refs are refused as starter sources
 - tests prove starter init appends to an existing user policy store without overwriting the user's policy
+- starter-pack manifest publication now has a no-write plan and guarded apply
+  path for reviewed package template refs
+- starter-pack manifest publication does not initialize user projects and still
+  rejects project-local `.jikuo/policies` refs
 
 The item-by-item promotion audit of all JIKUO self-bootstrap policies remains a follow-on task.
 
@@ -86,3 +100,7 @@ The item-by-item promotion audit of all JIKUO self-bootstrap policies remains a 
 - `plan-init --pack-id ..` refuses with `starter_pack_source_boundary_violation`
 - guarded starter init into a project with an existing user policy preserves the existing policy text and leaves it active
 - official starter pack still initializes only reviewed package templates
+- `plan-publish-template` is no-write and resolves only package-owned policy
+  templates
+- guarded `publish-template --confirm-manifest-publication` appends one package
+  template ref to a starter manifest without creating `.jikuo/policies`
