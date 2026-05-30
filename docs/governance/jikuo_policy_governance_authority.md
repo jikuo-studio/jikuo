@@ -763,6 +763,10 @@ Current JIKUO has:
   let GUI clients request the same review by `policy_ref`, `source_policy`, or
   natural-language `policy_query`, with ambiguity refusal instead of hidden
   guessing;
+- no-write `policy_template_publication_plan` and
+  `starter_manifest_publication_plan` agent-flow / MCP proposal cards, plus
+  guarded `policy_template_publication` and `starter_manifest_publication`
+  agent-flow / MCP apply paths;
 - MCP surfaces for route, status, proposals, and guarded writes.
 
 Current JIKUO does not yet have:
@@ -770,8 +774,6 @@ Current JIKUO does not yet have:
 - lifecycle-node completion orchestration that ensures a pulled-up JIKUO turn
   reaches completion review in addition to task start;
 - structured `agent_hint` input on every router path;
-- MCP / agent-flow bridge surfaces for guarded package-template publication and
-  starter-pack manifest publication;
 - full hint/signal/fallback routing detail in runtime cards and structured
   execution events;
 - strict host adapters that guarantee every user turn supplies the hint and calls
@@ -821,9 +823,9 @@ Recommended future slices:
    through CLI, agent-flow proposal, and MCP, including natural-language
    `policy_query` source resolution with ambiguity refusal. Guarded
    package-template publication and starter-pack manifest publication are
-   available through CLI plan/apply surfaces. Future implementation should add
-   MCP / agent-flow bridge cards for these publication paths without building a
-   heavy candidate-disposition registry before lifecycle facts are explicit.
+   available through CLI, agent-flow, and MCP plan/apply surfaces without
+   building a heavy candidate-disposition registry before lifecycle facts are
+   explicit.
 7. `POLTRIG-04`: update MCP and host adapter surfaces to require or strongly
    encourage agent hints.
 8. `POLTRIG-05`: surface hint/signal/fallback basis in runtime cards and

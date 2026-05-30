@@ -8,7 +8,7 @@ are active, which ones triggered, what evidence is missing, which task-session
 is being worked, and where the user can independently verify the runtime card.
 
 JIKUO is currently an early standalone package in private preview. The current
-MCP MVP exposes 19 local stdio tools across no-write status/cards/proposals,
+MCP MVP exposes 23 local stdio tools across no-write status/cards/proposals,
 first-use configuration review, activation settings, conversation routing,
 policy suggestion review, MCP Sampling semantic-provider probing, and
 guarded-write apply paths.
@@ -26,7 +26,7 @@ gate are being decided.
 - Task-session records for durable process memory without capturing raw chat
   transcripts.
 - Starter policy templates with provenance for first-use project bootstrap.
-- A local stdio MCP server exposing 19 tools for status, cards, proposals,
+- A local stdio MCP server exposing 23 tools for status, cards, proposals,
   configuration review, activation settings, routing, MCP Sampling semantic
   provider probing, and guarded writes.
 - Accepted private-preview MCP use in Codex and Claude, plus proof docs for
@@ -70,7 +70,7 @@ or, after installation:
 jikuo-mcp
 ```
 
-The current MCP surface exposes 19 tools:
+The current MCP surface exposes 23 tools:
 
 Status, cards, and no-write proposals:
 
@@ -82,6 +82,8 @@ Status, cards, and no-write proposals:
 - `jikuo.propose_policy_write_plan`
 - `jikuo.propose_policy_evolution_plan`
 - `jikuo.propose_policy_distribution_review`
+- `jikuo.propose_policy_template_publication_plan`
+- `jikuo.propose_starter_manifest_publication_plan`
 - `jikuo.propose_policy_template_import_plan`
 
 First-use configuration and activation settings:
@@ -105,6 +107,8 @@ Guarded-write apply tools:
 - `jikuo.apply_task_session_evidence_update`
 - `jikuo.apply_policy_evolution_write`
 - `jikuo.apply_policy_template_activation`
+- `jikuo.apply_policy_template_publication`
+- `jikuo.apply_starter_manifest_publication`
 
 Guarded-write tools require explicit confirmation and an approval phrase. They
 must not silently create durable `.jikuo/` state without user approval.

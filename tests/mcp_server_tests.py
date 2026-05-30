@@ -153,9 +153,13 @@ class MCPServerWrapperTests(unittest.TestCase):
         self.assertIn("jikuo.propose_policy_suggestions", fake.tools)
         self.assertIn("jikuo.probe_sampling_semantic_intent", fake.tools)
         self.assertIn("jikuo.propose_policy_distribution_review", fake.tools)
+        self.assertIn("jikuo.propose_policy_template_publication_plan", fake.tools)
+        self.assertIn("jikuo.propose_starter_manifest_publication_plan", fake.tools)
         self.assertIn("jikuo.apply_task_session_evidence_update", fake.tools)
         self.assertIn("jikuo.apply_policy_evolution_write", fake.tools)
         self.assertIn("jikuo.apply_policy_template_activation", fake.tools)
+        self.assertIn("jikuo.apply_policy_template_publication", fake.tools)
+        self.assertIn("jikuo.apply_starter_manifest_publication", fake.tools)
 
     def test_card_tool_descriptions_include_display_contract(self):
         fake = server.create_server(fastmcp_cls=FakeFastMCP)
@@ -306,6 +310,54 @@ class MCPServerWrapperTests(unittest.TestCase):
                 "policy_query_unique_match",
             )
             self.assertIn("Policy distribution review", response["card_markdown"])
+
+    def test_policy_publication_registered_tools_delegate_adapter(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = copy_fixture(POLICY_ACTIVE_PROJECT, tmp)
+            source_policy = (
+                project_root
+                / ".jikuo"
+                / "policies"
+                / "approved"
+                / "POLICY-three-phase-audit.yaml"
+            )
+            fake = server.create_server(fastmcp_cls=FakeFastMCP)
+
+            plan_response = fake.tools[
+                "jikuo.propose_policy_template_publication_plan"
+            ]["function"](
+                project_root=str(project_root),
+                source_policy=str(source_policy),
+                distribution_decision="optional_template",
+                target_dir=str(Path(tmp) / "package_templates"),
+            )
+            self.assertEqual(
+                plan_response["tool_name"],
+                "jikuo.propose_policy_template_publication_plan",
+            )
+            self.assertEqual(
+                plan_response["policy_template_publication_plan"]["policy_id"],
+                "POLICY-three-phase-audit",
+            )
+
+            template_ref = (
+                "pkg://jikuo/policy_templates/engineering_governance/"
+                "POLICYTEMPLATE-local-policy-task-scope-control-before-packaging.yaml"
+            )
+            manifest_response = fake.tools[
+                "jikuo.propose_starter_manifest_publication_plan"
+            ]["function"](
+                project_root=str(project_root),
+                template_ref=template_ref,
+            )
+            self.assertEqual(
+                manifest_response["tool_name"],
+                "jikuo.propose_starter_manifest_publication_plan",
+            )
+            self.assertEqual(
+                manifest_response["starter_manifest_publication_plan"]["schema"],
+                "jikuo.starter_pack_manifest_publication_plan.v0",
+            )
 
     def test_configuration_status_registered_tool_delegates_adapter(self):
         with tempfile.TemporaryDirectory() as tmp:

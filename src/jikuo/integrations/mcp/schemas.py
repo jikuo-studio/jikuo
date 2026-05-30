@@ -35,7 +35,9 @@ CARD_PRIORITY_ORDER = (
     "policy_write_plan",
     "policy_evolution_plan",
     "policy_distribution_review",
+    "policy_template_publication_plan",
     "policy_template_import_plan",
+    "starter_manifest_publication_plan",
     "starter_policy_pack_init_plan",
 )
 
@@ -57,6 +59,8 @@ STAGE_A_TOOL_NAMES = (
     "jikuo.propose_policy_write_plan",
     "jikuo.propose_policy_evolution_plan",
     "jikuo.propose_policy_distribution_review",
+    "jikuo.propose_policy_template_publication_plan",
+    "jikuo.propose_starter_manifest_publication_plan",
     "jikuo.propose_policy_template_import_plan",
 )
 
@@ -64,11 +68,15 @@ STAGE_B_TOOL_NAMES = (
     "jikuo.apply_task_session_evidence_update",
     "jikuo.apply_policy_evolution_write",
     "jikuo.apply_policy_template_activation",
+    "jikuo.apply_policy_template_publication",
+    "jikuo.apply_starter_manifest_publication",
 )
 
 STAGE_B1_TOOL_NAMES = ("jikuo.apply_task_session_evidence_update",)
 STAGE_B2_TOOL_NAMES = ("jikuo.apply_policy_evolution_write",)
 STAGE_B3_TOOL_NAMES = ("jikuo.apply_policy_template_activation",)
+STAGE_B4_TOOL_NAMES = ("jikuo.apply_policy_template_publication",)
+STAGE_B5_TOOL_NAMES = ("jikuo.apply_starter_manifest_publication",)
 
 CONFIGURATION_TOOL_NAMES = (
     "jikuo.get_configuration_status",
@@ -92,6 +100,8 @@ EXPOSED_TOOL_NAMES = (
     + STAGE_B1_TOOL_NAMES
     + STAGE_B2_TOOL_NAMES
     + STAGE_B3_TOOL_NAMES
+    + STAGE_B4_TOOL_NAMES
+    + STAGE_B5_TOOL_NAMES
 )
 
 
@@ -265,6 +275,51 @@ TOOL_DEFINITIONS: dict[str, dict[str, Any]] = {
             "work_profile": RETURN,
             "policy_distribution_review": RETURN,
             "policy_distribution_source_resolution": RETURN,
+        },
+        card_returning=True,
+    ),
+    "jikuo.propose_policy_template_publication_plan": _tool(
+        name="jikuo.propose_policy_template_publication_plan",
+        description=(
+            "Build a no-write package policy-template publication plan from a resolved "
+            "policy id, source policy path, or natural-language policy query. This does "
+            "not write package template files, update starter packs, or activate user "
+            "project policies."
+        ),
+        input_fields={
+            "project_root": LOCAL_ONLY,
+            "policy_ref": RETURN,
+            "source_policy": LOCAL_ONLY,
+            "policy_query": REDACT_OPTIONAL,
+            "distribution_decision": RETURN,
+            "source_project_ref": REDACT_OPTIONAL,
+            "starter_pack_id": RETURN,
+            "rationale": REDACT_OPTIONAL,
+            "target_dir": LOCAL_ONLY,
+            "namespace": RETURN,
+        },
+        output_fields={
+            "work_profile": RETURN,
+            "policy_template_publication_plan": RETURN,
+            "policy_distribution_source_resolution": RETURN,
+        },
+        card_returning=True,
+    ),
+    "jikuo.propose_starter_manifest_publication_plan": _tool(
+        name="jikuo.propose_starter_manifest_publication_plan",
+        description=(
+            "Build a no-write starter-pack manifest publication plan for one package "
+            "policy template ref. This does not activate user-project policies or run "
+            "starter initialization."
+        ),
+        input_fields={
+            "project_root": LOCAL_ONLY,
+            "template_ref": RETURN,
+            "starter_pack_id": RETURN,
+        },
+        output_fields={
+            "work_profile": RETURN,
+            "starter_manifest_publication_plan": RETURN,
         },
         card_returning=True,
     ),
@@ -519,6 +574,63 @@ TOOL_DEFINITIONS: dict[str, dict[str, Any]] = {
         },
         card_returning=True,
         stage="B3",
+        write_mode="guarded-write",
+    ),
+    "jikuo.apply_policy_template_publication": _tool(
+        name="jikuo.apply_policy_template_publication",
+        description=(
+            "Publish one explicitly approved project policy as a package policy template "
+            "through the guarded agent_flow apply boundary. Requires source_policy, "
+            "confirm_apply=true, and an approval_phrase after the publication plan is reviewed."
+        ),
+        input_fields={
+            "project_root": LOCAL_ONLY,
+            "source_policy": LOCAL_ONLY,
+            "distribution_decision": RETURN,
+            "source_project_ref": REDACT_OPTIONAL,
+            "starter_pack_id": RETURN,
+            "rationale": REDACT_OPTIONAL,
+            "target_dir": LOCAL_ONLY,
+            "namespace": RETURN,
+            "owner_agent": RETURN,
+            "confirm_apply": RETURN,
+            "approval_phrase": REDACT_REQUIRED,
+        },
+        output_fields={
+            "write_performed": RETURN,
+            "target_result_schema": RETURN,
+            "target_result": RETURN,
+            "approval_boundary": RETURN,
+            "refusal_reasons": RETURN,
+        },
+        card_returning=True,
+        stage="B4",
+        write_mode="guarded-write",
+    ),
+    "jikuo.apply_starter_manifest_publication": _tool(
+        name="jikuo.apply_starter_manifest_publication",
+        description=(
+            "Publish one explicitly approved package policy template ref into a starter-pack "
+            "manifest through the guarded agent_flow apply boundary. Requires template_ref, "
+            "confirm_apply=true, and an approval_phrase after the manifest plan is reviewed."
+        ),
+        input_fields={
+            "project_root": LOCAL_ONLY,
+            "template_ref": RETURN,
+            "starter_pack_id": RETURN,
+            "owner_agent": RETURN,
+            "confirm_apply": RETURN,
+            "approval_phrase": REDACT_REQUIRED,
+        },
+        output_fields={
+            "write_performed": RETURN,
+            "target_result_schema": RETURN,
+            "target_result": RETURN,
+            "approval_boundary": RETURN,
+            "refusal_reasons": RETURN,
+        },
+        card_returning=True,
+        stage="B5",
         write_mode="guarded-write",
     ),
 }

@@ -188,6 +188,10 @@ class MCPStageAAdapterTests(unittest.TestCase):
         self.assertIn("jikuo.apply_activation_settings_update", names)
         self.assertIn("jikuo.route_user_request", names)
         self.assertIn("jikuo.propose_policy_suggestions", names)
+        self.assertIn("jikuo.propose_policy_template_publication_plan", names)
+        self.assertIn("jikuo.propose_starter_manifest_publication_plan", names)
+        self.assertIn("jikuo.apply_policy_template_publication", names)
+        self.assertIn("jikuo.apply_starter_manifest_publication", names)
         by_name = {tool["name"]: tool for tool in tools}
         for name in ("jikuo.route_user_request", "jikuo.propose_policy_suggestions"):
             self.assertIn("host_semantic_intent", by_name[name]["input_fields"])
@@ -258,6 +262,22 @@ class MCPStageAAdapterTests(unittest.TestCase):
         )
         self.assertEqual(
             by_name["jikuo.apply_policy_template_activation"]["write_mode"],
+            "guarded-write",
+        )
+        self.assertEqual(
+            by_name["jikuo.apply_policy_template_publication"]["stage"],
+            "B4",
+        )
+        self.assertEqual(
+            by_name["jikuo.apply_policy_template_publication"]["write_mode"],
+            "guarded-write",
+        )
+        self.assertEqual(
+            by_name["jikuo.apply_starter_manifest_publication"]["stage"],
+            "B5",
+        )
+        self.assertEqual(
+            by_name["jikuo.apply_starter_manifest_publication"]["write_mode"],
             "guarded-write",
         )
 
@@ -829,6 +849,17 @@ class MCPStageAAdapterTests(unittest.TestCase):
     def test_stage_a_proposal_tools_return_display_verification_without_governance_write(self):
         with tempfile.TemporaryDirectory() as tmp:
             project_root = copy_fixture(POLICY_ACTIVE_PROJECT, tmp)
+            source_policy = (
+                project_root
+                / ".jikuo"
+                / "policies"
+                / "approved"
+                / "POLICY-three-phase-audit.yaml"
+            )
+            template_ref = (
+                "pkg://jikuo/policy_templates/engineering_governance/"
+                "POLICYTEMPLATE-local-policy-task-scope-control-before-packaging.yaml"
+            )
             calls = [
                 (
                     "jikuo.propose_policy_write_plan",
@@ -857,6 +888,22 @@ class MCPStageAAdapterTests(unittest.TestCase):
                         "project_root": str(project_root),
                         "policy_query": "three phase audit policy",
                         "distribution_decision": "dogfood_only",
+                    },
+                ),
+                (
+                    "jikuo.propose_policy_template_publication_plan",
+                    {
+                        "project_root": str(project_root),
+                        "source_policy": str(source_policy),
+                        "distribution_decision": "optional_template",
+                        "target_dir": str(Path(tmp) / "package_templates"),
+                    },
+                ),
+                (
+                    "jikuo.propose_starter_manifest_publication_plan",
+                    {
+                        "project_root": str(project_root),
+                        "template_ref": template_ref,
                     },
                 ),
                 (
@@ -897,6 +944,20 @@ class MCPStageAAdapterTests(unittest.TestCase):
                         self.assertEqual(
                             response["policy_distribution_source_resolution"]["resolution_basis"],
                             "policy_query_unique_match",
+                        )
+                    if tool_name == "jikuo.propose_policy_template_publication_plan":
+                        self.assertEqual(
+                            response["policy_template_publication_plan"]["schema"],
+                            "jikuo.policy_template_publication_plan.v0",
+                        )
+                        self.assertEqual(
+                            response["policy_template_publication_plan"]["policy_id"],
+                            "POLICY-three-phase-audit",
+                        )
+                    if tool_name == "jikuo.propose_starter_manifest_publication_plan":
+                        self.assertEqual(
+                            response["starter_manifest_publication_plan"]["schema"],
+                            "jikuo.starter_pack_manifest_publication_plan.v0",
                         )
 
             self.assertFalse((project_root / ".jikuo" / "task_sessions").exists())
@@ -1169,6 +1230,51 @@ class MCPStageAAdapterTests(unittest.TestCase):
             self.assertIn("resolved_bindings:", approved_path.read_text(encoding="utf-8"))
             self.assertFalse((project_root / ".jikuo" / "task_sessions").exists())
             self.assertTrue((project_root / ".jikuo" / "runtime" / "last_card.md").is_file())
+
+    def test_stage_b4_policy_template_publication_writes_after_approval(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = copy_fixture(POLICY_ACTIVE_PROJECT, tmp)
+            source_policy = (
+                project_root
+                / ".jikuo"
+                / "policies"
+                / "approved"
+                / "POLICY-three-phase-audit.yaml"
+            )
+            target_dir = Path(tmp) / "package_templates"
+
+            response = adapter.call_tool(
+                "jikuo.apply_policy_template_publication",
+                {
+                    "project_root": str(project_root),
+                    "source_policy": str(source_policy),
+                    "distribution_decision": "optional_template",
+                    "source_project_ref": "JIKUO-test",
+                    "target_dir": str(target_dir),
+                    "confirm_apply": True,
+                    "approval_phrase": "I approve MCP B4 publishing this policy template.",
+                },
+                transport=schemas.LOCAL_STDIO_TRANSPORT,
+            )
+
+            self.assertEqual(response["tool_name"], "jikuo.apply_policy_template_publication")
+            self.assertEqual(response["stage"], "B4")
+            self.assertEqual(response["write_mode"], "guarded-write")
+            self.assertEqual(response["status"], "applied")
+            self.assertTrue(response["write_performed"])
+            self.assertEqual(
+                response["target_result_schema"],
+                "jikuo.policy_template_publication_result.v0",
+            )
+            target = response["target_result"]
+            self.assertEqual(target["status"], "written")
+            self.assertTrue(Path(target["target_template_path"]).is_file())
+            self.assertNotIn(
+                "I approve MCP B4 publishing this policy template.",
+                json.dumps(response),
+            )
+            tool = schemas.tool_definition("jikuo.apply_policy_template_publication")
+            self.assertEqual(tool["input_fields"]["approval_phrase"], schemas.REDACT_REQUIRED)
 
 
 if __name__ == "__main__":

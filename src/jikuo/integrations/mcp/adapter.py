@@ -273,6 +273,8 @@ def _proposal_response(
         for key in (
             "policy_distribution_review",
             "policy_distribution_source_resolution",
+            "policy_template_publication_plan",
+            "starter_manifest_publication_plan",
         ):
             if isinstance(card.get(key), dict):
                 response[key] = card[key]
@@ -845,6 +847,151 @@ def _apply_policy_template_activation_response(
     )
 
 
+def _apply_policy_template_publication_response(
+    *,
+    arguments: dict[str, Any],
+    project_root: Path | None,
+    transport: str,
+) -> dict[str, Any]:
+    report, _exit_code = agent_flow.build_apply_result(
+        operation="policy_template_publication",
+        project_root=project_root,
+        task_title=None,
+        session_id=None,
+        evidence_kind=None,
+        evidence_ref=None,
+        summary=None,
+        evidence_status="ok",
+        owner_agent=str(arguments.get("owner_agent") or "codex"),
+        distribution_source_policy_path=_path_or_none(arguments.get("source_policy")),
+        distribution_decision=str(arguments.get("distribution_decision") or "deferred"),
+        distribution_source_project_ref=arguments.get("source_project_ref"),
+        distribution_rationale=arguments.get("rationale"),
+        publication_target_dir=_path_or_none(arguments.get("target_dir")),
+        publication_namespace=str(
+            arguments.get("namespace") or agent_flow.policy_templates.DEFAULT_NAMESPACE
+        ),
+        starter_pack_id=str(arguments.get("starter_pack_id") or "engineering_governance"),
+        confirmed=_bool_arg(arguments.get("confirm_apply")),
+        approval_phrase=arguments.get("approval_phrase"),
+    )
+    with_markdown = agent_flow.apply_result_with_chat_ready_markdown(report)
+    markdown = str(with_markdown.get("chat_ready_markdown") or "")
+    runtime_report = runtime_visibility.persist_agent_flow_snapshot(
+        project_root=project_root,
+        proposal=with_markdown,
+        card_markdown=markdown,
+    )
+    with_markdown["runtime_visibility"] = runtime_report
+    with_markdown["client_display_links"] = runtime_visibility.build_client_display_links(
+        runtime_report
+    )
+    atom_trace = with_markdown.get("atom_trace")
+    if isinstance(atom_trace, list) and runtime_report.get("write_performed"):
+        atom_trace.append(
+            agent_flow.atom_trace(
+                loop_step_id="DPL-06",
+                atom_id="CAP-RUNTIME-VISIBILITY-CHANNEL-01",
+                mode="runtime-projection",
+                status="ok",
+                summary="wrote guarded policy-template publication snapshot to .jikuo/runtime",
+            )
+        )
+    response = _base_response(
+        tool_name="jikuo.apply_policy_template_publication",
+        status=str(with_markdown.get("status") or "unknown"),
+        data_details=with_markdown,
+        project_root=project_root,
+        transport=transport,
+        card_markdown=markdown,
+        chat_ready_markdown=markdown,
+        runtime_report=runtime_report,
+    )
+    response["write_performed"] = bool(with_markdown.get("write_performed"))
+    response["target_result_schema"] = with_markdown.get("target_result_schema")
+    response["target_result"] = _redact_required_fields(
+        with_markdown.get("target_result")
+    )
+    response["approval_boundary"] = _redact_required_fields(
+        with_markdown.get("approval_boundary")
+    )
+    response["refusal_reasons"] = list(with_markdown.get("refusal_reasons") or [])
+    return _sanitize_for_transport(
+        response,
+        project_root=project_root,
+        transport=transport,
+    )
+
+
+def _apply_starter_manifest_publication_response(
+    *,
+    arguments: dict[str, Any],
+    project_root: Path | None,
+    transport: str,
+) -> dict[str, Any]:
+    report, _exit_code = agent_flow.build_apply_result(
+        operation="starter_manifest_publication",
+        project_root=project_root,
+        task_title=None,
+        session_id=None,
+        evidence_kind=None,
+        evidence_ref=None,
+        summary=None,
+        evidence_status="ok",
+        owner_agent=str(arguments.get("owner_agent") or "codex"),
+        starter_pack_id=str(arguments.get("starter_pack_id") or "engineering_governance"),
+        template_ref=arguments.get("template_ref"),
+        confirmed=_bool_arg(arguments.get("confirm_apply")),
+        approval_phrase=arguments.get("approval_phrase"),
+    )
+    with_markdown = agent_flow.apply_result_with_chat_ready_markdown(report)
+    markdown = str(with_markdown.get("chat_ready_markdown") or "")
+    runtime_report = runtime_visibility.persist_agent_flow_snapshot(
+        project_root=project_root,
+        proposal=with_markdown,
+        card_markdown=markdown,
+    )
+    with_markdown["runtime_visibility"] = runtime_report
+    with_markdown["client_display_links"] = runtime_visibility.build_client_display_links(
+        runtime_report
+    )
+    atom_trace = with_markdown.get("atom_trace")
+    if isinstance(atom_trace, list) and runtime_report.get("write_performed"):
+        atom_trace.append(
+            agent_flow.atom_trace(
+                loop_step_id="DPL-06",
+                atom_id="CAP-RUNTIME-VISIBILITY-CHANNEL-01",
+                mode="runtime-projection",
+                status="ok",
+                summary="wrote guarded starter manifest publication snapshot to .jikuo/runtime",
+            )
+        )
+    response = _base_response(
+        tool_name="jikuo.apply_starter_manifest_publication",
+        status=str(with_markdown.get("status") or "unknown"),
+        data_details=with_markdown,
+        project_root=project_root,
+        transport=transport,
+        card_markdown=markdown,
+        chat_ready_markdown=markdown,
+        runtime_report=runtime_report,
+    )
+    response["write_performed"] = bool(with_markdown.get("write_performed"))
+    response["target_result_schema"] = with_markdown.get("target_result_schema")
+    response["target_result"] = _redact_required_fields(
+        with_markdown.get("target_result")
+    )
+    response["approval_boundary"] = _redact_required_fields(
+        with_markdown.get("approval_boundary")
+    )
+    response["refusal_reasons"] = list(with_markdown.get("refusal_reasons") or [])
+    return _sanitize_for_transport(
+        response,
+        project_root=project_root,
+        transport=transport,
+    )
+
+
 def call_tool(
     tool_name: str,
     arguments: dict[str, Any] | None = None,
@@ -1020,6 +1167,37 @@ def call_tool(
             distribution_rationale=args.get("rationale"),
         )
 
+    if tool_name == "jikuo.propose_policy_template_publication_plan":
+        return _proposal_response(
+            tool_name=tool_name,
+            raw_event="policy_template_publication_plan",
+            arguments=args,
+            project_root=resolved_root,
+            transport=resolved_transport,
+            policy_ref=args.get("policy_ref"),
+            distribution_source_policy_path=_path_or_none(args.get("source_policy")),
+            distribution_policy_query=args.get("policy_query"),
+            distribution_decision=str(args.get("distribution_decision") or "deferred"),
+            distribution_source_project_ref=args.get("source_project_ref"),
+            starter_pack_id=str(args.get("starter_pack_id") or "engineering_governance"),
+            distribution_rationale=args.get("rationale"),
+            publication_target_dir=_path_or_none(args.get("target_dir")),
+            publication_namespace=str(
+                args.get("namespace") or agent_flow.policy_templates.DEFAULT_NAMESPACE
+            ),
+        )
+
+    if tool_name == "jikuo.propose_starter_manifest_publication_plan":
+        return _proposal_response(
+            tool_name=tool_name,
+            raw_event="starter_manifest_publication_plan",
+            arguments=args,
+            project_root=resolved_root,
+            transport=resolved_transport,
+            template_ref=args.get("template_ref"),
+            starter_pack_id=str(args.get("starter_pack_id") or "engineering_governance"),
+        )
+
     if tool_name == "jikuo.propose_policy_template_import_plan":
         return _proposal_response(
             tool_name=tool_name,
@@ -1120,6 +1298,20 @@ def call_tool(
 
     if tool_name == "jikuo.apply_policy_template_activation":
         return _apply_policy_template_activation_response(
+            arguments=args,
+            project_root=resolved_root,
+            transport=resolved_transport,
+        )
+
+    if tool_name == "jikuo.apply_policy_template_publication":
+        return _apply_policy_template_publication_response(
+            arguments=args,
+            project_root=resolved_root,
+            transport=resolved_transport,
+        )
+
+    if tool_name == "jikuo.apply_starter_manifest_publication":
+        return _apply_starter_manifest_publication_response(
             arguments=args,
             project_root=resolved_root,
             transport=resolved_transport,

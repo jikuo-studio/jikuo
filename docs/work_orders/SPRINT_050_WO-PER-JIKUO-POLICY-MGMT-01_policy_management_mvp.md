@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-POLICY-MGMT-01: Policy Management MVP
 
-> **Status**: Two held candidates activated as `active_report_only`; Policy Management MVP closeout design, no-write distribution review with GUI/MCP natural-language source resolution, guarded package-template publication CLI, and guarded starter-pack manifest publication CLI implemented.
+> **Status**: Two held candidates activated as `active_report_only`; Policy Management MVP closeout design, no-write distribution review with GUI/MCP natural-language source resolution, guarded package-template publication CLI plus agent-flow/MCP bridge, and guarded starter-pack manifest publication CLI plus agent-flow/MCP bridge implemented.
 > **Date**: 2026-05-18
 > **JIKUO layer**: policy governance / policy distribution.
 > **Business meaning**: JIKUO's first usable version needs the current user-authored candidate policies to enter active scope through the existing guarded flow, and it needs a clear official distribution boundary so useful policies can reach user projects without copying JIKUO dogfood policies or overwriting user-owned local policies.
@@ -355,6 +355,16 @@ Policy Management MVP closeout is accepted when:
   and MCP `jikuo.propose_policy_distribution_review` expose the same no-write
   review to GUI clients, including natural-language `policy_query` resolution
   with ambiguity refusal;
+- `python -B -m jikuo.agent_flow propose --event policy_template_publication_plan ...`
+  and MCP `jikuo.propose_policy_template_publication_plan` expose package-template
+  publication as a no-write visible card, while guarded apply remains
+  `agent_flow apply --operation policy_template_publication` or MCP
+  `jikuo.apply_policy_template_publication`;
+- `python -B -m jikuo.agent_flow propose --event starter_manifest_publication_plan ...`
+  and MCP `jikuo.propose_starter_manifest_publication_plan` expose starter-pack
+  manifest publication as a separate no-write visible card, while guarded apply
+  remains `agent_flow apply --operation starter_manifest_publication` or MCP
+  `jikuo.apply_starter_manifest_publication`;
 - active-policy maintenance outcomes are documented;
 - registry capability metadata points future implementation to this closeout
   design.

@@ -272,6 +272,62 @@ def register_stage_a_tools(
         )
 
     @server.tool(
+        name="jikuo.propose_policy_template_publication_plan",
+        description=tool_description(
+            tool_definitions["jikuo.propose_policy_template_publication_plan"]
+        ),
+    )
+    def jikuo_propose_policy_template_publication_plan(
+        project_root: str | None = None,
+        policy_ref: str | None = None,
+        source_policy: str | None = None,
+        policy_query: str | None = None,
+        distribution_decision: str | None = None,
+        source_project_ref: str | None = None,
+        starter_pack_id: str | None = None,
+        rationale: str | None = None,
+        target_dir: str | None = None,
+        namespace: str | None = None,
+    ) -> dict[str, Any]:
+        return _call(
+            "jikuo.propose_policy_template_publication_plan",
+            {
+                "project_root": project_root,
+                "policy_ref": policy_ref,
+                "source_policy": source_policy,
+                "policy_query": policy_query,
+                "distribution_decision": distribution_decision,
+                "source_project_ref": source_project_ref,
+                "starter_pack_id": starter_pack_id,
+                "rationale": rationale,
+                "target_dir": target_dir,
+                "namespace": namespace,
+            },
+            default_transport=default_transport,
+        )
+
+    @server.tool(
+        name="jikuo.propose_starter_manifest_publication_plan",
+        description=tool_description(
+            tool_definitions["jikuo.propose_starter_manifest_publication_plan"]
+        ),
+    )
+    def jikuo_propose_starter_manifest_publication_plan(
+        project_root: str | None = None,
+        template_ref: str | None = None,
+        starter_pack_id: str | None = None,
+    ) -> dict[str, Any]:
+        return _call(
+            "jikuo.propose_starter_manifest_publication_plan",
+            {
+                "project_root": project_root,
+                "template_ref": template_ref,
+                "starter_pack_id": starter_pack_id,
+            },
+            default_transport=default_transport,
+        )
+
+    @server.tool(
         name="jikuo.propose_policy_template_import_plan",
         description=tool_description(
             tool_definitions["jikuo.propose_policy_template_import_plan"]
@@ -740,6 +796,82 @@ def register_stage_b3_tools(
     return server
 
 
+def register_policy_publication_tools(
+    server: Any,
+    *,
+    default_transport: str = schemas.LOCAL_STDIO_TRANSPORT,
+) -> Any:
+    """Register guarded policy publication MCP tools."""
+
+    tool_definitions = {tool["name"]: tool for tool in adapter.list_tools()}
+
+    @server.tool(
+        name="jikuo.apply_policy_template_publication",
+        description=tool_description(
+            tool_definitions["jikuo.apply_policy_template_publication"]
+        ),
+    )
+    def jikuo_apply_policy_template_publication(
+        project_root: str | None = None,
+        source_policy: str | None = None,
+        distribution_decision: str | None = None,
+        source_project_ref: str | None = None,
+        starter_pack_id: str | None = None,
+        rationale: str | None = None,
+        target_dir: str | None = None,
+        namespace: str | None = None,
+        owner_agent: str | None = None,
+        confirm_apply: bool = False,
+        approval_phrase: str | None = None,
+    ) -> dict[str, Any]:
+        return _call(
+            "jikuo.apply_policy_template_publication",
+            {
+                "project_root": project_root,
+                "source_policy": source_policy,
+                "distribution_decision": distribution_decision,
+                "source_project_ref": source_project_ref,
+                "starter_pack_id": starter_pack_id,
+                "rationale": rationale,
+                "target_dir": target_dir,
+                "namespace": namespace,
+                "owner_agent": owner_agent,
+                "confirm_apply": confirm_apply,
+                "approval_phrase": approval_phrase,
+            },
+            default_transport=default_transport,
+        )
+
+    @server.tool(
+        name="jikuo.apply_starter_manifest_publication",
+        description=tool_description(
+            tool_definitions["jikuo.apply_starter_manifest_publication"]
+        ),
+    )
+    def jikuo_apply_starter_manifest_publication(
+        project_root: str | None = None,
+        template_ref: str | None = None,
+        starter_pack_id: str | None = None,
+        owner_agent: str | None = None,
+        confirm_apply: bool = False,
+        approval_phrase: str | None = None,
+    ) -> dict[str, Any]:
+        return _call(
+            "jikuo.apply_starter_manifest_publication",
+            {
+                "project_root": project_root,
+                "template_ref": template_ref,
+                "starter_pack_id": starter_pack_id,
+                "owner_agent": owner_agent,
+                "confirm_apply": confirm_apply,
+                "approval_phrase": approval_phrase,
+            },
+            default_transport=default_transport,
+        )
+
+    return server
+
+
 def create_server(
     *,
     fastmcp_cls: FastMCPFactory | None = None,
@@ -762,7 +894,8 @@ def create_server(
     register_sampling_tools(server, default_transport=default_transport)
     register_stage_b1_tools(server, default_transport=default_transport)
     register_stage_b2_tools(server, default_transport=default_transport)
-    return register_stage_b3_tools(server, default_transport=default_transport)
+    register_stage_b3_tools(server, default_transport=default_transport)
+    return register_policy_publication_tools(server, default_transport=default_transport)
 
 
 def _adapter_transport_for_run(run_transport: str) -> str:

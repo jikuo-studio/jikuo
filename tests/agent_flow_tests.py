@@ -2432,6 +2432,179 @@ class AgentFlowProposalTests(unittest.TestCase):
             self.assertEqual(review["policy_id"], "POLICY-three-phase-audit")
             self.assertEqual(review["distribution_decision"], "optional_template")
 
+    def test_policy_template_publication_plan_projects_guarded_apply_without_write(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "distribution_project"
+            shutil.copytree(POLICY_ACTIVE_PROJECT, project_root)
+            source_policy = (
+                project_root
+                / ".jikuo"
+                / "policies"
+                / "approved"
+                / "POLICY-three-phase-audit.yaml"
+            )
+            target_dir = Path(tmp) / "package_templates"
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "propose",
+                    "--event",
+                    "policy_template_publication_plan",
+                    "--project-root",
+                    str(project_root),
+                    "--distribution-source-policy",
+                    str(source_policy),
+                    "--distribution-decision",
+                    "optional_template",
+                    "--distribution-source-project-ref",
+                    "JIKUO-test",
+                    "--publication-target-dir",
+                    str(target_dir),
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            proposal = json.loads(completed.stdout)
+            cards = [
+                card
+                for card in proposal["cards"]
+                if card["card_kind"] == "policy_template_publication_plan"
+            ]
+            self.assertEqual(len(cards), 1)
+            card = cards[0]
+            plan = card["policy_template_publication_plan"]
+            self.assertEqual(plan["schema"], "jikuo.policy_template_publication_plan.v0")
+            self.assertEqual(plan["status"], "review")
+            self.assertFalse(plan["writes_performed"])
+            self.assertEqual(plan["policy_id"], "POLICY-three-phase-audit")
+            self.assertFalse(Path(plan["target_template_path"]).exists())
+            command = card["command_proposal"]["command_preview"]
+            self.assertIn("python -B -m jikuo.agent_flow", command)
+            self.assertIn("policy_template_publication", command)
+            self.assertNotIn("jikuo.policy_templates", command)
+            atom_ids = {trace["atom_id"] for trace in proposal["atom_trace"]}
+            self.assertIn("CAP-POLICY-TEMPLATE-PUBLICATION-PLAN-01", atom_ids)
+
+    def test_apply_policy_template_publication_writes_after_approval(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "distribution_project"
+            shutil.copytree(POLICY_ACTIVE_PROJECT, project_root)
+            source_policy = (
+                project_root
+                / ".jikuo"
+                / "policies"
+                / "approved"
+                / "POLICY-three-phase-audit.yaml"
+            )
+            target_dir = Path(tmp) / "package_templates"
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "apply",
+                    "--operation",
+                    "policy_template_publication",
+                    "--project-root",
+                    str(project_root),
+                    "--distribution-source-policy",
+                    str(source_policy),
+                    "--distribution-decision",
+                    "optional_template",
+                    "--distribution-source-project-ref",
+                    "JIKUO-test",
+                    "--publication-target-dir",
+                    str(target_dir),
+                    "--confirm-apply",
+                    "--approval-phrase",
+                    "I approve publishing this policy as a package template.",
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            report = json.loads(completed.stdout)
+            self.assertEqual(report["operation"], "policy_template_publication")
+            self.assertEqual(report["status"], "applied")
+            self.assertTrue(report["write_performed"])
+            self.assertEqual(
+                report["target_result_schema"],
+                "jikuo.policy_template_publication_result.v0",
+            )
+            target = report["target_result"]
+            self.assertEqual(target["status"], "written")
+            self.assertTrue(Path(target["target_template_path"]).is_file())
+            self.assertEqual(target["distribution_decision"], "optional_template")
+            atom_ids = {trace["atom_id"] for trace in report["atom_trace"]}
+            self.assertIn(
+                "CAP-AGENT-FLOW-APPLY-POLICY-TEMPLATE-PUBLICATION-01",
+                atom_ids,
+            )
+
+    def test_starter_manifest_publication_plan_projects_duplicate_refusal(self):
+        template_ref = (
+            "pkg://jikuo/policy_templates/engineering_governance/"
+            "POLICYTEMPLATE-local-policy-task-scope-control-before-packaging.yaml"
+        )
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-B",
+                str(TOOL),
+                "propose",
+                "--event",
+                "starter_manifest_publication_plan",
+                "--template-ref",
+                template_ref,
+                "--format",
+                "json",
+            ],
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+
+        self.assertEqual(completed.returncode, 2, completed.stderr)
+        proposal = json.loads(completed.stdout)
+        cards = [
+            card
+            for card in proposal["cards"]
+            if card["card_kind"] == "starter_manifest_publication_plan"
+        ]
+        self.assertEqual(len(cards), 1)
+        plan = cards[0]["starter_manifest_publication_plan"]
+        self.assertEqual(
+            plan["schema"],
+            "jikuo.starter_pack_manifest_publication_plan.v0",
+        )
+        self.assertEqual(plan["status"], "refused")
+        self.assertFalse(plan["writes_performed"])
+        self.assertIn(
+            "starter_pack_policy_id_already_present:POLICY-task-scope-control-before-packaging",
+            plan["refusal_reasons"],
+        )
+        atom_ids = {trace["atom_id"] for trace in proposal["atom_trace"]}
+        self.assertIn("CAP-STARTER-MANIFEST-PUBLICATION-PLAN-01", atom_ids)
+
     def test_policy_template_import_plan_proposes_visible_guarded_activation(self):
         with tempfile.TemporaryDirectory() as tmp:
             project_root = Path(tmp) / "template_project"

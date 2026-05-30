@@ -77,12 +77,16 @@ CARD_PRIORITY_ORDER = [
     "policy_write_plan",
     "policy_evolution_plan",
     "policy_distribution_review",
+    "policy_template_publication_plan",
     "policy_template_import_plan",
+    "starter_manifest_publication_plan",
     "starter_policy_pack_init_plan",
 ]
 APPLY_OPERATIONS = {
     "policy_evolution_write",
     "policy_template_activation",
+    "policy_template_publication",
+    "starter_manifest_publication",
     "starter_policy_pack_init",
     "task_session_evidence_update",
     "task_session_start",
@@ -118,9 +122,11 @@ POLICY_DEAD_ZONE_NON_GOVERNANCE_EVENTS = {
     "policy_evolution_plan",
     "policy_distribution_review",
     "policy_feedback_record",
+    "policy_template_publication_plan",
     "policy_template_import_plan",
     "policy_write_plan",
     "project_status",
+    "starter_manifest_publication_plan",
     "starter_policy_pack_init",
     "task_continue",
 }
@@ -167,6 +173,14 @@ EVENT_ALIASES = {
     "policy_distribution_review": "policy_distribution_review",
     "distribution_review": "policy_distribution_review",
     "policy_distribution": "policy_distribution_review",
+    "policy_template_publication": "policy_template_publication_plan",
+    "policy_template_publication_plan": "policy_template_publication_plan",
+    "template_publication": "policy_template_publication_plan",
+    "template_publication_plan": "policy_template_publication_plan",
+    "starter_manifest_publication": "starter_manifest_publication_plan",
+    "starter_manifest_publication_plan": "starter_manifest_publication_plan",
+    "starter_pack_manifest_publication": "starter_manifest_publication_plan",
+    "starter_pack_manifest_publication_plan": "starter_manifest_publication_plan",
     "starter_policy_pack_init": "starter_policy_pack_init",
     "starter_init": "starter_policy_pack_init",
     "initialize_jikuo": "starter_policy_pack_init",
@@ -198,6 +212,8 @@ NO_WRITE_ATOMS = {
     "CAP-POLICY-TRIGGER-EVALUATE-01",
     "CAP-POLICY-CONDITION-EVALUATOR-01",
     "CAP-POLICY-DISTRIBUTION-REVIEW-01",
+    "CAP-POLICY-TEMPLATE-PUBLICATION-PLAN-01",
+    "CAP-STARTER-MANIFEST-PUBLICATION-PLAN-01",
     "CAP-POLICY-EVIDENCE-CHECK-01",
     "CAP-POLICY-EVIDENCE-PERSIST-PROPOSE-01",
     "CAP-POLICY-FEEDBACK-PERSIST-PROPOSE-01",
@@ -3335,6 +3351,276 @@ def build_policy_distribution_review_cards(
     return [card], [trace], list(review.get("refusal_reasons") or [])
 
 
+def build_policy_template_publication_plan_cards(
+    *,
+    project_root: Path | None,
+    policy_ref: str | None,
+    source_policy_path: Path | None,
+    policy_query: str | None,
+    decision: str,
+    source_project_ref: str | None,
+    starter_pack_id: str,
+    rationale: str | None,
+    target_dir: Path | None,
+    namespace: str,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]:
+    resolved_root = (project_root or Path.cwd()).expanduser().resolve()
+    resolution = policy_templates.resolve_distribution_source_policy(
+        project_root=resolved_root,
+        policy_ref=policy_ref,
+        source_policy_path=source_policy_path,
+        policy_query=policy_query,
+    )
+    if resolution.get("status") != "resolved":
+        candidates = resolution.get("candidates") or []
+        card = generic_card(
+            card_kind="policy_template_publication_source_resolution",
+            status="review",
+            title="Policy template publication needs a source policy",
+            summary=(
+                "Policy template publication did not resolve to exactly one active policy; "
+                "choose a source before planning a package-template write."
+            ),
+            shown_inputs=[
+                f"project_root: {resolved_root}",
+                f"policy_ref: {policy_ref or 'not_supplied'}",
+                f"policy_query: {policy_query or 'not_supplied'}",
+            ],
+            shown_outputs=[
+                f"resolution_status: {resolution.get('status')}",
+                f"resolution_basis: {resolution.get('resolution_basis')}",
+                f"candidate_count: {len(candidates)}",
+                *[
+                    f"candidate: {item.get('policy_id')} ({item.get('title')}) score={item.get('match_score', 'n/a')}"
+                    for item in candidates
+                ],
+            ],
+            refusal_reasons=list(resolution.get("refusal_reasons") or []),
+            next_actions=[
+                "ask the host AI to select one candidate policy_id",
+                "retry policy_template_publication_plan with policy_ref or a more specific policy_query",
+            ],
+        )
+        card["policy_distribution_source_resolution"] = resolution
+        card["write_effect"] = {
+            "target": "none",
+            "effect": "renders source-policy choices only; no durable write is performed",
+            "non_effects": resolution.get("non_effects") or [],
+        }
+        return [card], [
+            atom_trace(
+                loop_step_id="DPL-05",
+                atom_id="CAP-POLICY-TEMPLATE-PUBLICATION-PLAN-01",
+                mode="no-write",
+                status=str(resolution.get("status") or "review"),
+                summary="resolved policy-template publication source candidates without writing files",
+            )
+        ], list(resolution.get("refusal_reasons") or [])
+
+    source_path = Path(str(resolution["source_policy_path"]))
+    plan = policy_templates.build_template_publication_plan(
+        source_policy_path=source_path,
+        decision=decision,
+        target_dir=target_dir,
+        namespace=namespace,
+        source_project_ref=source_project_ref,
+        starter_pack_id=starter_pack_id,
+        rationale=rationale,
+    )
+    outputs = [
+        f"resolution_basis: {resolution.get('resolution_basis')}",
+        f"policy_id: {plan.get('policy_id')}",
+        f"title: {plan.get('title')}",
+        f"distribution_decision: {plan.get('distribution_decision')}",
+        f"target_template_ref: {plan.get('target_template_ref')}",
+        f"starter_pack_manifest_change_required: {plan.get('starter_pack_manifest_change_required')}",
+        f"approval_required_for_publication: {plan.get('approval_required_for_publication')}",
+    ]
+    card = generic_card(
+        card_kind="policy_template_publication_plan",
+        status=plan["status"],
+        title="Policy template publication plan",
+        summary=(
+            "A package policy template publication has been planned without writing files."
+            if plan["status"] != "refused"
+            else "Policy template publication could not be prepared safely."
+        ),
+        shown_inputs=[
+            f"project_root: {resolved_root}",
+            f"policy_ref: {policy_ref or resolution.get('policy_ref') or 'not_supplied'}",
+            f"policy_query: {policy_query or 'not_supplied'}",
+            f"decision: {decision}",
+            f"target_dir: {target_dir or 'default_package_template_root'}",
+            f"namespace: {namespace}",
+        ],
+        shown_outputs=outputs,
+        refusal_reasons=list(plan.get("refusal_reasons") or []),
+        next_actions=list(plan.get("next_actions") or []),
+    )
+    card["policy_template_publication_plan"] = plan
+    card["policy_distribution_source_resolution"] = resolution
+    card["write_effect"] = {
+        "target": "none",
+        "effect": "renders a package-template publication plan only; no durable write is performed",
+        "non_effects": plan["non_effects"],
+    }
+    if plan["status"] == "review":
+        preview_parts = [
+            "python",
+            "-B",
+            "-m",
+            "jikuo.agent_flow",
+            "apply",
+            "--operation",
+            command_arg("policy_template_publication"),
+            "--distribution-source-policy",
+            command_arg(str(source_path)),
+            "--distribution-decision",
+            command_arg(decision),
+            "--starter-pack-id",
+            command_arg(starter_pack_id),
+        ]
+        if target_dir is not None:
+            preview_parts.extend(["--publication-target-dir", command_arg(str(target_dir))])
+        if namespace != policy_templates.DEFAULT_NAMESPACE:
+            preview_parts.extend(["--publication-namespace", command_arg(namespace)])
+        if source_project_ref:
+            preview_parts.extend(["--distribution-source-project-ref", command_arg(source_project_ref)])
+        if rationale:
+            preview_parts.extend(["--distribution-rationale", command_arg(rationale)])
+        preview_parts.extend(
+            [
+                "--confirm-apply",
+                "--approval-phrase",
+                command_arg(APPROVAL_PHRASE_PLACEHOLDER),
+                "--format",
+                "json",
+            ]
+        )
+        card["command_proposal"] = {
+            "command_kind": "agent_flow_policy_template_publication",
+            "command_preview": " ".join(preview_parts),
+            "expected_result_schema": APPLY_RESULT_SCHEMA,
+            "approval_required": True,
+            "technical_confirmation_required": True,
+            "requires_user_approval": True,
+            "writes_if_approved": [str(item.get("path")) for item in plan.get("write_set") or []],
+            "non_effects": plan["non_effects"],
+        }
+    return [card], [
+        atom_trace(
+            loop_step_id="DPL-05",
+            atom_id="CAP-POLICY-TEMPLATE-PUBLICATION-PLAN-01",
+            mode="no-write",
+            status=plan["status"],
+            summary="built package policy-template publication plan without writing files",
+        )
+    ], list(plan.get("refusal_reasons") or [])
+
+
+def build_starter_manifest_publication_plan_cards(
+    *,
+    template_ref: str | None,
+    starter_pack_id: str,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]:
+    if not template_ref:
+        refusal = "template_ref_required_for_starter_manifest_publication"
+        card = generic_card(
+            card_kind="starter_manifest_publication_refusal",
+            status="refused",
+            title="Starter manifest publication needs a template ref",
+            summary=(
+                "A starter-pack manifest publication plan requires a package template ref."
+            ),
+            refusal_reasons=[refusal],
+            next_actions=[
+                "provide --template-ref before retrying starter manifest publication planning"
+            ],
+        )
+        return [card], [
+            atom_trace(
+                loop_step_id="DPL-05",
+                atom_id="CAP-STARTER-MANIFEST-PUBLICATION-PLAN-01",
+                mode="no-write",
+                status="refused",
+                summary="refused starter manifest publication planning because no template_ref was provided",
+            )
+        ], [refusal]
+
+    plan = starter_policies.build_starter_manifest_publication_plan(
+        template_ref=template_ref,
+        pack_id=starter_pack_id,
+    )
+    card = generic_card(
+        card_kind="starter_manifest_publication_plan",
+        status=plan["status"],
+        title="Starter manifest publication plan",
+        summary=(
+            "A package starter manifest update has been planned without writing files."
+            if plan["status"] != "refused"
+            else "Starter manifest publication could not be prepared safely."
+        ),
+        shown_inputs=[
+            f"starter_pack_id: {starter_pack_id}",
+            f"template_ref: {template_ref}",
+        ],
+        shown_outputs=[
+            f"manifest_path: {plan.get('manifest_path')}",
+            f"policy_id: {plan.get('policy_id')}",
+            f"title: {plan.get('title')}",
+            f"existing_template_count: {plan.get('existing_template_count')}",
+            f"approval_required: {plan.get('approval_required')}",
+        ],
+        refusal_reasons=list(plan.get("refusal_reasons") or []),
+        next_actions=list(plan.get("next_actions") or []),
+    )
+    card["starter_manifest_publication_plan"] = plan
+    card["write_effect"] = {
+        "target": "none",
+        "effect": "renders a starter-pack manifest publication plan only; no durable write is performed",
+        "non_effects": plan["non_effects"],
+    }
+    if plan["status"] == "review":
+        card["command_proposal"] = {
+            "command_kind": "agent_flow_starter_manifest_publication",
+            "command_preview": " ".join(
+                [
+                    "python",
+                    "-B",
+                    "-m",
+                    "jikuo.agent_flow",
+                    "apply",
+                    "--operation",
+                    command_arg("starter_manifest_publication"),
+                    "--template-ref",
+                    command_arg(template_ref),
+                    "--starter-pack-id",
+                    command_arg(starter_pack_id),
+                    "--confirm-apply",
+                    "--approval-phrase",
+                    command_arg(APPROVAL_PHRASE_PLACEHOLDER),
+                    "--format",
+                    "json",
+                ]
+            ),
+            "expected_result_schema": APPLY_RESULT_SCHEMA,
+            "approval_required": True,
+            "technical_confirmation_required": True,
+            "requires_user_approval": True,
+            "writes_if_approved": [str(item.get("path")) for item in plan.get("write_set") or []],
+            "non_effects": plan["non_effects"],
+        }
+    return [card], [
+        atom_trace(
+            loop_step_id="DPL-05",
+            atom_id="CAP-STARTER-MANIFEST-PUBLICATION-PLAN-01",
+            mode="no-write",
+            status=plan["status"],
+            summary="built starter-pack manifest publication plan without writing files",
+        )
+    ], list(plan.get("refusal_reasons") or [])
+
+
 def build_audit_cards() -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]:
     card = generic_card(
         card_kind="audit_report_not_configured",
@@ -3435,6 +3721,8 @@ def build_proposal(
     distribution_decision: str = "deferred",
     distribution_rationale: str | None = None,
     distribution_source_project_ref: str | None = None,
+    publication_target_dir: Path | None = None,
+    publication_namespace: str = policy_templates.DEFAULT_NAMESPACE,
     policy_evolution_operation: str = "refine_policy",
     replacement_policy_ref: str | None = None,
     replacement_title: str | None = None,
@@ -3447,6 +3735,7 @@ def build_proposal(
     replacement_evidence_type: str = "card_rendered",
     starter_pack_id: str = starter_policies.DEFAULT_PACK_ID,
     template_path: Path | None = None,
+    template_ref: str | None = None,
     action_ref: str | None = None,
     requirement_ref: str | None = None,
     command_name: str | None = None,
@@ -3574,6 +3863,24 @@ def build_proposal(
             source_project_ref=distribution_source_project_ref,
             starter_pack_id=starter_pack_id,
             rationale=distribution_rationale,
+        )
+    elif event == "policy_template_publication_plan":
+        cards, traces, refusals = build_policy_template_publication_plan_cards(
+            project_root=project_root,
+            policy_ref=policy_ref,
+            source_policy_path=distribution_source_policy_path,
+            policy_query=distribution_policy_query,
+            decision=distribution_decision,
+            source_project_ref=distribution_source_project_ref,
+            starter_pack_id=starter_pack_id,
+            rationale=distribution_rationale,
+            target_dir=publication_target_dir,
+            namespace=publication_namespace,
+        )
+    elif event == "starter_manifest_publication_plan":
+        cards, traces, refusals = build_starter_manifest_publication_plan_cards(
+            template_ref=template_ref,
+            starter_pack_id=starter_pack_id,
         )
     elif event == "starter_policy_pack_init":
         cards, traces, refusals = build_starter_policy_pack_init_cards(
@@ -3862,6 +4169,10 @@ def next_actions_for(*, status: str, event: str | None) -> list[str]:
         return ["review policy evolution recommendation and any generated guarded command before approving a write"]
     if event == "policy_distribution_review":
         return ["review distribution category, source resolution, and non-effects before any template or starter publication"]
+    if event == "policy_template_publication_plan":
+        return ["review package template target, provenance, and generated guarded publication command before approving a write"]
+    if event == "starter_manifest_publication_plan":
+        return ["review starter manifest target and template provenance before approving a manifest update"]
     if event == "policy_template_import_plan":
         return ["review resolved bindings, write targets, and the generated guarded activation command before approving a write"]
     if event in {"evidence_review", "verification_review", "completion_review", "handoff"}:
@@ -3894,8 +4205,15 @@ def build_apply_result(
     replacement_added_path_pattern: str | None = None,
     replacement_action_type: str = "render_pre_task_review",
     replacement_evidence_type: str = "card_rendered",
+    distribution_source_policy_path: Path | None = None,
+    distribution_decision: str = "deferred",
+    distribution_source_project_ref: str | None = None,
+    distribution_rationale: str | None = None,
+    publication_target_dir: Path | None = None,
+    publication_namespace: str = policy_templates.DEFAULT_NAMESPACE,
     starter_pack_id: str = starter_policies.DEFAULT_PACK_ID,
     template_path: Path | None = None,
+    template_ref: str | None = None,
     confirmed: bool = False,
     approval_phrase: str | None = None,
 ) -> tuple[dict[str, Any], int]:
@@ -4082,6 +4400,138 @@ def build_apply_result(
             "does not promote gates or blocking enforcement",
             "does not modify package template files",
             "does not write project_context bindings",
+        ]
+    elif operation == "policy_template_publication":
+        if distribution_source_policy_path is None:
+            target_result = {
+                "schema": policy_templates.POLICY_TEMPLATE_PUBLICATION_RESULT_SCHEMA,
+                "schema_version": policy_templates.POLICY_TEMPLATE_PUBLICATION_RESULT_SCHEMA,
+                "status": "refused",
+                "write_performed": False,
+                "distribution_decision": distribution_decision,
+                "source_policy_path": None,
+                "target_template_path": None,
+                "template_ref": None,
+                "created_paths": [],
+                "written_paths": [],
+                "refusal_reasons": [
+                    "source_policy_required_for_policy_template_publication"
+                ],
+                "warnings": [],
+                "approval_record": None,
+                "non_effects": [
+                    "does not activate policies in user projects",
+                    "does not update starter pack manifests",
+                    "does not write package template files",
+                ],
+                "next_actions": [
+                    "provide --distribution-source-policy before retrying template publication"
+                ],
+            }
+            exit_code = 2
+        else:
+            target_result, exit_code = policy_templates.publish_template_from_distribution(
+                source_policy_path=distribution_source_policy_path,
+                decision=distribution_decision,
+                target_dir=publication_target_dir,
+                namespace=publication_namespace,
+                source_project_ref=distribution_source_project_ref,
+                starter_pack_id=starter_pack_id,
+                rationale=distribution_rationale,
+                confirmed=confirmed,
+                approval_phrase=approval_phrase,
+            )
+        write_performed = bool(target_result.get("write_performed"))
+        traces.extend(
+            [
+                atom_trace(
+                    loop_step_id="DPL-07",
+                    atom_id="CAP-POLICY-TEMPLATE-PUBLICATION-01",
+                    mode="guarded-write",
+                    status=target_result.get("status", "unknown"),
+                    summary="called guarded package policy-template publication writer",
+                ),
+                atom_trace(
+                    loop_step_id="DPL-07",
+                    atom_id="CAP-AGENT-FLOW-APPLY-POLICY-TEMPLATE-PUBLICATION-01",
+                    mode="guarded-write",
+                    status=target_result.get("status", "unknown"),
+                    summary="applied guarded package policy-template publication through agent_flow.py",
+                ),
+            ]
+        )
+        approval_target = "JIKUO policy template publication"
+        approval_effect = (
+            f"publish package template {target_result.get('template_ref')}"
+        )
+        approval_non_effects = [
+            "does not activate policies in user projects",
+            "does not update starter pack manifests",
+            "does not execute policy actions",
+            "does not rewrite the source policy",
+        ]
+    elif operation == "starter_manifest_publication":
+        if not template_ref:
+            target_result = {
+                "schema": starter_policies.STARTER_PACK_MANIFEST_PUBLICATION_RESULT_SCHEMA,
+                "schema_version": starter_policies.STARTER_PACK_MANIFEST_PUBLICATION_RESULT_SCHEMA,
+                "status": "refused",
+                "write_performed": False,
+                "pack_id": starter_pack_id,
+                "manifest_path": None,
+                "template_ref": None,
+                "policy_id": None,
+                "written_paths": [],
+                "refusal_reasons": [
+                    "template_ref_required_for_starter_manifest_publication"
+                ],
+                "warnings": [],
+                "approval_record": None,
+                "non_effects": [
+                    "does not activate policies in user projects",
+                    "does not initialize starter policies",
+                    "does not create .jikuo/policies/",
+                ],
+                "next_actions": [
+                    "provide --template-ref before retrying starter manifest publication"
+                ],
+            }
+            exit_code = 2
+        else:
+            target_result, exit_code = starter_policies.publish_template_to_starter_manifest(
+                template_ref=template_ref,
+                pack_id=starter_pack_id,
+                confirmed=confirmed,
+                approval_phrase=approval_phrase,
+            )
+        write_performed = bool(target_result.get("write_performed"))
+        traces.extend(
+            [
+                atom_trace(
+                    loop_step_id="DPL-07",
+                    atom_id="CAP-STARTER-MANIFEST-PUBLICATION-01",
+                    mode="guarded-write",
+                    status=target_result.get("status", "unknown"),
+                    summary="called guarded starter-pack manifest publication writer",
+                ),
+                atom_trace(
+                    loop_step_id="DPL-07",
+                    atom_id="CAP-AGENT-FLOW-APPLY-STARTER-MANIFEST-PUBLICATION-01",
+                    mode="guarded-write",
+                    status=target_result.get("status", "unknown"),
+                    summary="applied guarded starter-pack manifest publication through agent_flow.py",
+                ),
+            ]
+        )
+        approval_target = "JIKUO starter pack manifest publication"
+        approval_effect = (
+            f"add template ref {template_ref} to starter pack {starter_pack_id}"
+        )
+        approval_non_effects = [
+            "does not activate policies in user projects",
+            "does not initialize starter policies",
+            "does not execute policy actions",
+            "does not copy .jikuo/policies/approved files into starter packs",
         ]
     else:
         binding_plan = policy_store.build_policy_evolution_plan(
@@ -4806,6 +5256,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     propose.add_argument("--distribution-rationale", default=None)
     propose.add_argument("--distribution-source-project-ref", default=None)
+    propose.add_argument("--publication-target-dir", type=Path, default=None)
+    propose.add_argument(
+        "--publication-namespace",
+        default=policy_templates.DEFAULT_NAMESPACE,
+    )
     propose.add_argument(
         "--policy-evolution-operation",
         choices=sorted(policy_store.POLICY_EVOLUTION_OPERATIONS),
@@ -4822,6 +5277,7 @@ def build_parser() -> argparse.ArgumentParser:
     propose.add_argument("--replacement-evidence-type", default="card_rendered")
     propose.add_argument("--starter-pack-id", default=starter_policies.DEFAULT_PACK_ID)
     propose.add_argument("--template", type=Path, default=None)
+    propose.add_argument("--template-ref", default=None)
     propose.add_argument(
         "--produced-evidence-json",
         default=None,
@@ -4902,8 +5358,22 @@ def build_parser() -> argparse.ArgumentParser:
     apply.add_argument("--replacement-added-path-pattern", default=None)
     apply.add_argument("--replacement-action-type", default="render_pre_task_review")
     apply.add_argument("--replacement-evidence-type", default="card_rendered")
+    apply.add_argument("--distribution-source-policy", type=Path, default=None)
+    apply.add_argument(
+        "--distribution-decision",
+        choices=sorted(policy_templates.POLICY_DISTRIBUTION_DECISIONS),
+        default="deferred",
+    )
+    apply.add_argument("--distribution-source-project-ref", default=None)
+    apply.add_argument("--distribution-rationale", default=None)
+    apply.add_argument("--publication-target-dir", type=Path, default=None)
+    apply.add_argument(
+        "--publication-namespace",
+        default=policy_templates.DEFAULT_NAMESPACE,
+    )
     apply.add_argument("--starter-pack-id", default=starter_policies.DEFAULT_PACK_ID)
     apply.add_argument("--template", type=Path, default=None)
+    apply.add_argument("--template-ref", default=None)
     apply.add_argument("--project-root", type=Path, default=None)
     apply.add_argument("--confirm-apply", action="store_true")
     apply.add_argument("--approval-phrase", default=None)
@@ -4939,8 +5409,15 @@ def main(argv: list[str] | None = None) -> int:
             replacement_added_path_pattern=args.replacement_added_path_pattern,
             replacement_action_type=args.replacement_action_type,
             replacement_evidence_type=args.replacement_evidence_type,
+            distribution_source_policy_path=args.distribution_source_policy,
+            distribution_decision=args.distribution_decision,
+            distribution_source_project_ref=args.distribution_source_project_ref,
+            distribution_rationale=args.distribution_rationale,
+            publication_target_dir=args.publication_target_dir,
+            publication_namespace=args.publication_namespace,
             starter_pack_id=args.starter_pack_id,
             template_path=args.template,
+            template_ref=args.template_ref,
             confirmed=args.confirm_apply,
             approval_phrase=args.approval_phrase,
         )
@@ -5033,6 +5510,8 @@ def main(argv: list[str] | None = None) -> int:
         distribution_decision=args.distribution_decision,
         distribution_rationale=args.distribution_rationale,
         distribution_source_project_ref=args.distribution_source_project_ref,
+        publication_target_dir=args.publication_target_dir,
+        publication_namespace=args.publication_namespace,
         policy_evolution_operation=args.policy_evolution_operation,
         replacement_policy_ref=args.replacement_policy_ref,
         replacement_title=args.replacement_title,
@@ -5045,6 +5524,7 @@ def main(argv: list[str] | None = None) -> int:
         replacement_evidence_type=args.replacement_evidence_type,
         starter_pack_id=args.starter_pack_id,
         template_path=args.template,
+        template_ref=args.template_ref,
         action_ref=args.action_ref,
         requirement_ref=args.requirement_ref,
         command_name=args.command_name,
