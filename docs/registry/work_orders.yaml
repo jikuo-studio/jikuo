@@ -168,7 +168,7 @@ entries:
     title: "SPRINT_050_WO-PER-JIKUO-AI-SEMROUTE-01: AI Semantic Routing MVP"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-AI-SEMROUTE-01_ai_semantic_routing_mvp.md"
     sprint: "SPRINT_050"
-    status: "Design accepted; first projection, consumption, and explicit-provider slice implemented for short user_expression, MVP scope filtering, ordered intent_slices card rendering, Codex hook wording, raw user_phrase redaction in trigger/router projections, synthetic no-write semantic_intent_status=provided smoke, local proof that host semantic scopes change scope-aware policy distribution without expanding evaluator inputs, and accepted Codex-host-AI explicit transport proof; automatic GUI/MCP semantic provider smoke pending"
+    status: "Design accepted; first projection, consumption, and explicit-provider slice implemented for short user_expression, MVP scope filtering, ordered intent_slices card rendering, Codex hook wording, raw user_phrase redaction in trigger/router projections, synthetic no-write semantic_intent_status=provided smoke, local proof that host semantic scopes change scope-aware policy distribution without expanding evaluator inputs, and accepted Codex-host-AI explicit transport proof; an external MCP Sampling smoke attempt reported the probe tool not exposed, so automatic GUI/MCP semantic provider smoke remains pending behind client tool-surface refresh"
     impact_tags:
       - "ai_semantic_routing"
       - "strict_mounted_harness"

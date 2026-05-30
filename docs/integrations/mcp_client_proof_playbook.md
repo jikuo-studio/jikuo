@@ -534,6 +534,10 @@ MCP Sampling provider proof:
   `sampling_semantic_intent.status=unavailable` or `invalid` and continue with
   honest deterministic fallback. That result is still useful compatibility
   evidence.
+- If `jikuo.probe_sampling_semantic_intent` is not visible in the client tool
+  inventory, stop before judging Sampling support. That is a tool-surface /
+  client-refresh issue. Refresh or restart the MCP client/server and first
+  verify that the probe tool is visible.
 - This tool does not prove pre-turn hook execution. A normal MCP tool call
   happens only after the host model/user chooses to call the tool, so it cannot
   by itself satisfy strict mounted mode.

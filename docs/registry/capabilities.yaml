@@ -208,7 +208,7 @@ entries:
       - "docs/governance/jikuo_productization_task_map.md"
   - id: "CAP-HOST-SEMANTIC-INTENT-WORK-PROFILE-01"
     title: "Host semantic-intent work-profile merge"
-    status: "implemented local Level 2A input slice with bilingual deterministic fallback keyword coverage, runtime-card projection for policy-contract fields, synthetic no-write semantic_intent_status=provided smoke, raw user_phrase redaction in trigger/router projections, local proof that host semantic scopes change scope-aware policy distribution, and explicit Codex-host-AI semantic-intent transport proof; JIKUO-AI-SEMROUTE-01 anchors the MVP contract; MCP Sampling provider proof can supply compact host_semantic_intent when a client supports sampling; automatic host-time hook provider smoke still pending"
+    status: "implemented local Level 2A input slice with bilingual deterministic fallback keyword coverage, runtime-card projection for policy-contract fields, synthetic no-write semantic_intent_status=provided smoke, raw user_phrase redaction in trigger/router projections, local proof that host semantic scopes change scope-aware policy distribution, and explicit Codex-host-AI semantic-intent transport proof; JIKUO-AI-SEMROUTE-01 anchors the MVP contract; MCP Sampling provider proof can supply compact host_semantic_intent when a client supports sampling, but an external client first reported the probe tool not exposed; automatic host-time hook provider smoke still pending"
     metadata_status: "complete"
     entry_point: "src/jikuo/work_profile.py; python -B -m jikuo.agent_flow propose --event conversation_turn --host-semantic-intent-json ..."
     write_effect: "none"

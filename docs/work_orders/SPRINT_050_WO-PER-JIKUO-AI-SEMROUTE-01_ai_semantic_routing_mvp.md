@@ -263,6 +263,21 @@ classifies the user turn and passes compact semantic intent when invoking
 JIKUO. It still does not prove that the Codex GUI hook can automatically obtain
 semantic intent before the model runs.
 
+An external MCP Sampling smoke attempt on 2026-05-30 did not reach Sampling
+itself because the target client session did not expose
+`jikuo.probe_sampling_semantic_intent`. The repository source exposed 19 MCP
+tools locally and included the probe in `schemas.EXPOSED_TOOL_NAMES`, so the
+observation is recorded as client/tool-surface-not-exposed rather than
+Sampling-provider failure:
+
+- Proof note:
+  `docs/integrations/proofs/PROOF-2026-05-30-mcp-sampling-tool-not-exposed.md`;
+- Reported history card:
+  `.jikuo/runtime/history/20260530T090824Z_proposal_264d3469ea.md`;
+- Reported semantic status: `unavailable`;
+- Next diagnostic: refresh or restart the target MCP client/server until the
+  probe tool is visible, then rerun the Sampling smoke.
+
 Remaining implementation work:
 
 - run GUI / MCP smoke tests with automatic host-provided or Sampling-provided
