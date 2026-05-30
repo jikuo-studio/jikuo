@@ -331,6 +331,48 @@ def write_conversation_policy_suggestion_store(root: Path) -> None:
     )
 
 
+def write_semantic_scope_distribution_policy_store(root: Path) -> None:
+    store = root / ".jikuo" / "policies"
+    approved = store / "approved"
+    approved.mkdir(parents=True, exist_ok=True)
+    policy_ids = [
+        "POLICY-jikuo-first-principles-critical-alignment",
+        "POLICY-jikuo-data-model-drift-alarm",
+    ]
+    for policy_id in policy_ids:
+        shutil.copyfile(
+            ROOT / ".jikuo" / "policies" / "approved" / f"{policy_id}.yaml",
+            approved / f"{policy_id}.yaml",
+        )
+    manifest_lines = [
+        'schema_version: "jikuo.policy_store_manifest.v0"',
+        'project_id: "agent_flow_semantic_scope_distribution_fixture"',
+        'store_root: ".jikuo/policies"',
+        "active_policy_refs:",
+    ]
+    for policy_id in policy_ids:
+        manifest_lines.extend(
+            [
+                f'  - policy_id: "{policy_id}"',
+                "    version: 1",
+                f'    path: ".jikuo/policies/approved/{policy_id}.yaml"',
+            ]
+        )
+    manifest_lines.extend(
+        [
+            "proposal_refs: []",
+            "deprecated_policy_refs: []",
+            "superseded_policy_refs: []",
+            'last_updated_at: "2026-05-30T00:00:00Z"',
+            "compatibility:",
+            '  unknown_fields: "preserve"',
+            '  writer: "test_fixture"',
+            "",
+        ]
+    )
+    (store / "manifest.yaml").write_text("\n".join(manifest_lines), encoding="utf-8")
+
+
 def write_main_doc_mount_policy_store(root: Path) -> None:
     store = root / ".jikuo" / "policies"
     approved = store / "approved"
@@ -974,6 +1016,90 @@ class AgentFlowProposalTests(unittest.TestCase):
         self.assertIn("`1`: id=`explain_design`; scopes=`discussion`", proposal["chat_ready_markdown"])
         self.assertIn("`2`: id=`update_docs`; scopes=`editing`", proposal["chat_ready_markdown"])
         self.assertIn("user_expression=`update the docs`", proposal["chat_ready_markdown"])
+
+    def test_host_semantic_intent_scopes_change_policy_distribution(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            write_semantic_scope_distribution_policy_store(project_root)
+
+            def propose_with_scope(scope: str) -> dict:
+                semantic_intent = {
+                    "schema": "jikuo.host_semantic_intent.v0",
+                    "provider": "host_ai",
+                    "confidence": "high",
+                    "work_profile": {
+                        "intent_class": (
+                            "design_discussion"
+                            if scope == "discussion"
+                            else "implementation_request"
+                        ),
+                        "operation_class": "no_change" if scope == "discussion" else "write_file",
+                        "output_class": "explanation" if scope == "discussion" else "repository_change",
+                        "policy_scopes": [scope],
+                    },
+                    "intent_slices": [
+                        {
+                            "id": f"{scope}_slice",
+                            "index": 1,
+                            "user_expression": "handle item alpha",
+                            "policy_scopes": [scope],
+                            "requested_outcome": "route policy from host semantic scope",
+                            "response_contract": ["show which policy matched"],
+                        }
+                    ],
+                }
+                completed = subprocess.run(
+                    [
+                        sys.executable,
+                        "-B",
+                        str(TOOL),
+                        "propose",
+                        "--event",
+                        "conversation_turn",
+                        "--trigger-mode",
+                        "mounted",
+                        "--user-phrase",
+                        "please handle item alpha",
+                        "--host-semantic-intent-json",
+                        json.dumps(semantic_intent),
+                        "--project-root",
+                        str(project_root),
+                        "--format",
+                        "json",
+                    ],
+                    cwd=ROOT,
+                    text=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    check=False,
+                )
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+                return json.loads(completed.stdout)
+
+            discussion = propose_with_scope("discussion")
+            editing = propose_with_scope("editing")
+
+            self.assertEqual(discussion["work_profile"]["policy_scopes"], ["discussion"])
+            self.assertEqual(editing["work_profile"]["policy_scopes"], ["editing"])
+            self.assertEqual(
+                [policy["policy_ref"] for policy in discussion["triggered_policies"]],
+                ["POLICY-jikuo-first-principles-critical-alignment"],
+            )
+            self.assertEqual(
+                [policy["policy_ref"] for policy in editing["triggered_policies"]],
+                ["POLICY-jikuo-data-model-drift-alarm"],
+            )
+            self.assertIn(
+                "policy_scope:discussion",
+                discussion["triggered_policies"][0]["work_profile_match"]["matched_refs"],
+            )
+            self.assertIn(
+                "policy_scope:editing",
+                editing["triggered_policies"][0]["work_profile_match"]["matched_refs"],
+            )
+            self.assertIn("Semantic intent status: `provided`", discussion["chat_ready_markdown"])
+            self.assertIn("Semantic intent status: `provided`", editing["chat_ready_markdown"])
 
     def test_work_profile_does_not_treat_no_write_as_editing(self):
         completed = subprocess.run(

@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-AI-SEMROUTE-01: AI Semantic Routing MVP
 
-> **Status**: Design accepted; first projection slice implemented for short `user_expression`, MVP scope filtering, ordered `intent_slices` card rendering, Codex hook wording, no-write smoke for `semantic_intent_status=provided`, and raw `user_phrase` redaction in trigger/router projections. Real host-time GUI / MCP semantic provider smoke and any evaluator expansion remain pending.
+> **Status**: Design accepted; first projection slice implemented for short `user_expression`, MVP scope filtering, ordered `intent_slices` card rendering, Codex hook wording, no-write smoke for `semantic_intent_status=provided`, raw `user_phrase` redaction in trigger/router projections, and local policy-distribution proof that host semantic scopes select different scope-aware policies. Real host-time GUI / MCP semantic provider smoke and any evaluator expansion remain pending.
 > **Date**: 2026-05-28
 > **JIKUO layer**: integration / policy distribution.
 > **Business meaning**: JIKUO should stay thin. The host AI understands the user's natural-language intent; JIKUO receives a compact semantic object, records it, explains policy routing, and keeps deterministic fallback honest.
@@ -220,6 +220,29 @@ intent slices while redacting the raw `user_phrase` from trigger/router
 projections. The runtime card may render short `user_expression` values, but
 `trigger_decision.user_phrase` and `conversation_router.input_summary` must
 remain `<redacted_user_phrase>` when the source is the current user prompt.
+
+Follow-up distribution proof verified that the compact semantic object is
+consumed, not merely displayed. The regression
+`tests.agent_flow_tests.AgentFlowProposalTests.test_host_semantic_intent_scopes_change_policy_distribution`
+uses the same user phrase with two different host-provided semantic scopes:
+
+- `policy_scopes=["discussion"]` triggers
+  `POLICY-jikuo-first-principles-critical-alignment`;
+- `policy_scopes=["editing"]` triggers
+  `POLICY-jikuo-data-model-drift-alarm`.
+
+This proves the current MVP consumption path:
+
+```text
+host_semantic_intent.policy_scopes
+-> work_profile.policy_scopes
+-> existing policy applies_to_work_profile scope match
+-> different triggered policy set
+```
+
+This is still not host-time AI semantic-provider acceptance. The test supplies
+a compact semantic object directly to JIKUO; a future GUI / wrapper / Sampling
+proof must show how that object is produced by the host or client.
 
 Remaining implementation work:
 
