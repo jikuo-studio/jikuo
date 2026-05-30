@@ -617,6 +617,34 @@ recommend template extraction, optional template activation, or starter-pack
 review, but it cannot publish templates, mutate starter manifests, activate user
 project policies, or rewrite the source policy.
 
+Reusable outcomes then use a separate guarded publication boundary. The
+no-write plan is:
+
+```powershell
+python -B -m jikuo.policy_templates plan-publication `
+  --source-policy ".jikuo/policies/approved/<POLICY-ID>.yaml" `
+  --decision optional_template|official_starter `
+  --format json
+```
+
+The guarded apply is:
+
+```powershell
+python -B -m jikuo.policy_templates publish-template `
+  --source-policy ".jikuo/policies/approved/<POLICY-ID>.yaml" `
+  --decision optional_template|official_starter `
+  --confirm-publish-template `
+  --approval-phrase "<exact user phrase as spoken>" `
+  --format json
+```
+
+These produce `jikuo.policy_template_publication_plan.v0` and
+`jikuo.policy_template_publication_result.v0`. They may write package-owned
+policy templates, but they must not activate user-project policies, must not
+update starter-pack manifests, and must not copy `.jikuo/policies/approved`
+files into starter packs. `official_starter` publication leaves starter-pack
+manifest inclusion as a separate guarded follow-up.
+
 GUI and MCP users should not be expected to provide internal policy labels or
 file paths. The user-facing distribution path must support natural-language
 requests:
@@ -700,6 +728,10 @@ Current JIKUO has:
 - no-write `policy_templates review-distribution` reports that classify a
   policy as dogfood-only, official starter, optional template, or deferred
   without publishing or activating it;
+- no-write `policy_templates plan-publication` reports and guarded
+  `publish-template` writes that convert reviewed reusable policies into
+  package-owned templates without activating user projects or mutating starter
+  packs;
 - no-write `policy_distribution_review` agent-flow / MCP proposal cards that
   let GUI clients request the same review by `policy_ref`, `source_policy`, or
   natural-language `policy_query`, with ambiguity refusal instead of hidden
@@ -711,8 +743,9 @@ Current JIKUO does not yet have:
 - lifecycle-node completion orchestration that ensures a pulled-up JIKUO turn
   reaches completion review in addition to task start;
 - structured `agent_hint` input on every router path;
-- guarded starter/template publication tooling that consumes distribution review
-  outcomes and updates package templates or starter manifests;
+- guarded starter-pack manifest publication tooling that consumes distribution
+  review outcomes and updates starter manifests after package-template
+  publication;
 - full hint/signal/fallback routing detail in runtime cards and structured
   execution events;
 - strict host adapters that guarantee every user turn supplies the hint and calls
@@ -760,9 +793,11 @@ Recommended future slices:
    design now defines policy source categories, official distribution flow, and
    active-policy maintenance outcomes. No-write distribution review is available
    through CLI, agent-flow proposal, and MCP, including natural-language
-   `policy_query` source resolution with ambiguity refusal. Future implementation
-   should add guarded starter-template publication without building a heavy
-   candidate-disposition registry before lifecycle facts are explicit.
+   `policy_query` source resolution with ambiguity refusal. Guarded
+   package-template publication is available through CLI plan/apply surfaces.
+   Future implementation should add guarded starter-pack manifest publication
+   without building a heavy candidate-disposition registry before lifecycle
+   facts are explicit.
 7. `POLTRIG-04`: update MCP and host adapter surfaces to require or strongly
    encourage agent hints.
 8. `POLTRIG-05`: surface hint/signal/fallback basis in runtime cards and

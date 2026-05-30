@@ -29,6 +29,8 @@ POLICY_TEMPLATE_SCHEMA = "jikuo.policy_template.v0"
 POLICY_TEMPLATE_EXTRACT_PLAN_SCHEMA = "jikuo.policy_template_extract_plan.v0"
 POLICY_TEMPLATE_IMPORT_PLAN_SCHEMA = "jikuo.policy_template_import_plan.v0"
 POLICY_TEMPLATE_EXPORT_RESULT_SCHEMA = "jikuo.policy_template_export_result.v0"
+POLICY_TEMPLATE_PUBLICATION_PLAN_SCHEMA = "jikuo.policy_template_publication_plan.v0"
+POLICY_TEMPLATE_PUBLICATION_RESULT_SCHEMA = "jikuo.policy_template_publication_result.v0"
 POLICY_TEMPLATE_ACTIVATION_RESULT_SCHEMA = "jikuo.policy_template_activation_result.v0"
 POLICY_TEMPLATE_SOURCE_INSPECTION_SCHEMA = "jikuo.policy_template_source_inspection.v0"
 POLICY_DISTRIBUTION_REVIEW_SCHEMA = "jikuo.policy_distribution_review.v0"
@@ -814,6 +816,261 @@ def build_distribution_review(
         if status == "review"
         else ["resolve refusal reasons before retrying distribution review"],
     }
+
+
+def build_template_publication_plan(
+    *,
+    source_policy_path: Path,
+    decision: str,
+    target_dir: Path | None = None,
+    namespace: str = DEFAULT_NAMESPACE,
+    source_project_ref: str | None = None,
+    starter_pack_id: str = "engineering_governance",
+    rationale: str | None = None,
+) -> dict[str, Any]:
+    review = build_distribution_review(
+        source_policy_path=source_policy_path,
+        decision=decision,
+        target_dir=target_dir,
+        namespace=namespace,
+        source_project_ref=source_project_ref,
+        starter_pack_id=starter_pack_id,
+        rationale=rationale,
+    )
+    refusals = list(review.get("refusal_reasons") or [])
+    warnings = list(review.get("warnings") or [])
+    if decision not in {"official_starter", "optional_template"}:
+        refusals.append(f"distribution_decision_does_not_publish_template:{decision}")
+
+    extract_plan: dict[str, Any] | None = None
+    target_template_path: str | None = None
+    target_template_ref: str | None = None
+    if review.get("status") != "refused" and decision in {"official_starter", "optional_template"}:
+        extract_plan = build_extract_plan(
+            source_policy_path=source_policy_path,
+            target_dir=target_dir,
+            namespace=namespace,
+            source_project_ref=source_project_ref,
+        )
+        warnings.extend(extract_plan.get("warnings") or [])
+        refusals.extend(extract_plan.get("refusal_reasons") or [])
+        target_template_path = extract_plan.get("target_template_path")
+        target_template_ref = extract_plan.get("target_template_ref")
+        if target_template_path and Path(str(target_template_path)).exists():
+            refusals.append("target_template_already_exists")
+
+    status = "refused" if refusals else "review"
+    starter_change_required = decision == "official_starter"
+    guarded_command = None
+    if target_template_path:
+        preview_parts = [
+            "python -B -m jikuo.policy_templates publish-template",
+            f'--source-policy "{source_policy_path}"',
+            f"--decision {decision}",
+        ]
+        if target_dir is not None:
+            preview_parts.append(f'--target-dir "{target_dir}"')
+        if namespace != DEFAULT_NAMESPACE:
+            preview_parts.append(f"--namespace {namespace}")
+        if source_project_ref:
+            preview_parts.append(f'--source-project-ref "{source_project_ref}"')
+        if starter_pack_id != "engineering_governance":
+            preview_parts.append(f"--starter-pack-id {starter_pack_id}")
+        if rationale:
+            preview_parts.append(f'--rationale "{rationale}"')
+        preview_parts.extend(
+            [
+                "--confirm-publish-template",
+                '--approval-phrase "<exact user phrase as spoken>"',
+                "--format json",
+            ]
+        )
+        guarded_command = " ".join(preview_parts)
+
+    return {
+        "schema": POLICY_TEMPLATE_PUBLICATION_PLAN_SCHEMA,
+        "schema_version": POLICY_TEMPLATE_PUBLICATION_PLAN_SCHEMA,
+        "report_only": True,
+        "status": status,
+        "distribution_decision": decision,
+        "distribution_review": review,
+        "source_policy_path": review.get("source_policy_path"),
+        "source_policy_sha256": review.get("source_policy_sha256"),
+        "policy_id": review.get("policy_id"),
+        "title": review.get("title"),
+        "source_category": review.get("source_category"),
+        "target_template_path": target_template_path,
+        "target_template_ref": target_template_ref,
+        "publication_kind": "package_policy_template",
+        "starter_pack_manifest_change_required": starter_change_required,
+        "starter_pack_manifest_change_status": "follow_up_required"
+        if starter_change_required
+        else "not_applicable",
+        "approval_required_for_publication": decision in {"official_starter", "optional_template"},
+        "write_allowed_by_command": False,
+        "writes_performed": False,
+        "write_set": [
+            {
+                "path": target_template_path,
+                "effect": "write reviewed package policy template",
+            }
+        ]
+        if target_template_path
+        else [],
+        "guarded_apply_command_preview": guarded_command,
+        "refusal_reasons": sorted(set(refusals)),
+        "warnings": sorted(set(warnings)),
+        "source_refs": POLICY_DISTRIBUTION_CONTRACT_REFS,
+        "non_effects": [
+            "does not activate the template in any user project",
+            "does not update starter pack manifests",
+            "does not copy .jikuo/policies/approved files into starter packs",
+            "does not supersede, deprecate, or rewrite the source policy",
+        ],
+        "next_actions": [
+            "review distribution decision, provenance, template target, and non-effects",
+            "publish the package template only with explicit confirmation and approval",
+            "handle starter-pack manifest publication in a separate guarded slice if required",
+        ]
+        if status == "review"
+        else ["resolve refusal reasons before retrying template publication"],
+    }
+
+
+def build_publication_refusal_result(
+    *,
+    plan: dict[str, Any],
+    approval_phrase: str | None,
+    confirmed: bool,
+    refusals: list[str],
+) -> dict[str, Any]:
+    return {
+        "schema": POLICY_TEMPLATE_PUBLICATION_RESULT_SCHEMA,
+        "schema_version": POLICY_TEMPLATE_PUBLICATION_RESULT_SCHEMA,
+        "status": "refused",
+        "write_performed": False,
+        "distribution_decision": plan.get("distribution_decision"),
+        "source_policy_path": plan.get("source_policy_path"),
+        "target_template_path": plan.get("target_template_path"),
+        "template_ref": plan.get("target_template_ref"),
+        "created_paths": [],
+        "written_paths": [],
+        "refusal_reasons": sorted(set(refusals)),
+        "warnings": plan.get("warnings") or [],
+        "approval_record": {
+            "phrase": approval_phrase,
+            "decision_target": "JIKUO policy template publication",
+            "decision_effect": "write one reviewed package policy template",
+            "decision_noneffect": "does not activate policies in user projects and does not update starter packs",
+            "source_plan_schema": POLICY_TEMPLATE_PUBLICATION_PLAN_SCHEMA,
+            "command_confirmed": confirmed,
+        }
+        if approval_phrase
+        else None,
+        "non_effects": plan.get("non_effects") or [],
+        "next_actions": ["review refusal reasons before retrying template publication"],
+    }
+
+
+def publish_template_from_distribution(
+    *,
+    source_policy_path: Path,
+    decision: str,
+    target_dir: Path | None = None,
+    namespace: str = DEFAULT_NAMESPACE,
+    source_project_ref: str | None = None,
+    starter_pack_id: str = "engineering_governance",
+    rationale: str | None = None,
+    confirmed: bool = False,
+    approval_phrase: str | None = None,
+) -> tuple[dict[str, Any], int]:
+    plan = build_template_publication_plan(
+        source_policy_path=source_policy_path,
+        decision=decision,
+        target_dir=target_dir,
+        namespace=namespace,
+        source_project_ref=source_project_ref,
+        starter_pack_id=starter_pack_id,
+        rationale=rationale,
+    )
+    refusals = list(plan.get("refusal_reasons") or [])
+    if not confirmed:
+        refusals.append("missing technical confirmation flag")
+    if not approval_phrase:
+        refusals.append("missing approval phrase evidence")
+    if refusals:
+        return (
+            build_publication_refusal_result(
+                plan=plan,
+                approval_phrase=approval_phrase,
+                confirmed=confirmed,
+                refusals=refusals,
+            ),
+            2,
+        )
+
+    export_result, exit_code = export_template_from_plan(
+        source_policy_path=source_policy_path,
+        target_dir=target_dir,
+        namespace=namespace,
+        source_project_ref=source_project_ref,
+        confirmed=True,
+        approval_phrase=approval_phrase,
+    )
+    if exit_code != 0:
+        return (
+            {
+                **build_publication_refusal_result(
+                    plan=plan,
+                    approval_phrase=approval_phrase,
+                    confirmed=confirmed,
+                    refusals=list(export_result.get("refusal_reasons") or []),
+                ),
+                "export_result": export_result,
+            },
+            exit_code,
+        )
+
+    return (
+        {
+            "schema": POLICY_TEMPLATE_PUBLICATION_RESULT_SCHEMA,
+            "schema_version": POLICY_TEMPLATE_PUBLICATION_RESULT_SCHEMA,
+            "status": "written",
+            "write_performed": True,
+            "distribution_decision": decision,
+            "distribution_review": plan.get("distribution_review"),
+            "source_policy_path": plan.get("source_policy_path"),
+            "source_policy_sha256": plan.get("source_policy_sha256"),
+            "target_template_path": export_result.get("target_template_path"),
+            "template_ref": export_result.get("template_ref"),
+            "created_paths": export_result.get("created_paths") or [],
+            "written_paths": export_result.get("written_paths") or [],
+            "starter_pack_manifest_change_required": plan.get(
+                "starter_pack_manifest_change_required"
+            ),
+            "starter_pack_manifest_change_status": plan.get(
+                "starter_pack_manifest_change_status"
+            ),
+            "refusal_reasons": [],
+            "warnings": sorted(set(plan.get("warnings") or [])),
+            "approval_record": {
+                "phrase": approval_phrase,
+                "decision_target": "JIKUO policy template publication",
+                "decision_effect": "write one reviewed package policy template",
+                "decision_noneffect": "does not activate policies in user projects and does not update starter packs",
+                "source_plan_schema": POLICY_TEMPLATE_PUBLICATION_PLAN_SCHEMA,
+                "command_confirmed": confirmed,
+            },
+            "export_result": export_result,
+            "post_write_verification": export_result.get("post_write_verification"),
+            "non_effects": plan.get("non_effects") or [],
+            "next_actions": [
+                "review exported package template before any user-project activation",
+                "run optional template activation or starter-pack publication as a separate guarded flow",
+            ],
+        },
+        0,
+    )
 
 
 def build_export_refusal_result(
@@ -1703,6 +1960,36 @@ def build_parser() -> argparse.ArgumentParser:
     review_distribution.add_argument("--rationale", default=None)
     review_distribution.add_argument("--format", choices=("text", "json"), default="text")
 
+    plan_publication = subparsers.add_parser("plan-publication")
+    plan_publication.add_argument("--source-policy", type=Path, required=True)
+    plan_publication.add_argument(
+        "--decision",
+        choices=sorted(POLICY_DISTRIBUTION_DECISIONS),
+        required=True,
+    )
+    plan_publication.add_argument("--target-dir", type=Path, default=None)
+    plan_publication.add_argument("--namespace", default=DEFAULT_NAMESPACE)
+    plan_publication.add_argument("--source-project-ref", default=None)
+    plan_publication.add_argument("--starter-pack-id", default="engineering_governance")
+    plan_publication.add_argument("--rationale", default=None)
+    plan_publication.add_argument("--format", choices=("text", "json"), default="text")
+
+    publish_template = subparsers.add_parser("publish-template")
+    publish_template.add_argument("--source-policy", type=Path, required=True)
+    publish_template.add_argument(
+        "--decision",
+        choices=sorted(POLICY_DISTRIBUTION_DECISIONS),
+        required=True,
+    )
+    publish_template.add_argument("--target-dir", type=Path, default=None)
+    publish_template.add_argument("--namespace", default=DEFAULT_NAMESPACE)
+    publish_template.add_argument("--source-project-ref", default=None)
+    publish_template.add_argument("--starter-pack-id", default="engineering_governance")
+    publish_template.add_argument("--rationale", default=None)
+    publish_template.add_argument("--confirm-publish-template", action="store_true")
+    publish_template.add_argument("--approval-phrase", default=None)
+    publish_template.add_argument("--format", choices=("text", "json"), default="text")
+
     plan_import = subparsers.add_parser("plan-import")
     plan_import.add_argument("--template", type=Path, required=True)
     plan_import.add_argument("--project-root", type=Path, default=None)
@@ -1731,8 +2018,12 @@ def format_text(report: dict[str, Any]) -> str:
         lines.append(f"Target template: {report['target_template_path']}")
     if report.get("template_ref"):
         lines.append(f"Template ref: {report['template_ref']}")
+    if report.get("target_template_ref"):
+        lines.append(f"Target template ref: {report['target_template_ref']}")
     if report.get("distribution_decision"):
         lines.append(f"Distribution decision: {report['distribution_decision']}")
+    if report.get("publication_kind"):
+        lines.append(f"Publication kind: {report['publication_kind']}")
     if report.get("distribution_path"):
         path = report["distribution_path"]
         lines.append(f"Distribution category: {path.get('category')}")
@@ -1787,6 +2078,29 @@ def main(argv: list[str] | None = None) -> int:
             rationale=args.rationale,
         )
         exit_code = 0 if report["status"] != "refused" else 2
+    elif args.command == "plan-publication":
+        report = build_template_publication_plan(
+            source_policy_path=args.source_policy,
+            decision=args.decision,
+            target_dir=args.target_dir,
+            namespace=args.namespace,
+            source_project_ref=args.source_project_ref,
+            starter_pack_id=args.starter_pack_id,
+            rationale=args.rationale,
+        )
+        exit_code = 0 if report["status"] != "refused" else 2
+    elif args.command == "publish-template":
+        report, exit_code = publish_template_from_distribution(
+            source_policy_path=args.source_policy,
+            decision=args.decision,
+            target_dir=args.target_dir,
+            namespace=args.namespace,
+            source_project_ref=args.source_project_ref,
+            starter_pack_id=args.starter_pack_id,
+            rationale=args.rationale,
+            confirmed=args.confirm_publish_template,
+            approval_phrase=args.approval_phrase,
+        )
     elif args.command == "plan-import":
         report = build_import_plan(
             template_path=args.template,

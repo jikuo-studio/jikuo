@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-POLICY-MGMT-01: Policy Management MVP
 
-> **Status**: Two held candidates activated as `active_report_only`; Policy Management MVP closeout design and no-write distribution review with GUI/MCP natural-language source resolution implemented.
+> **Status**: Two held candidates activated as `active_report_only`; Policy Management MVP closeout design, no-write distribution review with GUI/MCP natural-language source resolution, and guarded package-template publication CLI implemented.
 > **Date**: 2026-05-18
 > **JIKUO layer**: policy governance / policy distribution.
 > **Business meaning**: JIKUO's first usable version needs the current user-authored candidate policies to enter active scope through the existing guarded flow, and it needs a clear official distribution boundary so useful policies can reach user projects without copying JIKUO dogfood policies or overwriting user-owned local policies.
@@ -216,6 +216,42 @@ policy in a user project, or rewrite the source policy. `official_starter` and
 template activation or starter-pack initialization paths; they are not
 publication by themselves.
 
+### 4.3.1 Guarded Template Publication
+
+`optional_template` and `official_starter` distribution outcomes may be
+published into package-owned policy templates only after a second guarded step.
+
+The no-write publication plan is:
+
+```powershell
+python -B -m jikuo.policy_templates plan-publication `
+  --source-policy ".jikuo/policies/approved/<POLICY-ID>.yaml" `
+  --decision optional_template|official_starter `
+  --format json
+```
+
+The guarded publication apply is:
+
+```powershell
+python -B -m jikuo.policy_templates publish-template `
+  --source-policy ".jikuo/policies/approved/<POLICY-ID>.yaml" `
+  --decision optional_template|official_starter `
+  --confirm-publish-template `
+  --approval-phrase "<exact user phrase as spoken>" `
+  --format json
+```
+
+These commands produce `jikuo.policy_template_publication_plan.v0` and
+`jikuo.policy_template_publication_result.v0`. Publication writes only a
+reviewed package template under `src/jikuo/policy_templates/...`; it does not
+activate a user-project policy, does not update starter-pack manifests, and
+does not copy `.jikuo/policies/approved` into starter packs.
+
+For `official_starter`, template publication leaves
+`starter_pack_manifest_change_status: follow_up_required`. Starter-pack manifest
+publication remains a separate guarded follow-up so the product can review
+default starter inclusion independently from template availability.
+
 GUI / MCP users normally will not know a policy file path or `POLICY-*` id.
 The user-facing path is therefore:
 
@@ -274,6 +310,10 @@ Policy Management MVP closeout is accepted when:
 - `python -B -m jikuo.policy_templates review-distribution ...` produces a
   no-write review report for dogfood-only, official-starter, optional-template,
   or deferred outcomes;
+- `python -B -m jikuo.policy_templates plan-publication ...` and
+  `publish-template ... --confirm-publish-template --approval-phrase ...`
+  produce no-write publication plans and guarded package-template publication
+  results for reusable outcomes without activating user-project policies;
 - `python -B -m jikuo.agent_flow propose --event policy_distribution_review ...`
   and MCP `jikuo.propose_policy_distribution_review` expose the same no-write
   review to GUI clients, including natural-language `policy_query` resolution

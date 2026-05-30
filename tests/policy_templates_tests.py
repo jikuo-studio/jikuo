@@ -504,6 +504,187 @@ class PolicyTemplateTests(unittest.TestCase):
             self.assertFalse((root / "src").exists())
             self.assertFalse((root / ".jikuo").exists())
 
+    def test_publication_plan_refuses_dogfood_only_without_write(self):
+        with temp_project_dir() as root:
+            source_policy = root / "POLICY-task-scope-control-before-packaging.yaml"
+            target_dir = root / "templates"
+            write_policy(source_policy)
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "plan-publication",
+                    "--source-policy",
+                    str(source_policy),
+                    "--decision",
+                    "dogfood_only",
+                    "--target-dir",
+                    str(target_dir),
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 2, completed.stderr)
+            report = json.loads(completed.stdout)
+            self.assertEqual(report["schema"], "jikuo.policy_template_publication_plan.v0")
+            self.assertEqual(report["status"], "refused")
+            self.assertFalse(report["writes_performed"])
+            self.assertIn(
+                "distribution_decision_does_not_publish_template:dogfood_only",
+                report["refusal_reasons"],
+            )
+            self.assertFalse(target_dir.exists())
+            self.assertFalse((root / ".jikuo").exists())
+
+    def test_publication_plan_for_optional_template_is_no_write(self):
+        with temp_project_dir() as root:
+            source_policy = root / "POLICY-task-scope-control-before-packaging.yaml"
+            target_dir = root / "templates"
+            write_policy(source_policy)
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "plan-publication",
+                    "--source-policy",
+                    str(source_policy),
+                    "--decision",
+                    "optional_template",
+                    "--target-dir",
+                    str(target_dir),
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            report = json.loads(completed.stdout)
+            self.assertEqual(report["schema"], "jikuo.policy_template_publication_plan.v0")
+            self.assertEqual(report["status"], "review")
+            self.assertEqual(report["distribution_decision"], "optional_template")
+            self.assertEqual(report["publication_kind"], "package_policy_template")
+            self.assertFalse(report["writes_performed"])
+            self.assertFalse(report["write_allowed_by_command"])
+            self.assertTrue(report["approval_required_for_publication"])
+            self.assertFalse(report["starter_pack_manifest_change_required"])
+            self.assertEqual(
+                report["starter_pack_manifest_change_status"],
+                "not_applicable",
+            )
+            self.assertEqual(len(report["write_set"]), 1)
+            self.assertTrue(
+                report["target_template_ref"].startswith("pkg://jikuo/policy_templates/")
+            )
+            self.assertIn("publish-template", report["guarded_apply_command_preview"])
+            self.assertIn(
+                "does not update starter pack manifests",
+                report["non_effects"],
+            )
+            self.assertFalse(target_dir.exists())
+            self.assertFalse((root / ".jikuo").exists())
+
+    def test_publish_template_requires_publication_approval(self):
+        with temp_project_dir() as root:
+            source_policy = root / "POLICY-task-scope-control-before-packaging.yaml"
+            target_dir = root / "templates"
+            write_policy(source_policy)
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "publish-template",
+                    "--source-policy",
+                    str(source_policy),
+                    "--decision",
+                    "optional_template",
+                    "--target-dir",
+                    str(target_dir),
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 2, completed.stderr)
+            report = json.loads(completed.stdout)
+            self.assertEqual(report["schema"], "jikuo.policy_template_publication_result.v0")
+            self.assertFalse(report["write_performed"])
+            self.assertIn("missing technical confirmation flag", report["refusal_reasons"])
+            self.assertIn("missing approval phrase evidence", report["refusal_reasons"])
+            self.assertFalse(target_dir.exists())
+
+    def test_publish_template_writes_only_package_template(self):
+        with temp_project_dir() as root:
+            source_policy = root / "POLICY-task-scope-control-before-packaging.yaml"
+            target_dir = root / "templates"
+            write_policy(source_policy)
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "publish-template",
+                    "--source-policy",
+                    str(source_policy),
+                    "--decision",
+                    "official_starter",
+                    "--target-dir",
+                    str(target_dir),
+                    "--confirm-publish-template",
+                    "--approval-phrase",
+                    "<exact user phrase as spoken>",
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            report = json.loads(completed.stdout)
+            self.assertEqual(report["schema"], "jikuo.policy_template_publication_result.v0")
+            self.assertEqual(report["status"], "written")
+            self.assertTrue(report["write_performed"])
+            self.assertEqual(report["distribution_decision"], "official_starter")
+            self.assertTrue(report["starter_pack_manifest_change_required"])
+            self.assertEqual(
+                report["starter_pack_manifest_change_status"],
+                "follow_up_required",
+            )
+            written_path = Path(report["written_paths"][0])
+            self.assertTrue(written_path.is_file())
+            self.assertFalse((root / ".jikuo" / "policies").exists())
+            self.assertFalse((root / "src" / "jikuo" / "starter_policy_packs").exists())
+            written_text = written_path.read_text(encoding="utf-8")
+            self.assertIn("jikuo.policy_template.v0", written_text)
+            self.assertNotIn(str(source_policy), written_text)
+            self.assertNotIn(".jikuo/policies/approved", written_text)
+
     def test_export_requires_confirmation_and_approval(self):
         with temp_project_dir() as root:
             source_policy = root / "POLICY-task-scope-control-before-packaging.yaml"
