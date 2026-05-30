@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-AI-SEMROUTE-01: AI Semantic Routing MVP
 
-> **Status**: Design accepted; first projection slice implemented for short `user_expression`, MVP scope filtering, ordered `intent_slices` card rendering, Codex hook wording, no-write smoke for `semantic_intent_status=provided`, raw `user_phrase` redaction in trigger/router projections, and local policy-distribution proof that host semantic scopes select different scope-aware policies. Real host-time GUI / MCP semantic provider smoke and any evaluator expansion remain pending.
+> **Status**: Design accepted; first projection slice implemented for short `user_expression`, MVP scope filtering, ordered `intent_slices` card rendering, Codex hook wording, no-write smoke for `semantic_intent_status=provided`, raw `user_phrase` redaction in trigger/router projections, local policy-distribution proof that host semantic scopes select different scope-aware policies, and explicit Codex-host-AI semantic-intent transport proof. Real automatic GUI / MCP semantic provider smoke and any evaluator expansion remain pending.
 > **Date**: 2026-05-28
 > **JIKUO layer**: integration / policy distribution.
 > **Business meaning**: JIKUO should stay thin. The host AI understands the user's natural-language intent; JIKUO receives a compact semantic object, records it, explains policy routing, and keeps deterministic fallback honest.
@@ -244,10 +244,30 @@ This is still not host-time AI semantic-provider acceptance. The test supplies
 a compact semantic object directly to JIKUO; a future GUI / wrapper / Sampling
 proof must show how that object is produced by the host or client.
 
+An explicit host-AI provider proof was accepted on 2026-05-30:
+
+- Proof note:
+  `docs/integrations/proofs/PROOF-2026-05-30-explicit-host-ai-semantic-intent.md`;
+- Runtime card:
+  `.jikuo/runtime/history/20260530T090029Z_proposal_8156c71d76.md`;
+- Provider: `codex_host_ai_explicit`;
+- Status: `semantic_intent_status=provided`;
+- Result: `work_profile.policy_scopes=editing,progress_summary`;
+- Triggered policies:
+  `POLICY-jikuo-conversation-level-proactive-policy-suggestion` and
+  `POLICY-jikuo-data-model-drift-alarm`;
+- Missing evidence count: `0`.
+
+This proves a cooperative explicit-provider path in which the host AI
+classifies the user turn and passes compact semantic intent when invoking
+JIKUO. It still does not prove that the Codex GUI hook can automatically obtain
+semantic intent before the model runs.
+
 Remaining implementation work:
 
-- run 2-3 GUI / MCP smoke tests with real host-provided or Sampling-provided
-  semantic intent, not only a local no-write synthetic semantic object;
+- run GUI / MCP smoke tests with automatic host-provided or Sampling-provided
+  semantic intent, not only local no-write or cooperative explicit-provider
+  semantic objects;
 - decide whether wrapper / plugin work should make host-time classification
   mandatory before JIKUO invocation;
 - keep richer fields out of evaluator inputs until real smoke evidence shows a
