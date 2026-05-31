@@ -124,6 +124,8 @@ The accepted implementation is a tool-side precondition, not a thicker adapter:
   `host_semantic_intent`, selected JIKUO MCP entry points return a no-write
   `semantic_intent_precondition` / `precondition_unmet` result with the compact
   schema and ask the host AI to classify and re-call;
+- those selected proposal tools accept `host_semantic_intent` directly on the
+  re-call, so the host adapter contract is not limited to router-only tools;
 - this precondition must not call a model, decide policy applicability, or
   persist raw prompt text;
 - wrapper / plugin work remains future work after this lighter contract is

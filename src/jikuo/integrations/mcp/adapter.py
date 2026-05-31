@@ -275,6 +275,15 @@ def _proposal_response(
     )
     if isinstance(with_markdown.get("work_profile"), dict):
         response["work_profile"] = with_markdown["work_profile"]
+        if isinstance(
+            with_markdown["work_profile"].get("semantic_intent_evidence"),
+            dict,
+        ):
+            response["semantic_intent_evidence"] = with_markdown["work_profile"][
+                "semantic_intent_evidence"
+            ]
+    if isinstance(with_markdown.get("semantic_intent_evidence"), dict):
+        response["semantic_intent_evidence"] = with_markdown["semantic_intent_evidence"]
     for card in with_markdown.get("cards") or []:
         if not isinstance(card, dict):
             continue
@@ -1109,6 +1118,7 @@ def call_tool(
             project_root=resolved_root,
             transport=resolved_transport,
             enforce_semantic_intent_precondition=True,
+            host_semantic_intent=args.get("host_semantic_intent"),
             task_title=args.get("task_title"),
             session_id=args.get("session_id"),
             task_type=args.get("task_type"),
@@ -1132,6 +1142,7 @@ def call_tool(
             project_root=resolved_root,
             transport=resolved_transport,
             enforce_semantic_intent_precondition=True,
+            host_semantic_intent=args.get("host_semantic_intent"),
             policy_ref=args.get("policy_ref"),
             policy_title=args.get("policy_title"),
             policy_source_ref=args.get("policy_source_ref"),
@@ -1160,6 +1171,7 @@ def call_tool(
             project_root=resolved_root,
             transport=resolved_transport,
             enforce_semantic_intent_precondition=True,
+            host_semantic_intent=args.get("host_semantic_intent"),
             policy_ref=args.get("policy_ref"),
             policy_evolution_operation=str(
                 args.get("policy_evolution_operation") or "refine_policy"
@@ -1192,6 +1204,7 @@ def call_tool(
             project_root=resolved_root,
             transport=resolved_transport,
             enforce_semantic_intent_precondition=True,
+            host_semantic_intent=args.get("host_semantic_intent"),
             policy_ref=args.get("policy_ref"),
             distribution_source_policy_path=_path_or_none(args.get("source_policy")),
             distribution_policy_query=args.get("policy_query"),
@@ -1208,6 +1221,8 @@ def call_tool(
             arguments=args,
             project_root=resolved_root,
             transport=resolved_transport,
+            enforce_semantic_intent_precondition=True,
+            host_semantic_intent=args.get("host_semantic_intent"),
             policy_ref=args.get("policy_ref"),
             distribution_source_policy_path=_path_or_none(args.get("source_policy")),
             distribution_policy_query=args.get("policy_query"),
@@ -1229,6 +1244,7 @@ def call_tool(
             project_root=resolved_root,
             transport=resolved_transport,
             enforce_semantic_intent_precondition=True,
+            host_semantic_intent=args.get("host_semantic_intent"),
             template_ref=args.get("template_ref"),
             starter_pack_id=str(args.get("starter_pack_id") or "engineering_governance"),
         )
@@ -1241,6 +1257,7 @@ def call_tool(
             project_root=resolved_root,
             transport=resolved_transport,
             enforce_semantic_intent_precondition=True,
+            host_semantic_intent=args.get("host_semantic_intent"),
             template_path=_path_or_none(args.get("template")),
         )
 

@@ -195,12 +195,25 @@ class MCPServerWrapperTests(unittest.TestCase):
         fake = server.create_server(fastmcp_cls=FakeFastMCP)
         route_tool = fake.tools["jikuo.route_user_request"]["function"]
         suggestion_tool = fake.tools["jikuo.propose_policy_suggestions"]["function"]
+        task_start_tool = fake.tools["jikuo.propose_task_start"]["function"]
+        publication_plan_tool = fake.tools[
+            "jikuo.propose_policy_template_publication_plan"
+        ]["function"]
 
         self.assertIn("host_semantic_intent", inspect.signature(route_tool).parameters)
         self.assertIn("host_semantic_intent", inspect.signature(suggestion_tool).parameters)
+        self.assertIn("host_semantic_intent", inspect.signature(task_start_tool).parameters)
+        self.assertIn(
+            "host_semantic_intent",
+            inspect.signature(publication_plan_tool).parameters,
+        )
         self.assertIn(
             "status=provided",
             fake.tools["jikuo.route_user_request"]["description"],
+        )
+        self.assertIn(
+            "status=provided",
+            fake.tools["jikuo.propose_task_start"]["description"],
         )
 
         with tempfile.TemporaryDirectory() as tmp:

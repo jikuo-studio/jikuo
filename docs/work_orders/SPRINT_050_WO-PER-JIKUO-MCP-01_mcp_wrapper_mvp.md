@@ -195,6 +195,9 @@ Semantic-intent precondition follow-up:
   response when semantic evidence is missing or fallback-only. The card asks
   the host AI to provide compact `host_semantic_intent` and re-call before
   JIKUO proceeds with the plan or guarded publication path.
+- The selected proposal tools also expose `host_semantic_intent`, so the
+  re-call can satisfy the precondition in the same tool rather than requiring a
+  separate router-only detour.
 - This implementation must not change evaluator inputs, call a model inside
   the MCP adapter, or make deterministic keyword routing look like AI semantic
   routing.

@@ -173,6 +173,26 @@ def policy_evolution_proposal_ref(response: dict[str, object]) -> str:
     raise AssertionError("policy evolution proposal ref not found")
 
 
+def editing_host_semantic_intent() -> dict[str, object]:
+    return {
+        "schema": "jikuo.host_semantic_intent.v0",
+        "status": "provided",
+        "provider": "host_ai",
+        "confidence": "high",
+        "policy_scopes": ["editing"],
+        "work_profile": {
+            "policy_scopes": ["editing"],
+            "intent_class": "editing",
+            "operation_class": "write_file",
+            "output_class": "change",
+        },
+        "requested_outcome": "Run the governed editing smoke.",
+        "execution_boundary": "no durable write unless guarded apply is approved",
+        "response_contract": "Report status, evidence, and next action.",
+        "user_expression": "governed editing smoke",
+    }
+
+
 class MCPStageAAdapterTests(unittest.TestCase):
     def test_tool_list_exposes_stage_a_plus_accepted_stage_b_tools_only(self):
         tools = adapter.list_tools()
@@ -194,7 +214,18 @@ class MCPStageAAdapterTests(unittest.TestCase):
         self.assertIn("jikuo.apply_policy_template_publication", names)
         self.assertIn("jikuo.apply_starter_manifest_publication", names)
         by_name = {tool["name"]: tool for tool in tools}
-        for name in ("jikuo.route_user_request", "jikuo.propose_policy_suggestions"):
+        semantic_contract_tools = (
+            "jikuo.route_user_request",
+            "jikuo.propose_policy_suggestions",
+            "jikuo.propose_task_start",
+            "jikuo.propose_policy_write_plan",
+            "jikuo.propose_policy_evolution_plan",
+            "jikuo.propose_policy_distribution_review",
+            "jikuo.propose_policy_template_publication_plan",
+            "jikuo.propose_starter_manifest_publication_plan",
+            "jikuo.propose_policy_template_import_plan",
+        )
+        for name in semantic_contract_tools:
             self.assertIn("host_semantic_intent", by_name[name]["input_fields"])
             self.assertIn("status=provided", by_name[name]["description"])
             self.assertIn("provider=host_ai", by_name[name]["description"])
@@ -386,6 +417,42 @@ class MCPStageAAdapterTests(unittest.TestCase):
             serialized = json.dumps(response, ensure_ascii=False)
             self.assertNotIn(str(project_root.resolve()), serialized)
             self.assertIn("<LOCAL_PROJECT_ROOT>", serialized)
+
+    def test_propose_task_start_accepts_host_semantic_intent_after_precondition_prompt(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = copy_fixture(POLICY_ACTIVE_PROJECT, tmp)
+
+            missing = adapter.call_tool(
+                "jikuo.propose_task_start",
+                {
+                    "project_root": str(project_root),
+                    "task_title": "Edit docs smoke",
+                    "changed_paths": ["docs/smoke.md"],
+                    "task_session_decision": "defer",
+                    "task_session_defer_reason": "smoke only",
+                },
+            )
+            satisfied = adapter.call_tool(
+                "jikuo.propose_task_start",
+                {
+                    "project_root": str(project_root),
+                    "task_title": "Edit docs smoke",
+                    "changed_paths": ["docs/smoke.md"],
+                    "task_session_decision": "defer",
+                    "task_session_defer_reason": "smoke only",
+                    "host_semantic_intent": editing_host_semantic_intent(),
+                },
+            )
+
+            self.assertEqual(missing["status"], "refused")
+            self.assertEqual(missing["semantic_intent_precondition"]["status"], "refused")
+            self.assertNotEqual(satisfied["status"], "refused")
+            self.assertNotIn("semantic_intent_precondition", satisfied)
+            self.assertEqual(
+                satisfied["work_profile"]["basis"]["host_semantic_intent"]["status"],
+                "provided",
+            )
+            self.assertEqual(satisfied["semantic_intent_evidence"]["status"], "ok")
 
     def test_local_stdio_transport_can_return_local_paths(self):
         with tempfile.TemporaryDirectory() as tmp:

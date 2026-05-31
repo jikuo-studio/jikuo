@@ -169,7 +169,7 @@ entries:
     title: "SPRINT_050_WO-PER-JIKUO-AI-SEMROUTE-01: AI Semantic Routing MVP"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-AI-SEMROUTE-01_ai_semantic_routing_mvp.md"
     sprint: "SPRINT_050"
-    status: "Design accepted; first projection, consumption, explicit-provider, report-only evidence-gate, router-tool-contract, cooperative GUI-router proof, UTF-8 semantic-field proof, and no-write precondition slices implemented for short user_expression, MVP scope filtering, ordered intent_slices card rendering, Codex hook wording, raw user_phrase redaction in trigger/router projections, synthetic no-write semantic_intent_status=provided smoke, local proof that host semantic scopes change scope-aware policy distribution without expanding evaluator inputs, accepted Codex-host-AI explicit transport proof, MCP Sampling unavailable proof, semantic_intent_classification_evidence projection, MCP router server signatures/tool descriptions that expose and guide host_semantic_intent, accepted separate Codex GUI proof that route_user_request can receive host_semantic_intent, local proof that Chinese semantic contract fields survive UTF-8 runtime-card rendering, and selected governed editing / write-capable MCP entry points returning semantic_intent_precondition when semantic evidence is missing or fallback-only; automatic hook-time or Sampling semantic provider smoke remains pending"
+    status: "Design accepted; first projection, consumption, explicit-provider, report-only evidence-gate, router-tool-contract, cooperative GUI-router proof, UTF-8 semantic-field proof, and no-write precondition slices implemented for short user_expression, MVP scope filtering, ordered intent_slices card rendering, Codex hook wording, raw user_phrase redaction in trigger/router projections, synthetic no-write semantic_intent_status=provided smoke, local proof that host semantic scopes change scope-aware policy distribution without expanding evaluator inputs, accepted Codex-host-AI explicit transport proof, MCP Sampling unavailable proof, semantic_intent_classification_evidence projection, MCP router/proposal server signatures and tool descriptions that expose and guide host_semantic_intent, accepted separate Codex GUI proof that route_user_request can receive host_semantic_intent, local proof that Chinese semantic contract fields survive UTF-8 runtime-card rendering, and selected governed editing / write-capable MCP entry points returning semantic_intent_precondition when semantic evidence is missing or fallback-only and accepting host_semantic_intent directly on re-call; automatic hook-time or Sampling semantic provider smoke remains pending"
     impact_tags:
       - "ai_semantic_routing"
       - "strict_mounted_harness"
@@ -203,7 +203,7 @@ entries:
     title: "SPRINT_050_WO-PER-JIKUO-HOSTADAPT-01: Host Adapter Contract"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-HOSTADAPT-01_host_adapter_contract.md"
     sprint: "SPRINT_050"
-    status: "Contract scaffold implemented for cross-client Host Adapter Turn Input/Result normalization and raw prompt redaction; Codex project-local hook now consumes the contract and renders the result summary, with GUI additionalContext contract-line smoke accepted; selected governed editing / write-capable MCP entry points now return semantic_intent_precondition when host_semantic_intent is missing; host-specific wrappers/plugins remain future slices"
+    status: "Contract scaffold implemented for cross-client Host Adapter Turn Input/Result normalization and raw prompt redaction; Codex project-local hook now consumes the contract and renders the result summary, with GUI additionalContext contract-line smoke accepted; selected governed editing / write-capable MCP entry points now return semantic_intent_precondition when host_semantic_intent is missing and accept host_semantic_intent directly on re-call; host-specific wrappers/plugins remain future slices"
     impact_tags:
       - "strict_mounted_harness"
       - "host_adapter"
@@ -914,6 +914,8 @@ entries:
       - "CAP-MCP-SAMPLING-SEMANTIC-PROVIDER-01"
       - "CAP-POLICY-DISTRIBUTION-MVP-01"
       - "CAP-POLICY-DISTRIBUTION-REVIEW-01"
+      - "CAP-AGENT-FLOW-APPLY-POLICY-TEMPLATE-PUBLICATION-01"
+      - "CAP-AGENT-FLOW-APPLY-STARTER-MANIFEST-PUBLICATION-01"
       - "CAP-POLICY-MANAGEMENT-STATUS-READ-01"
     capability_extraction_status: "extracted_from_work_order_body"
     required_mount_sets: []
@@ -989,7 +991,9 @@ entries:
       - "CAP-POLICY-DISTRIBUTION-REVIEW-01"
       - "CAP-POLICY-MANAGEMENT-STATUS-READ-01"
       - "CAP-POLICY-TEMPLATE-PUBLICATION-01"
+      - "CAP-AGENT-FLOW-APPLY-POLICY-TEMPLATE-PUBLICATION-01"
       - "CAP-STARTER-MANIFEST-PUBLICATION-01"
+      - "CAP-AGENT-FLOW-APPLY-STARTER-MANIFEST-PUBLICATION-01"
     capability_extraction_status: "extracted_from_work_order_body"
     required_mount_sets:
       - "MOUNT-POLICY-MANAGEMENT-MVP"

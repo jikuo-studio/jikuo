@@ -143,8 +143,10 @@ first JIKUO invocation. Therefore the accepted hardening step is not a larger
 hook or an API call from the hook; it is a JIKUO tool response: selected
 governed editing / write-capable tool calls that lack valid semantic intent now
 receive a no-write `semantic_intent_precondition` / `precondition_unmet` card
-with the compact schema and a request to classify and re-call. Pure discussion
-fallback remains allowed.
+with the compact schema and a request to classify and re-call. Those selected
+proposal tools expose `host_semantic_intent`, so the host can re-call the same
+tool successfully after classification. Pure discussion fallback remains
+allowed.
 
 Semantic routing should map user intent to policy scope, not internal agent
 verbs directly:

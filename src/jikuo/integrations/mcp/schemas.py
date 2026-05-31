@@ -200,9 +200,13 @@ TOOL_DEFINITIONS: dict[str, dict[str, Any]] = {
     ),
     "jikuo.propose_task_start": _tool(
         name="jikuo.propose_task_start",
-        description="Build a no-write governed task-start proposal and runtime card.",
+        description=(
+            "Build a no-write governed task-start proposal and runtime card. "
+            f"{HOST_SEMANTIC_INTENT_ARGUMENT_GUIDANCE}"
+        ),
         input_fields={
             "project_root": LOCAL_ONLY,
+            "host_semantic_intent": REDACT_OPTIONAL,
             "task_title": RETURN,
             "task_type": RETURN,
             "jikuo_layer": RETURN,
@@ -212,14 +216,22 @@ TOOL_DEFINITIONS: dict[str, dict[str, Any]] = {
             "task_session_decision": RETURN,
             "task_session_defer_reason": REDACT_OPTIONAL,
         },
-        output_fields={"work_profile": RETURN},
+        output_fields={
+            "work_profile": RETURN,
+            "semantic_intent_evidence": RETURN,
+            "semantic_intent_precondition": RETURN,
+        },
         card_returning=True,
     ),
     "jikuo.propose_policy_write_plan": _tool(
         name="jikuo.propose_policy_write_plan",
-        description="Build a no-write project policy write plan for user review.",
+        description=(
+            "Build a no-write project policy write plan for user review. "
+            f"{HOST_SEMANTIC_INTENT_ARGUMENT_GUIDANCE}"
+        ),
         input_fields={
             "project_root": LOCAL_ONLY,
+            "host_semantic_intent": REDACT_OPTIONAL,
             "policy_ref": RETURN,
             "policy_title": RETURN,
             "policy_source_ref": REDACT_OPTIONAL,
@@ -233,14 +245,22 @@ TOOL_DEFINITIONS: dict[str, dict[str, Any]] = {
             "policy_action_type": RETURN,
             "policy_evidence_type": RETURN,
         },
-        output_fields={"work_profile": RETURN},
+        output_fields={
+            "work_profile": RETURN,
+            "semantic_intent_evidence": RETURN,
+            "semantic_intent_precondition": RETURN,
+        },
         card_returning=True,
     ),
     "jikuo.propose_policy_evolution_plan": _tool(
         name="jikuo.propose_policy_evolution_plan",
-        description="Build a no-write active-policy evolution plan for user review.",
+        description=(
+            "Build a no-write active-policy evolution plan for user review. "
+            f"{HOST_SEMANTIC_INTENT_ARGUMENT_GUIDANCE}"
+        ),
         input_fields={
             "project_root": LOCAL_ONLY,
+            "host_semantic_intent": REDACT_OPTIONAL,
             "policy_ref": RETURN,
             "policy_evolution_operation": RETURN,
             "feedback_type": RETURN,
@@ -256,17 +276,29 @@ TOOL_DEFINITIONS: dict[str, dict[str, Any]] = {
             "replacement_action_type": RETURN,
             "replacement_evidence_type": RETURN,
         },
-        output_fields={"work_profile": RETURN},
+        output_fields={
+            "work_profile": RETURN,
+            "semantic_intent_evidence": RETURN,
+            "semantic_intent_precondition": RETURN,
+        },
         card_returning=True,
     ),
     "jikuo.propose_policy_template_import_plan": _tool(
         name="jikuo.propose_policy_template_import_plan",
-        description="Build a no-write reusable policy template import plan for user review.",
+        description=(
+            "Build a no-write reusable policy template import plan for user review. "
+            f"{HOST_SEMANTIC_INTENT_ARGUMENT_GUIDANCE}"
+        ),
         input_fields={
             "project_root": LOCAL_ONLY,
+            "host_semantic_intent": REDACT_OPTIONAL,
             "template": RETURN,
         },
-        output_fields={"work_profile": RETURN},
+        output_fields={
+            "work_profile": RETURN,
+            "semantic_intent_evidence": RETURN,
+            "semantic_intent_precondition": RETURN,
+        },
         card_returning=True,
     ),
     "jikuo.propose_policy_distribution_review": _tool(
@@ -274,10 +306,12 @@ TOOL_DEFINITIONS: dict[str, dict[str, Any]] = {
         description=(
             "Build a no-write policy distribution review from a policy id, source policy path, "
             "or natural-language policy query. This does not publish templates, update starter "
-            "packs, or activate user-project policies."
+            "packs, or activate user-project policies. "
+            f"{HOST_SEMANTIC_INTENT_ARGUMENT_GUIDANCE}"
         ),
         input_fields={
             "project_root": LOCAL_ONLY,
+            "host_semantic_intent": REDACT_OPTIONAL,
             "policy_ref": RETURN,
             "source_policy": LOCAL_ONLY,
             "policy_query": REDACT_OPTIONAL,
@@ -288,6 +322,8 @@ TOOL_DEFINITIONS: dict[str, dict[str, Any]] = {
         },
         output_fields={
             "work_profile": RETURN,
+            "semantic_intent_evidence": RETURN,
+            "semantic_intent_precondition": RETURN,
             "policy_distribution_review": RETURN,
             "policy_distribution_source_resolution": RETURN,
         },
@@ -299,10 +335,12 @@ TOOL_DEFINITIONS: dict[str, dict[str, Any]] = {
             "Build a no-write package policy-template publication plan from a resolved "
             "policy id, source policy path, or natural-language policy query. This does "
             "not write package template files, update starter packs, or activate user "
-            "project policies."
+            "project policies. "
+            f"{HOST_SEMANTIC_INTENT_ARGUMENT_GUIDANCE}"
         ),
         input_fields={
             "project_root": LOCAL_ONLY,
+            "host_semantic_intent": REDACT_OPTIONAL,
             "policy_ref": RETURN,
             "source_policy": LOCAL_ONLY,
             "policy_query": REDACT_OPTIONAL,
@@ -315,6 +353,8 @@ TOOL_DEFINITIONS: dict[str, dict[str, Any]] = {
         },
         output_fields={
             "work_profile": RETURN,
+            "semantic_intent_evidence": RETURN,
+            "semantic_intent_precondition": RETURN,
             "policy_template_publication_plan": RETURN,
             "policy_distribution_source_resolution": RETURN,
         },
@@ -325,15 +365,19 @@ TOOL_DEFINITIONS: dict[str, dict[str, Any]] = {
         description=(
             "Build a no-write starter-pack manifest publication plan for one package "
             "policy template ref. This does not activate user-project policies or run "
-            "starter initialization."
+            "starter initialization. "
+            f"{HOST_SEMANTIC_INTENT_ARGUMENT_GUIDANCE}"
         ),
         input_fields={
             "project_root": LOCAL_ONLY,
+            "host_semantic_intent": REDACT_OPTIONAL,
             "template_ref": RETURN,
             "starter_pack_id": RETURN,
         },
         output_fields={
             "work_profile": RETURN,
+            "semantic_intent_evidence": RETURN,
+            "semantic_intent_precondition": RETURN,
             "starter_manifest_publication_plan": RETURN,
         },
         card_returning=True,

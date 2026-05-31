@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-AI-SEMROUTE-01: AI Semantic Routing MVP
 
-> **Status**: Design accepted; first projection slice implemented for short `user_expression`, MVP scope filtering, ordered `intent_slices` card rendering, Codex hook wording, no-write smoke for `semantic_intent_status=provided`, raw `user_phrase` redaction in trigger/router projections, local policy-distribution proof that host semantic scopes select different scope-aware policies, explicit Codex-host-AI semantic-intent transport proof, MCP Sampling unavailable proof, report-only `semantic_intent_classification_evidence`, accepted cooperative Codex GUI MCP router proof that `host_semantic_intent` can be exposed and passed, and no-write `semantic_intent_precondition` feedback for selected governed editing / write-capable MCP entry points. Automatic hook-time semantic classification, MCP Sampling provider support, and any evaluator expansion remain pending.
+> **Status**: Design accepted; first projection slice implemented for short `user_expression`, MVP scope filtering, ordered `intent_slices` card rendering, Codex hook wording, no-write smoke for `semantic_intent_status=provided`, raw `user_phrase` redaction in trigger/router projections, local policy-distribution proof that host semantic scopes select different scope-aware policies, explicit Codex-host-AI semantic-intent transport proof, MCP Sampling unavailable proof, report-only `semantic_intent_classification_evidence`, accepted cooperative Codex GUI MCP router proof that `host_semantic_intent` can be exposed and passed, no-write `semantic_intent_precondition` feedback for selected governed editing / write-capable MCP entry points, and direct `host_semantic_intent` passthrough on those proposal tools so the host can re-call successfully. Automatic hook-time semantic classification, MCP Sampling provider support, and any evaluator expansion remain pending.
 > **Date**: 2026-05-28
 > **JIKUO layer**: integration / policy distribution.
 > **Business meaning**: JIKUO should stay thin. The host AI understands the user's natural-language intent; JIKUO receives a compact semantic object, records it, explains policy routing, and keeps deterministic fallback honest.
@@ -293,6 +293,9 @@ Implementation boundary:
   write-capable entry points such as task start, policy write / evolution /
   template-publication plans, template import plans, and the Sampling semantic
   probe when Sampling is unavailable or invalid;
+- those selected proposal tools expose and pass through `host_semantic_intent`
+  directly, so the requested re-call can satisfy the precondition without
+  routing through a separate conversation tool first;
 - `route_user_request` remains a non-blocking router unless an internal caller
   explicitly opts into this precondition;
 - the Codex hook treats structured JIKUO refusal JSON as a successful mounted

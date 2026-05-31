@@ -151,6 +151,7 @@ def register_stage_a_tools(
         work_routing_summary: str | None = None,
         task_session_decision: str | None = None,
         task_session_defer_reason: str | None = None,
+        host_semantic_intent: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         return _call(
             "jikuo.propose_task_start",
@@ -167,6 +168,7 @@ def register_stage_a_tools(
                 "work_routing_summary": work_routing_summary,
                 "task_session_decision": task_session_decision,
                 "task_session_defer_reason": task_session_defer_reason,
+                "host_semantic_intent": host_semantic_intent,
             },
             default_transport=default_transport,
         )
@@ -189,6 +191,7 @@ def register_stage_a_tools(
         policy_work_profile_policy_scopes: list[str] | None = None,
         policy_action_type: str | None = None,
         policy_evidence_type: str | None = None,
+        host_semantic_intent: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         return _call(
             "jikuo.propose_policy_write_plan",
@@ -210,6 +213,7 @@ def register_stage_a_tools(
                 ),
                 "policy_action_type": policy_action_type,
                 "policy_evidence_type": policy_evidence_type,
+                "host_semantic_intent": host_semantic_intent,
             },
             default_transport=default_transport,
         )
@@ -236,6 +240,7 @@ def register_stage_a_tools(
         replacement_added_path_pattern: str | None = None,
         replacement_action_type: str | None = None,
         replacement_evidence_type: str | None = None,
+        host_semantic_intent: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         return _call(
             "jikuo.propose_policy_evolution_plan",
@@ -255,6 +260,7 @@ def register_stage_a_tools(
                 "replacement_added_path_pattern": replacement_added_path_pattern,
                 "replacement_action_type": replacement_action_type,
                 "replacement_evidence_type": replacement_evidence_type,
+                "host_semantic_intent": host_semantic_intent,
             },
             default_transport=default_transport,
         )
@@ -274,6 +280,7 @@ def register_stage_a_tools(
         source_project_ref: str | None = None,
         starter_pack_id: str | None = None,
         rationale: str | None = None,
+        host_semantic_intent: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         return _call(
             "jikuo.propose_policy_distribution_review",
@@ -286,6 +293,7 @@ def register_stage_a_tools(
                 "source_project_ref": source_project_ref,
                 "starter_pack_id": starter_pack_id,
                 "rationale": rationale,
+                "host_semantic_intent": host_semantic_intent,
             },
             default_transport=default_transport,
         )
@@ -307,6 +315,7 @@ def register_stage_a_tools(
         rationale: str | None = None,
         target_dir: str | None = None,
         namespace: str | None = None,
+        host_semantic_intent: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         return _call(
             "jikuo.propose_policy_template_publication_plan",
@@ -321,6 +330,7 @@ def register_stage_a_tools(
                 "rationale": rationale,
                 "target_dir": target_dir,
                 "namespace": namespace,
+                "host_semantic_intent": host_semantic_intent,
             },
             default_transport=default_transport,
         )
@@ -335,6 +345,7 @@ def register_stage_a_tools(
         project_root: str | None = None,
         template_ref: str | None = None,
         starter_pack_id: str | None = None,
+        host_semantic_intent: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         return _call(
             "jikuo.propose_starter_manifest_publication_plan",
@@ -342,6 +353,7 @@ def register_stage_a_tools(
                 "project_root": project_root,
                 "template_ref": template_ref,
                 "starter_pack_id": starter_pack_id,
+                "host_semantic_intent": host_semantic_intent,
             },
             default_transport=default_transport,
         )
@@ -355,10 +367,15 @@ def register_stage_a_tools(
     def jikuo_propose_policy_template_import_plan(
         project_root: str | None = None,
         template: str | None = None,
+        host_semantic_intent: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         return _call(
             "jikuo.propose_policy_template_import_plan",
-            {"project_root": project_root, "template": template},
+            {
+                "project_root": project_root,
+                "template": template,
+                "host_semantic_intent": host_semantic_intent,
+            },
             default_transport=default_transport,
         )
 
