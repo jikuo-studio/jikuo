@@ -1,0 +1,48 @@
+schema_version: "jikuo.policy_template.v0"
+template_id: "POLICYTEMPLATE-local-policy-jikuo-data-model-drift-alarm"
+namespace: "local"
+version: 1
+title: "Data-model drift alarm"
+source:
+  type: "local_project_policy"
+  ref: "redacted://local_project_policy/policy-jikuo-data-model-drift-alarm"
+  source_project_ref: "redacted"
+  source_policy_id: "POLICY-jikuo-data-model-drift-alarm"
+  source_sha256: "833f9121aa4c30c3a4ab23be374afc9b8af616b70964f784e1609240e5ef1647"
+  privacy:
+    local_path: "redacted"
+    project_identity: "redacted"
+    source_refs: "redacted"
+portability:
+  status: "portable"
+  detected_project_refs: []
+  warnings: []
+required_bindings: []
+template_policy:
+  schema_version: "jikuo.configurable_rule_policy.v0"
+  policy_id: "POLICY-jikuo-data-model-drift-alarm"
+  version: 1
+  status: "active_report_only"
+  title: "Data-model drift alarm"
+  scenario_package: "engineering_governance"
+  source_refs:
+    - type: "policy_template"
+      ref: "POLICYTEMPLATE-local-policy-jikuo-data-model-drift-alarm"
+  triggers:
+    - trigger_id: "TRG-conversation-turn"
+      type: "task_lifecycle_event"
+      event: "conversation_turn"
+  conditions: []
+  required_actions:
+    - action_id: "ACT-perform-data-model-boundary-review"
+      type: "perform_data_model_boundary_review"
+  required_evidence:
+    - evidence_id: "EVD-data-model-boundary-review-evidence"
+      type: "data_model_boundary_review_evidence"
+      satisfies_action: "ACT-perform-data-model-boundary-review"
+  enforcement:
+    phase: "report_only"
+    level: "review_required"
+  applies_to_work_profile:
+    - lifecycle_events: []
+      policy_scopes: ["editing"]

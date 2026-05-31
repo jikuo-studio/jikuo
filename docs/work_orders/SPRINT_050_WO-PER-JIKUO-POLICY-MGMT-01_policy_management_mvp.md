@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-POLICY-MGMT-01: Policy Management MVP
 
-> **Status**: Two held candidates activated as `active_report_only`; Policy Management MVP closeout design, no-write distribution review with GUI/MCP natural-language source resolution, guarded package-template publication CLI plus agent-flow/MCP bridge, guarded starter-pack manifest publication CLI plus agent-flow/MCP bridge, no-write policy-management status read model, and real-policy distribution smoke for `POLICY-jikuo-data-model-drift-alarm` implemented. Follow-up semantic-precondition hardening fixed the missing-intent gap found by that smoke.
+> **Status**: Two held candidates activated as `active_report_only`; Policy Management MVP closeout design, no-write distribution review with GUI/MCP natural-language source resolution, guarded package-template publication CLI plus agent-flow/MCP bridge, guarded starter-pack manifest publication CLI plus agent-flow/MCP bridge, no-write policy-management status read model, real-policy distribution smoke, and first real optional package-template publication for `POLICY-jikuo-data-model-drift-alarm` implemented. Follow-up semantic-precondition hardening fixed the missing-intent gap found by that smoke.
 > **Date**: 2026-05-18
 > **JIKUO layer**: policy governance / policy distribution.
 > **Business meaning**: JIKUO's first usable version needs the current user-authored candidate policies to enter active scope through the existing guarded flow, and it needs a clear official distribution boundary so useful policies can reach user projects without copying JIKUO dogfood policies or overwriting user-owned local policies.
@@ -49,6 +49,16 @@ precondition gap: missing `host_semantic_intent` on
 `semantic_intent_precondition`. The follow-up fix treats selected MCP proposal
 tools as tool-level semantic-contract entry points, so missing semantic intent
 is refused before no-write policy-management planning proceeds.
+
+Real publication note (2026-05-31): after explicit user approval, the guarded
+package-template publication path wrote
+`src/jikuo/policy_templates/engineering_governance/POLICYTEMPLATE-local-policy-jikuo-data-model-drift-alarm.yaml`.
+The policy-management read model now reports `package_template_count=5`,
+`POLICY-jikuo-data-model-drift-alarm` as
+`distribution_state=package_template_available`, and
+`included_in_starter_packs=[]`. This confirms the first reusable policy package
+asset can be published without mutating starter manifests or activating a user
+project.
 
 ---
 

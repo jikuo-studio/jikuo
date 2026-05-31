@@ -980,7 +980,7 @@ entries:
     title: "SPRINT_050_WO-PER-JIKUO-POLICY-MGMT-01: Policy Management MVP"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-POLICY-MGMT-01_policy_management_mvp.md"
     sprint: "SPRINT_050"
-    status: "Two held candidates activated as active_report_only; lightweight policy distribution and maintenance design documented; no-write distribution review with CLI, agent-flow proposal, MCP GUI surface, and natural-language policy_query source resolution implemented; guarded package-template publication CLI / agent-flow / MCP plan/apply implemented; guarded starter-pack manifest publication CLI / agent-flow / MCP plan/apply implemented; no-write policy-management status read model implemented; real-policy optional-template smoke for POLICY-jikuo-data-model-drift-alarm passed after selected-tool semantic-precondition hardening"
+    status: "Two held candidates activated as active_report_only; lightweight policy distribution and maintenance design documented; no-write distribution review with CLI, agent-flow proposal, MCP GUI surface, and natural-language policy_query source resolution implemented; guarded package-template publication CLI / agent-flow / MCP plan/apply implemented; guarded starter-pack manifest publication CLI / agent-flow / MCP plan/apply implemented; no-write policy-management status read model implemented; real-policy optional-template smoke passed and first real optional package template published for POLICY-jikuo-data-model-drift-alarm after selected-tool semantic-precondition hardening"
     impact_tags:
       - "policy_governance"
       - "policy_distribution"
