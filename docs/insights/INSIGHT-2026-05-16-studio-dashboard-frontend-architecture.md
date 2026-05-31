@@ -1,8 +1,8 @@
 # INSIGHT-2026-05-16: Studio And Dashboard Frontend Architecture
 
-> **Classification**: insight_only
-> **Status**: open
-> **Related future task**: `JIKUO-STUDIO-01`
+> **Classification**: promoted_to_task
+> **Status**: promoted
+> **Related task**: `JIKUO-STUDIO-01`
 
 ## Observation
 
@@ -228,10 +228,10 @@ Avoid:
 
 ## Routing Decision
 
-Keep this as `insight_only` for now.
+Promoted on 2026-05-31 into
+`docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md`.
 
-It should be mounted before future `JIKUO-STUDIO-01` planning, but it should not
-start implementation by itself. The immediate value is to preserve the design
-principle: Studio should be a modular projection and guarded control shell over
-JIKUO's canonical local state and stable tool contracts.
-
+The promoted task keeps the core insight: Studio should be a modular projection
+and guarded control shell over JIKUO's canonical local state and stable tool
+contracts. The promoted scope is explicitly JIKUO-wide, not a policy-management
+only frontend.

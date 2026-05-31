@@ -170,7 +170,11 @@ document_roles:
   studio_dashboard_frontend_architecture_insight:
     path: "docs/insights/INSIGHT-2026-05-16-studio-dashboard-frontend-architecture.md"
     required: false
-    note: "Mount before future JIKUO-STUDIO-01 dashboard / Studio architecture or implementation slices."
+    note: "Promoted into JIKUO-STUDIO-01; mount before dashboard / Studio architecture or implementation slices."
+  studio_global_console_work_order:
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md"
+    required: false
+    note: "Global JIKUO console / Studio design anchor: view-model first, action registry second, thin local UI third; not a policy-only frontend."
   structured_execution_event_ledger_work_order:
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-DATA-01_structured_execution_event_ledger_and_analytics_contract.md"
     required: true

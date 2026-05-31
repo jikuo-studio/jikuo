@@ -1191,6 +1191,25 @@ entries:
     implements_capabilities: []
     capability_extraction_status: "no_capability_refs_found"
     required_mount_sets: []
+  - id: "JIKUO-STUDIO-01"
+    title: "SPRINT_050_WO-PER-JIKUO-STUDIO-01: Global Console And Configuration Shell"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md"
+    sprint: "SPRINT_050"
+    status: "Planned; design anchor accepted for a JIKUO-wide thin frontend / global console. First implementation should start with no-write global status read model, then panel/action registry, then local read-only console."
+    impact_tags:
+      - "studio"
+      - "frontend"
+      - "configuration"
+      - "runtime_visibility"
+      - "policy_distribution"
+    implements_capabilities:
+      - "CAP-STUDIO-GLOBAL-STATUS-READ-MODEL-01"
+      - "CAP-STUDIO-PANEL-REGISTRY-01"
+      - "CAP-STUDIO-ACTION-REGISTRY-01"
+      - "CAP-STUDIO-LOCAL-CONSOLE-SHELL-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets:
+      - "MOUNT-STUDIO-01"
   - id: "JIKUO-UX-00"
     title: "SPRINT_050_WO-PER-JIKUO-UX-00: User Scenarios And Atomic Action Map"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-UX-00_user_scenarios_and_atomic_action_map.md"
