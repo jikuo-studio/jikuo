@@ -291,8 +291,12 @@ Implementation boundary:
   development and diagnostics;
 - the MCP adapter enables the precondition for selected governed editing /
   write-capable entry points such as task start, policy write / evolution /
-  template-publication plans, template import plans, and the Sampling semantic
-  probe when Sampling is unavailable or invalid;
+  distribution review, template-publication plans, template import plans, and
+  the Sampling semantic probe when Sampling is unavailable or invalid;
+- for those selected MCP proposal entry points, the precondition is a
+  tool-level contract: missing `host_semantic_intent` is refused even if the
+  deterministic fallback projection would otherwise report
+  `semantic_intent_evidence.status=not_required`;
 - those selected proposal tools expose and pass through `host_semantic_intent`
   directly, so the requested re-call can satisfy the precondition without
   routing through a separate conversation tool first;
@@ -437,6 +441,13 @@ This accepts the cooperative re-call path for selected MCP proposal tools: a
 host can satisfy the semantic precondition in the same proposal surface instead
 of detouring through a router-only call. It still does not prove automatic
 hook-time semantic classification.
+
+A follow-up real-policy distribution smoke found and fixed a narrower
+precondition gap: `jikuo.propose_policy_distribution_review` without
+`host_semantic_intent` had continued as `status=review` with
+`semantic_intent_evidence.status=not_required`. The fix makes selected MCP
+proposal tools force semantic intent as a tool-level precondition before
+falling back to their deterministic low-risk projection.
 
 A local UTF-8 follow-up proof was accepted after the pasted GUI proof showed
 mojibake in Chinese semantic contract fields:

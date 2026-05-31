@@ -454,6 +454,40 @@ class MCPStageAAdapterTests(unittest.TestCase):
             )
             self.assertEqual(satisfied["semantic_intent_evidence"]["status"], "ok")
 
+    def test_policy_distribution_review_requires_host_semantic_intent_for_mcp_proposal(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = copy_fixture(POLICY_ACTIVE_PROJECT, tmp)
+
+            missing = adapter.call_tool(
+                "jikuo.propose_policy_distribution_review",
+                {
+                    "project_root": str(project_root),
+                    "policy_ref": "POLICY-three-phase-audit",
+                    "distribution_decision": "optional_template",
+                },
+            )
+            satisfied = adapter.call_tool(
+                "jikuo.propose_policy_distribution_review",
+                {
+                    "project_root": str(project_root),
+                    "policy_ref": "POLICY-three-phase-audit",
+                    "distribution_decision": "optional_template",
+                    "host_semantic_intent": editing_host_semantic_intent(),
+                },
+            )
+
+            self.assertEqual(missing["status"], "refused")
+            self.assertEqual(missing["semantic_intent_evidence"]["status"], "missing")
+            self.assertTrue(missing["semantic_intent_evidence"]["required"])
+            self.assertIn(
+                "selected_mcp_entry_point_requires_host_semantic_intent",
+                missing["semantic_intent_evidence"]["reasons"],
+            )
+            self.assertEqual(missing["semantic_intent_precondition"]["status"], "refused")
+            self.assertNotEqual(satisfied["status"], "refused")
+            self.assertNotIn("semantic_intent_precondition", satisfied)
+            self.assertEqual(satisfied["semantic_intent_evidence"]["status"], "ok")
+
     def test_local_stdio_transport_can_return_local_paths(self):
         with tempfile.TemporaryDirectory() as tmp:
             project_root = copy_fixture(POLICY_ACTIVE_PROJECT, tmp)

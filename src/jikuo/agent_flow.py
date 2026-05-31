@@ -312,6 +312,39 @@ def semantic_intent_precondition_unmet(
     ) in {"missing", "fallback_only"}
 
 
+def semantic_intent_evidence_with_precondition_required(
+    semantic_intent_evidence: dict[str, Any],
+) -> dict[str, Any]:
+    """Require host semantic intent for selected MCP proposal entry points."""
+
+    if not isinstance(semantic_intent_evidence, dict):
+        semantic_intent_evidence = {}
+    semantic_status = str(
+        semantic_intent_evidence.get("semantic_intent_status") or "unavailable"
+    )
+    if semantic_status == "provided":
+        return semantic_intent_evidence
+
+    updated = dict(semantic_intent_evidence)
+    reasons = [
+        str(item)
+        for item in (updated.get("reasons") or [])
+        if str(item).strip()
+    ]
+    if "selected_mcp_entry_point_requires_host_semantic_intent" not in reasons:
+        reasons.append("selected_mcp_entry_point_requires_host_semantic_intent")
+    updated["required"] = True
+    updated["status"] = (
+        "fallback_only" if semantic_status == "heuristic_fallback" else "missing"
+    )
+    updated["semantic_intent_status"] = semantic_status
+    updated["provider"] = str(updated.get("provider") or "unavailable")
+    updated["reason"] = ",".join(reasons)
+    updated["reasons"] = reasons
+    updated["followup"] = "provide_host_semantic_intent_and_rerun_route"
+    return updated
+
+
 def build_semantic_intent_precondition_card(
     *,
     work_profile_projection: dict[str, Any],
@@ -4008,6 +4041,11 @@ def build_proposal(
     semantic_intent_evidence = (
         work_profile_projection.get("semantic_intent_evidence") or {}
     )
+    if enforce_semantic_intent_precondition:
+        semantic_intent_evidence = semantic_intent_evidence_with_precondition_required(
+            semantic_intent_evidence
+        )
+        work_profile_projection["semantic_intent_evidence"] = semantic_intent_evidence
     if semantic_basis.get("status") in {"provided", "heuristic_fallback"}:
         traces.append(
             atom_trace(
