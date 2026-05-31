@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-CODEX-PLUGIN-01: Codex Plugin Pre-Turn Harness Review
 
-> **Status**: Level 1 project-local proof files implemented and local stdin smoke passed; host semantic-intent input and work-profile merge path implemented for CLI / MCP / Codex hook proof; MCP Sampling semantic-provider probe implemented as an optional client-mediated proof path; AI semantic routing MVP contract anchored in `JIKUO-AI-SEMROUTE-01`; official Codex hook surface reviewed on 2026-05-19; Codex GUI `additionalContext` visibility has been observed; a 2026-05-28 GUI probe exposed nested-Python subprocess timeout, so the hook now defaults to in-process JIKUO invocation; fresh GUI smoke accepted the in-process pre-turn additionalContext path and later confirmed the Host Adapter contract line in `additionalContext`; host-time semantic provider acceptance, multi-intent semantic proof, and full lifecycle strict-mounted acceptance still pending.
+> **Status**: Level 1 project-local proof files implemented and local stdin smoke passed; host semantic-intent input and work-profile merge path implemented for CLI / MCP / Codex hook proof; MCP Sampling semantic-provider probe implemented as an optional client-mediated proof path; AI semantic routing MVP contract anchored in `JIKUO-AI-SEMROUTE-01`; official Codex hook surface reviewed on 2026-05-19; Codex GUI `additionalContext` visibility has been observed; a 2026-05-28 GUI probe exposed nested-Python subprocess timeout, so the hook now defaults to in-process JIKUO invocation; fresh GUI smoke accepted the in-process pre-turn additionalContext path and later confirmed the Host Adapter contract line in `additionalContext`; semantic-routing review says the next minimal hardening is tool-side `precondition_unmet` feedback for governed editing / write-capable calls missing `host_semantic_intent`; host-time semantic provider acceptance, multi-intent semantic proof, and full lifecycle strict-mounted acceptance still pending.
 > **Date**: 2026-05-16
 > **Product meaning**: Determine whether a Codex plugin can make JIKUO run before every user turn, or whether it should only ship as an instruction / MCP setup aid. This prevents JIKUO from claiming strict mounted behavior that Codex cannot actually enforce.
 
@@ -136,6 +136,14 @@ The intended cooperation model is:
 The hook must not directly decide which policies apply. It may provide or
 request semantic classification, but JIKUO remains the policy-distribution
 authority.
+
+The current Codex hook can only remind the host AI to classify future tool
+calls. It cannot force the model to produce `host_semantic_intent` before the
+first JIKUO invocation. Therefore the accepted next hardening step is not a
+larger hook or an API call from the hook; it is a JIKUO tool response:
+governed editing / write-capable tool calls that lack valid semantic intent
+should receive a no-write `precondition_unmet` card with the compact schema and
+a request to classify and re-call. Pure discussion fallback remains allowed.
 
 Semantic routing should map user intent to policy scope, not internal agent
 verbs directly:

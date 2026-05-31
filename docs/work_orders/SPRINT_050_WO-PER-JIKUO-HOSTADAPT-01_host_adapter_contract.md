@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-HOSTADAPT-01: Host Adapter Contract
 
-> **Status**: Contract scaffold implemented for cross-client input/result normalization, raw prompt redaction, Codex project-local hook consumption, and Codex GUI contract-line projection proof. Host-specific wrappers/plugins remain future slices.
+> **Status**: Contract scaffold implemented for cross-client input/result normalization, raw prompt redaction, Codex project-local hook consumption, and Codex GUI contract-line projection proof. External semantic-routing review records one remaining contract gap: missing `host_semantic_intent` is visible but not yet tool-enforced for governed editing / write-capable entry points. Host-specific wrappers/plugins remain future slices.
 > **Date**: 2026-05-28
 > **JIKUO layer**: integration / strict mounted harness.
 > **Business meaning**: JIKUO should be portable across Codex, Claude, Cursor, VS Code, and future wrappers without baking one client's hook behavior into the core governance model.
@@ -110,6 +110,25 @@ Do not collapse these levels. A Codex hook that injects `additionalContext`
 does not prove host-time semantic classification. A Sampling response does not
 prove pre-turn strict mounting.
 
+## 5.1 Semantic Contract Enforcement Gap
+
+The host adapter contract currently transports semantic intent when supplied
+and honestly reports `semantic_intent_status=unavailable` when it is missing.
+That is correct but incomplete for governed editing / write-capable work.
+
+The accepted follow-up is a tool-side precondition, not a thicker adapter:
+
+- if a pure discussion turn lacks `host_semantic_intent`, the adapter may allow
+  deterministic fallback and report the degraded basis;
+- if a governed editing / write-capable entry point lacks valid
+  `host_semantic_intent`, JIKUO should return a no-write
+  `precondition_unmet` result with the compact schema and ask the host AI to
+  classify and re-call;
+- this precondition must not call a model, decide policy applicability, or
+  persist raw prompt text;
+- wrapper / plugin work remains future work after this lighter contract is
+  tried in real GUI / MCP use.
+
 ## 6. Codex Implementation Path
 
 ### Current accepted path: project-local hook
@@ -194,6 +213,9 @@ hooks, but it should reuse the same contract fields.
   smoke proves it.
 - Do not claim L4 strict lifecycle acceptance until pre-turn and
   completion-review cards are linked for the same governed work.
+- Do not treat `semantic_intent_status=unavailable` as acceptable for governed
+  editing / write-capable tool calls once the `precondition_unmet` follow-up is
+  implemented; return the precondition card instead.
 
 ## 8. Acceptance Criteria
 

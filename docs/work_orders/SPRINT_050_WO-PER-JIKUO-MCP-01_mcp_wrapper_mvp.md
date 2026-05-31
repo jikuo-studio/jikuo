@@ -184,6 +184,19 @@ This slice must not implement:
 | Apply approved policy-template activation | Agent calls `jikuo.apply_policy_template_activation` with template path, confirmation, and approval phrase | `CAP-POLICY-TEMPLATE-ACTIVATE-01`, `CAP-AGENT-FLOW-APPLY-POLICY-TEMPLATE-ACTIVATION-01` | guarded write only after bindings resolve |
 | Probe client semantic sampling | Agent calls `jikuo.probe_sampling_semantic_intent`; MCP server requests `sampling/createMessage` from the client when supported, then routes through JIKUO | `CAP-MCP-SAMPLING-SEMANTIC-PROVIDER-01`, `CAP-HOST-SEMANTIC-INTENT-WORK-PROFILE-01`, `CAP-CONVERSATION-TURN-ROUTER-01` | no governance write; not strict mounted proof; prompt echoes must be redacted from returned proof data |
 
+Semantic-intent precondition follow-up:
+
+- MCP Sampling remains probe / optional classifier evidence, not the main
+  semantic provider.
+- For pure discussion tools, `semantic_intent_status=unavailable` may continue
+  as honest fallback.
+- For governed editing / write-capable entry points, a future no-write
+  `precondition_unmet` response should ask the host AI to provide compact
+  `host_semantic_intent` and re-call before JIKUO proceeds with the plan or
+  guarded publication path.
+- This follow-up must not change evaluator inputs, call a model inside the MCP
+  adapter, or make deterministic keyword routing look like AI semantic routing.
+
 ## 7. Implementation Plan
 
 Recommended implementation slices:

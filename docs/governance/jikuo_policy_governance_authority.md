@@ -437,6 +437,14 @@ current `work_profile`. Pure `discussion` turns may remain fallback-only, while
 `status=missing` or `fallback_only` and a follow-up to rerun routing with
 compact `host_semantic_intent`.
 
+Current architecture review conclusion: the main gap is contract enforcement,
+not the scope taxonomy. The next minimal hardening should turn missing semantic
+intent for governed editing / write-capable entry points into a no-write
+`precondition_unmet` tool response that asks the host AI to classify and
+re-call with compact `host_semantic_intent`. This should not affect pure
+discussion fallback, should not call a model from JIKUO, should not expand
+evaluator inputs, and should not change the MVP scope set.
+
 The two held user-authored policy candidates are examples of process-contract
 policy needs:
 
