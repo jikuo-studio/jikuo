@@ -249,11 +249,13 @@ def _proposal_response(
     arguments: dict[str, Any],
     project_root: Path | None,
     transport: str,
+    enforce_semantic_intent_precondition: bool = False,
     **kwargs: Any,
 ) -> dict[str, Any]:
     proposal = agent_flow.build_proposal(
         raw_event=raw_event,
         project_root=project_root,
+        enforce_semantic_intent_precondition=enforce_semantic_intent_precondition,
         **kwargs,
     )
     with_markdown = agent_flow.proposal_with_chat_ready_markdown(
@@ -277,6 +279,7 @@ def _proposal_response(
         if not isinstance(card, dict):
             continue
         for key in (
+            "semantic_intent_precondition",
             "policy_distribution_review",
             "policy_distribution_source_resolution",
             "policy_template_publication_plan",
@@ -284,6 +287,8 @@ def _proposal_response(
         ):
             if isinstance(card.get(key), dict):
                 response[key] = card[key]
+        if card.get("card_kind") == "semantic_intent_precondition":
+            response["semantic_intent_precondition"] = card
     return response
 
 
@@ -329,6 +334,7 @@ def _conversation_turn_response(
     arguments: dict[str, Any],
     project_root: Path | None,
     transport: str,
+    enforce_semantic_intent_precondition: bool = False,
 ) -> dict[str, Any]:
     response = _proposal_response(
         tool_name=tool_name,
@@ -336,6 +342,7 @@ def _conversation_turn_response(
         arguments=arguments,
         project_root=project_root,
         transport=transport,
+        enforce_semantic_intent_precondition=enforce_semantic_intent_precondition,
         user_phrase=arguments.get("user_phrase"),
         host_semantic_intent=arguments.get("host_semantic_intent"),
         trigger_mode=arguments.get("trigger_mode"),
@@ -411,6 +418,7 @@ def _sampling_semantic_unavailable_response(
         arguments=route_args,
         project_root=project_root,
         transport=transport,
+        enforce_semantic_intent_precondition=True,
     )
     return sampling_semantic.attach_sampling_result(
         response,
@@ -1100,6 +1108,7 @@ def call_tool(
             arguments=args,
             project_root=resolved_root,
             transport=resolved_transport,
+            enforce_semantic_intent_precondition=True,
             task_title=args.get("task_title"),
             session_id=args.get("session_id"),
             task_type=args.get("task_type"),
@@ -1122,6 +1131,7 @@ def call_tool(
             arguments=args,
             project_root=resolved_root,
             transport=resolved_transport,
+            enforce_semantic_intent_precondition=True,
             policy_ref=args.get("policy_ref"),
             policy_title=args.get("policy_title"),
             policy_source_ref=args.get("policy_source_ref"),
@@ -1149,6 +1159,7 @@ def call_tool(
             arguments=args,
             project_root=resolved_root,
             transport=resolved_transport,
+            enforce_semantic_intent_precondition=True,
             policy_ref=args.get("policy_ref"),
             policy_evolution_operation=str(
                 args.get("policy_evolution_operation") or "refine_policy"
@@ -1180,6 +1191,7 @@ def call_tool(
             arguments=args,
             project_root=resolved_root,
             transport=resolved_transport,
+            enforce_semantic_intent_precondition=True,
             policy_ref=args.get("policy_ref"),
             distribution_source_policy_path=_path_or_none(args.get("source_policy")),
             distribution_policy_query=args.get("policy_query"),
@@ -1216,6 +1228,7 @@ def call_tool(
             arguments=args,
             project_root=resolved_root,
             transport=resolved_transport,
+            enforce_semantic_intent_precondition=True,
             template_ref=args.get("template_ref"),
             starter_pack_id=str(args.get("starter_pack_id") or "engineering_governance"),
         )
@@ -1227,6 +1240,7 @@ def call_tool(
             arguments=args,
             project_root=resolved_root,
             transport=resolved_transport,
+            enforce_semantic_intent_precondition=True,
             template_path=_path_or_none(args.get("template")),
         )
 
@@ -1295,6 +1309,9 @@ def call_tool(
             arguments=args,
             project_root=resolved_root,
             transport=resolved_transport,
+            enforce_semantic_intent_precondition=bool(
+                args.get("enforce_semantic_intent_precondition")
+            ),
         )
 
     if tool_name == "jikuo.probe_sampling_semantic_intent":

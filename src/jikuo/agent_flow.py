@@ -62,6 +62,7 @@ TRIGGER_MODES = {"mounted", "semantic"}
 GOVERNANCE_PATHS = {"core_debug", "mcp"}
 CARD_PRIORITY_ORDER = [
     "policy_runtime_status",
+    "semantic_intent_precondition",
     "conversation_turn_router",
     "configuration_review",
     "policy_suggestion_review",
@@ -234,6 +235,7 @@ NO_WRITE_ATOMS = {
     "CAP-PROACTIVE-POLICY-SUGGESTION-REVIEW-01",
     "CAP-HOST-SEMANTIC-INTENT-WORK-PROFILE-01",
     "CAP-SEMANTIC-INTENT-CLASSIFICATION-EVIDENCE-01",
+    "CAP-SEMANTIC-INTENT-PRECONDITION-01",
 }
 
 
@@ -298,6 +300,63 @@ def generic_card(
             ],
         },
     }
+
+
+def semantic_intent_precondition_unmet(
+    semantic_intent_evidence: dict[str, Any],
+) -> bool:
+    """Return true when governed work needs host semantic intent before proceeding."""
+
+    return bool(semantic_intent_evidence.get("required")) and str(
+        semantic_intent_evidence.get("status") or ""
+    ) in {"missing", "fallback_only"}
+
+
+def build_semantic_intent_precondition_card(
+    *,
+    work_profile_projection: dict[str, Any],
+    semantic_intent_evidence: dict[str, Any],
+) -> dict[str, Any]:
+    scopes = work_profile_projection.get("policy_scopes") or []
+    reasons = semantic_intent_evidence.get("reasons") or []
+    return generic_card(
+        card_kind="semantic_intent_precondition",
+        status="refused",
+        title="Semantic intent precondition unmet",
+        summary=(
+            "Governed editing or write-capable work needs compact "
+            "host_semantic_intent before JIKUO proceeds."
+        ),
+        shown_inputs=[
+            f"semantic_intent_status: {semantic_intent_evidence.get('semantic_intent_status')}",
+            f"semantic_intent_evidence_status: {semantic_intent_evidence.get('status')}",
+            f"required: {str(semantic_intent_evidence.get('required')).lower()}",
+            f"reason: {semantic_intent_evidence.get('reason')}",
+            f"policy_scopes: {', '.join(str(item) for item in scopes) or 'none'}",
+            f"required_reasons: {', '.join(str(item) for item in reasons) or 'none'}",
+        ],
+        shown_outputs=[
+            (
+                'minimum_host_semantic_intent: {"schema":"jikuo.host_semantic_intent.v0",'
+                '"status":"provided","provider":"host_ai","policy_scopes":["discussion|editing|progress_summary"],'
+                '"requested_outcome":"compact outcome","execution_boundary":"allowed or blocked effects",'
+                '"response_contract":["what the answer must report"],"user_expression":"short phrase only"}'
+            ),
+            "pure_discussion_fallback: allowed",
+            "evaluator_effect: none; this does not expand policy evaluator inputs",
+        ],
+        refusal_reasons=[
+            "host_semantic_intent_required_for_governed_work",
+            "semantic_intent_missing_or_fallback_only",
+        ],
+        next_actions=[
+            (
+                "classify the user request and re-call the same JIKUO tool with "
+                "compact host_semantic_intent"
+            ),
+            "do not include the raw prompt or transcript in host_semantic_intent",
+        ],
+    )
 
 
 def build_policy_context(
@@ -3749,6 +3808,7 @@ def build_proposal(
     governance_path: str | None = None,
     host_semantic_intent: dict[str, Any] | None = None,
     produced_evidence: list[dict[str, Any]] | None = None,
+    enforce_semantic_intent_precondition: bool = False,
     work_routing_category: str | None = None,
     work_routing_summary: str | None = None,
     task_session_decision: str | None = None,
@@ -3974,6 +4034,29 @@ def build_proposal(
                 ),
             )
         )
+    if enforce_semantic_intent_precondition and semantic_intent_precondition_unmet(
+        semantic_intent_evidence
+    ):
+        cards.append(
+            build_semantic_intent_precondition_card(
+                work_profile_projection=work_profile_projection,
+                semantic_intent_evidence=semantic_intent_evidence,
+            )
+        )
+        traces.append(
+            atom_trace(
+                loop_step_id="DPL-05",
+                atom_id="CAP-SEMANTIC-INTENT-PRECONDITION-01",
+                mode="no-write",
+                status="refused",
+                summary=(
+                    "returned a no-write precondition card requiring compact "
+                    "host_semantic_intent before governed editing or "
+                    "write-capable MCP entry points proceed"
+                ),
+            )
+        )
+        refusals.append("semantic_intent_precondition_unmet")
     if work_routing:
         traces.append(
             atom_trace(

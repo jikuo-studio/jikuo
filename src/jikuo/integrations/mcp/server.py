@@ -648,6 +648,7 @@ def register_sampling_tools(
                 "trigger_mode": trigger_mode,
                 "task_title": task_title,
                 "summary": summary,
+                "enforce_semantic_intent_precondition": True,
             },
             default_transport=default_transport,
         )

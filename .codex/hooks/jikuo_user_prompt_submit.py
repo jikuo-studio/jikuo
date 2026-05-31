@@ -328,17 +328,22 @@ def run_agent_flow_subprocess(
             f"after {timeout_from_env(process_env)}s; python={command[0]}"
         ) from exc
 
-    if completed.returncode != 0:
-        stderr = (completed.stderr or "").strip().splitlines()
-        detail = stderr[-1] if stderr else "no stderr"
-        raise HookExecutionError(f"JIKUO command failed with exit {completed.returncode}: {detail}")
-
     try:
         result = json.loads(completed.stdout)
     except json.JSONDecodeError as exc:
+        if completed.returncode != 0:
+            stderr = (completed.stderr or "").strip().splitlines()
+            detail = stderr[-1] if stderr else "no stderr"
+            raise HookExecutionError(
+                f"JIKUO command failed with exit {completed.returncode}: {detail}"
+            ) from exc
         raise HookExecutionError("JIKUO command did not return JSON") from exc
     if not isinstance(result, dict):
         raise HookExecutionError("JIKUO command returned a non-object JSON value")
+    if completed.returncode != 0 and "status" not in result:
+        stderr = (completed.stderr or "").strip().splitlines()
+        detail = stderr[-1] if stderr else "no stderr"
+        raise HookExecutionError(f"JIKUO command failed with exit {completed.returncode}: {detail}")
     return result
 
 
@@ -415,6 +420,22 @@ def _required_followup_tools(proposal: dict[str, Any]) -> list[str]:
     return [str(item) for item in tools if item]
 
 
+def _semantic_intent_precondition_lines(proposal: dict[str, Any]) -> list[str]:
+    card = proposal.get("semantic_intent_precondition")
+    if not isinstance(card, dict):
+        return []
+    status = _string_or_none(card.get("status")) or "unknown"
+    summary = _string_or_none(card.get("user_facing_summary")) or "host semantic intent is required"
+    next_actions = card.get("next_actions")
+    action = None
+    if isinstance(next_actions, list) and next_actions:
+        action = str(next_actions[0])
+    lines = [f"Semantic intent precondition: {status}; {summary}"]
+    if action:
+        lines.append(f"Semantic intent required action: {action}.")
+    return lines
+
+
 def render_additional_context(
     proposal: dict[str, Any],
     hook_input: HookInput,
@@ -449,6 +470,7 @@ def render_additional_context(
             f"user_turn_summary_status={host_adapter_input.get('user_turn_summary_status')}."
         ),
         semantic_classification_note(semantic_intent_status),
+        *_semantic_intent_precondition_lines(proposal),
         (
             "Host semantic intent contract: before calling JIKUO router tools for "
             "this turn, classify the request when you have enough context and pass "

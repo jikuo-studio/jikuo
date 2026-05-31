@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-INTG-03: Strict Mounted Harness Adapter Contract
 
-> **Status**: Contract / planning accepted; AI semantic routing MVP design is anchored in `JIKUO-AI-SEMROUTE-01`; cross-client host adapter input/result scaffolding is anchored in `JIKUO-HOSTADAPT-01`; host-specific wrappers/plugins remain deferred to client proof and later adapter slices.
+> **Status**: Contract / planning accepted; AI semantic routing MVP design is anchored in `JIKUO-AI-SEMROUTE-01`; cross-client host adapter input/result scaffolding is anchored in `JIKUO-HOSTADAPT-01`; selected governed editing / write-capable MCP entry points now implement no-write semantic-intent precondition feedback; host-specific wrappers/plugins remain deferred to client proof and later adapter slices.
 > **Product meaning**: users who choose mounted mode should get real pre-turn JIKUO execution, not just an instruction that the host Agent may or may not follow.
 > **Boundary**: this slice defines the adapter contract. It does not implement a Claude hook, Codex plugin, Cursor extension, VS Code extension, Studio proxy, or Agent SDK wrapper.
 
@@ -165,13 +165,14 @@ the main guarantee. Future wrapper / plugin work should reuse the same
 `host_semantic_intent` contract rather than inventing a client-specific
 semantic payload.
 
-The accepted minimum enforcement follow-up is a tool round-trip, not a new
-classifier layer. When a governed editing / write-capable JIKUO entry point is
-called without valid `host_semantic_intent`, the tool should return a no-write
-`precondition_unmet` card that shows the compact schema and asks the host AI to
-classify and re-call. Pure discussion turns may continue with deterministic
-fallback. This makes the contract actionable without making the adapter call a
-model or decide policy applicability.
+The accepted minimum enforcement is a tool round-trip, not a new classifier
+layer. When a selected governed editing / write-capable JIKUO MCP entry point
+is called without valid `host_semantic_intent`, the tool returns a no-write
+`semantic_intent_precondition` / `precondition_unmet` card that shows the
+compact schema and asks the host AI to classify and re-call. Pure discussion
+turns may continue with deterministic fallback. This makes the contract
+actionable without making the adapter call a model or decide policy
+applicability.
 
 Multi-intent turns are normal and must be modeled explicitly. One user turn has
 one lifecycle position, but it may contain multiple intent slices:
@@ -346,8 +347,8 @@ Minimum observable artifacts for an end-to-end proof:
 - If host AI semantic intent is unavailable, the client records
   `semantic_intent_status=unavailable` and JIKUO may use deterministic fallback;
   this must not be described as AI-semantic routing.
-- Once the semantic precondition follow-up is implemented, governed editing /
-  write-capable entry points without valid `host_semantic_intent` return
+- Selected governed editing / write-capable entry points without valid
+  `host_semantic_intent` return `semantic_intent_precondition` /
   `precondition_unmet` instead of silently proceeding as if classification were
   complete.
 - If one user instruction contains discussion, editing, and summary intents,

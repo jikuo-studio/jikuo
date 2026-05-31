@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-AI-SEMROUTE-01: AI Semantic Routing MVP
 
-> **Status**: Design accepted; first projection slice implemented for short `user_expression`, MVP scope filtering, ordered `intent_slices` card rendering, Codex hook wording, no-write smoke for `semantic_intent_status=provided`, raw `user_phrase` redaction in trigger/router projections, local policy-distribution proof that host semantic scopes select different scope-aware policies, explicit Codex-host-AI semantic-intent transport proof, MCP Sampling unavailable proof, report-only `semantic_intent_classification_evidence`, and accepted cooperative Codex GUI MCP router proof that `host_semantic_intent` can be exposed and passed. External architecture review accepted the thin-host boundary and identified the next design focus as tool-side `precondition_unmet` feedback for governed editing / write-capable entry points when `host_semantic_intent` is missing. Automatic hook-time semantic classification, MCP Sampling provider support, and any evaluator expansion remain pending.
+> **Status**: Design accepted; first projection slice implemented for short `user_expression`, MVP scope filtering, ordered `intent_slices` card rendering, Codex hook wording, no-write smoke for `semantic_intent_status=provided`, raw `user_phrase` redaction in trigger/router projections, local policy-distribution proof that host semantic scopes select different scope-aware policies, explicit Codex-host-AI semantic-intent transport proof, MCP Sampling unavailable proof, report-only `semantic_intent_classification_evidence`, accepted cooperative Codex GUI MCP router proof that `host_semantic_intent` can be exposed and passed, and no-write `semantic_intent_precondition` feedback for selected governed editing / write-capable MCP entry points. Automatic hook-time semantic classification, MCP Sampling provider support, and any evaluator expansion remain pending.
 > **Date**: 2026-05-28
 > **JIKUO layer**: integration / policy distribution.
 > **Business meaning**: JIKUO should stay thin. The host AI understands the user's natural-language intent; JIKUO receives a compact semantic object, records it, explains policy routing, and keeps deterministic fallback honest.
@@ -250,12 +250,12 @@ This keeps the shell thin while making missing classification visible. Future
 work may promote this from report-only to blocking once GUI / wrapper proof
 shows a reliable host-time semantic provider.
 
-## 11.1 Contract Enforcement Follow-up
+## 11.1 Contract Enforcement
 
 The current weakness is not the scope taxonomy or evaluator boundary. It is the
 softness of the host semantic-intent contract: when the host does not provide
-`host_semantic_intent`, JIKUO currently records `unavailable` / `missing` but
-does not force a tool round-trip that the host must address.
+`host_semantic_intent`, a purely report-only path can record `unavailable` /
+`missing` without creating a tool round-trip that the host must address.
 
 Accepted architecture-review direction:
 
@@ -269,7 +269,7 @@ Accepted architecture-review direction:
 - do not build wrapper / plugin work merely to solve this until the lighter
   contract path has been tried.
 
-Minimum next design slice:
+Implemented minimum slice:
 
 ```text
 governed editing / write-capable tool call
@@ -282,6 +282,22 @@ This is not an action executor and not an evaluator change. It is a tool-level
 feedback contract that makes the missing semantic input visible and actionable
 inside the same GUI / MCP round trip. Pure discussion turns may continue using
 deterministic fallback without blocking.
+
+Implementation boundary:
+
+- `agent_flow` owns the reusable `semantic_intent_precondition` card builder
+  and no-write atom trace;
+- core / CLI proposal paths keep report-only semantic evidence by default for
+  development and diagnostics;
+- the MCP adapter enables the precondition for selected governed editing /
+  write-capable entry points such as task start, policy write / evolution /
+  template-publication plans, template import plans, and the Sampling semantic
+  probe when Sampling is unavailable or invalid;
+- `route_user_request` remains a non-blocking router unless an internal caller
+  explicitly opts into this precondition;
+- the Codex hook treats structured JIKUO refusal JSON as a successful mounted
+  result so `additionalContext` can show the precondition instead of degrading
+  into an opaque command failure.
 
 ## 12. Implemented Slices
 
@@ -306,6 +322,12 @@ existing host-semantic-intent pipeline against this MVP contract:
   and short `user_expression`) to guide cooperative host AI tool calls;
 - focused tests cover short expression preservation, invalid scope filtering,
   multi-intent order preservation, and raw prompt omission from hook output.
+
+The contract-enforcement slice adds a no-write
+`semantic_intent_precondition` card for selected MCP governed editing /
+write-capable entry points. It changes the tool response status to `refused`
+only for that no-write precondition response, does not perform durable writes,
+does not call a model provider, and does not change policy evaluator inputs.
 
 Follow-up smoke in this slice verified that a compact `host_semantic_intent`
 can project `semantic_intent_status=provided`, aggregate MVP scopes, and ordered

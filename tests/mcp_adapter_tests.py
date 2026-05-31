@@ -619,9 +619,9 @@ class MCPStageAAdapterTests(unittest.TestCase):
                 f"{response['client_display_links']['lifecycle_card_links'][0]['markdown']}"
             )
             self.assertTrue(response["card_markdown"].rstrip().endswith(lifecycle_footer_line))
-            self.assertEqual(
-                response["display"]["card_priority_order"][1],
+            self.assertIn(
                 "conversation_turn_router",
+                response["display"]["card_priority_order"],
             )
             self.assertTrue((project_root / ".jikuo" / "runtime" / "last_card.md").is_file())
             self.assertFalse((project_root / ".jikuo" / "policies").exists())
@@ -733,6 +733,7 @@ class MCPStageAAdapterTests(unittest.TestCase):
             )
 
             self.assertEqual(response["tool_name"], "jikuo.probe_sampling_semantic_intent")
+            self.assertEqual(response["status"], "refused")
             self.assertEqual(response["sampling_semantic_intent"]["status"], "unavailable")
             self.assertIn(
                 "adapter_call_has_no_mcp_client_sampling_context",
@@ -749,6 +750,15 @@ class MCPStageAAdapterTests(unittest.TestCase):
             self.assertEqual(
                 semantic_evidence["followup"],
                 "provide_host_semantic_intent_and_rerun_route",
+            )
+            self.assertEqual(response["semantic_intent_precondition"]["status"], "refused")
+            self.assertIn(
+                "host_semantic_intent_required_for_governed_work",
+                response["semantic_intent_precondition"]["refusal_reasons"],
+            )
+            self.assertIn(
+                "Semantic intent precondition unmet",
+                response["card_markdown"],
             )
             self.assertIn("### Observed Lifecycle", response["card_markdown"])
             self.assertIn("### Semantic Intent Evidence", response["card_markdown"])

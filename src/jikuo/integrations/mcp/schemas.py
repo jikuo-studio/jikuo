@@ -20,6 +20,7 @@ UNKNOWN_TRANSPORT = "unknown"
 
 CARD_PRIORITY_ORDER = (
     "policy_runtime_status",
+    "semantic_intent_precondition",
     "conversation_turn_router",
     "configuration_review",
     "policy_suggestion_review",

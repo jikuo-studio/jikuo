@@ -537,11 +537,13 @@ class MCPServerWrapperTests(unittest.TestCase):
             )
 
             self.assertEqual(response["sampling_semantic_intent"]["status"], "unavailable")
+            self.assertEqual(response["status"], "refused")
             self.assertEqual(
                 response["work_profile"]["basis"]["host_semantic_intent"]["status"],
                 "unavailable",
             )
             self.assertEqual(response["host_semantic_intent"]["status"], "unavailable")
+            self.assertEqual(response["semantic_intent_precondition"]["status"], "refused")
             serialized = json.dumps(response, ensure_ascii=False)
             self.assertNotIn(secret_prompt, serialized)
             self.assertIn("<REDACTED_PROMPT_ECHO>", serialized)

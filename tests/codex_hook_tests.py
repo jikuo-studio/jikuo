@@ -85,6 +85,13 @@ class CodexHookProofTests(unittest.TestCase):
             "conversation_router": {
                 "required_followup_tools": ["jikuo.propose_task_start"],
             },
+            "semantic_intent_precondition": {
+                "status": "refused",
+                "user_facing_summary": "Governed editing work needs host_semantic_intent.",
+                "next_actions": [
+                    "classify the request and re-call JIKUO with host_semantic_intent"
+                ],
+            },
         }
 
         context = hook.render_additional_context(
@@ -98,6 +105,8 @@ class CodexHookProofTests(unittest.TestCase):
         self.assertNotIn(raw_prompt, context)
         self.assertIn("JIKUO mounted pre-turn ran", context)
         self.assertIn("Semantic intent status: unavailable.", context)
+        self.assertIn("Semantic intent precondition: refused", context)
+        self.assertIn("Semantic intent required action:", context)
         self.assertIn("Host adapter contract:", context)
         self.assertIn("input_schema=jikuo.host_adapter.turn_input.v0", context)
         self.assertIn("user_turn_summary_status=provided_redacted", context)
@@ -285,6 +294,58 @@ class CodexHookProofTests(unittest.TestCase):
         self.assertEqual(calls["builder"]["host_semantic_intent"]["status"], "provided")
         self.assertEqual(calls["formatter"]["project_root"], ROOT)
         self.assertEqual(result["runtime_visibility"]["last_card_ref"], ".jikuo/runtime/last_card.md")
+
+    def test_run_agent_flow_subprocess_accepts_structured_refusal_output(self):
+        hook = load_hook_module()
+        raw_prompt = "SECRET_PROMPT_VALUE: update docs"
+        hook_input = hook.HookInput(
+            hook_event_name="UserPromptSubmit",
+            prompt=raw_prompt,
+            cwd=ROOT,
+            session_id="session-subprocess",
+            turn_id="turn-subprocess",
+            permission_mode="default",
+            model=None,
+        )
+        payload = {
+            "status": "refused",
+            "work_profile": {
+                "lifecycle_event": "conversation_turn",
+                "policy_scopes": ["editing"],
+            },
+            "semantic_intent_precondition": {
+                "status": "refused",
+                "user_facing_summary": "host semantic intent required",
+            },
+        }
+        calls = {}
+
+        class Completed:
+            returncode = 2
+            stdout = json.dumps(payload)
+            stderr = ""
+
+        original_run = hook.subprocess.run
+
+        def fake_run(command, **kwargs):
+            calls["command"] = command
+            calls["input"] = kwargs.get("input")
+            return Completed()
+
+        try:
+            hook.subprocess.run = fake_run
+            result = hook.run_agent_flow_subprocess(
+                hook_input,
+                ROOT,
+                "mounted",
+                env={"JIKUO_HOOK_PYTHON": "python"},
+            )
+        finally:
+            hook.subprocess.run = original_run
+
+        self.assertEqual(result["status"], "refused")
+        self.assertEqual(calls["input"], raw_prompt)
+        self.assertNotIn(raw_prompt, calls["command"])
 
     def test_main_emits_codex_additional_context_with_fake_runner(self):
         hook = load_hook_module()

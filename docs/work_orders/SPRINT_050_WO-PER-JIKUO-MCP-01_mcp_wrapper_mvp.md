@@ -190,12 +190,14 @@ Semantic-intent precondition follow-up:
   semantic provider.
 - For pure discussion tools, `semantic_intent_status=unavailable` may continue
   as honest fallback.
-- For governed editing / write-capable entry points, a future no-write
-  `precondition_unmet` response should ask the host AI to provide compact
-  `host_semantic_intent` and re-call before JIKUO proceeds with the plan or
-  guarded publication path.
-- This follow-up must not change evaluator inputs, call a model inside the MCP
-  adapter, or make deterministic keyword routing look like AI semantic routing.
+- For selected governed editing / write-capable entry points, the MCP adapter
+  now returns a no-write `semantic_intent_precondition` / `precondition_unmet`
+  response when semantic evidence is missing or fallback-only. The card asks
+  the host AI to provide compact `host_semantic_intent` and re-call before
+  JIKUO proceeds with the plan or guarded publication path.
+- This implementation must not change evaluator inputs, call a model inside
+  the MCP adapter, or make deterministic keyword routing look like AI semantic
+  routing.
 
 ## 7. Implementation Plan
 
