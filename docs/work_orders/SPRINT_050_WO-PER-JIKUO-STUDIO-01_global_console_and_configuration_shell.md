@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-STUDIO-01: Global Console And Configuration Shell
 
-> **Status**: Planned; design anchor accepted for a JIKUO-wide thin frontend. No frontend or backend implementation is included by this document.
+> **Status**: Planned; design anchor accepted for a JIKUO-wide thin frontend, with `JIKUO-STUDIO-01A` global status read-model landing plan documented. No frontend or backend implementation is included by this document.
 > **Date**: 2026-05-31
 > **JIKUO layer**: product surface / view-model projection / guarded configuration control.
 > **Business meaning**: Users should not need to reconstruct JIKUO's global state from chat alone. A thin JIKUO console should make activation, runtime, policy, template, integration, diagnostics, and guarded configuration status visible in one place while preserving the existing kernel and guarded-write boundaries.
@@ -280,7 +280,190 @@ Acceptance:
 
 ---
 
-## 9. Non-Goals
+## 9. `JIKUO-STUDIO-01A` Concrete Landing Plan
+
+`JIKUO-STUDIO-01A` should be the first implementation slice because it gives
+the future frontend one stable backend object before any UI framework is chosen.
+
+### 9.1 Implementation Boundary
+
+Implement a read-only Python module and CLI surface only:
+
+```text
+src/jikuo/studio/
+  __init__.py
+  global_status.py
+
+tests/
+  studio_global_status_tests.py
+```
+
+Optional later, but not required in `01A`:
+
+```text
+src/jikuo/integrations/mcp/...
+```
+
+Do not create `src/jikuo/integrations/studio_web/` in `01A`. The frontend waits
+until the read model shape is accepted.
+
+### 9.2 Public Contract
+
+Add one read model builder:
+
+```python
+build_global_status(project_root: Path | None = None) -> dict
+```
+
+Add one CLI route:
+
+```text
+python -B -m jikuo studio status --project-root <path> --format json|markdown
+```
+
+The CLI may be wired through `src/jikuo/cli.py` if the existing command surface
+supports it cleanly. If the root CLI would become noisy, use
+`python -B -m jikuo.studio.global_status status ...` for `01A` and defer root
+CLI polish.
+
+No MCP tool is required in `01A`; MCP exposure can be a follow-up once the JSON
+contract has tests.
+
+### 9.3 Data Sources
+
+Use existing backend APIs where available. Do not reimplement their business
+rules in Studio code.
+
+| Summary field | Preferred source |
+|---|---|
+| `runtime_summary` | `runtime_visibility` helpers or `.jikuo/runtime/state_summary.json` with defensive missing-file handling |
+| `activation_summary` | `activation_settings.build_status_report` |
+| `configuration_summary` | `configuration_review.build_configuration_review` |
+| `policy_management_summary` | `policy_management_status.build_status_report` or current equivalent |
+| `registry_summary` | `docs/registry/work_orders.yaml`, `capabilities.yaml`, `mount_sets.yaml`, `registry_index.yaml` |
+| `integration_health` | existing proof / status records where structured; otherwise return explicit `unknown` records |
+| `diagnostics` | aggregate warnings and degraded statuses from the above sources |
+| `pending_user_decisions` | activation required decisions, configuration review decisions, and policy-management follow-ups |
+| `available_actions` | read-only descriptors for known plan/apply families, not executable UI actions yet |
+
+If a source is missing or unparseable, return a degraded section and a diagnostic
+instead of raising for ordinary user-facing status calls.
+
+### 9.4 Output Shape
+
+The first schema should stay compact and UI-friendly:
+
+```yaml
+schema: "jikuo.studio.global_status.v0"
+status: "available|degraded|unavailable"
+project_root: "<path>"
+generated_at_utc: "<timestamp>"
+summaries:
+  runtime: {}
+  activation: {}
+  configuration: {}
+  policy_management: {}
+  registry: {}
+  integrations: {}
+pending_user_decisions: []
+available_actions: []
+diagnostics: []
+card_links: {}
+source_refs: []
+read_model_limitations: []
+privacy:
+  raw_prompt_stored: false
+  transcript_stored: false
+writes_performed: false
+non_effects: []
+```
+
+Keep large source payloads out of the default response. Each summary should
+provide counts, status labels, important refs, and next actions. The future UI
+can drill into domain-specific read models when needed.
+
+### 9.5 Status Rules
+
+Use predictable aggregate status:
+
+- `available`: required local sources loaded and no critical source is missing;
+- `degraded`: at least one optional source is missing, stale, or unparseable,
+  but the overall console can still render;
+- `unavailable`: project root cannot be resolved or core project context cannot
+  be read.
+
+Diagnostics should include:
+
+- missing activation settings;
+- unreviewed activation defaults;
+- missing runtime state;
+- stale or missing MCP / hook proof records when detectable;
+- unavailable Sampling or semantic-provider proof;
+- registry parse errors;
+- permission warnings that affect visibility.
+
+### 9.6 Available Actions In `01A`
+
+`01A` should return action descriptors as previews only. They are not executable
+by the Studio layer yet.
+
+Initial descriptors:
+
+- `studio.configuration.review`;
+- `studio.activation_settings.plan_update`;
+- `studio.policy_management.status`;
+- `studio.policy_distribution.review`;
+- `studio.policy_template.plan_publication`;
+- `studio.policy_template.activate`;
+- `studio.starter_manifest.plan_publication`;
+- `studio.runtime.open_latest_card`.
+
+Each descriptor should include:
+
+- `action_id`;
+- `domain`;
+- `title`;
+- `write_mode`;
+- `plan_surface`;
+- `apply_surface` when applicable;
+- `write_effect`;
+- `approval_required`;
+- `source_ref`;
+- `status`.
+
+The frontend can render these before action execution exists.
+
+### 9.7 Tests
+
+Add focused tests before any UI work:
+
+- missing / temporary project root returns `unavailable` or `degraded` without
+  writing files;
+- normal JIKUO repo returns schema `jikuo.studio.global_status.v0` and
+  `writes_performed=false`;
+- activation summary includes missing or reviewed activation status;
+- policy management summary includes active policy and template counts;
+- diagnostics collect at least one known degraded condition when activation
+  settings are missing;
+- available actions include the initial read-only descriptors;
+- no raw prompt or transcript fields appear in serialized output;
+- CLI `--format json` returns parseable JSON;
+- CLI `--format markdown` renders a short human summary.
+
+### 9.8 Acceptance For `01A`
+
+`01A` is complete only when:
+
+- the read model can be consumed by tests, CLI, and future UI code without
+  scraping Markdown cards;
+- no durable write occurs during status generation;
+- source refs and read-model limitations are visible;
+- degraded state is explicit rather than silently ignored;
+- full test discovery remains green.
+
+---
+
+## 10. Non-Goals
 
 This work order does not approve:
 
@@ -296,7 +479,7 @@ This work order does not approve:
 
 ---
 
-## 10. Dependency Notes
+## 11. Dependency Notes
 
 The global console depends on the current JIKUO backend becoming more readable,
 not more autonomous.
@@ -322,7 +505,7 @@ Known gaps before implementation:
 
 ---
 
-## 11. Business Acceptance
+## 12. Business Acceptance
 
 This task is valuable when a user can answer, from one local surface:
 

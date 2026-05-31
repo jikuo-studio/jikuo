@@ -1444,7 +1444,7 @@ entries:
       - "docs/governance/jikuo_productization_task_map.md"
   - id: "CAP-STUDIO-GLOBAL-STATUS-READ-MODEL-01"
     title: "Studio global status read model"
-    status: "planned by JIKUO-STUDIO-01; no implementation yet"
+    status: "planned by JIKUO-STUDIO-01; concrete 01A landing plan documented; no implementation yet"
     metadata_status: "complete"
     entry_point: "future: python -B -m jikuo studio status --format json; future: jikuo.get_studio_global_status"
     write_effect: "none; aggregates runtime, activation, configuration, integration, policy-management, registry, diagnostics, pending-decision, and action summaries"
