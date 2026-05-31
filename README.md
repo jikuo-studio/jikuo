@@ -29,6 +29,11 @@ gate are being decided.
 - A local stdio MCP server exposing 24 tools for status, cards, proposals,
   configuration review, activation settings, routing, MCP Sampling semantic
   provider probing, and guarded writes.
+- A no-write Studio global status read model exposed through
+  `jikuo studio status`, so a future thin console can read runtime,
+  activation, configuration, integration, policy-management, registry,
+  diagnostics, pending-decision, and action-preview summaries without scraping
+  Markdown cards.
 - Accepted private-preview MCP use in Codex and Claude, plus proof docs for
   Cursor, VS Code + GitHub Copilot Agent mode, and regression checks.
 - Integration-neutral core APIs reserved for MCP, future Agent SDK wrappers,
@@ -47,6 +52,7 @@ py -3 -m venv .venv
 .\.venv\Scripts\jikuo.exe --help
 .\.venv\Scripts\jikuo-mcp.exe --help
 .\.venv\Scripts\jikuo.exe show
+.\.venv\Scripts\jikuo.exe studio status --format markdown
 ```
 
 For local source-tree development without an editable install:

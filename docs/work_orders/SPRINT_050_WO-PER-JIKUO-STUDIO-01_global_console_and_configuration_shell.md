@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-STUDIO-01: Global Console And Configuration Shell
 
-> **Status**: Planned; design anchor accepted for a JIKUO-wide thin frontend, with `JIKUO-STUDIO-01A` global status read-model landing plan documented. No frontend or backend implementation is included by this document.
+> **Status**: `JIKUO-STUDIO-01A` global status read model implemented as a no-write Python/CLI surface. Panel registry, standalone action registry, local frontend, and guarded Studio actions remain planned.
 > **Date**: 2026-05-31
 > **JIKUO layer**: product surface / view-model projection / guarded configuration control.
 > **Business meaning**: Users should not need to reconstruct JIKUO's global state from chat alone. A thin JIKUO console should make activation, runtime, policy, template, integration, diagnostics, and guarded configuration status visible in one place while preserving the existing kernel and guarded-write boundaries.
@@ -236,6 +236,11 @@ Every guarded action must preserve the existing sequence:
 
 Implement `jikuo.studio.global_status.v0` as a no-write backend read model.
 
+Implementation status (2026-05-31): implemented in
+`src/jikuo/studio/global_status.py`, exposed through
+`python -B -m jikuo studio status --format json|markdown`, and covered by
+`tests/studio_global_status_tests.py`.
+
 Acceptance:
 
 - returns runtime, activation, configuration, integration, policy-management,
@@ -282,12 +287,12 @@ Acceptance:
 
 ## 9. `JIKUO-STUDIO-01A` Concrete Landing Plan
 
-`JIKUO-STUDIO-01A` should be the first implementation slice because it gives
+`JIKUO-STUDIO-01A` is the first implementation slice because it gives
 the future frontend one stable backend object before any UI framework is chosen.
 
 ### 9.1 Implementation Boundary
 
-Implement a read-only Python module and CLI surface only:
+Implemented as a read-only Python module and CLI surface only:
 
 ```text
 src/jikuo/studio/
@@ -309,13 +314,13 @@ until the read model shape is accepted.
 
 ### 9.2 Public Contract
 
-Add one read model builder:
+Implemented read model builder:
 
 ```python
 build_global_status(project_root: Path | None = None) -> dict
 ```
 
-Add one CLI route:
+Implemented CLI route:
 
 ```text
 python -B -m jikuo studio status --project-root <path> --format json|markdown
@@ -326,7 +331,7 @@ supports it cleanly. If the root CLI would become noisy, use
 `python -B -m jikuo.studio.global_status status ...` for `01A` and defer root
 CLI polish.
 
-No MCP tool is required in `01A`; MCP exposure can be a follow-up once the JSON
+No MCP tool is included in `01A`; MCP exposure can be a follow-up once the JSON
 contract has tests.
 
 ### 9.3 Data Sources
@@ -493,13 +498,15 @@ Current reusable foundations:
 - MCP and hook proof records;
 - document registry shards and mount sets.
 
-Known gaps before implementation:
+Known gaps after `01A` implementation:
 
-- no `jikuo.studio.global_status.v0` exists yet;
 - no panel registry exists yet;
 - no action registry exists yet;
+- action previews are embedded in `jikuo.studio.global_status.v0` but are not
+  standalone executable Studio actions;
 - integration health is distributed across proof docs, runtime cards, and MCP
-  tool inventory;
+  tool inventory, so `01A` reports conservative proof status rather than strict
+  GUI truth;
 - DATA-01 event ledger is not implemented, so analytics must remain limited to
   existing runtime projections.
 

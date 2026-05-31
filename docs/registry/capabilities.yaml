@@ -1444,9 +1444,9 @@ entries:
       - "docs/governance/jikuo_productization_task_map.md"
   - id: "CAP-STUDIO-GLOBAL-STATUS-READ-MODEL-01"
     title: "Studio global status read model"
-    status: "planned by JIKUO-STUDIO-01; concrete 01A landing plan documented; no implementation yet"
+    status: "implemented no-write Python/CLI read model by JIKUO-STUDIO-01A"
     metadata_status: "complete"
-    entry_point: "future: python -B -m jikuo studio status --format json; future: jikuo.get_studio_global_status"
+    entry_point: "src/jikuo/studio/global_status.py; python -B -m jikuo studio status --format json; python -B -m jikuo.studio.global_status status --format json"
     write_effect: "none; aggregates runtime, activation, configuration, integration, policy-management, registry, diagnostics, pending-decision, and action summaries"
     approval: "read-only; must not mutate .jikuo state, policy files, starter manifests, or runtime cards"
     referenced_by_transitional_cache:

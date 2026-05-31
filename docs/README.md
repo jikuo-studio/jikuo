@@ -71,6 +71,7 @@ The following remain outside this repository's active documentation mount unless
 - `docs/schemas/execution_events_v0_draft.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-SELF-BOOTSTRAP-02_stable_self_bootstrap_execution_strategy.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-SELF-BOOTSTRAP-03_harness_workspace_boundary_spike.md`
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md`
 - `docs/insights/INSIGHT-2026-05-17-self-bootstrap-harness-workspace-boundary.md`
 - `docs/integrations/mcp_client_configuration_examples.md`
 - `docs/integrations/mcp_client_proof_playbook.md`

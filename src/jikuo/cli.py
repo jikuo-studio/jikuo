@@ -14,6 +14,7 @@ if __package__:
         runtime_visibility,
     )
     from .integrations import instruction_files
+    from .studio import global_status
 else:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from jikuo import (
@@ -23,6 +24,7 @@ else:
         runtime_visibility,
     )
     from jikuo.integrations import instruction_files
+    from jikuo.studio import global_status
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -98,6 +100,13 @@ def build_parser() -> argparse.ArgumentParser:
         choices=("markdown", "json"),
         default="markdown",
     )
+    studio = subparsers.add_parser(
+        "studio",
+        help="Inspect JIKUO Studio/global-console read models.",
+    )
+    studio.add_argument("studio_command", choices=("status",))
+    studio.add_argument("--project-root", type=Path, default=None)
+    studio.add_argument("--format", choices=("markdown", "json"), default="markdown")
     return parser
 
 
@@ -164,6 +173,12 @@ def main(argv: list[str] | None = None) -> int:
             status_args.extend(["--template-dir", str(args.template_dir)])
         status_args.extend(["--format", args.format])
         return policy_management_status.main(status_args)
+    if args.command == "studio":
+        studio_args = [args.studio_command]
+        if args.project_root is not None:
+            studio_args.extend(["--project-root", str(args.project_root)])
+        studio_args.extend(["--format", args.format])
+        return global_status.main(studio_args)
     parser.error(f"unsupported command: {args.command}")
     return 2
 
