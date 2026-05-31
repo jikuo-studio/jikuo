@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-AI-SEMROUTE-01: AI Semantic Routing MVP
 
-> **Status**: Design accepted; first projection slice implemented for short `user_expression`, MVP scope filtering, ordered `intent_slices` card rendering, Codex hook wording, no-write smoke for `semantic_intent_status=provided`, raw `user_phrase` redaction in trigger/router projections, local policy-distribution proof that host semantic scopes select different scope-aware policies, explicit Codex-host-AI semantic-intent transport proof, MCP Sampling unavailable proof, report-only `semantic_intent_classification_evidence`, accepted cooperative Codex GUI MCP router proof that `host_semantic_intent` can be exposed and passed, no-write `semantic_intent_precondition` feedback for selected governed editing / write-capable MCP entry points, and direct `host_semantic_intent` passthrough on those proposal tools so the host can re-call successfully. Automatic hook-time semantic classification, MCP Sampling provider support, and any evaluator expansion remain pending.
+> **Status**: Design accepted; first projection slice implemented for short `user_expression`, MVP scope filtering, ordered `intent_slices` card rendering, Codex hook wording, no-write smoke for `semantic_intent_status=provided`, raw `user_phrase` redaction in trigger/router projections, local policy-distribution proof that host semantic scopes select different scope-aware policies, explicit Codex-host-AI semantic-intent transport proof, MCP Sampling unavailable proof, report-only `semantic_intent_classification_evidence`, accepted cooperative Codex GUI MCP router proof that `host_semantic_intent` can be exposed and passed, no-write `semantic_intent_precondition` feedback for selected governed editing / write-capable MCP entry points, direct `host_semantic_intent` passthrough on those proposal tools, and accepted external Codex GUI MCP proposal-tool smoke proving the host can re-call successfully. Automatic hook-time semantic classification, MCP Sampling provider support, and any evaluator expansion remain pending.
 > **Date**: 2026-05-28
 > **JIKUO layer**: integration / policy distribution.
 > **Business meaning**: JIKUO should stay thin. The host AI understands the user's natural-language intent; JIKUO receives a compact semantic object, records it, explains policy routing, and keeps deterministic fallback honest.
@@ -416,6 +416,27 @@ proof was accepted and recorded:
 This accepts the cooperative GUI MCP tool-call path: Codex can see the router
 argument and pass compact semantic intent into JIKUO. It still does not accept
 automatic hook-time semantic classification or MCP Sampling support.
+
+An external Codex GUI MCP proposal-tool passthrough smoke was accepted after
+the selected proposal tools exposed `host_semantic_intent` directly:
+
+- Proof note:
+  `docs/integrations/proofs/PROOF-2026-05-31-codex-gui-mcp-proposal-host-semantic-intent.md`;
+- Runtime card:
+  `.jikuo/runtime/history/20260531T071619Z_proposal_017ad7e6db.md`;
+- Observed tool status:
+  `review`;
+- Observed semantic status:
+  `work_profile.basis.host_semantic_intent.status=provided`;
+- Evidence:
+  `semantic_intent_evidence.status=ok`;
+- Precondition:
+  `semantic_intent_precondition` absent.
+
+This accepts the cooperative re-call path for selected MCP proposal tools: a
+host can satisfy the semantic precondition in the same proposal surface instead
+of detouring through a router-only call. It still does not prove automatic
+hook-time semantic classification.
 
 A local UTF-8 follow-up proof was accepted after the pasted GUI proof showed
 mojibake in Chinese semantic contract fields:

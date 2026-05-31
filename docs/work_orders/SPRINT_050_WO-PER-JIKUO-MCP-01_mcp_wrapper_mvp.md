@@ -198,6 +198,12 @@ Semantic-intent precondition follow-up:
 - The selected proposal tools also expose `host_semantic_intent`, so the
   re-call can satisfy the precondition in the same tool rather than requiring a
   separate router-only detour.
+- A 2026-05-31 external Codex GUI MCP smoke accepted this proposal-tool path:
+  the tested proposal returned `status=review`,
+  `work_profile.basis.host_semantic_intent.status=provided`,
+  `semantic_intent_evidence.status=ok`, and no
+  `semantic_intent_precondition`
+  (`.jikuo/runtime/history/20260531T071619Z_proposal_017ad7e6db.md`).
 - This implementation must not change evaluator inputs, call a model inside
   the MCP adapter, or make deterministic keyword routing look like AI semantic
   routing.

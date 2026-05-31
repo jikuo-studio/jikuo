@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-HOSTADAPT-01: Host Adapter Contract
 
-> **Status**: Contract scaffold implemented for cross-client input/result normalization, raw prompt redaction, Codex project-local hook consumption, and Codex GUI contract-line projection proof. Selected governed editing / write-capable MCP entry points now return no-write `semantic_intent_precondition` feedback when `host_semantic_intent` is missing. Host-specific wrappers/plugins remain future slices.
+> **Status**: Contract scaffold implemented for cross-client input/result normalization, raw prompt redaction, Codex project-local hook consumption, and Codex GUI contract-line projection proof. Selected governed editing / write-capable MCP entry points now return no-write `semantic_intent_precondition` feedback when `host_semantic_intent` is missing, and an external Codex GUI MCP proposal-tool smoke accepted direct `host_semantic_intent` re-call passthrough. Host-specific wrappers/plugins remain future slices.
 > **Date**: 2026-05-28
 > **JIKUO layer**: integration / strict mounted harness.
 > **Business meaning**: JIKUO should be portable across Codex, Claude, Cursor, VS Code, and future wrappers without baking one client's hook behavior into the core governance model.
@@ -126,6 +126,9 @@ The accepted implementation is a tool-side precondition, not a thicker adapter:
   schema and ask the host AI to classify and re-call;
 - those selected proposal tools accept `host_semantic_intent` directly on the
   re-call, so the host adapter contract is not limited to router-only tools;
+- external Codex GUI MCP smoke on 2026-05-31 accepted that direct re-call path
+  with `status=review`, `host_semantic_intent.status=provided`,
+  `semantic_intent_evidence.status=ok`, and no returned precondition;
 - this precondition must not call a model, decide policy applicability, or
   persist raw prompt text;
 - wrapper / plugin work remains future work after this lighter contract is
