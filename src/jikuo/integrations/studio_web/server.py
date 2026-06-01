@@ -12,10 +12,10 @@ from typing import Any
 from urllib.parse import urlparse
 
 if __package__:
-    from ...studio import global_status
+    from ...studio import document_rules, global_status
 else:  # pragma: no cover - direct module execution fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from jikuo.studio import global_status
+    from jikuo.studio import document_rules, global_status
 
 
 STUDIO_WEB_SCHEMA = "jikuo.studio.web_console.v0"
@@ -24,7 +24,7 @@ DEFAULT_PORT = 8765
 
 
 INDEX_HTML = """<!doctype html>
-<html lang="en" data-jikuo-studio="read-only">
+<html lang="en" data-jikuo-studio="no-write-control-shell">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -40,6 +40,7 @@ INDEX_HTML = """<!doctype html>
       --accent: #1f7a68;
       --warn: #9a5b00;
       --danger: #9d2634;
+      --soft: #eef3f1;
     }
     * { box-sizing: border-box; }
     body {
@@ -164,11 +165,89 @@ INDEX_HTML = """<!doctype html>
     }
     a { color: #1d5f8a; }
     .mono { font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace; }
+    .plan-tool {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 14px;
+      margin: 14px 0 0;
+    }
+    .plan-tool h3 {
+      margin: 0 0 10px;
+      font-size: 15px;
+      line-height: 1.3;
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: minmax(160px, 0.8fr) minmax(220px, 1.2fr) minmax(160px, 0.7fr);
+      gap: 10px;
+      align-items: end;
+    }
+    label {
+      display: grid;
+      gap: 5px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+    input, select {
+      width: 100%;
+      min-height: 36px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--ink);
+      font: inherit;
+      font-size: 13px;
+      padding: 7px 9px;
+    }
+    .plan-rule-row {
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) auto;
+      gap: 10px;
+      align-items: end;
+      margin-top: 10px;
+    }
+    button {
+      min-height: 36px;
+      border: 1px solid #176555;
+      border-radius: 6px;
+      background: var(--accent);
+      color: #fff;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 650;
+      padding: 7px 12px;
+      cursor: pointer;
+    }
+    button:disabled {
+      border-color: var(--line);
+      background: #ccd4da;
+      cursor: not-allowed;
+    }
+    .plan-result {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    pre {
+      margin: 0;
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid var(--line);
+      background: var(--soft);
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+      line-height: 1.45;
+    }
     @media (max-width: 700px) {
       header { align-items: flex-start; flex-direction: column; }
       main { padding: 18px 16px 32px; }
       .row { grid-template-columns: 1fr; }
       .split { grid-template-columns: 1fr; }
+      .form-grid, .plan-rule-row { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -195,6 +274,40 @@ INDEX_HTML = """<!doctype html>
           <p class="subhead" id="rule-sources-label">Rule sources and edit status</p>
           <div class="list" id="document-mounts-authority"></div>
         </div>
+      </div>
+      <div class="plan-tool" aria-labelledby="document-rules-plan-title">
+        <h3 id="document-rules-plan-title">Preview a Document Rules change</h3>
+        <form id="document-rules-form">
+          <div class="form-grid">
+            <label>
+              Change type
+              <select id="document-rules-operation">
+                <option value="add_context_doc">Add context document</option>
+                <option value="add_completion_check">Add completion check</option>
+                <option value="add_governance_reference">Add rule source</option>
+                <option value="remove_context_doc">Remove context document</option>
+                <option value="remove_completion_check">Remove completion check</option>
+                <option value="remove_governance_reference">Remove rule source</option>
+              </select>
+            </label>
+            <label>
+              Project document path
+              <input id="document-rules-path" name="path" placeholder="docs/example.md" autocomplete="off">
+            </label>
+            <label>
+              Optional role name
+              <input id="document-rules-role" name="role" placeholder="project_brief" autocomplete="off">
+            </label>
+          </div>
+          <div class="plan-rule-row">
+            <label>
+              Completion check rule
+              <input id="document-rules-completion-rule" name="completion_rule" placeholder="review this document before declaring the governed slice complete" autocomplete="off">
+            </label>
+            <button id="document-rules-preview-button" type="submit">Preview plan</button>
+          </div>
+        </form>
+        <div class="plan-result" id="document-rules-plan-result" aria-live="polite"></div>
       </div>
     </section>
     <section>
@@ -236,6 +349,66 @@ INDEX_HTML = """<!doctype html>
     const termsById = (items) => Object.fromEntries((items || []).map((item) => [item.term_id, item]));
     const termLabel = (terms, id, fallback) => (terms[id] && terms[id].user_label) || fallback;
     const termDescription = (terms, id, fallback) => (terms[id] && terms[id].user_description) || fallback;
+    const addPlanMessage = (title, detail, status) => {
+      const result = document.getElementById("document-rules-plan-result");
+      result.replaceChildren(row(title, detail, status));
+    };
+    const renderPlanPreview = (plan) => {
+      const result = document.getElementById("document-rules-plan-result");
+      const status = plan.status || "unknown";
+      const summaryStatus = status === "refused" ? "unavailable" : (status === "review" ? "degraded" : "available");
+      const summary = row(`Plan ${status}`, `Changes: ${plan.change_count || 0}; writes performed: ${String(Boolean(plan.writes_performed))}`, summaryStatus);
+      const diff = document.createElement("pre");
+      const diffPreview = plan.diff_preview || [];
+      diff.textContent = diffPreview.length ? diffPreview.join("\\n") : "No document-rule changes proposed.";
+      const validation = plan.validation || {};
+      const validationRows = [
+        ...(validation.errors || []).map((item) => row(item.code || "error", item.message || "", "unavailable")),
+        ...(validation.warnings || []).map((item) => row(item.code || "warning", item.message || "", "degraded")),
+        ...(validation.noops || []).map((item) => row(item.code || "noop", item.message || "", "available")),
+      ];
+      const approval = plan.approval || {};
+      const approvalRow = row(
+        "Approval boundary",
+        approval.required ? "Guarded apply is required before any document rules are changed." : "No guarded apply is required for this preview result.",
+        approval.required ? "degraded" : "available"
+      );
+      result.replaceChildren(summary, diff, ...validationRows, approvalRow);
+    };
+    const requestFromDocumentRulesForm = () => {
+      const operation = document.getElementById("document-rules-operation").value;
+      const path = document.getElementById("document-rules-path").value.trim();
+      const role = document.getElementById("document-rules-role").value.trim();
+      const completionRule = document.getElementById("document-rules-completion-rule").value.trim();
+      if (!path) {
+        return null;
+      }
+      const payload = {
+        add_context_docs: [],
+        remove_context_docs: [],
+        add_completion_checks: [],
+        remove_completion_checks: [],
+        add_governance_references: [],
+        remove_governance_references: [],
+      };
+      if (completionRule) {
+        payload.completion_update_rule = completionRule;
+      }
+      if (operation === "add_context_doc") {
+        payload.add_context_docs.push(role ? `${role}=${path}` : path);
+      } else if (operation === "remove_context_doc") {
+        payload.remove_context_docs.push(path);
+      } else if (operation === "add_completion_check") {
+        payload.add_completion_checks.push(path);
+      } else if (operation === "remove_completion_check") {
+        payload.remove_completion_checks.push(path);
+      } else if (operation === "add_governance_reference") {
+        payload.add_governance_references.push(path);
+      } else if (operation === "remove_governance_reference") {
+        payload.remove_governance_references.push(path);
+      }
+      return payload;
+    };
     const renderDocumentMounts = (data) => {
       const summaries = data.summaries || {};
       const mounts = summaries.document_mounts || {};
@@ -322,6 +495,29 @@ INDEX_HTML = """<!doctype html>
         global.textContent = "unavailable";
         document.getElementById("diagnostics").replaceChildren(row("fetch_failed", error.message, "error"));
       });
+    document.getElementById("document-rules-form").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const payload = requestFromDocumentRulesForm();
+      if (!payload) {
+        addPlanMessage("Path required", "Enter a project-relative document path before previewing a plan.", "unavailable");
+        return;
+      }
+      const button = document.getElementById("document-rules-preview-button");
+      button.disabled = true;
+      button.textContent = "Previewing";
+      fetch("/api/document-rules/plan", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(payload),
+      })
+        .then((response) => response.json())
+        .then(renderPlanPreview)
+        .catch((error) => addPlanMessage("Preview failed", error.message, "unavailable"))
+        .finally(() => {
+          button.disabled = false;
+          button.textContent = "Preview plan";
+        });
+    });
   </script>
 </body>
 </html>
@@ -330,6 +526,55 @@ INDEX_HTML = """<!doctype html>
 
 def json_bytes(payload: dict[str, Any]) -> bytes:
     return json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
+
+
+def string_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    if isinstance(value, str) and value.strip():
+        return [value.strip()]
+    return []
+
+
+def api_document_rules_plan_payload(
+    request_payload: Any,
+    *,
+    project_root: Path | None = None,
+) -> tuple[int, dict[str, Any]]:
+    if not isinstance(request_payload, dict):
+        return HTTPStatus.BAD_REQUEST, {
+            "schema": STUDIO_WEB_SCHEMA,
+            "status": "invalid_request",
+            "message": "document rules plan requests must be JSON objects",
+            "writes_performed": False,
+            "write_allowed_by_command": False,
+        }
+    completion_update_rule = request_payload.get("completion_update_rule")
+    if completion_update_rule is not None:
+        completion_update_rule = str(completion_update_rule).strip() or None
+    plan = document_rules.build_document_rules_update_plan(
+        project_root=project_root,
+        add_context_docs=string_list(request_payload.get("add_context_docs")),
+        remove_context_docs=string_list(request_payload.get("remove_context_docs")),
+        add_completion_checks=string_list(request_payload.get("add_completion_checks")),
+        remove_completion_checks=string_list(request_payload.get("remove_completion_checks")),
+        add_governance_references=string_list(request_payload.get("add_governance_references")),
+        remove_governance_references=string_list(
+            request_payload.get("remove_governance_references")
+        ),
+        completion_update_rule=completion_update_rule,
+    )
+    plan["studio_web"] = {
+        "schema": STUDIO_WEB_SCHEMA,
+        "route": "/api/document-rules/plan",
+        "method": "POST",
+        "write_mode": "no-write-plan",
+        "writes_performed": False,
+        "write_allowed_by_command": False,
+    }
+    return HTTPStatus.OK, plan
 
 
 def api_payload_for_path(path: str, *, project_root: Path | None = None) -> tuple[int, dict[str, Any]]:
@@ -405,6 +650,63 @@ def make_handler(project_root: Path | None = None) -> type[BaseHTTPRequestHandle
                 content_type="application/json; charset=utf-8",
             )
 
+        def do_POST(self) -> None:  # noqa: N802 - stdlib handler API
+            route = (urlparse(self.path).path.rstrip("/") or "/")
+            if route != "/api/document-rules/plan":
+                status, payload = api_payload_for_path(self.path, project_root=project_root)
+                self._send(
+                    status=status,
+                    body=json_bytes(payload),
+                    content_type="application/json; charset=utf-8",
+                )
+                return
+            try:
+                content_length = int(self.headers.get("Content-Length", "0"))
+            except ValueError:
+                content_length = 0
+            if content_length > 65536:
+                self._send(
+                    status=HTTPStatus.BAD_REQUEST,
+                    body=json_bytes(
+                        {
+                            "schema": STUDIO_WEB_SCHEMA,
+                            "status": "invalid_request",
+                            "message": "request body is too large",
+                            "writes_performed": False,
+                            "write_allowed_by_command": False,
+                        }
+                    ),
+                    content_type="application/json; charset=utf-8",
+                )
+                return
+            try:
+                raw_body = self.rfile.read(content_length).decode("utf-8")
+                request_payload = json.loads(raw_body or "{}")
+            except json.JSONDecodeError as exc:
+                self._send(
+                    status=HTTPStatus.BAD_REQUEST,
+                    body=json_bytes(
+                        {
+                            "schema": STUDIO_WEB_SCHEMA,
+                            "status": "invalid_json",
+                            "message": str(exc),
+                            "writes_performed": False,
+                            "write_allowed_by_command": False,
+                        }
+                    ),
+                    content_type="application/json; charset=utf-8",
+                )
+                return
+            status, payload = api_document_rules_plan_payload(
+                request_payload,
+                project_root=project_root,
+            )
+            self._send(
+                status=status,
+                body=json_bytes(payload),
+                content_type="application/json; charset=utf-8",
+            )
+
         def log_message(self, _format: str, *args: Any) -> None:
             return
 
@@ -428,7 +730,7 @@ def serve(
 ) -> int:
     httpd = create_server(host=host, port=port, project_root=project_root)
     actual_host, actual_port = httpd.server_address
-    print(f"JIKUO Studio read-only console: http://{actual_host}:{actual_port}/")
+    print(f"JIKUO Studio no-write console: http://{actual_host}:{actual_port}/")
     print("Press Ctrl+C to stop.")
     try:
         httpd.serve_forever()

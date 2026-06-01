@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-STUDIO-01: Global Console And Configuration Shell
 
-> **Status**: `JIKUO-STUDIO-01A` global status read model, `JIKUO-STUDIO-01B` panel/action registries, `JIKUO-STUDIO-01C` local read-only console, `JIKUO-STUDIO-01D1` document-mount read model, `JIKUO-STUDIO-01D2` visible document-mount frontend section, and `JIKUO-STUDIO-01D3` configuration vocabulary mapping implemented as no-write Python/CLI/backend surfaces. `JIKUO-STUDIO-01D4` records the detailed Document Rules plan/apply design contract; `JIKUO-STUDIO-01D5` implements the first Document Rules no-write plan backend. Guarded apply and editable frontend controls remain planned.
+> **Status**: `JIKUO-STUDIO-01A` global status read model, `JIKUO-STUDIO-01B` panel/action registries, `JIKUO-STUDIO-01C` local read-only console, `JIKUO-STUDIO-01D1` document-mount read model, `JIKUO-STUDIO-01D2` visible document-mount frontend section, and `JIKUO-STUDIO-01D3` configuration vocabulary mapping implemented as no-write Python/CLI/backend surfaces. `JIKUO-STUDIO-01D4` records the detailed Document Rules plan/apply design contract; `JIKUO-STUDIO-01D5` implements the first Document Rules no-write plan backend; `JIKUO-STUDIO-01D6` connects that plan to the local Studio page as a no-write preview. Guarded apply remains planned.
 > **Date**: 2026-05-31
 > **JIKUO layer**: product surface / view-model projection / guarded configuration control.
 > **Business meaning**: Users should not need to reconstruct JIKUO's global state from chat alone. A thin JIKUO console should make activation, runtime, policy, template, integration, diagnostics, and guarded configuration status visible in one place while preserving the existing kernel and guarded-write boundaries.
@@ -758,6 +758,35 @@ Acceptance:
   are refused before any apply;
 - `writes_performed=false` and `write_allowed_by_command=false`;
 - apply remains unavailable until a separate guarded implementation slice.
+
+### `JIKUO-STUDIO-01D6`: Document Rules Frontend Plan Preview
+
+Expose the `JIKUO-STUDIO-01D5` no-write plan backend through the local Studio
+web console without adding apply behavior:
+
+```text
+POST /api/document-rules/plan
+```
+
+Implementation status (2026-06-01): `src/jikuo/integrations/studio_web/server.py`
+accepts JSON requests for context-document, completion-check, and rule-source
+changes, calls `src/jikuo/studio/document_rules.py`, and returns
+`jikuo.studio.document_rules_update_plan.v0`. The Studio page renders a compact
+Document Rules preview form and displays status, diff preview, validation, and
+approval boundary. The route returns structured `review`, `noop`, or `refused`
+plans as successful no-write responses; only invalid JSON or unknown routes are
+HTTP-level failures.
+
+Acceptance:
+
+- the page remains a no-write control shell, not an apply surface;
+- the preview form uses customer-facing Document Rules language while the plan
+  response retains internal target refs for verification;
+- `POST /api/document-rules/plan` never writes `.jikuo/project_context.yaml`;
+- refused validation, including outside-root paths, is visible in the plan
+  response without writes;
+- no approval phrase field or guarded apply button appears in this slice;
+- the legacy task map remains untouched.
 
 ### `JIKUO-STUDIO-01D`: Guarded Configuration Actions
 

@@ -1,17 +1,52 @@
 import json
 import subprocess
 import sys
+import tempfile
 import threading
 import unittest
 from pathlib import Path
 from urllib.error import HTTPError
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from jikuo.integrations.studio_web import server  # noqa: E402
+
+
+def write_project_context(root: Path) -> None:
+    jikuo = root / ".jikuo"
+    jikuo.mkdir(parents=True, exist_ok=True)
+    (jikuo / "project_context.yaml").write_text(
+        "\n".join(
+            [
+                'schema_version: "jikuo.project_context.v0"',
+                "document_roles:",
+                "  project_context:",
+                '    path: ".jikuo/project_context.yaml"',
+                "    required: true",
+                '    note: "Project context."',
+                "main_document_mounts:",
+                '  canonical_path_root: "."',
+                '  path_policy: "standalone_repo_paths_only"',
+                "  active_mount_authority:",
+                '    - ".jikuo/project_context.yaml"',
+                "  checked_before_slice_completion:",
+                '    - path: ".jikuo/project_context.yaml"',
+                '      update_required_when: "document rules change"',
+                "  unchanged_report_required: true",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def touch(root: Path, rel: str) -> None:
+    path = root / rel
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(f"# {path.name}\n", encoding="utf-8")
 
 
 class StudioWebServerTests(unittest.TestCase):
@@ -34,16 +69,63 @@ class StudioWebServerTests(unittest.TestCase):
         self.assertFalse(actions["writes_performed"])
         self.assertFalse(health["writes_performed"])
 
-    def test_index_html_is_static_read_only_shell(self):
+    def test_document_rules_plan_api_returns_no_write_plan(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            write_project_context(project_root)
+            touch(project_root, "docs/customer-guide.md")
+
+            status_code, plan = server.api_document_rules_plan_payload(
+                {
+                    "add_context_docs": ["customer_guide=docs/customer-guide.md"],
+                    "add_completion_checks": ["docs/customer-guide.md"],
+                    "completion_update_rule": "customer guide changes",
+                },
+                project_root=project_root,
+            )
+
+            self.assertEqual(status_code, 200)
+            self.assertEqual(plan["schema"], "jikuo.studio.document_rules_update_plan.v0")
+            self.assertEqual(plan["status"], "review")
+            self.assertEqual(plan["change_count"], 2)
+            self.assertFalse(plan["writes_performed"])
+            self.assertFalse(plan["write_allowed_by_command"])
+            self.assertEqual(plan["studio_web"]["route"], "/api/document-rules/plan")
+
+    def test_document_rules_plan_api_surfaces_refused_validation_without_writes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            write_project_context(project_root)
+
+            status_code, plan = server.api_document_rules_plan_payload(
+                {"add_context_docs": ["../outside.md"]},
+                project_root=project_root,
+            )
+
+            self.assertEqual(status_code, 200)
+            self.assertEqual(plan["status"], "refused")
+            self.assertFalse(plan["writes_performed"])
+            self.assertIn(
+                "path_outside_project_root",
+                {item["code"] for item in plan["validation"]["errors"]},
+            )
+
+    def test_index_html_is_no_write_control_shell_with_document_rules_preview(self):
         html = server.render_index_html()
 
-        self.assertIn("data-jikuo-studio=\"read-only\"", html)
+        self.assertIn("data-jikuo-studio=\"no-write-control-shell\"", html)
         self.assertIn("JIKUO Studio", html)
         self.assertIn("/api/status", html)
+        self.assertIn("/api/document-rules/plan", html)
         self.assertIn("Document Rules", html)
         self.assertIn("document-mounts-completion", html)
+        self.assertIn("document-rules-form", html)
+        self.assertIn("Preview plan", html)
         self.assertIn("Available Actions", html)
         self.assertNotIn("Mount authority and pending write boundary", html)
+        self.assertNotIn("apply_document_rules", html)
         self.assertNotIn("approval-phrase", html)
 
     def test_http_server_serves_index_and_json_endpoints(self):
@@ -78,6 +160,37 @@ class StudioWebServerTests(unittest.TestCase):
             httpd.shutdown()
             httpd.server_close()
             thread.join(timeout=10)
+
+    def test_http_server_accepts_document_rules_plan_post(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            write_project_context(project_root)
+            touch(project_root, "docs/customer-guide.md")
+            httpd = server.create_server(host="127.0.0.1", port=0, project_root=project_root)
+            thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+            thread.start()
+            try:
+                host, port = httpd.server_address
+                payload = json.dumps(
+                    {"add_context_docs": ["docs/customer-guide.md"]}
+                ).encode("utf-8")
+                request = Request(
+                    f"http://{host}:{port}/api/document-rules/plan",
+                    data=payload,
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                with urlopen(request, timeout=10) as response:
+                    plan = json.loads(response.read().decode("utf-8"))
+
+                self.assertEqual(plan["schema"], "jikuo.studio.document_rules_update_plan.v0")
+                self.assertEqual(plan["status"], "review")
+                self.assertFalse(plan["writes_performed"])
+            finally:
+                httpd.shutdown()
+                httpd.server_close()
+                thread.join(timeout=10)
 
     def test_http_server_returns_structured_not_found(self):
         httpd = server.create_server(host="127.0.0.1", port=0, project_root=ROOT)

@@ -1533,6 +1533,15 @@ entries:
     approval: "plan is no-write; apply remains planned and must require guarded approval before any project_context change"
     referenced_by_transitional_cache:
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md"
+  - id: "CAP-STUDIO-DOCUMENT-RULES-FRONTEND-PLAN-01"
+    title: "Studio Document Rules frontend no-write plan preview"
+    status: "implemented local web preview by JIKUO-STUDIO-01D6"
+    metadata_status: "complete"
+    entry_point: "src/jikuo/integrations/studio_web/server.py POST /api/document-rules/plan and Document Rules preview form"
+    write_effect: "none; routes customer-facing Document Rules preview requests to the no-write plan backend"
+    approval: "no apply control is exposed; guarded apply remains planned and must require approval before any .jikuo/project_context.yaml write"
+    referenced_by_transitional_cache:
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md"
   - id: "CAP-TODO-SNAPSHOT-POSTURE-01"
     title: "Previous/latest todo snapshot posture"
     status: "implemented context/documentation guard"
