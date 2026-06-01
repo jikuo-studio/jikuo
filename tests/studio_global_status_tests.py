@@ -24,6 +24,7 @@ class StudioGlobalStatusTests(unittest.TestCase):
         self.assertIn("runtime", report["summaries"])
         self.assertIn("activation", report["summaries"])
         self.assertIn("configuration", report["summaries"])
+        self.assertIn("document_mounts", report["summaries"])
         self.assertIn("policy_management", report["summaries"])
         self.assertIn("registry", report["summaries"])
         self.assertIn("integrations", report["summaries"])
@@ -40,8 +41,34 @@ class StudioGlobalStatusTests(unittest.TestCase):
         action_ids = {item["action_id"] for item in report["available_actions"]}
         self.assertIn("studio.configuration.review", action_ids)
         self.assertIn("studio.activation_settings.plan_update", action_ids)
+        self.assertIn("studio.document_mounts.review", action_ids)
+        self.assertIn("studio.document_mounts.plan_update", action_ids)
         self.assertIn("studio.policy_management.status", action_ids)
         self.assertIn("studio.runtime.open_latest_card", action_ids)
+
+    def test_global_status_reports_document_mount_read_model(self):
+        report = global_status.build_global_status(project_root=ROOT)
+
+        document_mounts = report["summaries"]["document_mounts"]
+        self.assertEqual(document_mounts["status"], "available")
+        self.assertEqual(document_mounts["project_context_ref"], ".jikuo/project_context.yaml")
+        self.assertEqual(document_mounts["mount_sets_ref"], "docs/registry/mount_sets.yaml")
+        self.assertGreaterEqual(document_mounts["role_count"], 1)
+        self.assertGreaterEqual(document_mounts["checked_document_count"], 1)
+        self.assertIn(".jikuo/project_context.yaml", document_mounts["active_mount_authority"])
+        self.assertEqual(
+            document_mounts["configuration_language_schema"],
+            "jikuo.studio.configuration_language.v0",
+        )
+        terms = {item["term_id"]: item for item in document_mounts["configuration_terms"]}
+        self.assertEqual(terms["document_rules"]["user_label"], "Document rules")
+        self.assertIn(
+            ".jikuo/project_context.yaml main_document_mounts",
+            terms["document_rules"]["internal_refs"],
+        )
+        self.assertEqual(terms["rule_sources"]["user_label"], "Current rule sources")
+        self.assertIn("stability_rule", terms["edit_status"])
+        self.assertFalse(report["writes_performed"])
 
     def test_missing_project_context_is_unavailable_without_writes(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -121,6 +148,8 @@ class StudioGlobalStatusTests(unittest.TestCase):
         self.assertIn("# JIKUO Studio Global Status", markdown_completed.stdout)
         self.assertIn("## Panels", markdown_completed.stdout)
         self.assertIn("Available Actions", markdown_completed.stdout)
+        self.assertIn("## Document rules", markdown_completed.stdout)
+        self.assertIn("Review document rules", markdown_completed.stdout)
 
 
 if __name__ == "__main__":

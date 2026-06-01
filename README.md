@@ -34,6 +34,8 @@ gate are being decided.
   activation, configuration, integration, policy-management, registry,
   diagnostics, pending-decision, panel-registry, and action-registry summaries
   without scraping Markdown cards.
+- A local read-only Studio console exposed through `jikuo studio serve`, backed
+  by the same Studio read models and not by frontend-owned governance logic.
 - Accepted private-preview MCP use in Codex and Claude, plus proof docs for
   Cursor, VS Code + GitHub Copilot Agent mode, and regression checks.
 - Integration-neutral core APIs reserved for MCP, future Agent SDK wrappers,
@@ -53,6 +55,12 @@ py -3 -m venv .venv
 .\.venv\Scripts\jikuo-mcp.exe --help
 .\.venv\Scripts\jikuo.exe show
 .\.venv\Scripts\jikuo.exe studio status --format markdown
+```
+
+Run the local read-only Studio console:
+
+```powershell
+.\.venv\Scripts\jikuo.exe studio serve --host 127.0.0.1 --port 8765
 ```
 
 For local source-tree development without an editable install:

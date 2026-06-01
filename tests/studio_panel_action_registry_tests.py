@@ -67,6 +67,18 @@ class StudioPanelActionRegistryTests(unittest.TestCase):
         self.assertEqual(runtime["write_mode"], "no-write")
         self.assertFalse(runtime["approval_required"])
 
+        document_review = action_by_id["studio.document_mounts.review"]
+        self.assertEqual(document_review["domain"], "document_mounts")
+        self.assertEqual(document_review["title"], "Review document rules")
+        self.assertEqual(document_review["write_mode"], "no-write")
+        self.assertFalse(document_review["approval_required"])
+
+        document_plan = action_by_id["studio.document_mounts.plan_update"]
+        self.assertEqual(document_plan["title"], "Plan document-rule update")
+        self.assertEqual(document_plan["write_mode"], "planned-no-write-plan")
+        self.assertTrue(document_plan["approval_required"])
+        self.assertEqual(document_plan["status"], "disabled")
+
     def test_panel_registry_binds_panels_to_valid_action_refs(self):
         report = global_status.build_global_status(project_root=ROOT)
         registry = panels.build_panel_registry(
@@ -83,6 +95,8 @@ class StudioPanelActionRegistryTests(unittest.TestCase):
         self.assertIn("studio.overview", panel_by_id)
         self.assertIn("studio.runtime", panel_by_id)
         self.assertIn("studio.configuration", panel_by_id)
+        self.assertIn("studio.document_mounts", panel_by_id)
+        self.assertEqual(panel_by_id["studio.document_mounts"]["title"], "Document Rules")
         self.assertIn("studio.policy_management", panel_by_id)
         self.assertIn("studio.actions", panel_by_id)
         self.assertIn("studio.diagnostics", panel_by_id)

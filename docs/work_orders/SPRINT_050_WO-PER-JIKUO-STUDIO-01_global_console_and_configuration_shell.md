@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-STUDIO-01: Global Console And Configuration Shell
 
-> **Status**: `JIKUO-STUDIO-01A` global status read model and `JIKUO-STUDIO-01B` panel/action registries implemented as no-write Python/CLI backend surfaces. Local frontend and guarded Studio actions remain planned.
+> **Status**: `JIKUO-STUDIO-01A` global status read model, `JIKUO-STUDIO-01B` panel/action registries, `JIKUO-STUDIO-01C` local read-only console, `JIKUO-STUDIO-01D1` document-mount read model, `JIKUO-STUDIO-01D2` visible document-mount frontend section, and `JIKUO-STUDIO-01D3` configuration vocabulary mapping implemented as no-write Python/CLI/backend surfaces. Customer configuration action inventory and document-mount configuration boundary recorded; guarded Studio actions remain planned.
 > **Date**: 2026-05-31
 > **JIKUO layer**: product surface / view-model projection / guarded configuration control.
 > **Business meaning**: Users should not need to reconstruct JIKUO's global state from chat alone. A thin JIKUO console should make activation, runtime, policy, template, integration, diagnostics, and guarded configuration status visible in one place while preserving the existing kernel and guarded-write boundaries.
@@ -169,6 +169,7 @@ Initial panels:
 | Overview | One-screen project health and pending decisions. | `jikuo.studio.global_status.v0` |
 | Runtime | Latest card, state summary, history, observed lifecycle. | runtime visibility read model |
 | Configuration | Activation settings and configuration review. | activation / configuration status |
+| Document Rules | Main documents, active rule sets, task context bundles, and legacy projection warnings. | project context plus document registry |
 | Integrations | MCP tools, hook status, client proof status, semantic provider status. | integration health projection |
 | Policies And Templates | Active policies, package templates, starter packs, distribution state. | policy-management status |
 | Actions | Available no-write plans and guarded apply operations. | action registry |
@@ -213,6 +214,7 @@ rollback_posture: "manual follow-up plan"
 Initial action families:
 
 - configuration review and activation settings update;
+- document-mount and main-document review / update planning;
 - policy template import planning and activation;
 - policy distribution review and package-template publication;
 - starter manifest publication;
@@ -227,6 +229,117 @@ Every guarded action must preserve the existing sequence:
 4. user confirms approval phrase;
 5. backend calls guarded apply;
 6. UI refreshes global status and shows result card.
+
+### 7.1 Customer Configuration Action Inventory
+
+The global console is not only a status dashboard. It must let a customer see
+which project-level choices exist, why they matter, and which guarded boundary
+will apply before anything is changed.
+
+Configuration actions should be grouped by customer goal, not by current
+module layout:
+
+| Domain | Customer question | Current source of truth | First Studio action posture |
+|---|---|---|---|
+| Project binding | Which local project is JIKUO governing? | `.jikuo/project_context.yaml`, `project_state` | read-only review first; guarded initialization remains separate |
+| Activation | When should JIKUO be invoked, and how strict is it? | `.jikuo/activation_settings.yaml` | no-write plan plus guarded apply |
+| Client setup | Which AI clients receive JIKUO instructions or hooks? | instruction files, MCP config examples, hook proof docs | no-write install preview plus guarded instruction sync |
+| Document rules | Which documents should JIKUO use as context, completion checks, and governance references? | `.jikuo/project_context.yaml`, `docs/registry/mount_sets.yaml`, work-order `required_mount_sets` | design first; future no-write plan plus guarded apply |
+| Main documents | Which documents must be checked before completion? | `.jikuo/project_context.yaml` `main_document_mounts`, execution mounts | design first; future no-write plan plus guarded apply |
+| Policy management | Which policies are active, reusable, or distributable? | `.jikuo/policies/manifest.yaml`, package templates, starter manifests | existing read model, no-write plan, and guarded apply |
+| Runtime visibility | What happened recently, and where are the cards? | `.jikuo/runtime/*` | read-only links and refresh diagnostics |
+| Integration proof | Are MCP, hooks, Sampling, and semantic provider paths really available? | MCP inventory, hook proof notes, runtime cards | read-only proof view first; guarded install later |
+| Diagnostics | What is degraded, missing, stale, or blocked? | aggregated read models | read-only repair suggestions, then explicit plan/apply |
+
+Business meaning:
+
+- customers should not need to know which YAML file owns a setting before they
+  can understand or change it;
+- AI assistants should not invent configuration actions from chat memory;
+- guarded configuration actions must show source of truth, write effect,
+  non-effect, and result-card links before apply;
+- Studio remains a thin shell over canonical JIKUO state, not a second
+  configuration kernel.
+
+### 7.2 Document Mount Configuration Domain
+
+Document mounting is a first-class customer configuration need.
+
+Examples:
+
+- selecting which product or project documents count as `main documents`;
+- deciding which documents are required before task completion;
+- choosing reusable mount sets for policy, registry, lifecycle, Studio, or
+  integration work;
+- attaching work orders to required context bundles and originating evidence;
+- marking a document as source of truth, projection, legacy projection, or
+  orientation-only.
+
+The current source layers are:
+
+| Layer | Current owner | Customer-facing meaning |
+|---|---|---|
+| L0 registry | `docs/registry/*.yaml` | available structured documents, mount sets, capabilities, and work-order anchors |
+| L1 project context | `.jikuo/project_context.yaml` | project-local active document roles and main-document completion scope |
+| L2 mount recipes | `docs/governance/jikuo_execution_mounts.md` plus `mount_sets.yaml` | task-context bundles and operating guidance |
+| L3 projections | `README.md`, `docs/README.md`, legacy task map | readable orientation, not default authority for new configuration |
+
+Future document-mount actions should therefore follow this path:
+
+```text
+read current document registry and project context
+-> no-write document-mount plan
+-> show added/removed/role-changed document refs and completion-check impact
+-> guarded apply to project-local configuration only
+-> refresh Studio global status and runtime card links
+```
+
+Initial action candidates:
+
+| Action id | Purpose | Write boundary |
+|---|---|---|
+| `studio.document_mounts.review` | Show current document roles, mount sets, main-document scope, and legacy projections. | no-write |
+| `studio.document_mounts.plan_update` | Preview changes to main documents, active mount sets, or task-context bundles. | no-write-plan |
+| `studio.document_mounts.apply_update` | Apply an explicitly approved project-local document-mount update. | guarded write |
+
+Non-goals for the first document-mount slice:
+
+- do not regenerate the legacy task map;
+- do not change policy evaluator behavior;
+- do not create a heavy knowledge graph or hand-maintained reverse edges;
+- do not silently rewrite package registry shards when the user only changes a
+  project-local configuration;
+- do not let the frontend write `.jikuo/project_context.yaml` directly.
+
+### 7.3 User Configuration Language Contract
+
+Studio must not expose internal architecture names as the primary user-facing
+configuration language.
+
+User-facing labels are stable product concepts. Internal refs are implementation
+bindings that may move as the architecture changes. The read model therefore
+publishes a vocabulary mapping:
+
+```yaml
+configuration_language_schema: "jikuo.studio.configuration_language.v0"
+configuration_terms:
+  - term_id: "document_rules"
+    user_label: "Document rules"
+    internal_refs:
+      - ".jikuo/project_context.yaml document_roles"
+      - ".jikuo/project_context.yaml main_document_mounts"
+      - "docs/registry/mount_sets.yaml"
+```
+
+Frontend rules:
+
+- render `user_label` and `user_description` by default;
+- use `term_id` as the stable binding key;
+- show `internal_refs` only as supporting source/debug information;
+- never hard-code phrases such as `mount authority` or `write boundary` as the
+  primary customer concept;
+- if internal storage moves, update `internal_refs` while keeping the user term
+  stable unless the product meaning truly changes.
 
 ---
 
@@ -269,6 +382,11 @@ Acceptance:
 
 Implement the smallest local UI over the global status read model.
 
+Implementation status (2026-06-01): implemented in
+`src/jikuo/integrations/studio_web/server.py`, exposed through
+`python -B -m jikuo studio serve --host 127.0.0.1 --port 8765`, and covered by
+`tests/studio_web_server_tests.py`.
+
 Acceptance:
 
 - shows overview, runtime, configuration, integrations, policy/template summary,
@@ -276,6 +394,89 @@ Acceptance:
 - no guarded writes yet;
 - does not parse Markdown cards as business data;
 - does not require a specific AI GUI client.
+
+### `JIKUO-STUDIO-01D0`: Configuration Action Inventory And Document-Mount Design
+
+Record the customer configuration action inventory before adding editable UI.
+
+Implementation status (2026-06-01): documented in this work order. No runtime
+or frontend behavior is changed by this record.
+
+Acceptance:
+
+- customer configuration domains are listed by user goal;
+- document mounting and main-document selection are treated as first-class
+  configuration domains;
+- source-of-truth and projection boundaries are explicit;
+- guarded action candidates are named without implementing direct UI writes;
+- future `01D` implementation has a clear target.
+
+### `JIKUO-STUDIO-01D1`: Document-Mount Read Model
+
+Project document mounting is now visible through the Studio global status
+read model before any editable UI exists.
+
+Implementation status (2026-06-01): implemented in
+`src/jikuo/studio/global_status.py`, with panel/action descriptors in
+`src/jikuo/studio/panels.py` and `src/jikuo/studio/actions.py`, and covered
+by `tests/studio_global_status_tests.py` plus
+`tests/studio_panel_action_registry_tests.py`.
+
+Acceptance:
+
+- `summaries.document_mounts` reads `.jikuo/project_context.yaml`
+  `document_roles` and `main_document_mounts`;
+- the summary reports active mount authority, completion-check documents,
+  role counts, missing required roles, mount-set count, and Studio mount-set
+  status;
+- the summary publishes `configuration_terms` mapping user-facing language to
+  internal refs;
+- `studio.document_mounts` appears as a panel descriptor;
+- `studio.document_mounts.review` is an available no-write action descriptor;
+- `studio.document_mounts.plan_update` is registered but disabled until the
+  guarded plan/apply surface exists;
+- no project context, registry, policy, runtime, or legacy task-map write is
+  performed by the read model.
+
+### `JIKUO-STUDIO-01D2`: Document-Mount Frontend Section
+
+Make the document-mount read model visible in the local Studio web console
+instead of hiding it inside the generic panel/action lists.
+
+Implementation status (2026-06-01): implemented in
+`src/jikuo/integrations/studio_web/server.py` and covered by
+`tests/studio_web_server_tests.py`.
+
+Acceptance:
+
+- the page contains a dedicated user-facing `Document Rules` section;
+- the section displays document-role count, completion-check document count,
+  missing required role count, and mount-set count;
+- completion-check documents are shown with their status and update rule;
+- current rule sources and disabled `studio.document_mounts.plan_update`
+  reason are visible using user-facing labels;
+- the page remains read-only and does not expose approval-phrase or apply UI.
+
+### `JIKUO-STUDIO-01D3`: Configuration Vocabulary Mapping
+
+Protect the local Studio UI from semantic drift by mapping stable customer
+language to current internal architecture refs.
+
+Implementation status (2026-06-01): implemented in
+`src/jikuo/studio/global_status.py` and consumed by
+`src/jikuo/integrations/studio_web/server.py`; covered by
+`tests/studio_global_status_tests.py` and `tests/studio_web_server_tests.py`.
+
+Acceptance:
+
+- `summaries.document_mounts.configuration_language_schema` is
+  `jikuo.studio.configuration_language.v0`;
+- `configuration_terms` include `document_rules`, `completion_checks`,
+  `rule_sources`, and `edit_status`;
+- frontend binds to vocabulary terms for visible copy;
+- internal refs remain available as support/debug metadata;
+- primary frontend copy avoids internal architecture phrases such as
+  `mount authority`.
 
 ### `JIKUO-STUDIO-01D`: Guarded Configuration Actions
 
@@ -349,6 +550,7 @@ rules in Studio code.
 | `runtime_summary` | `runtime_visibility` helpers or `.jikuo/runtime/state_summary.json` with defensive missing-file handling |
 | `activation_summary` | `activation_settings.build_status_report` |
 | `configuration_summary` | `configuration_review.build_configuration_review` |
+| `document_mounts_summary` | `.jikuo/project_context.yaml` document roles and `main_document_mounts`, plus `docs/registry/mount_sets.yaml` |
 | `policy_management_summary` | `policy_management_status.build_status_report` or current equivalent |
 | `registry_summary` | `docs/registry/work_orders.yaml`, `capabilities.yaml`, `mount_sets.yaml`, `registry_index.yaml` |
 | `integration_health` | existing proof / status records where structured; otherwise return explicit `unknown` records |
@@ -372,6 +574,7 @@ summaries:
   runtime: {}
   activation: {}
   configuration: {}
+  document_mounts: {}
   policy_management: {}
   registry: {}
   integrations: {}
@@ -503,12 +706,19 @@ Current reusable foundations:
 - MCP and hook proof records;
 - document registry shards and mount sets.
 
-Known gaps after `01A`/`01B` implementation:
+Known gaps after `01A`/`01B`/`01C` implementation:
 
 - panel and action registries exist as read-only descriptors, but they do not
-  execute actions or host a frontend yet;
+  execute actions;
+- customer configuration domains are documented, and document-mount review is
+  now available as a read-only Studio projection;
+- document-mount data is visible in the local web console as a dedicated
+  section;
+- document-mount no-write planning and guarded apply surfaces are not
+  implemented yet;
 - action descriptors are embedded in `jikuo.studio.global_status.v0` for
   frontend convenience and also available through `jikuo.studio.action_registry.v0`;
+- the local console is read-only and does not execute registered actions;
 - integration health is distributed across proof docs, runtime cards, and MCP
   tool inventory, so `01A` reports conservative proof status rather than strict
   GUI truth;

@@ -68,6 +68,7 @@ def registered_action_descriptors(
     summaries = summaries or {}
     activation = summaries.get("activation") or {}
     configuration = summaries.get("configuration") or {}
+    document_mounts = summaries.get("document_mounts") or {}
     policy_management = summaries.get("policy_management") or {}
     runtime = summaries.get("runtime") or {}
 
@@ -78,6 +79,10 @@ def registered_action_descriptors(
     configuration_disabled = None
     if configuration.get("status") == "unavailable":
         configuration_disabled = "configuration summary is unavailable"
+
+    document_mounts_disabled = None
+    if document_mounts.get("status") == "unavailable":
+        document_mounts_disabled = "document-mount summary is unavailable"
 
     policy_disabled = None
     if policy_management.get("status") == "unavailable":
@@ -115,6 +120,37 @@ def registered_action_descriptors(
             status="disabled" if activation_disabled else "available",
             disabled_reason=activation_disabled,
             non_effects=["does_not_apply_without_approval_phrase"],
+        ),
+        action_descriptor(
+            action_id="studio.document_mounts.review",
+            domain="document_mounts",
+            title="Review document rules",
+            write_mode="no-write",
+            plan_surface="jikuo.studio.status.summaries.document_mounts",
+            apply_surface=None,
+            write_effect="none",
+            approval_required=False,
+            source_ref=".jikuo/project_context.yaml",
+            status="disabled" if document_mounts_disabled else "available",
+            disabled_reason=document_mounts_disabled,
+            non_effects=["does_not_change_main_document_scope"],
+        ),
+        action_descriptor(
+            action_id="studio.document_mounts.plan_update",
+            domain="document_mounts",
+            title="Plan document-rule update",
+            write_mode="planned-no-write-plan",
+            plan_surface="planned:jikuo.plan_document_mount_update",
+            apply_surface="planned:jikuo.apply_document_mount_update",
+            write_effect=".jikuo/project_context.yaml or future document-mount config only after guarded apply",
+            approval_required=True,
+            source_ref="docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md",
+            status="disabled",
+            disabled_reason="document-mount plan/apply surface is not implemented yet",
+            non_effects=[
+                "does_not_edit_project_context_directly",
+                "does_not_regenerate_legacy_task_map",
+            ],
         ),
         action_descriptor(
             action_id="studio.policy_management.status",

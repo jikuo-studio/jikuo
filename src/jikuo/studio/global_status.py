@@ -49,6 +49,53 @@ REGISTRY_REFS = {
     "mount_sets": "docs/registry/mount_sets.yaml",
     "registry_index": "docs/registry/registry_index.yaml",
 }
+CONFIGURATION_LANGUAGE_SCHEMA = "jikuo.studio.configuration_language.v0"
+
+
+def document_mount_configuration_terms(
+    *,
+    active_mount_authority: list[str],
+    mount_sets_ref: str,
+) -> list[dict[str, Any]]:
+    return [
+        {
+            "term_id": "document_rules",
+            "user_label": "Document rules",
+            "user_description": "Which project documents JIKUO should use as context, checks, and governance references.",
+            "internal_refs": [
+                ".jikuo/project_context.yaml document_roles",
+                ".jikuo/project_context.yaml main_document_mounts",
+                mount_sets_ref,
+            ],
+            "stability_rule": "frontend binds to term_id and user_label, not internal_refs",
+        },
+        {
+            "term_id": "completion_checks",
+            "user_label": "Completion checks",
+            "user_description": "Documents JIKUO should review before saying a governed slice is complete.",
+            "internal_refs": [
+                ".jikuo/project_context.yaml main_document_mounts.checked_before_slice_completion",
+            ],
+            "stability_rule": "frontend wording stays stable even if the stored field moves",
+        },
+        {
+            "term_id": "rule_sources",
+            "user_label": "Current rule sources",
+            "user_description": "Where JIKUO currently reads the document rules for this project.",
+            "internal_refs": active_mount_authority,
+            "stability_rule": "user-facing source concept stays stable even if authority files change",
+        },
+        {
+            "term_id": "edit_status",
+            "user_label": "How changes are applied",
+            "user_description": "Document-rule changes must be previewed, approved, and applied through a guarded write.",
+            "internal_refs": [
+                "studio.document_mounts.plan_update",
+                "studio.document_mounts.apply_update",
+            ],
+            "stability_rule": "frontend says whether editing is available, not which implementation owns it",
+        },
+    ]
 
 
 def utc_now_iso() -> str:
@@ -256,6 +303,155 @@ def configuration_summary(
             for item in review_items
         ],
     )
+
+
+def document_mounts_summary(
+    project_root: Path,
+    diagnostics: list[dict[str, Any]],
+) -> dict[str, Any]:
+    context_path = project_root / PROJECT_CONTEXT_REF
+    if not context_path.is_file():
+        diagnostics.append(
+            diagnostic(
+                "document_mounts_project_context_missing",
+                severity="error",
+                message="document mount summary requires .jikuo/project_context.yaml",
+                source_ref=PROJECT_CONTEXT_REF,
+                next_action="open a JIKUO project root before configuring document mounts",
+            )
+        )
+        return {
+            "status": "unavailable",
+            "reason": "project context missing",
+            "source_refs": [PROJECT_CONTEXT_REF],
+        }
+    try:
+        context = policy_templates.read_yaml_subset(context_path)
+    except Exception as exc:
+        diagnostics.append(
+            diagnostic(
+                "document_mounts_project_context_invalid",
+                severity="error",
+                message=f"document mount summary could not parse project context: {exc}",
+                source_ref=PROJECT_CONTEXT_REF,
+                next_action="repair .jikuo/project_context.yaml",
+            )
+        )
+        return {
+            "status": "unavailable",
+            "reason": f"project context invalid: {exc}",
+            "source_refs": [PROJECT_CONTEXT_REF],
+        }
+
+    document_roles = context.get("document_roles") if isinstance(context, dict) else {}
+    if not isinstance(document_roles, dict):
+        document_roles = {}
+    main_mounts = context.get("main_document_mounts") if isinstance(context, dict) else {}
+    if not isinstance(main_mounts, dict):
+        main_mounts = {}
+
+    role_items: list[dict[str, Any]] = []
+    missing_required_roles: list[dict[str, Any]] = []
+    for role, record in sorted(document_roles.items()):
+        if not isinstance(record, dict):
+            continue
+        path_value = record.get("path")
+        required = bool(record.get("required"))
+        exists = bool(path_value) and (project_root / str(path_value)).is_file()
+        item = {
+            "role": role,
+            "path": path_value,
+            "required": required,
+            "status": "available" if exists else ("missing" if required else "not_bound"),
+            "note": record.get("note"),
+        }
+        role_items.append(item)
+        if required and not exists:
+            missing_required_roles.append(item)
+
+    checked_documents: list[dict[str, Any]] = []
+    for record in main_mounts.get("checked_before_slice_completion") or []:
+        if not isinstance(record, dict):
+            continue
+        path_value = record.get("path")
+        exists = bool(path_value) and (project_root / str(path_value)).is_file()
+        checked_documents.append(
+            {
+                "path": path_value,
+                "status": "available" if exists else "missing",
+                "update_required_when": record.get("update_required_when"),
+            }
+        )
+
+    mount_sets_ref = REGISTRY_REFS["mount_sets"]
+    mount_sets_path = project_root / mount_sets_ref
+    mount_set_count = 0
+    studio_mount_set_status = None
+    if mount_sets_path.is_file():
+        try:
+            mount_sets = policy_templates.read_yaml_subset(mount_sets_path)
+            entries = mount_sets.get("entries") if isinstance(mount_sets, dict) else []
+            if isinstance(entries, list):
+                mount_set_count = len(entries)
+                for entry in entries:
+                    if isinstance(entry, dict) and entry.get("id") == "MOUNT-STUDIO-01":
+                        studio_mount_set_status = entry.get("status")
+                        break
+        except Exception as exc:
+            diagnostics.append(
+                diagnostic(
+                    "document_mounts_mount_set_registry_invalid",
+                    severity="warning",
+                    message=f"mount-set registry could not be parsed: {exc}",
+                    source_ref=mount_sets_ref,
+                    next_action="run document registry tests",
+                )
+            )
+
+    for item in missing_required_roles[:5]:
+        diagnostics.append(
+            diagnostic(
+                f"document_role_{item['role']}_missing",
+                severity="warning",
+                message=f"required document role is missing: {item['role']}",
+                source_ref=str(item.get("path") or PROJECT_CONTEXT_REF),
+                next_action="review document mount configuration before editing this project",
+            )
+        )
+
+    status = "available" if not missing_required_roles else "degraded"
+    active_mount_authority = list(main_mounts.get("active_mount_authority") or [])
+    return {
+        "status": status,
+        "source_status": "available",
+        "configuration_language_schema": CONFIGURATION_LANGUAGE_SCHEMA,
+        "configuration_terms": document_mount_configuration_terms(
+            active_mount_authority=active_mount_authority,
+            mount_sets_ref=mount_sets_ref,
+        ),
+        "project_context_ref": PROJECT_CONTEXT_REF,
+        "mount_sets_ref": mount_sets_ref,
+        "canonical_path_root": main_mounts.get("canonical_path_root"),
+        "path_policy": main_mounts.get("path_policy"),
+        "active_mount_authority": active_mount_authority,
+        "checked_before_slice_completion": checked_documents,
+        "role_count": len(role_items),
+        "required_role_count": sum(1 for item in role_items if item["required"]),
+        "missing_required_role_count": len(missing_required_roles),
+        "checked_document_count": len(checked_documents),
+        "mount_set_count": mount_set_count,
+        "studio_mount_set_status": studio_mount_set_status,
+        "unchanged_report_required": bool(main_mounts.get("unchanged_report_required")),
+        "scope_change_rule": main_mounts.get("scope_change_rule"),
+        "roles": role_items[:64],
+        "missing_required_roles": missing_required_roles[:16],
+        "source_refs": [PROJECT_CONTEXT_REF, mount_sets_ref],
+        "read_model_limitations": [
+            "document mounts are read from project context and registry shards only",
+            "this summary does not apply document-mount changes",
+            "future guarded actions must plan and apply mount updates through governance tools",
+        ],
+    }
 
 
 def policy_management_summary(
@@ -480,6 +676,11 @@ def build_global_status(*, project_root: Path | None = None) -> dict[str, Any]:
         ),
         "activation": activation,
         "configuration": configuration,
+        "document_mounts": safe_section(
+            "document_mounts",
+            lambda: document_mounts_summary(resolved_root, diagnostics),
+            diagnostics=diagnostics,
+        ),
         "policy_management": policy_summary,
         "registry": safe_section(
             "registry",
@@ -535,6 +736,7 @@ def build_global_status(*, project_root: Path | None = None) -> dict[str, Any]:
             "runtime history is based on current runtime visibility snapshots, not DATA-01 event ledger",
             "panels and actions are descriptors only; execution remains behind existing no-write and guarded apply surfaces",
             "policy-management summary does not activate user projects or mutate starter manifests",
+            "document-mount summary is read-only and does not decide which documents are canonical for the user",
         ],
         "privacy": {
             "raw_prompt_stored": False,
@@ -558,6 +760,18 @@ def format_markdown(report: dict[str, Any]) -> str:
     summaries = report.get("summaries") or {}
     policy_counts = ((summaries.get("policy_management") or {}).get("summary_counts") or {})
     activation = summaries.get("activation") or {}
+    document_mounts = summaries.get("document_mounts") or {}
+    configuration_terms = {
+        item.get("term_id"): item
+        for item in (document_mounts.get("configuration_terms") or [])
+        if isinstance(item, dict)
+    }
+    document_rules_term = configuration_terms.get("document_rules") or {}
+    completion_checks_term = configuration_terms.get("completion_checks") or {}
+    rule_sources_term = configuration_terms.get("rule_sources") or {}
+    document_rules_label = document_rules_term.get("user_label") or "Document rules"
+    completion_checks_label = completion_checks_term.get("user_label") or "Completion checks"
+    rule_sources_label = rule_sources_term.get("user_label") or "Current rule sources"
     runtime = summaries.get("runtime") or {}
     integrations = summaries.get("integrations") or {}
     mcp = integrations.get("mcp") or {}
@@ -573,10 +787,17 @@ def format_markdown(report: dict[str, Any]) -> str:
         "",
         f"- Activation: `{activation.get('source_status') or activation.get('status')}` / trigger_mode=`{activation.get('desired_trigger_mode')}` / strict_mount=`{activation.get('strict_mount_status')}`",
         f"- Runtime: `{runtime.get('status')}` / triggered_policies=`{(runtime.get('counts') or {}).get('triggered_policy_count', 0)}` / missing_evidence=`{(runtime.get('counts') or {}).get('missing_evidence_count', 0)}`",
+        f"- {document_rules_label}: `{document_mounts.get('status')}` / configured roles=`{document_mounts.get('role_count', 0)}` / {completion_checks_label.lower()}=`{document_mounts.get('checked_document_count', 0)}`",
         f"- Policies: active=`{policy_counts.get('active_policy_count', 0)}` / templates=`{policy_counts.get('package_template_count', 0)}` / starter_refs=`{policy_counts.get('starter_template_ref_count', 0)}`",
         f"- MCP tools: `{mcp.get('tool_count', 0)}` / sampling_probe=`{str(mcp.get('sampling_probe_exposed')).lower()}`",
         f"- Pending decisions: `{len(report.get('pending_user_decisions') or [])}`",
         f"- Diagnostics: `{len(report.get('diagnostics') or [])}`",
+        "",
+        f"## {document_rules_label}",
+        "",
+        f"- {rule_sources_label}: `{len(document_mounts.get('active_mount_authority') or [])}`",
+        f"- Missing required roles: `{document_mounts.get('missing_required_role_count', 0)}`",
+        f"- Rule sets: `{document_mounts.get('mount_set_count', 0)}` / Studio status=`{document_mounts.get('studio_mount_set_status')}`",
         "",
         "## Panels",
         "",
