@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-STUDIO-01: Global Console And Configuration Shell
 
-> **Status**: `JIKUO-STUDIO-01A` global status read model implemented as a no-write Python/CLI surface. Panel registry, standalone action registry, local frontend, and guarded Studio actions remain planned.
+> **Status**: `JIKUO-STUDIO-01A` global status read model and `JIKUO-STUDIO-01B` panel/action registries implemented as no-write Python/CLI backend surfaces. Local frontend and guarded Studio actions remain planned.
 > **Date**: 2026-05-31
 > **JIKUO layer**: product surface / view-model projection / guarded configuration control.
 > **Business meaning**: Users should not need to reconstruct JIKUO's global state from chat alone. A thin JIKUO console should make activation, runtime, policy, template, integration, diagnostics, and guarded configuration status visible in one place while preserving the existing kernel and guarded-write boundaries.
@@ -253,6 +253,11 @@ Acceptance:
 
 Implement panel and action descriptors that the future UI can render.
 
+Implementation status (2026-06-01): implemented in
+`src/jikuo/studio/panels.py` and `src/jikuo/studio/actions.py`, consumed by
+`src/jikuo/studio/global_status.py`, and covered by
+`tests/studio_panel_action_registry_tests.py`.
+
 Acceptance:
 
 - each panel has a provider ref, empty-state text, privacy level, and action refs;
@@ -498,12 +503,12 @@ Current reusable foundations:
 - MCP and hook proof records;
 - document registry shards and mount sets.
 
-Known gaps after `01A` implementation:
+Known gaps after `01A`/`01B` implementation:
 
-- no panel registry exists yet;
-- no action registry exists yet;
-- action previews are embedded in `jikuo.studio.global_status.v0` but are not
-  standalone executable Studio actions;
+- panel and action registries exist as read-only descriptors, but they do not
+  execute actions or host a frontend yet;
+- action descriptors are embedded in `jikuo.studio.global_status.v0` for
+  frontend convenience and also available through `jikuo.studio.action_registry.v0`;
 - integration health is distributed across proof docs, runtime cards, and MCP
   tool inventory, so `01A` reports conservative proof status rather than strict
   GUI truth;

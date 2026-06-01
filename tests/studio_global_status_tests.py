@@ -28,6 +28,9 @@ class StudioGlobalStatusTests(unittest.TestCase):
         self.assertIn("registry", report["summaries"])
         self.assertIn("integrations", report["summaries"])
         self.assertIn("project_context", report["summaries"])
+        self.assertEqual(report["panel_registry"]["schema"], "jikuo.studio.panel_registry.v0")
+        self.assertEqual(report["action_registry"]["schema"], "jikuo.studio.action_registry.v0")
+        self.assertGreaterEqual(len(report["panels"]), 6)
 
         policy_counts = report["summaries"]["policy_management"]["summary_counts"]
         self.assertGreaterEqual(policy_counts["active_policy_count"], 1)
@@ -116,6 +119,7 @@ class StudioGlobalStatusTests(unittest.TestCase):
         self.assertEqual(report["schema"], global_status.GLOBAL_STATUS_SCHEMA)
         self.assertEqual(markdown_completed.returncode, 0, markdown_completed.stderr)
         self.assertIn("# JIKUO Studio Global Status", markdown_completed.stdout)
+        self.assertIn("## Panels", markdown_completed.stdout)
         self.assertIn("Available Actions", markdown_completed.stdout)
 
 

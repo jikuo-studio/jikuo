@@ -15,6 +15,8 @@ from pathlib import Path
 from typing import Any, Callable
 
 if __package__:
+    from . import actions as studio_actions
+    from . import panels as studio_panels
     from .. import (
         activation_settings,
         configuration_review,
@@ -26,6 +28,8 @@ if __package__:
     from ..integrations.mcp import adapter as mcp_adapter
 else:
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    from jikuo.studio import actions as studio_actions
+    from jikuo.studio import panels as studio_panels
     from jikuo import (
         activation_settings,
         configuration_review,
@@ -257,7 +261,7 @@ def configuration_summary(
 def policy_management_summary(
     project_root: Path,
     diagnostics: list[dict[str, Any]],
-) -> tuple[dict[str, Any], list[dict[str, Any]], list[dict[str, Any]]]:
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     report = policy_management_status.build_policy_management_status(project_root=project_root)
     warnings = report.get("warnings") or []
     for warning in warnings[:5]:
@@ -279,20 +283,6 @@ def policy_management_summary(
             "meaning": "Policies intended for reuse need distribution review before package or starter publication.",
         }
     ]
-    actions = [
-        {
-            "action_id": "studio.policy_management.status",
-            "domain": "policy_management",
-            "title": "Review policy-management status",
-            "write_mode": "no-write",
-            "plan_surface": "jikuo.get_policy_management_status",
-            "apply_surface": None,
-            "write_effect": "none",
-            "approval_required": False,
-            "source_ref": "src/jikuo/policy_management_status.py",
-            "status": "available",
-        }
-    ]
     return (
         {
             "status": "available" if report.get("status") == "available" else "degraded",
@@ -303,7 +293,6 @@ def policy_management_summary(
             "next_actions": report.get("next_actions") or [],
         },
         followups,
-        actions,
     )
 
 
@@ -432,95 +421,6 @@ def core_project_context_summary(project_root: Path) -> tuple[dict[str, Any], di
     }, None
 
 
-def base_actions() -> list[dict[str, Any]]:
-    return [
-        {
-            "action_id": "studio.configuration.review",
-            "domain": "configuration",
-            "title": "Review JIKUO configuration",
-            "write_mode": "no-write",
-            "plan_surface": "jikuo.get_configuration_status",
-            "apply_surface": None,
-            "write_effect": "none",
-            "approval_required": False,
-            "source_ref": "src/jikuo/configuration_review.py",
-            "status": "available",
-        },
-        {
-            "action_id": "studio.activation_settings.plan_update",
-            "domain": "configuration",
-            "title": "Plan activation settings update",
-            "write_mode": "no-write-plan",
-            "plan_surface": "jikuo.plan_activation_settings_update",
-            "apply_surface": "jikuo.apply_activation_settings_update",
-            "write_effect": ".jikuo/activation_settings.yaml only after guarded apply",
-            "approval_required": True,
-            "source_ref": "src/jikuo/activation_settings.py",
-            "status": "available",
-        },
-        {
-            "action_id": "studio.policy_distribution.review",
-            "domain": "policy_management",
-            "title": "Review policy distribution",
-            "write_mode": "no-write",
-            "plan_surface": "jikuo.propose_policy_distribution_review",
-            "apply_surface": None,
-            "write_effect": "none",
-            "approval_required": False,
-            "source_ref": "src/jikuo/policy_templates.py",
-            "status": "available",
-        },
-        {
-            "action_id": "studio.policy_template.plan_publication",
-            "domain": "policy_management",
-            "title": "Plan package template publication",
-            "write_mode": "no-write-plan",
-            "plan_surface": "jikuo.propose_policy_template_publication_plan",
-            "apply_surface": "jikuo.apply_policy_template_publication",
-            "write_effect": "one package template only after guarded apply",
-            "approval_required": True,
-            "source_ref": "src/jikuo/policy_templates.py",
-            "status": "available",
-        },
-        {
-            "action_id": "studio.policy_template.activate",
-            "domain": "policy_management",
-            "title": "Activate package template in user project",
-            "write_mode": "guarded",
-            "plan_surface": "jikuo.propose_policy_template_import_plan",
-            "apply_surface": "jikuo.apply_policy_template_activation",
-            "write_effect": "project policy files only after guarded apply",
-            "approval_required": True,
-            "source_ref": "src/jikuo/starter_policies.py",
-            "status": "available",
-        },
-        {
-            "action_id": "studio.starter_manifest.plan_publication",
-            "domain": "policy_management",
-            "title": "Plan starter manifest publication",
-            "write_mode": "no-write-plan",
-            "plan_surface": "jikuo.propose_starter_manifest_publication_plan",
-            "apply_surface": "jikuo.apply_starter_manifest_publication",
-            "write_effect": "starter manifest update only after guarded apply",
-            "approval_required": True,
-            "source_ref": "src/jikuo/starter_policies.py",
-            "status": "available",
-        },
-        {
-            "action_id": "studio.runtime.open_latest_card",
-            "domain": "runtime",
-            "title": "Open latest runtime card",
-            "write_mode": "no-write",
-            "plan_surface": "jikuo.get_display_card",
-            "apply_surface": None,
-            "write_effect": "none",
-            "approval_required": False,
-            "source_ref": runtime_visibility.LAST_CARD_REF,
-            "status": "available",
-        },
-    ]
-
-
 def aggregate_status(
     *,
     project_context: dict[str, Any],
@@ -558,7 +458,7 @@ def build_global_status(*, project_root: Path | None = None) -> dict[str, Any]:
         "policy_management",
         lambda: dict(
             zip(
-                ("summary", "decisions", "actions"),
+                ("summary", "decisions"),
                 policy_management_summary(resolved_root, diagnostics),
             )
         ),
@@ -566,9 +466,7 @@ def build_global_status(*, project_root: Path | None = None) -> dict[str, Any]:
     )
     policy_summary = policy_section.get("summary", policy_section)
     policy_decisions = policy_section.get("decisions", [])
-    policy_actions = policy_section.get("actions", [])
 
-    available_actions = [*base_actions(), *list(policy_actions or [])]
     pending_user_decisions = [
         *list(activation_decisions or []),
         *list(configuration_decisions or []),
@@ -595,6 +493,16 @@ def build_global_status(*, project_root: Path | None = None) -> dict[str, Any]:
         ),
         "project_context": project_context,
     }
+    action_registry = studio_actions.build_action_registry(
+        project_root=resolved_root,
+        summaries=summaries,
+    )
+    available_actions = action_registry.get("actions") or []
+    panel_registry = studio_panels.build_panel_registry(
+        project_root=resolved_root,
+        summaries=summaries,
+        actions=available_actions,
+    )
     runtime_links = ((summaries.get("runtime") or {}).get("card_links") or {})
     return {
         "schema": GLOBAL_STATUS_SCHEMA,
@@ -606,6 +514,9 @@ def build_global_status(*, project_root: Path | None = None) -> dict[str, Any]:
         "project_root": str(resolved_root),
         "generated_at_utc": utc_now_iso(),
         "summaries": summaries,
+        "panel_registry": panel_registry,
+        "action_registry": action_registry,
+        "panels": panel_registry.get("panels") or [],
         "pending_user_decisions": pending_user_decisions[:16],
         "available_actions": available_actions,
         "diagnostics": diagnostics,
@@ -616,11 +527,13 @@ def build_global_status(*, project_root: Path | None = None) -> dict[str, Any]:
             source_ref(runtime_visibility.STATE_SUMMARY_REF),
             source_ref(activation_settings.SETTINGS_REF),
             source_ref("src/jikuo/studio/global_status.py"),
+            source_ref("src/jikuo/studio/panels.py"),
+            source_ref("src/jikuo/studio/actions.py"),
         ],
         "read_model_limitations": [
             "integration health is a local projection and does not prove GUI mounted behavior",
             "runtime history is based on current runtime visibility snapshots, not DATA-01 event ledger",
-            "available actions are descriptors only; execution remains behind existing no-write and guarded apply surfaces",
+            "panels and actions are descriptors only; execution remains behind existing no-write and guarded apply surfaces",
             "policy-management summary does not activate user projects or mutate starter manifests",
         ],
         "privacy": {
@@ -665,9 +578,20 @@ def format_markdown(report: dict[str, Any]) -> str:
         f"- Pending decisions: `{len(report.get('pending_user_decisions') or [])}`",
         f"- Diagnostics: `{len(report.get('diagnostics') or [])}`",
         "",
-        "## Available Actions",
+        "## Panels",
         "",
     ]
+    for panel in report.get("panels") or []:
+        lines.append(
+            f"- `{panel.get('panel_id')}` / `{panel.get('status')}` / provider=`{panel.get('provider_ref')}`"
+        )
+    lines.extend(
+        [
+            "",
+            "## Available Actions",
+            "",
+        ]
+    )
     for action in report.get("available_actions") or []:
         lines.append(
             f"- `{action.get('action_id')}` / `{action.get('write_mode')}` / {action.get('title')}"

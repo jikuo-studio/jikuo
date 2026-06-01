@@ -1195,7 +1195,7 @@ entries:
     title: "SPRINT_050_WO-PER-JIKUO-STUDIO-01: Global Console And Configuration Shell"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md"
     sprint: "SPRINT_050"
-    status: "JIKUO-STUDIO-01A implemented no-write global status read model and CLI; panel/action registry, local read-only console, and guarded Studio actions remain planned"
+    status: "JIKUO-STUDIO-01A implemented no-write global status read model and CLI; JIKUO-STUDIO-01B implemented no-write panel/action registries; local read-only console and guarded Studio actions remain planned"
     impact_tags:
       - "studio"
       - "frontend"
