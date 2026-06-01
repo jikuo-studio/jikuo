@@ -52,6 +52,52 @@ REGISTRY_REFS = {
 CONFIGURATION_LANGUAGE_SCHEMA = "jikuo.studio.configuration_language.v0"
 
 
+def document_rule_source_descriptor(path_ref: str) -> dict[str, Any]:
+    if path_ref == PROJECT_CONTEXT_REF:
+        return {
+            "path": path_ref,
+            "source_kind": "editable_configuration",
+            "user_label": "Editable configuration",
+            "user_description": "Where Studio previews Document Rules changes and future guarded apply writes project-local document configuration.",
+            "editable_in_studio": True,
+            "write_target": True,
+            "internal_role": "project_context.main_document_mounts",
+        }
+    if path_ref == "docs/governance/jikuo_execution_mounts.md":
+        return {
+            "path": path_ref,
+            "source_kind": "governance_guidance",
+            "user_label": "Governance guidance",
+            "user_description": "Project-level execution guide that explains why these rules exist; it is read as context, not edited by Document Rules.",
+            "editable_in_studio": False,
+            "write_target": False,
+            "internal_role": "program_level_roadmap_and_mount_guidance",
+        }
+    if path_ref.startswith("docs/registry/"):
+        return {
+            "path": path_ref,
+            "source_kind": "registry_authority",
+            "user_label": "Registry authority",
+            "user_description": "Machine-readable registry shard used for routing and metadata, not a direct Document Rules edit target.",
+            "editable_in_studio": False,
+            "write_target": False,
+            "internal_role": "registry_shard",
+        }
+    return {
+        "path": path_ref,
+        "source_kind": "reference_source",
+        "user_label": "Reference source",
+        "user_description": "A document-rule reference source. Review its source role before making it editable.",
+        "editable_in_studio": False,
+        "write_target": False,
+        "internal_role": "unclassified_active_mount_authority",
+    }
+
+
+def classify_document_rule_sources(active_mount_authority: list[str]) -> list[dict[str, Any]]:
+    return [document_rule_source_descriptor(str(path_ref)) for path_ref in active_mount_authority]
+
+
 def document_mount_configuration_terms(
     *,
     active_mount_authority: list[str],
@@ -80,10 +126,24 @@ def document_mount_configuration_terms(
         },
         {
             "term_id": "rule_sources",
-            "user_label": "Current rule sources",
-            "user_description": "Where JIKUO currently reads the document rules for this project.",
+            "user_label": "Configuration sources and guidance",
+            "user_description": "Which files store editable Document Rules configuration versus which files explain governance context.",
             "internal_refs": active_mount_authority,
             "stability_rule": "user-facing source concept stays stable even if authority files change",
+        },
+        {
+            "term_id": "editable_configuration",
+            "user_label": "Editable configuration",
+            "user_description": "The structured project-local configuration that Studio may update after a guarded apply.",
+            "internal_refs": [PROJECT_CONTEXT_REF],
+            "stability_rule": "configuration may move later, but Studio keeps this user-facing concept stable",
+        },
+        {
+            "term_id": "governance_guidance",
+            "user_label": "Governance guidance",
+            "user_description": "Human-readable execution guidance and roadmap context; this should become help/projection text as structured configuration matures.",
+            "internal_refs": ["docs/governance/jikuo_execution_mounts.md"],
+            "stability_rule": "guidance documents explain configuration but are not the primary edit target",
         },
         {
             "term_id": "edit_status",
@@ -421,6 +481,7 @@ def document_mounts_summary(
 
     status = "available" if not missing_required_roles else "degraded"
     active_mount_authority = list(main_mounts.get("active_mount_authority") or [])
+    rule_source_descriptors = classify_document_rule_sources(active_mount_authority)
     return {
         "status": status,
         "source_status": "available",
@@ -434,6 +495,21 @@ def document_mounts_summary(
         "canonical_path_root": main_mounts.get("canonical_path_root"),
         "path_policy": main_mounts.get("path_policy"),
         "active_mount_authority": active_mount_authority,
+        "document_rule_sources": rule_source_descriptors,
+        "editable_configuration_sources": [
+            item for item in rule_source_descriptors if item["source_kind"] == "editable_configuration"
+        ],
+        "governance_guidance_sources": [
+            item for item in rule_source_descriptors if item["source_kind"] == "governance_guidance"
+        ],
+        "non_editable_reference_sources": [
+            item for item in rule_source_descriptors if not item["editable_in_studio"]
+        ],
+        "source_truth_boundary": {
+            "structured_config": "source_of_truth_for_project_local_document_rules",
+            "governance_guidance": "human_readable_context_projection_not_primary_edit_target",
+            "studio_write_target": PROJECT_CONTEXT_REF,
+        },
         "checked_before_slice_completion": checked_documents,
         "role_count": len(role_items),
         "required_role_count": sum(1 for item in role_items if item["required"]),
@@ -771,7 +847,7 @@ def format_markdown(report: dict[str, Any]) -> str:
     rule_sources_term = configuration_terms.get("rule_sources") or {}
     document_rules_label = document_rules_term.get("user_label") or "Document rules"
     completion_checks_label = completion_checks_term.get("user_label") or "Completion checks"
-    rule_sources_label = rule_sources_term.get("user_label") or "Current rule sources"
+    rule_sources_label = rule_sources_term.get("user_label") or "Configuration sources and guidance"
     runtime = summaries.get("runtime") or {}
     integrations = summaries.get("integrations") or {}
     mcp = integrations.get("mcp") or {}
@@ -795,7 +871,7 @@ def format_markdown(report: dict[str, Any]) -> str:
         "",
         f"## {document_rules_label}",
         "",
-        f"- {rule_sources_label}: `{len(document_mounts.get('active_mount_authority') or [])}`",
+        f"- {rule_sources_label}: editable=`{len(document_mounts.get('editable_configuration_sources') or [])}` / guidance=`{len(document_mounts.get('governance_guidance_sources') or [])}`",
         f"- Missing required roles: `{document_mounts.get('missing_required_role_count', 0)}`",
         f"- Rule sets: `{document_mounts.get('mount_set_count', 0)}` / Studio status=`{document_mounts.get('studio_mount_set_status')}`",
         "",

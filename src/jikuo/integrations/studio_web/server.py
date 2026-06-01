@@ -271,8 +271,10 @@ INDEX_HTML = """<!doctype html>
           <div class="list" id="document-mounts-completion"></div>
         </div>
         <div>
-          <p class="subhead" id="rule-sources-label">Rule sources and edit status</p>
-          <div class="list" id="document-mounts-authority"></div>
+          <p class="subhead" id="editable-configuration-label">Editable configuration</p>
+          <div class="list" id="document-mounts-editable-sources"></div>
+          <p class="subhead" id="governance-guidance-label" style="margin-top: 12px;">Governance guidance</p>
+          <div class="list" id="document-mounts-guidance-sources"></div>
         </div>
       </div>
       <div class="plan-tool" aria-labelledby="document-rules-plan-title">
@@ -420,7 +422,8 @@ INDEX_HTML = """<!doctype html>
         "Which project documents JIKUO should use as context, checks, and governance references."
       );
       document.getElementById("completion-checks-label").textContent = termLabel(terms, "completion_checks", "Completion checks");
-      document.getElementById("rule-sources-label").textContent = `${termLabel(terms, "rule_sources", "Current rule sources")} and ${termLabel(terms, "edit_status", "how changes are applied").toLowerCase()}`;
+      document.getElementById("editable-configuration-label").textContent = termLabel(terms, "editable_configuration", "Editable configuration");
+      document.getElementById("governance-guidance-label").textContent = termLabel(terms, "governance_guidance", "Governance guidance");
       const status = document.getElementById("document-mounts-status");
       status.className = statusClass(mounts.status || "unavailable");
       status.textContent = mounts.status || "unavailable";
@@ -438,17 +441,23 @@ INDEX_HTML = """<!doctype html>
       ) : [emptyRow("No completion-check documents are configured.")]));
       const actions = data.available_actions || [];
       const planAction = actions.find((item) => item.action_id === "studio.document_mounts.plan_update") || {};
-      const authority = document.getElementById("document-mounts-authority");
-      const authorityRows = (mounts.active_mount_authority || []).map((item) =>
-        row(item, termDescription(terms, "rule_sources", "Where JIKUO currently reads the document rules for this project."), "available")
+      const editableSources = document.getElementById("document-mounts-editable-sources");
+      const editableRows = (mounts.editable_configuration_sources || []).map((item) =>
+        row(item.path || "unbound", `${item.user_description || ""} ${termLabel(terms, "edit_status", "How changes are applied")}: ${planAction.disabled_reason || "preview now, guarded apply later"}`, planAction.status || "available")
+      );
+      editableSources.replaceChildren(...(editableRows.length ? editableRows : [
+        row("No editable configuration source", "Document Rules has no structured configuration target.", "unavailable")
+      ]));
+      const guidanceSources = document.getElementById("document-mounts-guidance-sources");
+      const guidanceRows = (mounts.governance_guidance_sources || []).map((item) =>
+        row(item.path || "unbound", item.user_description || "Read as context; not edited by Document Rules.", "available")
       );
       const missing = mounts.missing_required_roles || [];
-      authority.replaceChildren(
-        ...authorityRows,
-        row(termLabel(terms, "edit_status", "How changes are applied"), planAction.disabled_reason || "available", planAction.status || "available"),
+      guidanceSources.replaceChildren(
+        ...(guidanceRows.length ? guidanceRows : [emptyRow("No governance guidance source is configured.")]),
         ...(missing.length ? missing.slice(0, 4).map((item) =>
           row(item.role || "missing role", item.path || "unbound", "warning")
-        ) : [emptyRow("No required document roles are missing.")])
+        ) : [])
       );
     };
     const render = (data) => {

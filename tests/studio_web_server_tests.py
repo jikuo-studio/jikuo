@@ -121,10 +121,15 @@ class StudioWebServerTests(unittest.TestCase):
         self.assertIn("/api/document-rules/plan", html)
         self.assertIn("Document Rules", html)
         self.assertIn("document-mounts-completion", html)
+        self.assertIn("document-mounts-editable-sources", html)
+        self.assertIn("document-mounts-guidance-sources", html)
+        self.assertIn("Editable configuration", html)
+        self.assertIn("Governance guidance", html)
         self.assertIn("document-rules-form", html)
         self.assertIn("Preview plan", html)
         self.assertIn("Available Actions", html)
         self.assertNotIn("Mount authority and pending write boundary", html)
+        self.assertNotIn("Current rule sources", html)
         self.assertNotIn("apply_document_rules", html)
         self.assertNotIn("approval-phrase", html)
 
@@ -154,6 +159,14 @@ class StudioWebServerTests(unittest.TestCase):
                 for item in status["summaries"]["document_mounts"]["configuration_terms"]
             }
             self.assertIn("rule_sources", terms)
+            self.assertIn("editable_configuration", terms)
+            self.assertIn("governance_guidance", terms)
+            self.assertTrue(
+                status["summaries"]["document_mounts"]["editable_configuration_sources"]
+            )
+            self.assertTrue(
+                status["summaries"]["document_mounts"]["governance_guidance_sources"]
+            )
             self.assertEqual(panels["schema"], "jikuo.studio.panel_registry.v0")
             self.assertEqual(actions["schema"], "jikuo.studio.action_registry.v0")
         finally:

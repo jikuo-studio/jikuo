@@ -1542,6 +1542,15 @@ entries:
     approval: "no apply control is exposed; guarded apply remains planned and must require approval before any .jikuo/project_context.yaml write"
     referenced_by_transitional_cache:
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md"
+  - id: "CAP-STUDIO-DOCUMENT-RULES-SOURCE-SEMANTICS-01"
+    title: "Studio Document Rules source semantics"
+    status: "implemented read-model and UI source classification by JIKUO-STUDIO-01D7"
+    metadata_status: "complete"
+    entry_point: "src/jikuo/studio/global_status.py document_rule_sources; src/jikuo/integrations/studio_web/server.py Document Rules source sections"
+    write_effect: "none; separates editable configuration sources from governance guidance for user-facing configuration surfaces"
+    approval: "read-only semantic clarification; .jikuo/project_context.yaml remains the current Document Rules write target and governance guidance docs are not edited by this UI"
+    referenced_by_transitional_cache:
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md"
   - id: "CAP-TODO-SNAPSHOT-POSTURE-01"
     title: "Previous/latest todo snapshot posture"
     status: "implemented context/documentation guard"

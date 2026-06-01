@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-STUDIO-01: Global Console And Configuration Shell
 
-> **Status**: `JIKUO-STUDIO-01A` global status read model, `JIKUO-STUDIO-01B` panel/action registries, `JIKUO-STUDIO-01C` local read-only console, `JIKUO-STUDIO-01D1` document-mount read model, `JIKUO-STUDIO-01D2` visible document-mount frontend section, and `JIKUO-STUDIO-01D3` configuration vocabulary mapping implemented as no-write Python/CLI/backend surfaces. `JIKUO-STUDIO-01D4` records the detailed Document Rules plan/apply design contract; `JIKUO-STUDIO-01D5` implements the first Document Rules no-write plan backend; `JIKUO-STUDIO-01D6` connects that plan to the local Studio page as a no-write preview. Guarded apply remains planned.
+> **Status**: `JIKUO-STUDIO-01A` global status read model, `JIKUO-STUDIO-01B` panel/action registries, `JIKUO-STUDIO-01C` local read-only console, `JIKUO-STUDIO-01D1` document-mount read model, `JIKUO-STUDIO-01D2` visible document-mount frontend section, and `JIKUO-STUDIO-01D3` configuration vocabulary mapping implemented as no-write Python/CLI/backend surfaces. `JIKUO-STUDIO-01D4` records the detailed Document Rules plan/apply design contract; `JIKUO-STUDIO-01D5` implements the first Document Rules no-write plan backend; `JIKUO-STUDIO-01D6` connects that plan to the local Studio page as a no-write preview; `JIKUO-STUDIO-01D7` separates editable configuration from governance guidance in the read model and UI. Guarded apply remains planned.
 > **Date**: 2026-05-31
 > **JIKUO layer**: product surface / view-model projection / guarded configuration control.
 > **Business meaning**: Users should not need to reconstruct JIKUO's global state from chat alone. A thin JIKUO console should make activation, runtime, policy, template, integration, diagnostics, and guarded configuration status visible in one place while preserving the existing kernel and guarded-write boundaries.
@@ -787,6 +787,37 @@ Acceptance:
   response without writes;
 - no approval phrase field or guarded apply button appears in this slice;
 - the legacy task map remains untouched.
+
+### `JIKUO-STUDIO-01D7`: Document Rules Source Semantics
+
+Clarify the Document Rules source model before guarded apply is implemented.
+The user-facing product principle is:
+
+```text
+structured configuration / registry = long-term source of truth
+human-readable governance docs = guidance, help text, or projection
+```
+
+Implementation status (2026-06-01): `src/jikuo/studio/global_status.py`
+classifies active mount authority entries into source kinds. The current
+project-local editable configuration source is `.jikuo/project_context.yaml`.
+`docs/governance/jikuo_execution_mounts.md` is rendered as governance guidance:
+it explains program-level route and mount context, but it is not the target
+that the Document Rules preview/apply flow edits.
+
+Acceptance:
+
+- the read model exposes `document_rule_sources` with `source_kind`,
+  `editable_in_studio`, and `write_target` fields;
+- `.jikuo/project_context.yaml` appears as `editable_configuration`;
+- `docs/governance/jikuo_execution_mounts.md` appears as
+  `governance_guidance`;
+- the Studio page shows separate `Editable configuration` and
+  `Governance guidance` sections instead of one ambiguous rule-source list;
+- the UI does not imply that guidance documents are same-level configuration
+  files;
+- no project configuration, policy evaluator behavior, guarded apply, or legacy
+  task-map projection changes are introduced by this slice.
 
 ### `JIKUO-STUDIO-01D`: Guarded Configuration Actions
 

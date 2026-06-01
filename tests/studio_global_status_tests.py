@@ -66,8 +66,32 @@ class StudioGlobalStatusTests(unittest.TestCase):
             ".jikuo/project_context.yaml main_document_mounts",
             terms["document_rules"]["internal_refs"],
         )
-        self.assertEqual(terms["rule_sources"]["user_label"], "Current rule sources")
+        self.assertEqual(
+            terms["rule_sources"]["user_label"],
+            "Configuration sources and guidance",
+        )
+        self.assertEqual(
+            terms["editable_configuration"]["user_label"],
+            "Editable configuration",
+        )
+        self.assertEqual(
+            terms["governance_guidance"]["user_label"],
+            "Governance guidance",
+        )
         self.assertIn("stability_rule", terms["edit_status"])
+        editable_sources = document_mounts["editable_configuration_sources"]
+        guidance_sources = document_mounts["governance_guidance_sources"]
+        self.assertEqual(editable_sources[0]["path"], ".jikuo/project_context.yaml")
+        self.assertTrue(editable_sources[0]["editable_in_studio"])
+        self.assertEqual(
+            guidance_sources[0]["path"],
+            "docs/governance/jikuo_execution_mounts.md",
+        )
+        self.assertFalse(guidance_sources[0]["editable_in_studio"])
+        self.assertEqual(
+            document_mounts["source_truth_boundary"]["studio_write_target"],
+            ".jikuo/project_context.yaml",
+        )
         self.assertFalse(report["writes_performed"])
 
     def test_missing_project_context_is_unavailable_without_writes(self):
