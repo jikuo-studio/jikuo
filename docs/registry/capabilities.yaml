@@ -1515,6 +1515,15 @@ entries:
     approval: "implemented as read-only mapping; internal refs are support/debug metadata and not the primary user-facing concept"
     referenced_by_transitional_cache:
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md"
+  - id: "CAP-STUDIO-DOCUMENT-RULES-PLAN-APPLY-CONTRACT-01"
+    title: "Studio Document Rules plan/apply contract"
+    status: "documented design contract by JIKUO-STUDIO-01D4; implementation planned"
+    metadata_status: "complete"
+    entry_point: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md section 7.4 and JIKUO-STUDIO-01D4"
+    write_effect: "none; specifies future no-write plan and guarded apply behavior for customer-facing Document Rules"
+    approval: "documentation-only; future implementation must keep plan no-write, apply guarded, target writes project-local configuration only, and not regenerate the legacy task map"
+    referenced_by_transitional_cache:
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md"
   - id: "CAP-TODO-SNAPSHOT-POSTURE-01"
     title: "Previous/latest todo snapshot posture"
     status: "implemented context/documentation guard"

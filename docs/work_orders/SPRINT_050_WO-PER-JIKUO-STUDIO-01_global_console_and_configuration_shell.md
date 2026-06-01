@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-STUDIO-01: Global Console And Configuration Shell
 
-> **Status**: `JIKUO-STUDIO-01A` global status read model, `JIKUO-STUDIO-01B` panel/action registries, `JIKUO-STUDIO-01C` local read-only console, `JIKUO-STUDIO-01D1` document-mount read model, `JIKUO-STUDIO-01D2` visible document-mount frontend section, and `JIKUO-STUDIO-01D3` configuration vocabulary mapping implemented as no-write Python/CLI/backend surfaces. Customer configuration action inventory and document-mount configuration boundary recorded; guarded Studio actions remain planned.
+> **Status**: `JIKUO-STUDIO-01A` global status read model, `JIKUO-STUDIO-01B` panel/action registries, `JIKUO-STUDIO-01C` local read-only console, `JIKUO-STUDIO-01D1` document-mount read model, `JIKUO-STUDIO-01D2` visible document-mount frontend section, and `JIKUO-STUDIO-01D3` configuration vocabulary mapping implemented as no-write Python/CLI/backend surfaces. `JIKUO-STUDIO-01D4` records the detailed Document Rules plan/apply design contract; guarded implementation remains planned.
 > **Date**: 2026-05-31
 > **JIKUO layer**: product surface / view-model projection / guarded configuration control.
 > **Business meaning**: Users should not need to reconstruct JIKUO's global state from chat alone. A thin JIKUO console should make activation, runtime, policy, template, integration, diagnostics, and guarded configuration status visible in one place while preserving the existing kernel and guarded-write boundaries.
@@ -341,6 +341,238 @@ Frontend rules:
 - if internal storage moves, update `internal_refs` while keeping the user term
   stable unless the product meaning truly changes.
 
+### 7.4 Document Rules Plan / Apply Contract
+
+`JIKUO-STUDIO-01D4` defines the future editable Document Rules flow before code
+implementation. It is a design contract, not an implemented write surface.
+
+Business goal:
+
+- let customers configure the documents JIKUO should use as context,
+  completion checks, and governance references;
+- keep the user-facing terms stable even when the internal storage changes;
+- keep every write behind a no-write plan and guarded apply boundary;
+- prevent the local Studio UI from becoming a second configuration kernel.
+
+#### 7.4.1 User Operations
+
+The first editable Document Rules UI should support these user-level actions:
+
+| User operation | Meaning | First implementation posture |
+|---|---|---|
+| Add context document | Add a document JIKUO should consider when orienting to the project. | plan-only then guarded apply |
+| Remove context document | Stop treating a document as active context. | plan-only then guarded apply |
+| Add completion check | Require JIKUO to inspect a document before claiming slice completion. | plan-only then guarded apply |
+| Remove completion check | Stop requiring a document in completion-review checks. | plan-only then guarded apply |
+| Add governance reference | Mark a document as explaining rules, policy, registry, or execution boundaries. | plan-only then guarded apply |
+| Change document label / note | Update the user-facing reason a document is included. | plan-only then guarded apply |
+
+The UI should group operations by user goal, not by YAML field name. Internal
+labels such as `document_roles`, `main_document_mounts`, and `mount_sets` remain
+support/debug details.
+
+#### 7.4.2 Internal Mapping
+
+The initial implementation should write only project-local configuration:
+
+| User term | Current internal target | Notes |
+|---|---|---|
+| Context documents | `.jikuo/project_context.yaml document_roles` | Add or remove role bindings. |
+| Completion checks | `.jikuo/project_context.yaml main_document_mounts.checked_before_slice_completion` | Preserve `update_required_when` text. |
+| Governance references | `.jikuo/project_context.yaml document_roles` plus existing registry refs | Do not mutate package registry shards for local choices. |
+| Rule sources | `.jikuo/project_context.yaml main_document_mounts.active_mount_authority` | Read-only in the first implementation unless explicitly approved later. |
+| Rule sets | `docs/registry/mount_sets.yaml` | Read-only for D4 implementation; package registry edits require a separate registry task. |
+
+The implementation may later move project-local document rules into a dedicated
+file such as `.jikuo/document_rules.yaml`. If that happens, Studio must keep the
+same `configuration_terms` and update only `internal_refs`.
+
+#### 7.4.3 No-Write Plan Surface
+
+Future plan command / tool:
+
+```text
+jikuo.plan_document_rules_update
+```
+
+Possible CLI shape:
+
+```text
+python -B -m jikuo studio document-rules plan \
+  --add-context-doc docs/example.md \
+  --add-completion-check docs/example.md \
+  --completion-update-rule "product-facing docs changed" \
+  --format json
+```
+
+Minimum request fields:
+
+```yaml
+schema: "jikuo.studio.document_rules_update_request.v0"
+project_root: "<local path>"
+operations:
+  - operation_id: "op_1"
+    operation_type: "add_context_document|remove_context_document|add_completion_check|remove_completion_check|add_governance_reference|update_note"
+    path: "docs/example.md"
+    user_label: "optional short label"
+    update_required_when: "optional completion-check rule"
+    reason: "optional user-facing reason"
+host_semantic_intent: {}
+```
+
+Minimum no-write response:
+
+```yaml
+schema: "jikuo.studio.document_rules_update_plan.v0"
+status: "review|refused|noop"
+writes_performed: false
+write_allowed_by_command: false
+target_files:
+  - ".jikuo/project_context.yaml"
+proposed_changes:
+  added_context_documents: []
+  removed_context_documents: []
+  added_completion_checks: []
+  removed_completion_checks: []
+  added_governance_references: []
+  changed_notes: []
+diff_preview:
+  before: {}
+  after: {}
+validation:
+  path_checks: []
+  duplicate_checks: []
+  authority_checks: []
+  legacy_projection_checks: []
+risks: []
+non_effects:
+  - "does_not_write_project_context"
+  - "does_not_edit_registry_shards"
+  - "does_not_regenerate_legacy_task_map"
+  - "does_not_change_policy_evaluator_behavior"
+approval:
+  required: true
+  approval_phrase_hint: "Approve Document Rules update"
+client_display_links: {}
+```
+
+The no-write plan must be the only way the UI previews document-rule edits. The
+frontend may keep temporary form state, but it must not compute canonical diffs
+or write YAML directly.
+
+#### 7.4.4 Validation Rules
+
+The plan surface should reject or flag:
+
+- paths outside the project root;
+- absolute paths unless explicitly normalized into project-relative refs;
+- missing files when the operation requires an existing document;
+- duplicate context or completion-check entries;
+- attempts to edit `docs/governance/jikuo_productization_task_map.md` as a new
+  source of task ordering, open items, capability metadata, or registry
+  authority;
+- attempts to mutate `docs/registry/*.yaml` from the Document Rules UI;
+- attempts to change policy evaluator behavior or active policies;
+- operations without a clear user-facing reason when the write would add a new
+  completion check.
+
+No-write plans may return `status: "noop"` when the requested rule already
+exists exactly as requested.
+
+#### 7.4.5 Guarded Apply Surface
+
+Future guarded apply command / tool:
+
+```text
+jikuo.apply_document_rules_update
+```
+
+Possible CLI shape:
+
+```text
+python -B -m jikuo studio document-rules apply \
+  --plan-ref ".jikuo/runtime/history/<plan-card>.md" \
+  --confirm-apply \
+  --approval-phrase "Approve Document Rules update" \
+  --format json
+```
+
+Minimum apply contract:
+
+```yaml
+schema: "jikuo.studio.document_rules_update_apply_result.v0"
+status: "applied|refused"
+write_performed: true|false
+target_files:
+  - ".jikuo/project_context.yaml"
+applied_operations: []
+refusal_reasons: []
+runtime_card_ref: ".jikuo/runtime/history/..."
+non_effects:
+  - "does_not_edit_registry_shards"
+  - "does_not_regenerate_legacy_task_map"
+  - "does_not_mutate_policies"
+```
+
+Guarded apply must refuse when:
+
+- no reviewed plan payload or plan fingerprint is supplied;
+- the approval phrase is missing or mismatched;
+- `confirm_apply` is not true;
+- the current source file fingerprint no longer matches the reviewed plan;
+- the plan would write outside `.jikuo/project_context.yaml` or a future
+  explicitly approved project-local document-rules file;
+- the request tries to mutate package registry shards, active policies, starter
+  manifests, runtime cards, or the legacy task map.
+
+#### 7.4.6 Frontend Flow
+
+The first interactive UI should follow this exact sequence:
+
+1. render `Document Rules` from `summaries.document_mounts`;
+2. let the user edit local form state only;
+3. call `jikuo.plan_document_rules_update`;
+4. render proposed changes, validation results, write effects, non-effects,
+   and card links;
+5. require an explicit approval phrase before apply controls are enabled;
+6. call `jikuo.apply_document_rules_update`;
+7. refresh `jikuo.studio.global_status.v0`;
+8. show the apply result card and updated Document Rules section.
+
+The UI must not hide a disabled action. If the plan/apply surface is unavailable
+or degraded, Studio should show the reason and keep the section read-only.
+
+#### 7.4.7 Tests And Acceptance
+
+Design acceptance for D4 is this section plus registry updates. Implementation
+acceptance for the future code slice should include:
+
+- plan with add-context-doc returns `writes_performed=false`;
+- plan with add-completion-check includes `update_required_when`;
+- plan rejects paths outside the project root;
+- plan refuses legacy task-map authority expansion;
+- plan reports noop for duplicate entries;
+- apply without approval phrase refuses;
+- apply with stale source fingerprint refuses;
+- apply with approval writes only the approved project-local target file;
+- full test discovery remains green;
+- `git diff --name-only -- docs/governance/jikuo_productization_task_map.md`
+  remains empty unless the task explicitly approves projection repair;
+- Studio Web refresh shows updated Document Rules after apply;
+- completion-review runtime card includes document-rule update evidence.
+
+#### 7.4.8 Explicit Non-Goals
+
+D4 and its first implementation do not:
+
+- implement a general knowledge graph;
+- add DATA-01 event-ledger writes;
+- make lifecycle node execution mandatory;
+- mutate registry shards from the customer configuration UI;
+- change policy evaluator matching fields;
+- make Studio the only supported way to configure JIKUO;
+- make hook / MCP mounted behavior stricter than proven by host adapters.
+
 ---
 
 ## 8. Implementation Slices
@@ -477,6 +709,25 @@ Acceptance:
 - internal refs remain available as support/debug metadata;
 - primary frontend copy avoids internal architecture phrases such as
   `mount authority`.
+
+### `JIKUO-STUDIO-01D4`: Document Rules Plan / Apply Design
+
+Define the future no-write plan and guarded apply contract for editable
+Document Rules before implementation starts.
+
+Implementation status (2026-06-01): documented in section 7.4 of this work
+order. No runtime code, CLI route, MCP tool, or frontend apply control is
+implemented by this slice.
+
+Acceptance:
+
+- user operations are defined in customer language;
+- internal targets are mapped to current project-local configuration files;
+- the no-write plan response schema and non-effects are specified;
+- the guarded apply refusal and write boundaries are specified;
+- frontend flow is sequenced through plan, approval, apply, and refresh;
+- tests for the future implementation are listed before code work begins;
+- the legacy task map remains untouched.
 
 ### `JIKUO-STUDIO-01D`: Guarded Configuration Actions
 
@@ -715,7 +966,8 @@ Known gaps after `01A`/`01B`/`01C` implementation:
 - document-mount data is visible in the local web console as a dedicated
   section;
 - document-mount no-write planning and guarded apply surfaces are not
-  implemented yet;
+  implemented yet, but `01D4` now defines their expected request/response,
+  validation, refusal, and frontend-flow contract;
 - action descriptors are embedded in `jikuo.studio.global_status.v0` for
   frontend convenience and also available through `jikuo.studio.action_registry.v0`;
 - the local console is read-only and does not execute registered actions;

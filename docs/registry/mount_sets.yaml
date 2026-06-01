@@ -66,7 +66,7 @@ entries:
       - path: ".codex/hooks/README.md"
   - id: "MOUNT-STUDIO-01"
     title: "JIKUO global console and configuration shell context bundle"
-    status: "active for STUDIO-01A through STUDIO-01D3; guarded action implementation still planned"
+    status: "active for STUDIO-01A through STUDIO-01D4; guarded action implementation still planned"
     documents:
       - path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md"
       - path: "docs/insights/INSIGHT-2026-05-16-studio-dashboard-frontend-architecture.md"
