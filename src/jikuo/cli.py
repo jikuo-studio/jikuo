@@ -15,7 +15,7 @@ if __package__:
     )
     from .integrations import instruction_files
     from .integrations.studio_web import server as studio_web_server
-    from .studio import global_status
+    from .studio import document_rules, global_status
 else:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from jikuo import (
@@ -26,7 +26,7 @@ else:
     )
     from jikuo.integrations import instruction_files
     from jikuo.integrations.studio_web import server as studio_web_server
-    from jikuo.studio import global_status
+    from jikuo.studio import document_rules, global_status
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -106,11 +106,19 @@ def build_parser() -> argparse.ArgumentParser:
         "studio",
         help="Inspect JIKUO Studio/global-console read models.",
     )
-    studio.add_argument("studio_command", choices=("status", "serve"))
+    studio.add_argument("studio_command", choices=("status", "serve", "document-rules"))
+    studio.add_argument("studio_subcommand", nargs="?", choices=("plan",))
     studio.add_argument("--project-root", type=Path, default=None)
     studio.add_argument("--format", choices=("markdown", "json"), default="markdown")
     studio.add_argument("--host", default=studio_web_server.DEFAULT_HOST)
     studio.add_argument("--port", type=int, default=studio_web_server.DEFAULT_PORT)
+    studio.add_argument("--add-context-doc", action="append", default=[])
+    studio.add_argument("--remove-context-doc", action="append", default=[])
+    studio.add_argument("--add-completion-check", action="append", default=[])
+    studio.add_argument("--remove-completion-check", action="append", default=[])
+    studio.add_argument("--add-governance-reference", action="append", default=[])
+    studio.add_argument("--remove-governance-reference", action="append", default=[])
+    studio.add_argument("--completion-update-rule", default=None)
     return parser
 
 
@@ -189,6 +197,28 @@ def main(argv: list[str] | None = None) -> int:
             if args.project_root is not None:
                 serve_args.extend(["--project-root", str(args.project_root)])
             return studio_web_server.main(serve_args)
+        if args.studio_command == "document-rules":
+            if args.studio_subcommand != "plan":
+                parser.error("studio document-rules requires the `plan` subcommand")
+            plan_args = ["plan"]
+            if args.project_root is not None:
+                plan_args.extend(["--project-root", str(args.project_root)])
+            for path_ref in args.add_context_doc:
+                plan_args.extend(["--add-context-doc", path_ref])
+            for path_ref in args.remove_context_doc:
+                plan_args.extend(["--remove-context-doc", path_ref])
+            for path_ref in args.add_completion_check:
+                plan_args.extend(["--add-completion-check", path_ref])
+            for path_ref in args.remove_completion_check:
+                plan_args.extend(["--remove-completion-check", path_ref])
+            for path_ref in args.add_governance_reference:
+                plan_args.extend(["--add-governance-reference", path_ref])
+            for path_ref in args.remove_governance_reference:
+                plan_args.extend(["--remove-governance-reference", path_ref])
+            if args.completion_update_rule:
+                plan_args.extend(["--completion-update-rule", args.completion_update_rule])
+            plan_args.extend(["--format", args.format])
+            return document_rules.main(plan_args)
     parser.error(f"unsupported command: {args.command}")
     return 2
 

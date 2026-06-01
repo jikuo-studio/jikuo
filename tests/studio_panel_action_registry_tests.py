@@ -75,9 +75,13 @@ class StudioPanelActionRegistryTests(unittest.TestCase):
 
         document_plan = action_by_id["studio.document_mounts.plan_update"]
         self.assertEqual(document_plan["title"], "Plan document-rule update")
-        self.assertEqual(document_plan["write_mode"], "planned-no-write-plan")
+        self.assertEqual(document_plan["write_mode"], "no-write-plan")
+        self.assertEqual(
+            document_plan["plan_surface"],
+            "python -B -m jikuo studio document-rules plan",
+        )
         self.assertTrue(document_plan["approval_required"])
-        self.assertEqual(document_plan["status"], "disabled")
+        self.assertEqual(document_plan["status"], "available")
 
     def test_panel_registry_binds_panels_to_valid_action_refs(self):
         report = global_status.build_global_status(project_root=ROOT)

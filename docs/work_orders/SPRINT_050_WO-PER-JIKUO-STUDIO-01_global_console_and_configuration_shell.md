@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-STUDIO-01: Global Console And Configuration Shell
 
-> **Status**: `JIKUO-STUDIO-01A` global status read model, `JIKUO-STUDIO-01B` panel/action registries, `JIKUO-STUDIO-01C` local read-only console, `JIKUO-STUDIO-01D1` document-mount read model, `JIKUO-STUDIO-01D2` visible document-mount frontend section, and `JIKUO-STUDIO-01D3` configuration vocabulary mapping implemented as no-write Python/CLI/backend surfaces. `JIKUO-STUDIO-01D4` records the detailed Document Rules plan/apply design contract; guarded implementation remains planned.
+> **Status**: `JIKUO-STUDIO-01A` global status read model, `JIKUO-STUDIO-01B` panel/action registries, `JIKUO-STUDIO-01C` local read-only console, `JIKUO-STUDIO-01D1` document-mount read model, `JIKUO-STUDIO-01D2` visible document-mount frontend section, and `JIKUO-STUDIO-01D3` configuration vocabulary mapping implemented as no-write Python/CLI/backend surfaces. `JIKUO-STUDIO-01D4` records the detailed Document Rules plan/apply design contract; `JIKUO-STUDIO-01D5` implements the first Document Rules no-write plan backend. Guarded apply and editable frontend controls remain planned.
 > **Date**: 2026-05-31
 > **JIKUO layer**: product surface / view-model projection / guarded configuration control.
 > **Business meaning**: Users should not need to reconstruct JIKUO's global state from chat alone. A thin JIKUO console should make activation, runtime, policy, template, integration, diagnostics, and guarded configuration status visible in one place while preserving the existing kernel and guarded-write boundaries.
@@ -716,8 +716,9 @@ Define the future no-write plan and guarded apply contract for editable
 Document Rules before implementation starts.
 
 Implementation status (2026-06-01): documented in section 7.4 of this work
-order. No runtime code, CLI route, MCP tool, or frontend apply control is
-implemented by this slice.
+order. No runtime code, MCP tool, or frontend apply control is implemented by
+this slice. The first CLI/core no-write plan implementation is tracked
+separately as `JIKUO-STUDIO-01D5`.
 
 Acceptance:
 
@@ -728,6 +729,35 @@ Acceptance:
 - frontend flow is sequenced through plan, approval, apply, and refresh;
 - tests for the future implementation are listed before code work begins;
 - the legacy task map remains untouched.
+
+### `JIKUO-STUDIO-01D5`: Document Rules No-Write Plan Backend
+
+Implement the plan-only side of the section 7.4 contract:
+
+```powershell
+python -B -m jikuo studio document-rules plan `
+  --add-context-doc docs/example.md `
+  --add-completion-check docs/example.md `
+  --add-governance-reference docs/governance/example.md `
+  --format json
+```
+
+Implementation status (2026-06-01): `src/jikuo/studio/document_rules.py`
+returns `jikuo.studio.document_rules_update_plan.v0` as a no-write plan. The
+root CLI exposes it through `python -B -m jikuo studio document-rules plan`.
+`src/jikuo/studio/actions.py` marks `studio.document_mounts.plan_update` as an
+available no-write plan action while keeping apply as planned.
+
+Acceptance:
+
+- the plan reports target file `.jikuo/project_context.yaml`;
+- context document, completion-check, and governance-reference additions are
+  previewed without writes;
+- duplicate requests return `noop` items instead of false changes;
+- outside-root, missing-file, and legacy-task-map authority-expansion attempts
+  are refused before any apply;
+- `writes_performed=false` and `write_allowed_by_command=false`;
+- apply remains unavailable until a separate guarded implementation slice.
 
 ### `JIKUO-STUDIO-01D`: Guarded Configuration Actions
 
@@ -965,9 +995,9 @@ Known gaps after `01A`/`01B`/`01C` implementation:
   now available as a read-only Studio projection;
 - document-mount data is visible in the local web console as a dedicated
   section;
-- document-mount no-write planning and guarded apply surfaces are not
-  implemented yet, but `01D4` now defines their expected request/response,
-  validation, refusal, and frontend-flow contract;
+- document-mount no-write planning is implemented as a CLI/core surface in
+  `01D5`, but guarded apply and frontend editing controls are not implemented
+  yet;
 - action descriptors are embedded in `jikuo.studio.global_status.v0` for
   frontend convenience and also available through `jikuo.studio.action_registry.v0`;
 - the local console is read-only and does not execute registered actions;
