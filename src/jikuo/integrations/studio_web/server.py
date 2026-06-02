@@ -260,6 +260,33 @@ INDEX_HTML = """<!doctype html>
       font-size: 12px;
       line-height: 1.4;
     }
+    .file-membership {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 3px;
+    }
+    .membership-badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      padding: 2px 7px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.2;
+    }
+    .membership-badge.in-rules {
+      border-color: #8db8ac;
+      color: #176555;
+      background: #eef8f4;
+    }
+    .membership-badge.not-in-rules {
+      color: #6b7280;
+      background: #f8fafc;
+    }
     .selected-files {
       display: grid;
       gap: 6px;
@@ -380,12 +407,12 @@ INDEX_HTML = """<!doctype html>
             <button id="document-rules-preview-button" type="submit">Preview plan</button>
           </div>
           <div class="file-picker" aria-labelledby="project-files-title">
-            <h3 id="project-files-title">Project documents</h3>
-            <p class="subhead">Select one or more project files, then preview the selected Document Rules change.</p>
+            <h3 id="project-files-title">Available project files</h3>
+            <p class="subhead">Candidate local files. This is not the current mount set; each row shows current Document Rules membership.</p>
             <div class="file-toolbar">
               <label>
-                Filter project documents
-                <input id="document-rules-file-filter" placeholder="docs, policy, yaml..." autocomplete="off">
+                Filter available files
+                <input id="document-rules-file-filter" placeholder="path, role, membership..." autocomplete="off">
               </label>
               <button class="secondary-button" id="document-rules-clear-selection" type="button">Clear selection</button>
             </div>
@@ -500,18 +527,38 @@ INDEX_HTML = """<!doctype html>
         fetch("/api/status", {cache: "no-store"}).then((response) => response.json()).then(render);
       }
     };
-    const membershipSummary = (membership) => {
+    const membershipParts = (membership) => {
       const parts = [];
       if (membership && membership.is_context_document) {
-        parts.push(`context: ${(membership.context_role_refs || []).join(", ")}`);
+        parts.push(`Context document: ${(membership.context_role_refs || []).join(", ")}`);
       }
       if (membership && membership.is_completion_check) {
-        parts.push("completion check");
+        parts.push("Completion check");
       }
       if (membership && membership.is_governance_reference) {
-        parts.push("rule source");
+        parts.push("Governance reference");
       }
-      return parts.length ? parts.join(" / ") : "not in Document Rules";
+      return parts;
+    };
+    const membershipSummary = (membership) => {
+      const parts = membershipParts(membership);
+      return parts.length ? parts.join(" / ") : "Not in Document Rules";
+    };
+    const membershipState = (membership) => {
+      return membershipParts(membership).length ? "In Document Rules" : "Not in Document Rules";
+    };
+    const appendMembershipBadges = (container, membership) => {
+      const state = document.createElement("span");
+      const parts = membershipParts(membership);
+      state.className = `membership-badge ${parts.length ? "in-rules" : "not-in-rules"}`;
+      state.textContent = membershipState(membership);
+      container.append(state);
+      parts.forEach((part) => {
+        const badge = document.createElement("span");
+        badge.className = "membership-badge in-rules";
+        badge.textContent = part;
+        container.append(badge);
+      });
     };
     const renderSelectedFiles = () => {
       const container = document.getElementById("document-rules-selected-files");
@@ -554,10 +601,10 @@ INDEX_HTML = """<!doctype html>
       const list = document.getElementById("document-rules-file-list");
       const filter = document.getElementById("document-rules-file-filter").value.trim().toLowerCase();
       const filtered = projectFileItems.filter((item) =>
-        !filter || `${item.path} ${item.file_kind} ${membershipSummary(item.document_rules_membership)}`.toLowerCase().includes(filter)
+        !filter || `${item.path} ${item.file_kind} ${membershipSummary(item.document_rules_membership)} ${membershipState(item.document_rules_membership)}`.toLowerCase().includes(filter)
       ).slice(0, 120);
       if (!filtered.length) {
-        list.replaceChildren(row("No project documents", "No matching markdown, YAML, JSON, or text files were found.", "degraded"));
+        list.replaceChildren(row("No available files", "No matching markdown, YAML, JSON, or text files were found.", "degraded"));
         return;
       }
       list.replaceChildren(...filtered.map((item) => {
@@ -568,10 +615,11 @@ INDEX_HTML = """<!doctype html>
         checkbox.checked = selectedFileRecords.has(item.path);
         checkbox.addEventListener("change", () => setSelectedPath(item.path, checkbox.checked));
         const details = document.createElement("div");
-        details.innerHTML = `<strong></strong><div class="file-meta"></div>`;
+        details.innerHTML = `<strong></strong><div class="file-meta"></div><div class="file-membership"></div>`;
         details.querySelector("strong").textContent = item.path;
         details.querySelector(".file-meta").textContent =
-          `${item.file_kind} / ${membershipSummary(item.document_rules_membership)} / modified ${item.modified_at_utc}`;
+          `${item.file_kind} / modified ${item.modified_at_utc}`;
+        appendMembershipBadges(details.querySelector(".file-membership"), item.document_rules_membership);
         const badge = document.createElement("span");
         badge.className = "status available";
         badge.textContent = item.file_kind || "file";
