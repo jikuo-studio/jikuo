@@ -4290,6 +4290,14 @@ class AgentFlowProposalTests(unittest.TestCase):
             "work_profile_policy_scopes: discussion, editing",
             proposal["cards"][0]["shown_inputs"],
         )
+        self.assertIn(
+            "authoring_mode: lifecycle_gated",
+            proposal["cards"][0]["shown_inputs"],
+        )
+        self.assertIn(
+            "authoring_warning: lifecycle_events_hard_gate_policy_applicability",
+            proposal["cards"][0]["shown_outputs"],
+        )
         atom_ids = {trace["atom_id"] for trace in proposal["atom_trace"]}
         self.assertIn("CAP-POLICY-STORE-WRITE-PROPOSE-01", atom_ids)
         self.assertFalse((READY_PROJECT / ".jikuo" / "policies").exists())
@@ -4353,9 +4361,25 @@ class AgentFlowProposalTests(unittest.TestCase):
             "work_profile_policy_scopes: discussion",
             proposal["cards"][0]["shown_inputs"],
         )
+        self.assertIn(
+            "authoring_mode: scope_only",
+            proposal["cards"][0]["shown_inputs"],
+        )
+        self.assertIn(
+            "authoring_mode: scope_only",
+            proposal["cards"][0]["shown_outputs"],
+        )
+        self.assertIn(
+            "compatibility_trigger_event: conversation_turn",
+            proposal["cards"][0]["shown_outputs"],
+        )
         self.assertNotIn(
             "work_profile_lifecycle_events: task_start",
             proposal["cards"][0]["shown_inputs"],
+        )
+        self.assertNotIn(
+            "authoring_warning: lifecycle_events_hard_gate_policy_applicability",
+            proposal["cards"][0]["shown_outputs"],
         )
 
     def test_policy_dead_zone_classifies_policy_write_plan_as_non_governance(self):

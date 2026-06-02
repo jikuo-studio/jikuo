@@ -1045,6 +1045,13 @@ class PolicyStoreStatusTests(unittest.TestCase):
                 }
             ],
         )
+        self.assertEqual(report["authoring_review"]["mode"], "lifecycle_gated")
+        self.assertFalse(report["authoring_review"]["scope_first"])
+        self.assertTrue(report["authoring_review"]["hard_gated_by_lifecycle"])
+        self.assertIn(
+            "lifecycle_events_hard_gate_policy_applicability",
+            report["authoring_review"]["warnings"],
+        )
         self.assertFalse((MISSING_PROJECT / ".jikuo" / "policies").exists())
 
     def test_plan_write_builds_scope_only_work_profile_policy_plan(self):
@@ -1097,6 +1104,13 @@ class PolicyStoreStatusTests(unittest.TestCase):
                 }
             ],
         )
+        self.assertEqual(report["authoring_review"]["mode"], "scope_only")
+        self.assertTrue(report["authoring_review"]["scope_first"])
+        self.assertEqual(
+            report["authoring_review"]["compatibility_trigger_event"],
+            "conversation_turn",
+        )
+        self.assertEqual(report["authoring_review"]["warnings"], [])
 
     def test_plan_write_refuses_existing_policy_collision_without_write(self):
         policy_file = (

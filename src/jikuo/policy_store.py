@@ -373,6 +373,51 @@ def build_work_profile_applicability_entries(
     ]
 
 
+def build_policy_authoring_review(
+    *,
+    trigger_event: str | None,
+    lifecycle_events: list[str] | None = None,
+    policy_scopes: list[str] | None = None,
+) -> dict[str, Any]:
+    """Project how a new policy plan will be authored without changing policy YAML."""
+
+    normalized_lifecycle_events = ordered_nonempty_strings(lifecycle_events)
+    normalized_policy_scopes = ordered_nonempty_strings(policy_scopes)
+    hard_gated_by_lifecycle = bool(normalized_lifecycle_events)
+    has_scope_filter = bool(normalized_policy_scopes)
+    if has_scope_filter and not hard_gated_by_lifecycle:
+        mode = "scope_only"
+    elif hard_gated_by_lifecycle:
+        mode = "lifecycle_gated"
+    else:
+        mode = "legacy_event_exact"
+
+    warnings: list[str] = []
+    if hard_gated_by_lifecycle:
+        warnings.append("lifecycle_events_hard_gate_policy_applicability")
+    if not has_scope_filter:
+        warnings.append("policy_has_no_work_profile_scope_filter")
+
+    return {
+        "mode": mode,
+        "scope_first": mode == "scope_only",
+        "compatibility_trigger_event": trigger_event or "",
+        "policy_scopes": normalized_policy_scopes,
+        "lifecycle_events": normalized_lifecycle_events,
+        "hard_gated_by_lifecycle": hard_gated_by_lifecycle,
+        "warnings": warnings,
+        "summary": (
+            "scope-only policy plan; trigger_event is a compatibility anchor"
+            if mode == "scope_only"
+            else (
+                "lifecycle_events will hard-gate this policy"
+                if mode == "lifecycle_gated"
+                else "legacy event-exact policy plan without work_profile scopes"
+            )
+        ),
+    }
+
+
 def normalize_work_profile_applicability(raw: Any) -> dict[str, Any] | None:
     """Project policy work-profile applicability for scope-aware evaluation.
 
@@ -802,6 +847,11 @@ def build_policy_write_plan(
         lifecycle_events=work_profile_lifecycle_events,
         policy_scopes=work_profile_policy_scopes,
     )
+    authoring_review = build_policy_authoring_review(
+        trigger_event=trigger_event,
+        lifecycle_events=work_profile_lifecycle_events,
+        policy_scopes=work_profile_policy_scopes,
+    )
     proposed_policy: dict[str, Any] = {
         "schema_version": POLICY_SCHEMA,
         "policy_id": resolved_policy_id,
@@ -901,6 +951,7 @@ def build_policy_write_plan(
         "write_allowed_by_command": False,
         "writes_performed": False,
         "guarded_apply_available": False,
+        "authoring_review": authoring_review,
         "proposed_policy": proposed_policy,
         "refusal_reasons": refusals,
         "warnings": warnings,

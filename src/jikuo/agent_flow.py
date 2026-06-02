@@ -3132,6 +3132,17 @@ def build_policy_write_plan_cards(
         f"policy_store_status: {plan['policy_store_status']}",
         f"conditions: {len(plan['proposed_policy'].get('conditions', []))}",
     ]
+    authoring_review = plan.get("authoring_review") or {}
+    authoring_warnings = authoring_review.get("warnings") or []
+    write_outputs.extend(
+        [
+            f"authoring_mode: {authoring_review.get('mode', 'unknown')}",
+            "compatibility_trigger_event: "
+            + str(authoring_review.get("compatibility_trigger_event") or "none"),
+        ]
+    )
+    for warning in authoring_warnings:
+        write_outputs.append(f"authoring_warning: {warning}")
     write_outputs.extend(
         f"would_write: {item['path']} ({item['effect']})"
         for item in plan["write_set"]
@@ -3181,6 +3192,7 @@ def build_policy_write_plan_cards(
     shown_inputs = [
         f"policy_ref: {policy_ref}",
         f"policy_title: {policy_title}",
+        f"authoring_mode: {authoring_review.get('mode', 'unknown')}",
         f"trigger_event: {policy_trigger_event}",
         f"action_type: {policy_action_type}",
         f"evidence_type: {policy_evidence_type}",
