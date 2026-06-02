@@ -1596,7 +1596,7 @@ entries:
     title: "Studio document/artifact assurance projection"
     status: "implemented no-write required/planned/actual read-write comparison by JIKUO-STUDIO-01D10"
     metadata_status: "complete"
-    entry_point: "src/jikuo/studio/artifact_assurance.py; src/jikuo/studio/global_status.py summaries.artifact_assurance; src/jikuo/studio/panels.py Read/Write Assurance panel"
+    entry_point: "src/jikuo/studio/artifact_assurance.py; src/jikuo/studio/global_status.py summaries.artifact_assurance; src/jikuo/studio/panels.py Round Document Trace panel"
     write_effect: "none; compares caller-supplied required read/write, planned write, actual write, and read-evidence sets"
     approval: "read-only projection; future guarded writes remain behind existing plan/apply approval surfaces"
     non_effects:
@@ -1638,6 +1638,23 @@ entries:
       - "does_not_create_data01_event_ledger_entries"
       - "does_not_change_policy_evaluator_behavior"
       - "does_not_regenerate_legacy_task_map"
+    referenced_by_transitional_cache:
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md"
+  - id: "CAP-STUDIO-ROUND-DOCUMENT-TRACE-01"
+    title: "Studio round document trace"
+    status: "implemented trace-oriented latest-round document view by JIKUO-STUDIO-01D13"
+    metadata_status: "complete"
+    entry_point: "src/jikuo/integrations/studio_web/server.py Round Document Trace section"
+    write_effect: "none; renders existing configured and latest runtime artifact-assurance projections as expected/observed/gap/action-chain trace"
+    approval: "no guarded approval required because this is read-only Studio rendering over existing no-write/runtime evidence projections"
+    non_effects:
+      - "does_not_create_round_history_selector"
+      - "does_not_create_data01_event_ledger_entries"
+      - "does_not_read_files_by_itself"
+      - "does_not_inspect_git_diff"
+      - "does_not_change_policy_evaluator_behavior"
+      - "does_not_replace_artifact_assurance_backend"
+      - "does_not_bypass_guarded_apply"
     referenced_by_transitional_cache:
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md"
   - id: "CAP-STUDIO-PROJECT-FILE-INVENTORY-01"

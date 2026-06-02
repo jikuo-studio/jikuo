@@ -77,13 +77,13 @@ PANEL_DEFINITIONS: tuple[dict[str, Any], ...] = (
     },
     {
         "panel_id": "studio.artifact_assurance",
-        "title": "Read/Write Assurance",
+        "title": "Round Document Trace",
         "domain": "artifact_assurance",
         "display_order": 45,
         "provider_ref": "jikuo.studio.artifact_assurance.v0",
         "summary_key": "artifact_assurance",
         "privacy_level": "project_metadata",
-        "empty_state": "No read/write assurance projection is available.",
+        "empty_state": "No round document trace projection is available.",
         "action_refs": ["studio.artifact_assurance.review"],
     },
     {

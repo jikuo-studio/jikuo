@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-STUDIO-01: Global Console And Configuration Shell
 
-> **Status**: `JIKUO-STUDIO-01A` global status read model, `JIKUO-STUDIO-01B` panel/action registries, `JIKUO-STUDIO-01C` local read-only console, `JIKUO-STUDIO-01D1` document-mount read model, `JIKUO-STUDIO-01D2` visible document-mount frontend section, and `JIKUO-STUDIO-01D3` configuration vocabulary mapping implemented as no-write Python/CLI/backend surfaces. `JIKUO-STUDIO-01D4` records the detailed Document Rules plan/apply design contract; `JIKUO-STUDIO-01D5` implements the first Document Rules no-write plan backend; `JIKUO-STUDIO-01D6` connects that plan to the local Studio page as a no-write preview; `JIKUO-STUDIO-01D7` separates editable configuration from governance guidance in the read model and UI; `JIKUO-STUDIO-01D8` implements minimal guarded apply for `.jikuo/project_context.yaml` Document Rules changes; `JIKUO-STUDIO-01D9` maps that guarded apply to a natural frontend approval confirmation instead of asking users to type the backend approval phrase; `JIKUO-STUDIO-01D10` implements the first no-write document/artifact assurance projection for required, planned, and actual read/write comparison; `JIKUO-STUDIO-01D11` projects that assurance into runtime task cards, history cards, and `state_summary.json`; `JIKUO-STUDIO-01D12` corrects completion-check document semantics so configured completion-check scope is rendered as write candidates/checklist items unless applicability evidence makes a document required for the current slice; `JIKUO-STUDIO-01E1/01E2` implement a no-write project-file inventory and reusable local web batch selector for Document Rules.
+> **Status**: `JIKUO-STUDIO-01A` global status read model, `JIKUO-STUDIO-01B` panel/action registries, `JIKUO-STUDIO-01C` local read-only console, `JIKUO-STUDIO-01D1` document-mount read model, `JIKUO-STUDIO-01D2` visible document-mount frontend section, and `JIKUO-STUDIO-01D3` configuration vocabulary mapping implemented as no-write Python/CLI/backend surfaces. `JIKUO-STUDIO-01D4` records the detailed Document Rules plan/apply design contract; `JIKUO-STUDIO-01D5` implements the first Document Rules no-write plan backend; `JIKUO-STUDIO-01D6` connects that plan to the local Studio page as a no-write preview; `JIKUO-STUDIO-01D7` separates editable configuration from governance guidance in the read model and UI; `JIKUO-STUDIO-01D8` implements minimal guarded apply for `.jikuo/project_context.yaml` Document Rules changes; `JIKUO-STUDIO-01D9` maps that guarded apply to a natural frontend approval confirmation instead of asking users to type the backend approval phrase; `JIKUO-STUDIO-01D10` implements the first no-write document/artifact assurance projection for required, planned, and actual read/write comparison; `JIKUO-STUDIO-01D11` projects that assurance into runtime task cards, history cards, and `state_summary.json`; `JIKUO-STUDIO-01D12` corrects completion-check document semantics so configured completion-check scope is rendered as write candidates/checklist items unless applicability evidence makes a document required for the current slice; `JIKUO-STUDIO-01D13` renders the same data as latest-round document trace instead of metric-first assurance cards; `JIKUO-STUDIO-01E1/01E2` implement a no-write project-file inventory and reusable local web batch selector for Document Rules.
 > **Date**: 2026-05-31
 > **JIKUO layer**: product surface / view-model projection / guarded configuration control.
 > **Business meaning**: Users should not need to reconstruct JIKUO's global state from chat alone. A thin JIKUO console should make activation, runtime, policy, template, integration, diagnostics, and guarded configuration status visible in one place while preserving the existing kernel and guarded-write boundaries.
@@ -920,7 +920,7 @@ artifact interactions are aligned with the current governed task.
 Implementation status (2026-06-02): implemented in
 `src/jikuo/studio/artifact_assurance.py`, exposed through
 `jikuo.studio.global_status.v0.summaries.artifact_assurance`, and registered as
-the `Read/Write Assurance` panel plus `studio.artifact_assurance.review`
+the artifact-assurance panel plus `studio.artifact_assurance.review`
 action descriptor.
 
 Business meaning:
@@ -961,8 +961,8 @@ Acceptance:
   `required_not_planned`, `required_not_written`, `planned_not_written`, and
   `unplanned_written` separately;
 - global Studio status exposes `summaries.artifact_assurance`;
-- the panel/action registries expose a `Read/Write Assurance` panel and
-  review action for future frontend rendering;
+- the panel/action registries expose an artifact-assurance panel and review
+  action for future frontend rendering;
 - this slice does not inspect git, create DATA-01 events, prove model
   understanding, change the policy evaluator, or replace guarded apply.
 
@@ -1086,6 +1086,52 @@ Acceptance:
 - read assurance can show `not_evaluated` without pretending there are zero
   read obligations;
 - state summary preserves the corrected fields for Studio rendering.
+
+### `JIKUO-STUDIO-01D13`: Round Document Trace UI
+
+Replace the Studio Web metric-first `Read/Write Assurance` presentation with a
+trace-oriented latest-round view.
+
+Implementation status (2026-06-02): implemented in
+`src/jikuo/integrations/studio_web/server.py`.
+
+Business meaning:
+
+- users need to reconstruct what a round expected, observed, and missed, not
+  stare at standalone counts such as required reads or completion candidates;
+- the same configured/runtime artifact-assurance data becomes useful when it is
+  grouped as `Expected`, `Observed`, `Gaps`, and an `Action chain`;
+- when no latest runtime evidence exists, Studio should say
+  `No trace captured` instead of presenting `not_evaluated` as if it were a
+  meaningful task result.
+
+Model:
+
+```text
+summaries.artifact_assurance
+  configured Document Rules projection
+
+summaries.runtime.artifact_assurance
+  latest runtime round projection when available
+
+Round Document Trace
+  -> summary chips
+  -> Expected column
+  -> Observed column
+  -> Gaps column
+  -> Action chain
+```
+
+Acceptance:
+
+- Studio Web contains a `Round Document Trace` section;
+- the section renders `Expected`, `Observed`, `Gaps`, and `Action chain`;
+- the UI uses existing configured/runtime artifact-assurance projections and
+  performs no new file reads, writes, git diff inspection, DATA-01 event writes,
+  or policy evaluator changes;
+- latest runtime evidence is preferred when available; otherwise the section
+  shows the configured projection with an explicit `No trace captured` state;
+- round history selection remains deferred to a later slice.
 
 ### `JIKUO-STUDIO-01E`: File Selection, Batch Changes, And Time Anchors
 

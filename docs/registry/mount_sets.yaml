@@ -68,7 +68,7 @@ entries:
       - path: ".codex/hooks/README.md"
   - id: "MOUNT-STUDIO-01"
     title: "JIKUO global console and configuration shell context bundle"
-    status: "active for STUDIO-01A through STUDIO-01E2; minimal Document Rules guarded apply, natural web approval confirmation, no-write artifact assurance projection, runtime card artifact assurance evidence projection, completion-check candidate semantics, project-file inventory, and batch Document Rules selection implemented"
+    status: "active for STUDIO-01A through STUDIO-01E2 plus STUDIO-01D13; minimal Document Rules guarded apply, natural web approval confirmation, no-write artifact assurance projection, runtime card artifact assurance evidence projection, completion-check candidate semantics, round document trace rendering, project-file inventory, and batch Document Rules selection implemented"
     documents:
       - path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md"
       - path: "docs/insights/INSIGHT-2026-05-16-studio-dashboard-frontend-architecture.md"
