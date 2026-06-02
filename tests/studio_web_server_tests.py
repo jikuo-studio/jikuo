@@ -63,6 +63,8 @@ class StudioWebServerTests(unittest.TestCase):
         self.assertEqual(files_code, 200)
         self.assertEqual(health_code, 200)
         self.assertEqual(status["schema"], "jikuo.studio.global_status.v0")
+        self.assertIn("artifact_assurance", status["summaries"])
+        self.assertIn("artifact_assurance", status["summaries"]["runtime"])
         self.assertEqual(panels["schema"], "jikuo.studio.panel_registry.v0")
         self.assertEqual(actions["schema"], "jikuo.studio.action_registry.v0")
         self.assertEqual(files["schema"], "jikuo.studio.project_file_inventory.v0")
@@ -137,6 +139,13 @@ class StudioWebServerTests(unittest.TestCase):
         self.assertIn("/api/document-rules/plan", html)
         self.assertIn("/api/document-rules/apply", html)
         self.assertIn("Document Rules", html)
+        self.assertIn("Read/Write Assurance", html)
+        self.assertIn("Evidence comparison for configured document reads", html)
+        self.assertIn("Configured projection", html)
+        self.assertIn("Latest task evidence", html)
+        self.assertIn("Read evidence", html)
+        self.assertIn("Write evidence", html)
+        self.assertIn("artifact-assurance-metrics", html)
         self.assertIn("Current Document Rules", html)
         self.assertIn("Each column is one Document Rules purpose", html)
         self.assertIn("Context documents", html)
@@ -194,6 +203,8 @@ class StudioWebServerTests(unittest.TestCase):
             self.assertIn("Document Rules", html)
             self.assertEqual(status["schema"], "jikuo.studio.global_status.v0")
             self.assertIn("document_mounts", status["summaries"])
+            self.assertIn("artifact_assurance", status["summaries"])
+            self.assertIn("artifact_assurance", status["summaries"]["runtime"])
             terms = {
                 item["term_id"]: item
                 for item in status["summaries"]["document_mounts"]["configuration_terms"]

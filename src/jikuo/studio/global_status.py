@@ -251,6 +251,7 @@ def runtime_summary(project_root: Path, diagnostics: list[dict[str, Any]]) -> di
             "required_action_count": counts.get("required_action_count", 0),
         },
         "observed_lifecycle": state.get("observed_lifecycle") or {},
+        "artifact_assurance": state.get("artifact_assurance") or {},
         "lifecycle_card_count": len(state.get("lifecycle_card_links") or []),
         "card_links": {
             "last_card": (links.get("last_card") or {}).get("markdown"),

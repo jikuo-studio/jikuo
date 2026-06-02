@@ -46,6 +46,51 @@ class StudioGlobalStatusTests(unittest.TestCase):
         self.assertIn("studio.policy_management.status", action_ids)
         self.assertIn("studio.runtime.open_latest_card", action_ids)
 
+    def test_runtime_summary_exposes_latest_task_artifact_assurance(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            runtime_root = project_root / ".jikuo" / "runtime"
+            runtime_root.mkdir(parents=True)
+            (project_root / ".jikuo" / "project_context.yaml").write_text(
+                "\n".join(
+                    [
+                        'schema_version: "jikuo.project_context.v0"',
+                        "document_roles: {}",
+                        "main_document_mounts:",
+                        '  canonical_path_root: "."',
+                        "  active_mount_authority: []",
+                        "  checked_before_slice_completion: []",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            (runtime_root / "state_summary.json").write_text(
+                json.dumps(
+                    {
+                        "schema": "jikuo.runtime_state_summary.v0",
+                        "status": "available",
+                        "artifact_assurance": {
+                            "schema": "jikuo.studio.artifact_assurance.v0",
+                            "status": "review",
+                            "read_assurance": {"required_read_count": 2},
+                            "write_assurance": {"planned_write_count": 1},
+                            "gap_report": {"gap_count": 1},
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            report = global_status.build_global_status(project_root=project_root)
+
+            runtime = report["summaries"]["runtime"]
+            self.assertEqual(runtime["artifact_assurance"]["status"], "review")
+            self.assertEqual(
+                runtime["artifact_assurance"]["write_assurance"]["planned_write_count"],
+                1,
+            )
+
     def test_global_status_reports_document_mount_read_model(self):
         report = global_status.build_global_status(project_root=ROOT)
 

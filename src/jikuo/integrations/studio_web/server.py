@@ -84,6 +84,9 @@ INDEX_HTML = """<!doctype html>
     .status.available { color: var(--accent); }
     .status.degraded { color: var(--warn); }
     .status.unavailable { color: var(--danger); }
+    .status.ok { color: var(--accent); }
+    .status.review, .status.not_evaluated { color: var(--warn); }
+    .status.refused { color: var(--danger); }
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -228,6 +231,22 @@ INDEX_HTML = """<!doctype html>
       display: grid;
       gap: 12px;
       margin: 12px 0 16px;
+    }
+    .assurance-layout {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .assurance-panel {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--panel);
+      padding: 10px;
+      min-width: 0;
+    }
+    .assurance-panel h3 {
+      margin: 0 0 3px;
+      font-size: 14px;
     }
     .rules-groups {
       display: grid;
@@ -395,6 +414,7 @@ INDEX_HTML = """<!doctype html>
       main { padding: 18px 16px 32px; }
       .row { grid-template-columns: 1fr; }
       .split { grid-template-columns: 1fr; }
+      .assurance-layout { grid-template-columns: 1fr; }
       .rules-groups { grid-template-columns: 1fr; }
       .form-grid, .plan-rule-row, .file-toolbar { grid-template-columns: 1fr; }
     }
@@ -489,6 +509,36 @@ INDEX_HTML = """<!doctype html>
       </div>
     </section>
     <section>
+      <div class="section-title">
+        <h2>Read/Write Assurance</h2>
+        <span id="artifact-assurance-status" class="status">Loading</span>
+      </div>
+      <p class="subhead">Evidence comparison for configured document reads, completion-check candidates, planned writes, and actual writes.</p>
+      <div class="grid" id="artifact-assurance-metrics"></div>
+      <div class="assurance-layout">
+        <div class="assurance-panel">
+          <h3>Configured projection</h3>
+          <p class="subhead">Current Document Rules obligations before per-slice evidence is supplied.</p>
+          <div class="compact-list" id="artifact-assurance-configured"></div>
+        </div>
+        <div class="assurance-panel">
+          <h3>Latest task evidence</h3>
+          <p class="subhead">Most recent runtime task-card projection when available.</p>
+          <div class="compact-list" id="artifact-assurance-runtime"></div>
+        </div>
+        <div class="assurance-panel">
+          <h3>Read evidence</h3>
+          <p class="subhead">Required reads compared with supplied read evidence.</p>
+          <div class="compact-list" id="artifact-assurance-reads"></div>
+        </div>
+        <div class="assurance-panel">
+          <h3>Write evidence</h3>
+          <p class="subhead">Applicable required, planned, and actual writes compared separately.</p>
+          <div class="compact-list" id="artifact-assurance-writes"></div>
+        </div>
+      </div>
+    </section>
+    <section>
       <h2>Panels</h2>
       <div class="list" id="panels"></div>
     </section>
@@ -535,6 +585,15 @@ INDEX_HTML = """<!doctype html>
     const overflowNote = (count, shown, label) => {
       const hidden = Math.max(0, count - shown);
       return hidden ? compactItem(`+ ${hidden} more`, `${label} are configured but hidden in this preview.`) : null;
+    };
+    const numberValue = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
+    const detailCount = (count, label) => `${numberValue(count)} ${label}`;
+    const gapRows = (items, fallback) => {
+      const rows = (items || []).slice(0, 4).map((item) =>
+        compactItem(item.gap_type || "gap", item.path || "path not supplied")
+      );
+      const extra = overflowNote((items || []).length, rows.length, "gaps");
+      return rows.length ? [...rows, ...(extra ? [extra] : [])] : [compactItem("No gaps", fallback)];
     };
     const termsById = (items) => Object.fromEntries((items || []).map((item) => [item.term_id, item]));
     const termLabel = (terms, id, fallback) => (terms[id] && terms[id].user_label) || fallback;
@@ -791,6 +850,64 @@ INDEX_HTML = """<!doctype html>
       );
       guidanceOverview.replaceChildren(...(guidanceOverviewRows.length ? guidanceOverviewRows : [compactItem("No governance references", "No rule sources are configured.")]));
     };
+    const renderArtifactAssurance = (data) => {
+      const summaries = data.summaries || {};
+      const configured = summaries.artifact_assurance || {};
+      const latest = (summaries.runtime || {}).artifact_assurance || {};
+      const latestAvailable = Boolean(latest && latest.schema);
+      const active = latestAvailable ? latest : configured;
+      const status = document.getElementById("artifact-assurance-status");
+      status.className = statusClass(active.status || "unavailable");
+      status.textContent = active.status || "unavailable";
+
+      const configuredRead = configured.read_assurance || {};
+      const configuredWrite = configured.write_assurance || {};
+      const configuredGap = configured.gap_report || {};
+      const latestRead = latest.read_assurance || {};
+      const latestWrite = latest.write_assurance || {};
+      const latestGap = latest.gap_report || {};
+      const runtimeProjection = latest.runtime_projection || {};
+      const metrics = document.getElementById("artifact-assurance-metrics");
+      metrics.replaceChildren(
+        metric(configured.status || "unknown", "Configured projection"),
+        metric(configuredRead.required_read_count || 0, "Required reads"),
+        metric(configuredWrite.completion_check_candidate_count || configuredWrite.write_candidate_count || 0, "Completion candidates"),
+        metric(latestAvailable ? latest.status : "missing", "Latest task status"),
+        metric(latestWrite.planned_write_count || 0, "Planned writes"),
+        metric(latestWrite.actual_write_count || 0, "Actual writes"),
+        metric(latestGap.gap_count || configuredGap.gap_count || 0, "Gap count")
+      );
+
+      document.getElementById("artifact-assurance-configured").replaceChildren(
+        compactItem("Guarantee", configured.guarantee || "evidence_comparison_only"),
+        compactItem("Read obligations", detailCount(configuredRead.required_read_count, "required reads")),
+        compactItem("Completion checks", detailCount(configuredWrite.completion_check_candidate_count || configuredWrite.write_candidate_count, "candidate documents")),
+        compactItem("Configured gaps", `${configuredGap.gap_count || 0} gaps; ${configuredGap.completion_check_not_evaluated_count || 0} completion checks not evaluated`)
+      );
+
+      document.getElementById("artifact-assurance-runtime").replaceChildren(
+        latestAvailable
+          ? compactItem("Runtime projection", `${runtimeProjection.event || "latest task"} / ${runtimeProjection.persistence || "runtime summary"}`)
+          : compactItem("Runtime projection", "No task-level artifact assurance is available yet."),
+        compactItem("Read status", latestRead.status || "not_available"),
+        compactItem("Write status", latestWrite.status || "not_available"),
+        compactItem("Runtime source", runtimeProjection.source || "state_summary")
+      );
+
+      document.getElementById("artifact-assurance-reads").replaceChildren(
+        compactItem("Required reads", detailCount((latestRead.required_read_count || configuredRead.required_read_count), "documents")),
+        compactItem("Read evidence", detailCount(latestRead.read_evidence_count || 0, "evidence items")),
+        ...gapRows(latestRead.required_not_read || configuredRead.required_not_read || [], "No required read gaps are currently reported.")
+      );
+
+      document.getElementById("artifact-assurance-writes").replaceChildren(
+        compactItem("Applicable required writes", detailCount((latestWrite.required_write_count || configuredWrite.required_write_count), "documents")),
+        compactItem("Planned writes", detailCount(latestWrite.planned_write_count || 0, "documents")),
+        compactItem("Actual writes", detailCount(latestWrite.actual_write_count || 0, "documents")),
+        compactItem("Completion checks not evaluated", detailCount((latestGap.completion_check_not_evaluated_count || configuredGap.completion_check_not_evaluated_count), "documents")),
+        ...gapRows(latestGap.write_gaps || configuredGap.write_gaps || [], "No applicable write gaps are currently reported.")
+      );
+    };
     const render = (data) => {
       const global = document.getElementById("global-status");
       global.className = statusClass(data.status);
@@ -812,6 +929,7 @@ INDEX_HTML = """<!doctype html>
         metric((data.diagnostics || []).length, "Diagnostics")
       );
       renderDocumentMounts(data);
+      renderArtifactAssurance(data);
       const panels = document.getElementById("panels");
       panels.replaceChildren(...(data.panels || []).map((panel) =>
         row(panel.title || panel.panel_id, `${panel.provider_ref || ""} · ${panel.privacy_level || ""}`, panel.status)
