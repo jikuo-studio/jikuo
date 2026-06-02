@@ -1517,11 +1517,11 @@ entries:
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md"
   - id: "CAP-STUDIO-DOCUMENT-RULES-PLAN-APPLY-CONTRACT-01"
     title: "Studio Document Rules plan/apply contract"
-    status: "documented design contract by JIKUO-STUDIO-01D4; no-write plan implemented by CAP-STUDIO-DOCUMENT-RULES-NO-WRITE-PLAN-01; guarded apply planned"
+    status: "documented design contract by JIKUO-STUDIO-01D4; no-write plan implemented by CAP-STUDIO-DOCUMENT-RULES-NO-WRITE-PLAN-01; guarded apply implemented by CAP-STUDIO-DOCUMENT-RULES-GUARDED-APPLY-01"
     metadata_status: "complete"
     entry_point: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md section 7.4 and JIKUO-STUDIO-01D4"
     write_effect: "none; specifies future no-write plan and guarded apply behavior for customer-facing Document Rules"
-    approval: "documentation-only; future implementation must keep plan no-write, apply guarded, target writes project-local configuration only, and not regenerate the legacy task map"
+    approval: "documentation contract now backed by no-write plan and minimal guarded apply; target writes project-local configuration only and does not regenerate the legacy task map"
     referenced_by_transitional_cache:
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md"
   - id: "CAP-STUDIO-DOCUMENT-RULES-NO-WRITE-PLAN-01"
@@ -1530,7 +1530,7 @@ entries:
     metadata_status: "complete"
     entry_point: "src/jikuo/studio/document_rules.py; python -B -m jikuo studio document-rules plan --format json"
     write_effect: "none; previews .jikuo/project_context.yaml document-role, completion-check, and active-mount-authority changes"
-    approval: "plan is no-write; apply remains planned and must require guarded approval before any project_context change"
+    approval: "plan is no-write; guarded apply requires reviewed plan fingerprint, confirmation flag, and approval phrase before any project_context change"
     referenced_by_transitional_cache:
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md"
   - id: "CAP-STUDIO-DOCUMENT-RULES-FRONTEND-PLAN-01"
@@ -1539,7 +1539,7 @@ entries:
     metadata_status: "complete"
     entry_point: "src/jikuo/integrations/studio_web/server.py POST /api/document-rules/plan and Document Rules preview form"
     write_effect: "none; routes customer-facing Document Rules preview requests to the no-write plan backend"
-    approval: "no apply control is exposed; guarded apply remains planned and must require approval before any .jikuo/project_context.yaml write"
+    approval: "plan preview remains no-write; guarded apply is a separate approval-gated control"
     referenced_by_transitional_cache:
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md"
   - id: "CAP-STUDIO-DOCUMENT-RULES-SOURCE-SEMANTICS-01"
@@ -1549,6 +1549,21 @@ entries:
     entry_point: "src/jikuo/studio/global_status.py document_rule_sources; src/jikuo/integrations/studio_web/server.py Document Rules source sections"
     write_effect: "none; separates editable configuration sources from governance guidance for user-facing configuration surfaces"
     approval: "read-only semantic clarification; .jikuo/project_context.yaml remains the current Document Rules write target and governance guidance docs are not edited by this UI"
+    referenced_by_transitional_cache:
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md"
+  - id: "CAP-STUDIO-DOCUMENT-RULES-GUARDED-APPLY-01"
+    title: "Studio Document Rules guarded apply"
+    status: "implemented minimal guarded apply by JIKUO-STUDIO-01D8"
+    metadata_status: "complete"
+    entry_point: "src/jikuo/studio/document_rules.py apply_document_rules_update_plan; python -B -m jikuo studio document-rules apply; src/jikuo/integrations/studio_web/server.py POST /api/document-rules/apply"
+    write_effect: "guarded write to .jikuo/project_context.yaml only after reviewed plan fingerprint, confirm flag, and exact approval phrase"
+    approval: "requires the reviewed plan to target only .jikuo/project_context.yaml, validation status ok, current source fingerprint match, --confirm-apply/confirm_apply=true, and approval phrase 'Approve Document Rules update'"
+    non_effects:
+      - "does_not_edit_docs_registry_shards"
+      - "does_not_edit_governance_guidance_documents"
+      - "does_not_regenerate_legacy_task_map"
+      - "does_not_mutate_policies_or_templates"
+      - "does_not_write_runtime_cards"
     referenced_by_transitional_cache:
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md"
   - id: "CAP-TODO-SNAPSHOT-POSTURE-01"

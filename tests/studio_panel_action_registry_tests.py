@@ -80,6 +80,10 @@ class StudioPanelActionRegistryTests(unittest.TestCase):
             document_plan["plan_surface"],
             "python -B -m jikuo studio document-rules plan",
         )
+        self.assertEqual(
+            document_plan["apply_surface"],
+            "python -B -m jikuo studio document-rules apply",
+        )
         self.assertTrue(document_plan["approval_required"])
         self.assertEqual(document_plan["status"], "available")
 

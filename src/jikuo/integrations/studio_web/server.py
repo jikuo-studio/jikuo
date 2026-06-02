@@ -24,7 +24,7 @@ DEFAULT_PORT = 8765
 
 
 INDEX_HTML = """<!doctype html>
-<html lang="en" data-jikuo-studio="no-write-control-shell">
+<html lang="en" data-jikuo-studio="guarded-control-shell">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -208,6 +208,15 @@ INDEX_HTML = """<!doctype html>
       align-items: end;
       margin-top: 10px;
     }
+    .plan-apply-row {
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) auto;
+      gap: 10px;
+      align-items: end;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--line);
+    }
     button {
       min-height: 36px;
       border: 1px solid #176555;
@@ -310,6 +319,13 @@ INDEX_HTML = """<!doctype html>
           </div>
         </form>
         <div class="plan-result" id="document-rules-plan-result" aria-live="polite"></div>
+        <div class="plan-apply-row">
+          <label>
+            Approval phrase
+            <input id="document-rules-approval-phrase" name="approval_phrase" placeholder="Approve Document Rules update" autocomplete="off">
+          </label>
+          <button id="document-rules-apply-button" type="button" disabled>Apply update</button>
+        </div>
       </div>
     </section>
     <section>
@@ -351,11 +367,18 @@ INDEX_HTML = """<!doctype html>
     const termsById = (items) => Object.fromEntries((items || []).map((item) => [item.term_id, item]));
     const termLabel = (terms, id, fallback) => (terms[id] && terms[id].user_label) || fallback;
     const termDescription = (terms, id, fallback) => (terms[id] && terms[id].user_description) || fallback;
+    let currentDocumentRulesPlan = null;
     const addPlanMessage = (title, detail, status) => {
       const result = document.getElementById("document-rules-plan-result");
       result.replaceChildren(row(title, detail, status));
     };
+    const updateApplyButton = () => {
+      const button = document.getElementById("document-rules-apply-button");
+      const phrase = document.getElementById("document-rules-approval-phrase").value.trim();
+      button.disabled = !(currentDocumentRulesPlan && currentDocumentRulesPlan.status === "review" && phrase === "Approve Document Rules update");
+    };
     const renderPlanPreview = (plan) => {
+      currentDocumentRulesPlan = plan;
       const result = document.getElementById("document-rules-plan-result");
       const status = plan.status || "unknown";
       const summaryStatus = status === "refused" ? "unavailable" : (status === "review" ? "degraded" : "available");
@@ -376,6 +399,26 @@ INDEX_HTML = """<!doctype html>
         approval.required ? "degraded" : "available"
       );
       result.replaceChildren(summary, diff, ...validationRows, approvalRow);
+      updateApplyButton();
+    };
+    const renderApplyResult = (result) => {
+      const container = document.getElementById("document-rules-plan-result");
+      const status = result.status || "unknown";
+      const summaryStatus = status === "applied" ? "available" : "unavailable";
+      const summary = row(`Apply ${status}`, `Write performed: ${String(Boolean(result.write_performed))}`, summaryStatus);
+      const operations = document.createElement("pre");
+      const applied = result.applied_operations || [];
+      const refusals = result.refusal_reasons || [];
+      operations.textContent = applied.length
+        ? applied.map((item) => `${item.operation}: ${item.path || item.role || ""}`).join("\\n")
+        : (refusals.length ? refusals.map((item) => `refused: ${item}`).join("\\n") : "No operations reported.");
+      container.append(summary, operations);
+      if (status === "applied") {
+        currentDocumentRulesPlan = null;
+        document.getElementById("document-rules-approval-phrase").value = "";
+        updateApplyButton();
+        fetch("/api/status", {cache: "no-store"}).then((response) => response.json()).then(render);
+      }
     };
     const requestFromDocumentRulesForm = () => {
       const operation = document.getElementById("document-rules-operation").value;
@@ -527,6 +570,33 @@ INDEX_HTML = """<!doctype html>
           button.textContent = "Preview plan";
         });
     });
+    document.getElementById("document-rules-approval-phrase").addEventListener("input", updateApplyButton);
+    document.getElementById("document-rules-apply-button").addEventListener("click", () => {
+      const phrase = document.getElementById("document-rules-approval-phrase").value.trim();
+      const button = document.getElementById("document-rules-apply-button");
+      if (!currentDocumentRulesPlan) {
+        addPlanMessage("Plan required", "Preview and review a Document Rules plan before applying.", "unavailable");
+        return;
+      }
+      button.disabled = true;
+      button.textContent = "Applying";
+      fetch("/api/document-rules/apply", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          plan: currentDocumentRulesPlan,
+          confirm_apply: true,
+          approval_phrase: phrase,
+        }),
+      })
+        .then((response) => response.json())
+        .then(renderApplyResult)
+        .catch((error) => addPlanMessage("Apply failed", error.message, "unavailable"))
+        .finally(() => {
+          button.textContent = "Apply update";
+          updateApplyButton();
+        });
+    });
   </script>
 </body>
 </html>
@@ -584,6 +654,36 @@ def api_document_rules_plan_payload(
         "write_allowed_by_command": False,
     }
     return HTTPStatus.OK, plan
+
+
+def api_document_rules_apply_payload(
+    request_payload: Any,
+    *,
+    project_root: Path | None = None,
+) -> tuple[int, dict[str, Any]]:
+    if not isinstance(request_payload, dict):
+        return HTTPStatus.BAD_REQUEST, {
+            "schema": STUDIO_WEB_SCHEMA,
+            "status": "invalid_request",
+            "message": "document rules apply requests must be JSON objects",
+            "writes_performed": False,
+            "write_allowed_by_command": False,
+        }
+    result, _exit_code = document_rules.apply_document_rules_update_plan(
+        request_payload.get("plan"),
+        project_root=project_root,
+        confirmed=bool(request_payload.get("confirm_apply")),
+        approval_phrase=str(request_payload.get("approval_phrase") or "").strip() or None,
+    )
+    result["studio_web"] = {
+        "schema": STUDIO_WEB_SCHEMA,
+        "route": "/api/document-rules/apply",
+        "method": "POST",
+        "write_mode": "guarded",
+        "writes_performed": bool(result.get("write_performed")),
+        "write_allowed_by_command": bool(result.get("write_allowed_by_command")),
+    }
+    return HTTPStatus.OK, result
 
 
 def api_payload_for_path(path: str, *, project_root: Path | None = None) -> tuple[int, dict[str, Any]]:
@@ -661,7 +761,7 @@ def make_handler(project_root: Path | None = None) -> type[BaseHTTPRequestHandle
 
         def do_POST(self) -> None:  # noqa: N802 - stdlib handler API
             route = (urlparse(self.path).path.rstrip("/") or "/")
-            if route != "/api/document-rules/plan":
+            if route not in {"/api/document-rules/plan", "/api/document-rules/apply"}:
                 status, payload = api_payload_for_path(self.path, project_root=project_root)
                 self._send(
                     status=status,
@@ -706,10 +806,16 @@ def make_handler(project_root: Path | None = None) -> type[BaseHTTPRequestHandle
                     content_type="application/json; charset=utf-8",
                 )
                 return
-            status, payload = api_document_rules_plan_payload(
-                request_payload,
-                project_root=project_root,
-            )
+            if route == "/api/document-rules/plan":
+                status, payload = api_document_rules_plan_payload(
+                    request_payload,
+                    project_root=project_root,
+                )
+            else:
+                status, payload = api_document_rules_apply_payload(
+                    request_payload,
+                    project_root=project_root,
+                )
             self._send(
                 status=status,
                 body=json_bytes(payload),

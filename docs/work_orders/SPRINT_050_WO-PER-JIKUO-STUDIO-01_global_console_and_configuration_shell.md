@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-STUDIO-01: Global Console And Configuration Shell
 
-> **Status**: `JIKUO-STUDIO-01A` global status read model, `JIKUO-STUDIO-01B` panel/action registries, `JIKUO-STUDIO-01C` local read-only console, `JIKUO-STUDIO-01D1` document-mount read model, `JIKUO-STUDIO-01D2` visible document-mount frontend section, and `JIKUO-STUDIO-01D3` configuration vocabulary mapping implemented as no-write Python/CLI/backend surfaces. `JIKUO-STUDIO-01D4` records the detailed Document Rules plan/apply design contract; `JIKUO-STUDIO-01D5` implements the first Document Rules no-write plan backend; `JIKUO-STUDIO-01D6` connects that plan to the local Studio page as a no-write preview; `JIKUO-STUDIO-01D7` separates editable configuration from governance guidance in the read model and UI. Guarded apply remains planned.
+> **Status**: `JIKUO-STUDIO-01A` global status read model, `JIKUO-STUDIO-01B` panel/action registries, `JIKUO-STUDIO-01C` local read-only console, `JIKUO-STUDIO-01D1` document-mount read model, `JIKUO-STUDIO-01D2` visible document-mount frontend section, and `JIKUO-STUDIO-01D3` configuration vocabulary mapping implemented as no-write Python/CLI/backend surfaces. `JIKUO-STUDIO-01D4` records the detailed Document Rules plan/apply design contract; `JIKUO-STUDIO-01D5` implements the first Document Rules no-write plan backend; `JIKUO-STUDIO-01D6` connects that plan to the local Studio page as a no-write preview; `JIKUO-STUDIO-01D7` separates editable configuration from governance guidance in the read model and UI; `JIKUO-STUDIO-01D8` implements minimal guarded apply for `.jikuo/project_context.yaml` Document Rules changes.
 > **Date**: 2026-05-31
 > **JIKUO layer**: product surface / view-model projection / guarded configuration control.
 > **Business meaning**: Users should not need to reconstruct JIKUO's global state from chat alone. A thin JIKUO console should make activation, runtime, policy, template, integration, diagnostics, and guarded configuration status visible in one place while preserving the existing kernel and guarded-write boundaries.
@@ -481,7 +481,7 @@ exists exactly as requested.
 
 #### 7.4.5 Guarded Apply Surface
 
-Future guarded apply command / tool:
+Guarded apply command / tool:
 
 ```text
 jikuo.apply_document_rules_update
@@ -496,6 +496,13 @@ python -B -m jikuo studio document-rules apply \
   --approval-phrase "Approve Document Rules update" \
   --format json
 ```
+
+Implementation status (2026-06-02): `JIKUO-STUDIO-01D8` implements the
+minimal CLI/core and local web guarded apply path. The apply path consumes a
+reviewed plan payload, checks the plan schema/status, verifies the reviewed
+`.jikuo/project_context.yaml` fingerprint against the current file, requires
+`--confirm-apply`, and requires the exact approval phrase
+`Approve Document Rules update`.
 
 Minimum apply contract:
 
@@ -524,6 +531,19 @@ Guarded apply must refuse when:
   explicitly approved project-local document-rules file;
 - the request tries to mutate package registry shards, active policies, starter
   manifests, runtime cards, or the legacy task map.
+
+Current write target:
+
+- `.jikuo/project_context.yaml` only.
+
+Current non-targets:
+
+- `docs/governance/jikuo_execution_mounts.md` remains governance guidance, not
+  an editable Document Rules target;
+- `docs/registry/*.yaml` remain registry authority, not edited from Document
+  Rules;
+- `docs/governance/jikuo_productization_task_map.md` remains a legacy
+  projection and is not regenerated or promoted by this flow.
 
 #### 7.4.6 Frontend Flow
 
@@ -818,6 +838,40 @@ Acceptance:
   files;
 - no project configuration, policy evaluator behavior, guarded apply, or legacy
   task-map projection changes are introduced by this slice.
+
+### `JIKUO-STUDIO-01D8`: Document Rules Guarded Apply
+
+Implement the minimal guarded apply path for reviewed Document Rules plans.
+
+Implementation status (2026-06-02): implemented in
+`src/jikuo/studio/document_rules.py`, the top-level
+`python -B -m jikuo studio document-rules apply` CLI, and local Studio Web
+`POST /api/document-rules/apply`.
+
+Business meaning:
+
+- users can move from "preview what this configuration change would do" to
+  "explicitly approve this exact change" without editing YAML by hand;
+- Studio remains a thin guarded control shell over canonical project config,
+  not a second configuration kernel;
+- governance guidance stays explanatory while structured project-local config
+  remains the write target.
+
+Acceptance:
+
+- apply without `confirm_apply` or the approval phrase refuses and performs no
+  write;
+- apply with a stale `.jikuo/project_context.yaml` fingerprint refuses and
+  performs no write;
+- approved apply writes only `.jikuo/project_context.yaml`;
+- successful apply can add/remove context document roles, completion checks,
+  and active mount authority entries that were already represented in the
+  reviewed plan;
+- the local Studio page exposes an approval phrase input and guarded apply
+  button only after a reviewable plan is present;
+- `docs/governance/jikuo_productization_task_map.md`, `docs/registry/*.yaml`,
+  active policies, package templates, starter manifests, and runtime cards are
+  not mutated by Document Rules apply.
 
 ### `JIKUO-STUDIO-01D`: Guarded Configuration Actions
 

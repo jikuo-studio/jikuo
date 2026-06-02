@@ -69,6 +69,7 @@ class StudioDocumentRulesTests(unittest.TestCase):
             self.assertEqual(plan["schema"], document_rules.DOCUMENT_RULES_PLAN_SCHEMA)
             self.assertEqual(plan["status"], "review")
             self.assertEqual(plan["target_files"], [".jikuo/project_context.yaml"])
+            self.assertIn(".jikuo/project_context.yaml", plan["source_fingerprints"])
             self.assertFalse(plan["writes_performed"])
             self.assertFalse(plan["write_allowed_by_command"])
             self.assertEqual(plan["change_count"], 3)
@@ -192,6 +193,171 @@ class StudioDocumentRulesTests(unittest.TestCase):
             self.assertEqual(markdown_completed.returncode, 0, markdown_completed.stderr)
             self.assertIn("# JIKUO Document Rules Update Plan", markdown_completed.stdout)
             self.assertIn("docs/user-guide.md", markdown_completed.stdout)
+
+    def test_document_rules_apply_refuses_without_approval(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            write_project_context(project_root)
+            touch(project_root, "docs/user-guide.md")
+            plan = document_rules.build_document_rules_update_plan(
+                project_root=project_root,
+                add_context_docs=["docs/user-guide.md"],
+            )
+            before = (project_root / ".jikuo" / "project_context.yaml").read_text(
+                encoding="utf-8"
+            )
+
+            result, exit_code = document_rules.apply_document_rules_update_plan(
+                plan,
+                project_root=project_root,
+                confirmed=False,
+                approval_phrase=None,
+            )
+
+            self.assertEqual(exit_code, 2)
+            self.assertEqual(result["status"], "refused")
+            self.assertFalse(result["write_performed"])
+            self.assertIn("missing technical confirmation flag", result["refusal_reasons"])
+            self.assertIn("missing approval phrase evidence", result["refusal_reasons"])
+            self.assertEqual(
+                before,
+                (project_root / ".jikuo" / "project_context.yaml").read_text(
+                    encoding="utf-8"
+                ),
+            )
+
+    def test_document_rules_apply_refuses_stale_source_fingerprint(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            write_project_context(project_root)
+            touch(project_root, "docs/user-guide.md")
+            plan = document_rules.build_document_rules_update_plan(
+                project_root=project_root,
+                add_context_docs=["docs/user-guide.md"],
+            )
+            context_path = project_root / ".jikuo" / "project_context.yaml"
+            context_path.write_text(
+                context_path.read_text(encoding="utf-8")
+                + "compatibility:\n  unknown_fields: \"preserve\"\n",
+                encoding="utf-8",
+            )
+
+            result, exit_code = document_rules.apply_document_rules_update_plan(
+                plan,
+                project_root=project_root,
+                confirmed=True,
+                approval_phrase=document_rules.DOCUMENT_RULES_APPROVAL_PHRASE,
+            )
+
+            self.assertEqual(exit_code, 2)
+            self.assertEqual(result["status"], "refused")
+            self.assertIn("stale source fingerprint", result["refusal_reasons"])
+            self.assertFalse(result["write_performed"])
+
+    def test_document_rules_apply_with_approval_writes_project_context_only(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            write_project_context(project_root)
+            touch(project_root, "docs/user-guide.md")
+            touch(project_root, "docs/governance/custom-rules.md")
+            legacy = project_root / "docs" / "governance" / "jikuo_productization_task_map.md"
+            touch(project_root, "docs/governance/jikuo_productization_task_map.md")
+            legacy_before = legacy.read_text(encoding="utf-8")
+            plan = document_rules.build_document_rules_update_plan(
+                project_root=project_root,
+                add_context_docs=["user_guide=docs/user-guide.md"],
+                add_completion_checks=["docs/user-guide.md"],
+                add_governance_references=["docs/governance/custom-rules.md"],
+                completion_update_rule="user guide changes",
+            )
+
+            result, exit_code = document_rules.apply_document_rules_update_plan(
+                plan,
+                project_root=project_root,
+                confirmed=True,
+                approval_phrase=document_rules.DOCUMENT_RULES_APPROVAL_PHRASE,
+            )
+            context, errors = document_rules.load_project_context(project_root)
+
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(result["schema"], document_rules.DOCUMENT_RULES_APPLY_RESULT_SCHEMA)
+            self.assertEqual(result["status"], "applied")
+            self.assertTrue(result["write_performed"])
+            self.assertEqual(result["target_files"], [".jikuo/project_context.yaml"])
+            self.assertEqual(result["applied_operation_count"], 3)
+            self.assertEqual(errors, [])
+            self.assertEqual(
+                context["document_roles"]["user_guide"]["path"],
+                "docs/user-guide.md",
+            )
+            self.assertIn(
+                "docs/user-guide.md",
+                {
+                    item["path"]
+                    for item in context["main_document_mounts"][
+                        "checked_before_slice_completion"
+                    ]
+                },
+            )
+            self.assertIn(
+                "docs/governance/custom-rules.md",
+                context["main_document_mounts"]["active_mount_authority"],
+            )
+            self.assertEqual(legacy_before, legacy.read_text(encoding="utf-8"))
+
+    def test_document_rules_apply_cli_uses_reviewed_plan_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            write_project_context(project_root)
+            touch(project_root, "docs/user-guide.md")
+            plan = document_rules.build_document_rules_update_plan(
+                project_root=project_root,
+                add_context_docs=["docs/user-guide.md"],
+            )
+            plan_path = Path(tmp) / "plan.json"
+            plan_path.write_text(json.dumps(plan), encoding="utf-8")
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    "-m",
+                    "jikuo",
+                    "studio",
+                    "document-rules",
+                    "apply",
+                    "--project-root",
+                    str(project_root),
+                    "--plan-json-file",
+                    str(plan_path),
+                    "--confirm-apply",
+                    "--approval-phrase",
+                    document_rules.DOCUMENT_RULES_APPROVAL_PHRASE,
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            result = json.loads(completed.stdout)
+            self.assertEqual(result["status"], "applied")
+            context, errors = document_rules.load_project_context(project_root)
+            self.assertEqual(errors, [])
+            self.assertTrue(
+                any(
+                    record["path"] == "docs/user-guide.md"
+                    for record in context["document_roles"].values()
+                    if isinstance(record, dict)
+                )
+            )
 
 
 if __name__ == "__main__":

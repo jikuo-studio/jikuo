@@ -115,10 +115,11 @@ class StudioWebServerTests(unittest.TestCase):
     def test_index_html_is_no_write_control_shell_with_document_rules_preview(self):
         html = server.render_index_html()
 
-        self.assertIn("data-jikuo-studio=\"no-write-control-shell\"", html)
+        self.assertIn("data-jikuo-studio=\"guarded-control-shell\"", html)
         self.assertIn("JIKUO Studio", html)
         self.assertIn("/api/status", html)
         self.assertIn("/api/document-rules/plan", html)
+        self.assertIn("/api/document-rules/apply", html)
         self.assertIn("Document Rules", html)
         self.assertIn("document-mounts-completion", html)
         self.assertIn("document-mounts-editable-sources", html)
@@ -127,11 +128,11 @@ class StudioWebServerTests(unittest.TestCase):
         self.assertIn("Governance guidance", html)
         self.assertIn("document-rules-form", html)
         self.assertIn("Preview plan", html)
+        self.assertIn("document-rules-approval-phrase", html)
+        self.assertIn("Apply update", html)
         self.assertIn("Available Actions", html)
         self.assertNotIn("Mount authority and pending write boundary", html)
         self.assertNotIn("Current rule sources", html)
-        self.assertNotIn("apply_document_rules", html)
-        self.assertNotIn("approval-phrase", html)
 
     def test_http_server_serves_index_and_json_endpoints(self):
         httpd = server.create_server(host="127.0.0.1", port=0, project_root=ROOT)
@@ -204,6 +205,45 @@ class StudioWebServerTests(unittest.TestCase):
                 httpd.shutdown()
                 httpd.server_close()
                 thread.join(timeout=10)
+
+    def test_document_rules_apply_api_refuses_then_applies_reviewed_plan(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            write_project_context(project_root)
+            touch(project_root, "docs/customer-guide.md")
+            status_code, plan = server.api_document_rules_plan_payload(
+                {"add_context_docs": ["customer_guide=docs/customer-guide.md"]},
+                project_root=project_root,
+            )
+
+            refused_code, refused = server.api_document_rules_apply_payload(
+                {"plan": plan, "confirm_apply": False},
+                project_root=project_root,
+            )
+            applied_code, applied = server.api_document_rules_apply_payload(
+                {
+                    "plan": plan,
+                    "confirm_apply": True,
+                    "approval_phrase": "Approve Document Rules update",
+                },
+                project_root=project_root,
+            )
+
+            self.assertEqual(status_code, 200)
+            self.assertEqual(refused_code, 200)
+            self.assertEqual(refused["status"], "refused")
+            self.assertFalse(refused["write_performed"])
+            self.assertEqual(applied_code, 200)
+            self.assertEqual(applied["status"], "applied")
+            self.assertTrue(applied["write_performed"])
+            self.assertEqual(applied["studio_web"]["route"], "/api/document-rules/apply")
+            context, errors = server.document_rules.load_project_context(project_root)
+            self.assertEqual(errors, [])
+            self.assertEqual(
+                context["document_roles"]["customer_guide"]["path"],
+                "docs/customer-guide.md",
+            )
 
     def test_http_server_returns_structured_not_found(self):
         httpd = server.create_server(host="127.0.0.1", port=0, project_root=ROOT)

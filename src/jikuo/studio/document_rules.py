@@ -6,6 +6,7 @@ import argparse
 from datetime import datetime, timezone
 import hashlib
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -19,6 +20,8 @@ else:  # pragma: no cover - direct script fallback for ad hoc inspection
 
 
 DOCUMENT_RULES_PLAN_SCHEMA = "jikuo.studio.document_rules_update_plan.v0"
+DOCUMENT_RULES_APPLY_RESULT_SCHEMA = "jikuo.studio.document_rules_update_apply_result.v0"
+DOCUMENT_RULES_APPROVAL_PHRASE = "Approve Document Rules update"
 PROJECT_CONTEXT_REF = ".jikuo/project_context.yaml"
 LEGACY_TASK_MAP_REF = "docs/governance/jikuo_productization_task_map.md"
 
@@ -121,6 +124,17 @@ def normalize_project_ref(
 
 def path_exists(project_root: Path, path_ref: str) -> bool:
     return (project_root / path_ref).is_file()
+
+
+def target_project_context_path(project_root: Path) -> Path:
+    return project_root / PROJECT_CONTEXT_REF
+
+
+def source_fingerprints(project_root: Path) -> dict[str, str]:
+    path = target_project_context_path(project_root)
+    if not path.is_file():
+        return {}
+    return {PROJECT_CONTEXT_REF: policy_templates.file_sha256(path)}
 
 
 def load_project_context(project_root: Path) -> tuple[dict[str, Any], list[dict[str, Any]]]:
@@ -485,6 +499,7 @@ def build_document_rules_update_plan(
         "generated_at_utc": utc_now_iso(),
         "project_root": str(resolved_root),
         "target_files": [PROJECT_CONTEXT_REF],
+        "source_fingerprints": source_fingerprints(resolved_root),
         "requested_operations": requested_operations,
         "current_state_summary": {
             "document_role_count": len(existing_roles),
@@ -502,7 +517,8 @@ def build_document_rules_update_plan(
         },
         "approval": {
             "required": status == "review",
-            "apply_surface": "planned:jikuo.apply_document_rules_update",
+            "apply_surface": "jikuo.apply_document_rules_update",
+            "approval_phrase_hint": DOCUMENT_RULES_APPROVAL_PHRASE,
             "approval_effect": "update .jikuo/project_context.yaml document rules",
         },
         "risks": [
@@ -511,7 +527,7 @@ def build_document_rules_update_plan(
         ],
         "next_actions": [
             "review this no-write plan before any guarded apply",
-            "use Studio guarded apply only after it is implemented and explicitly approved",
+            "use Studio guarded apply only after explicit approval",
         ]
         if status == "review"
         else [],
@@ -526,6 +542,304 @@ def build_document_rules_update_plan(
             "does_not_apply_without_guarded_approval",
         ],
     }
+
+
+def apply_result_refused(
+    *,
+    project_root: Path,
+    plan: dict[str, Any] | None,
+    refusal_reasons: list[str],
+    confirmed: bool,
+    approval_phrase: str | None,
+    error: str | None = None,
+) -> dict[str, Any]:
+    target_files = []
+    if isinstance(plan, dict):
+        target_files = list(plan.get("target_files") or [])
+    if not target_files:
+        target_files = [PROJECT_CONTEXT_REF]
+    return {
+        "schema": DOCUMENT_RULES_APPLY_RESULT_SCHEMA,
+        "schema_version": DOCUMENT_RULES_APPLY_RESULT_SCHEMA,
+        "status": "refused",
+        "project_root": str(project_root),
+        "target_files": target_files,
+        "source_plan_id": plan.get("plan_id") if isinstance(plan, dict) else None,
+        "write_performed": False,
+        "writes_performed": False,
+        "write_allowed_by_command": False,
+        "applied_operations": [],
+        "refusal_reasons": refusal_reasons,
+        "error": error,
+        "approval_record": {
+            "phrase": approval_phrase,
+            "required_phrase": DOCUMENT_RULES_APPROVAL_PHRASE,
+            "decision_target": "JIKUO Document Rules update",
+            "decision_effect": "update .jikuo/project_context.yaml document rules",
+            "decision_noneffect": "does not edit governance guidance, registry shards, legacy task map, policies, or runtime cards",
+            "source_plan_schema": DOCUMENT_RULES_PLAN_SCHEMA,
+            "command_confirmed": confirmed,
+        }
+        if approval_phrase
+        else None,
+        "non_effects": [
+            "does_not_edit_registry_shards",
+            "does_not_regenerate_legacy_task_map",
+            "does_not_mutate_policies",
+            "does_not_write_runtime_cards",
+        ],
+        "next_actions": ["review refusal reasons before retrying guarded apply"],
+    }
+
+
+def applied_operation_items(proposed_changes: dict[str, Any]) -> list[dict[str, Any]]:
+    operations: list[dict[str, Any]] = []
+    for key, kind in [
+        ("document_role_additions", "add_context_doc"),
+        ("document_role_removals", "remove_context_doc"),
+        ("completion_check_additions", "add_completion_check"),
+        ("completion_check_removals", "remove_completion_check"),
+        ("active_mount_authority_additions", "add_governance_reference"),
+        ("active_mount_authority_removals", "remove_governance_reference"),
+    ]:
+        for item in proposed_changes.get(key) or []:
+            if isinstance(item, dict):
+                operations.append({"operation": kind, **item})
+    return operations
+
+
+def apply_proposed_changes_to_context(
+    context: dict[str, Any],
+    proposed_changes: dict[str, Any],
+) -> list[dict[str, Any]]:
+    roles = context.setdefault("document_roles", {})
+    if not isinstance(roles, dict):
+        roles = {}
+        context["document_roles"] = roles
+    mounts = context.setdefault("main_document_mounts", {})
+    if not isinstance(mounts, dict):
+        mounts = {}
+        context["main_document_mounts"] = mounts
+
+    for item in proposed_changes.get("document_role_removals") or []:
+        role = str(item.get("role") or "")
+        if role:
+            roles.pop(role, None)
+    for item in proposed_changes.get("document_role_additions") or []:
+        role = str(item.get("role") or "")
+        path_ref = str(item.get("path") or "")
+        if role and path_ref:
+            record = {
+                "path": path_ref,
+                "required": bool(item.get("required", False)),
+            }
+            note = item.get("note")
+            if note:
+                record["note"] = str(note)
+            roles[role] = record
+
+    checks = mounts.get("checked_before_slice_completion")
+    if not isinstance(checks, list):
+        checks = []
+    remove_check_paths = {
+        str(item.get("path") or "")
+        for item in proposed_changes.get("completion_check_removals") or []
+        if isinstance(item, dict)
+    }
+    checks = [
+        item
+        for item in checks
+        if not (isinstance(item, dict) and str(item.get("path") or "") in remove_check_paths)
+    ]
+    existing_check_paths = {
+        str(item.get("path") or "") for item in checks if isinstance(item, dict)
+    }
+    for item in proposed_changes.get("completion_check_additions") or []:
+        path_ref = str(item.get("path") or "")
+        if path_ref and path_ref not in existing_check_paths:
+            checks.append(
+                {
+                    "path": path_ref,
+                    "update_required_when": str(item.get("update_required_when") or ""),
+                }
+            )
+            existing_check_paths.add(path_ref)
+    mounts["checked_before_slice_completion"] = checks
+
+    authority = mounts.get("active_mount_authority")
+    if not isinstance(authority, list):
+        authority = []
+    remove_authority_paths = {
+        str(item.get("path") or "")
+        for item in proposed_changes.get("active_mount_authority_removals") or []
+        if isinstance(item, dict)
+    }
+    authority = [str(item) for item in authority if str(item) not in remove_authority_paths]
+    existing_authority = set(authority)
+    for item in proposed_changes.get("active_mount_authority_additions") or []:
+        path_ref = str(item.get("path") or "")
+        if path_ref and path_ref not in existing_authority:
+            authority.append(path_ref)
+            existing_authority.add(path_ref)
+    mounts["active_mount_authority"] = authority
+
+    return applied_operation_items(proposed_changes)
+
+
+def write_project_context_atomically(path: Path, text: str) -> None:
+    tmp_path = path.with_suffix(path.suffix + ".tmp")
+    try:
+        tmp_path.write_text(text, encoding="utf-8", newline="\n")
+        os.replace(tmp_path, path)
+    finally:
+        if tmp_path.exists():
+            tmp_path.unlink()
+
+
+def apply_document_rules_update_plan(
+    plan: dict[str, Any] | None,
+    *,
+    project_root: Path | None = None,
+    confirmed: bool = False,
+    approval_phrase: str | None = None,
+) -> tuple[dict[str, Any], int]:
+    resolved_root = project_state.discover_project_root(project_root=project_root)
+    refusals: list[str] = []
+    if not isinstance(plan, dict):
+        refusals.append("missing reviewed plan payload")
+        return (
+            apply_result_refused(
+                project_root=resolved_root,
+                plan=None,
+                refusal_reasons=refusals,
+                confirmed=confirmed,
+                approval_phrase=approval_phrase,
+            ),
+            2,
+        )
+
+    if plan.get("schema") != DOCUMENT_RULES_PLAN_SCHEMA:
+        refusals.append("unsupported or missing document rules plan schema")
+    if plan.get("status") != "review":
+        refusals.append("document rules plan is not in review status")
+    if not confirmed:
+        refusals.append("missing technical confirmation flag")
+    if not approval_phrase:
+        refusals.append("missing approval phrase evidence")
+    elif approval_phrase != DOCUMENT_RULES_APPROVAL_PHRASE:
+        refusals.append("approval phrase mismatch")
+    if list(plan.get("target_files") or []) != [PROJECT_CONTEXT_REF]:
+        refusals.append("plan target files are not limited to .jikuo/project_context.yaml")
+    validation = plan.get("validation") or {}
+    if validation.get("status") != "ok":
+        refusals.append("document rules plan validation is not ok")
+
+    fingerprints = plan.get("source_fingerprints") or {}
+    expected_fingerprint = fingerprints.get(PROJECT_CONTEXT_REF)
+    if not expected_fingerprint:
+        refusals.append("missing reviewed source fingerprint")
+    else:
+        current_fingerprints = source_fingerprints(resolved_root)
+        current_fingerprint = current_fingerprints.get(PROJECT_CONTEXT_REF)
+        if current_fingerprint != expected_fingerprint:
+            refusals.append("stale source fingerprint")
+
+    if refusals:
+        return (
+            apply_result_refused(
+                project_root=resolved_root,
+                plan=plan,
+                refusal_reasons=refusals,
+                confirmed=confirmed,
+                approval_phrase=approval_phrase,
+            ),
+            2,
+        )
+
+    context, context_errors = load_project_context(resolved_root)
+    if context_errors:
+        return (
+            apply_result_refused(
+                project_root=resolved_root,
+                plan=plan,
+                refusal_reasons=[item.get("code", "project_context_unavailable") for item in context_errors],
+                confirmed=confirmed,
+                approval_phrase=approval_phrase,
+            ),
+            2,
+        )
+
+    proposed_changes = plan.get("proposed_changes") or {}
+    applied_operations = apply_proposed_changes_to_context(context, proposed_changes)
+    target_path = target_project_context_path(resolved_root)
+    try:
+        write_project_context_atomically(
+            target_path,
+            policy_templates.render_yaml_document(context),
+        )
+    except Exception as exc:
+        return (
+            apply_result_refused(
+                project_root=resolved_root,
+                plan=plan,
+                refusal_reasons=["document_rules_apply_write_failed"],
+                confirmed=confirmed,
+                approval_phrase=approval_phrase,
+                error=str(exc),
+            ),
+            2,
+        )
+
+    post_fingerprints = source_fingerprints(resolved_root)
+    return (
+        {
+            "schema": DOCUMENT_RULES_APPLY_RESULT_SCHEMA,
+            "schema_version": DOCUMENT_RULES_APPLY_RESULT_SCHEMA,
+            "status": "applied",
+            "project_root": str(resolved_root),
+            "target_files": [PROJECT_CONTEXT_REF],
+            "source_plan_id": plan.get("plan_id"),
+            "write_performed": True,
+            "writes_performed": True,
+            "write_allowed_by_command": True,
+            "applied_operations": applied_operations,
+            "applied_operation_count": len(applied_operations),
+            "refusal_reasons": [],
+            "source_fingerprints_before_apply": fingerprints,
+            "source_fingerprints_after_apply": post_fingerprints,
+            "post_write_verification": {
+                "project_context_exists": target_path.is_file(),
+                "project_context_fingerprint_changed": post_fingerprints.get(PROJECT_CONTEXT_REF)
+                != expected_fingerprint,
+                "project_context_schema": load_project_context(resolved_root)[0].get(
+                    "schema_version"
+                )
+                if target_path.is_file()
+                else None,
+            },
+            "approval_record": {
+                "phrase": approval_phrase,
+                "required_phrase": DOCUMENT_RULES_APPROVAL_PHRASE,
+                "decision_target": "JIKUO Document Rules update",
+                "decision_effect": "update .jikuo/project_context.yaml document rules",
+                "decision_noneffect": "does not edit governance guidance, registry shards, legacy task map, policies, or runtime cards",
+                "source_plan_schema": DOCUMENT_RULES_PLAN_SCHEMA,
+                "source_plan_id": plan.get("plan_id"),
+                "command_confirmed": confirmed,
+            },
+            "non_effects": [
+                "does_not_edit_registry_shards",
+                "does_not_regenerate_legacy_task_map",
+                "does_not_mutate_policies",
+                "does_not_write_runtime_cards",
+            ],
+            "next_actions": [
+                "refresh Studio global status",
+                "review updated Document Rules before the next governed slice",
+            ],
+        },
+        0,
+    )
 
 
 def format_markdown(plan: dict[str, Any]) -> str:
@@ -564,6 +878,47 @@ def format_markdown(plan: dict[str, Any]) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
+def format_apply_markdown(result: dict[str, Any]) -> str:
+    lines = [
+        "# JIKUO Document Rules Apply Result",
+        "",
+        f"- Status: `{result.get('status')}`",
+        f"- Schema: `{result.get('schema')}`",
+        f"- Project root: `{result.get('project_root')}`",
+        f"- Write performed: `{str(result.get('write_performed')).lower()}`",
+        "",
+        "## Target Files",
+        "",
+    ]
+    for target in result.get("target_files") or []:
+        lines.append(f"- `{target}`")
+    lines.extend(["", "## Applied Operations", ""])
+    operations = result.get("applied_operations") or []
+    if operations:
+        for item in operations:
+            lines.append(f"- `{item.get('operation')}`: `{item.get('path') or item.get('role')}`")
+    else:
+        lines.append("- None.")
+    refusals = result.get("refusal_reasons") or []
+    if refusals:
+        lines.extend(["", "## Refusal Reasons", ""])
+        lines.extend(f"- `{item}`" for item in refusals)
+    lines.extend(["", "## Non-Effects", ""])
+    lines.extend(f"- {item}" for item in result.get("non_effects") or [])
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def load_plan_json(path: Path | None, *, from_stdin: bool = False) -> dict[str, Any] | None:
+    if from_stdin:
+        raw = sys.stdin.read()
+    elif path is not None:
+        raw = path.read_text(encoding="utf-8")
+    else:
+        return None
+    decoded = json.loads(raw)
+    return decoded if isinstance(decoded, dict) else None
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Plan JIKUO Studio document-rule updates.")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -577,6 +932,13 @@ def build_parser() -> argparse.ArgumentParser:
     plan.add_argument("--remove-governance-reference", action="append", default=[])
     plan.add_argument("--completion-update-rule", default=None)
     plan.add_argument("--format", choices=("json", "markdown"), default="json")
+    apply = subparsers.add_parser("apply")
+    apply.add_argument("--project-root", type=Path, default=None)
+    apply.add_argument("--plan-json-file", type=Path, default=None)
+    apply.add_argument("--plan-json-stdin", action="store_true")
+    apply.add_argument("--confirm-apply", action="store_true")
+    apply.add_argument("--approval-phrase", default=None)
+    apply.add_argument("--format", choices=("json", "markdown"), default="json")
     return parser
 
 
@@ -599,6 +961,33 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print(json.dumps(plan, ensure_ascii=False, indent=2))
         return 0 if plan.get("status") in {"review", "noop"} else 2
+    if args.command == "apply":
+        if args.plan_json_file is not None and args.plan_json_stdin:
+            parser.error("use only one of --plan-json-file or --plan-json-stdin")
+        try:
+            plan = load_plan_json(args.plan_json_file, from_stdin=args.plan_json_stdin)
+        except Exception as exc:
+            plan = None
+            load_error = str(exc)
+        else:
+            load_error = None
+        result, exit_code = apply_document_rules_update_plan(
+            plan,
+            project_root=args.project_root,
+            confirmed=args.confirm_apply,
+            approval_phrase=args.approval_phrase,
+        )
+        if load_error and result.get("status") == "refused":
+            result["error"] = load_error
+            result["refusal_reasons"] = [
+                *list(result.get("refusal_reasons") or []),
+                "plan_json_load_failed",
+            ]
+        if args.format == "markdown":
+            print(format_apply_markdown(result), end="")
+        else:
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+        return exit_code
     parser.error(f"unsupported command: {args.command}")
     return 2
 

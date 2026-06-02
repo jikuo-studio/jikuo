@@ -107,7 +107,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Inspect JIKUO Studio/global-console read models.",
     )
     studio.add_argument("studio_command", choices=("status", "serve", "document-rules"))
-    studio.add_argument("studio_subcommand", nargs="?", choices=("plan",))
+    studio.add_argument("studio_subcommand", nargs="?", choices=("plan", "apply"))
     studio.add_argument("--project-root", type=Path, default=None)
     studio.add_argument("--format", choices=("markdown", "json"), default="markdown")
     studio.add_argument("--host", default=studio_web_server.DEFAULT_HOST)
@@ -119,6 +119,10 @@ def build_parser() -> argparse.ArgumentParser:
     studio.add_argument("--add-governance-reference", action="append", default=[])
     studio.add_argument("--remove-governance-reference", action="append", default=[])
     studio.add_argument("--completion-update-rule", default=None)
+    studio.add_argument("--plan-json-file", type=Path, default=None)
+    studio.add_argument("--plan-json-stdin", action="store_true")
+    studio.add_argument("--confirm-apply", action="store_true")
+    studio.add_argument("--approval-phrase", default=None)
     return parser
 
 
@@ -198,25 +202,35 @@ def main(argv: list[str] | None = None) -> int:
                 serve_args.extend(["--project-root", str(args.project_root)])
             return studio_web_server.main(serve_args)
         if args.studio_command == "document-rules":
-            if args.studio_subcommand != "plan":
-                parser.error("studio document-rules requires the `plan` subcommand")
-            plan_args = ["plan"]
+            if args.studio_subcommand not in {"plan", "apply"}:
+                parser.error("studio document-rules requires `plan` or `apply`")
+            plan_args = [args.studio_subcommand]
             if args.project_root is not None:
                 plan_args.extend(["--project-root", str(args.project_root)])
-            for path_ref in args.add_context_doc:
-                plan_args.extend(["--add-context-doc", path_ref])
-            for path_ref in args.remove_context_doc:
-                plan_args.extend(["--remove-context-doc", path_ref])
-            for path_ref in args.add_completion_check:
-                plan_args.extend(["--add-completion-check", path_ref])
-            for path_ref in args.remove_completion_check:
-                plan_args.extend(["--remove-completion-check", path_ref])
-            for path_ref in args.add_governance_reference:
-                plan_args.extend(["--add-governance-reference", path_ref])
-            for path_ref in args.remove_governance_reference:
-                plan_args.extend(["--remove-governance-reference", path_ref])
-            if args.completion_update_rule:
-                plan_args.extend(["--completion-update-rule", args.completion_update_rule])
+            if args.studio_subcommand == "plan":
+                for path_ref in args.add_context_doc:
+                    plan_args.extend(["--add-context-doc", path_ref])
+                for path_ref in args.remove_context_doc:
+                    plan_args.extend(["--remove-context-doc", path_ref])
+                for path_ref in args.add_completion_check:
+                    plan_args.extend(["--add-completion-check", path_ref])
+                for path_ref in args.remove_completion_check:
+                    plan_args.extend(["--remove-completion-check", path_ref])
+                for path_ref in args.add_governance_reference:
+                    plan_args.extend(["--add-governance-reference", path_ref])
+                for path_ref in args.remove_governance_reference:
+                    plan_args.extend(["--remove-governance-reference", path_ref])
+                if args.completion_update_rule:
+                    plan_args.extend(["--completion-update-rule", args.completion_update_rule])
+            if args.studio_subcommand == "apply":
+                if args.plan_json_file is not None:
+                    plan_args.extend(["--plan-json-file", str(args.plan_json_file)])
+                if args.plan_json_stdin:
+                    plan_args.append("--plan-json-stdin")
+                if args.confirm_apply:
+                    plan_args.append("--confirm-apply")
+                if args.approval_phrase:
+                    plan_args.extend(["--approval-phrase", args.approval_phrase])
             plan_args.extend(["--format", args.format])
             return document_rules.main(plan_args)
     parser.error(f"unsupported command: {args.command}")
