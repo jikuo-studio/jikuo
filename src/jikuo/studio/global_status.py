@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 from datetime import datetime, timezone
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any, Callable
@@ -52,6 +53,9 @@ REGISTRY_REFS = {
     "registry_index": "docs/registry/registry_index.yaml",
 }
 CONFIGURATION_LANGUAGE_SCHEMA = "jikuo.studio.configuration_language.v0"
+ROUND_DOCUMENT_TRACES_SCHEMA = "jikuo.studio.round_document_traces.v0"
+ROUND_DOCUMENT_TRACE_SCHEMA = "jikuo.studio.round_document_trace.v0"
+ROUND_DOCUMENT_TRACE_HISTORY_LIMIT = 24
 
 
 def document_rule_source_descriptor(path_ref: str) -> dict[str, Any]:
@@ -210,6 +214,342 @@ def safe_section(
         }
 
 
+def markdown_section(text: str, heading: str) -> str:
+    match = re.search(
+        rf"^## {re.escape(heading)}\s*\n(?P<body>.*?)(?=^## |\Z)",
+        text,
+        flags=re.MULTILINE | re.DOTALL,
+    )
+    return match.group("body") if match else ""
+
+
+def markdown_backtick_value(text: str, label: str) -> str | None:
+    match = re.search(
+        rf"^- {re.escape(label)}: `([^`]*)`",
+        text,
+        flags=re.MULTILINE,
+    )
+    return match.group(1) if match else None
+
+
+def markdown_int_value(text: str, label: str) -> int:
+    value = markdown_backtick_value(text, label)
+    if value is None:
+        match = re.search(
+            rf"^- {re.escape(label)}: ([0-9]+)",
+            text,
+            flags=re.MULTILINE,
+        )
+        value = match.group(1) if match else None
+    try:
+        return int(value or 0)
+    except ValueError:
+        return 0
+
+
+def history_ref_for_card(project_root: Path, path: Path) -> str:
+    try:
+        return path.resolve().relative_to(project_root.resolve()).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def history_markdown_for_ref(project_root: Path, history_ref: str | None) -> str | None:
+    if not history_ref:
+        return None
+    resolved = (project_root / history_ref).resolve()
+    runtime_root = runtime_visibility.runtime_root_for(project_root)
+    try:
+        resolved.relative_to(runtime_root)
+    except ValueError:
+        return None
+    return f"[{Path(history_ref).name}]({resolved.as_posix()})"
+
+
+def utc_from_history_name(name: str) -> str | None:
+    match = re.match(r"(?P<stamp>\d{8}T\d{6}Z)_", name)
+    if not match:
+        return None
+    try:
+        parsed = datetime.strptime(match.group("stamp"), "%Y%m%dT%H%M%SZ")
+    except ValueError:
+        return None
+    return parsed.replace(tzinfo=timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def artifact_assurance_from_history_card(
+    text: str,
+    *,
+    event: str | None,
+    history_ref: str,
+) -> dict[str, Any]:
+    section = markdown_section(text, "Artifact Assurance")
+    if not section:
+        return {}
+    required_reads = markdown_int_value(section, "Required reads")
+    read_evidence = markdown_int_value(section, "Read evidence")
+    completion_checks = markdown_int_value(section, "Completion-check documents")
+    completion_not_evaluated = markdown_int_value(
+        section,
+        "Completion-check documents not evaluated",
+    )
+    applicable_required_writes = markdown_int_value(section, "Applicable required writes")
+    planned_writes = markdown_int_value(section, "Planned writes")
+    actual_writes = markdown_int_value(section, "Actual writes")
+    gap_count = markdown_int_value(section, "Gap count")
+    required_reads_without_evidence = markdown_int_value(
+        section,
+        "Required reads without evidence",
+    )
+    return {
+        "schema": artifact_assurance.ARTIFACT_ASSURANCE_SCHEMA,
+        "schema_version": artifact_assurance.ARTIFACT_ASSURANCE_SCHEMA,
+        "status": markdown_backtick_value(section, "Status") or "review",
+        "guarantee": markdown_backtick_value(section, "Guarantee")
+        or "evidence_comparison_only",
+        "read_assurance": {
+            "status": markdown_backtick_value(section, "Read assurance status"),
+            "required_read_count": required_reads,
+            "read_evidence_count": read_evidence,
+            "required_read_set": [],
+            "read_evidence_set": [],
+            "required_not_read": [],
+            "required_reads_without_evidence_count": required_reads_without_evidence,
+        },
+        "write_assurance": {
+            "status": markdown_backtick_value(section, "Write assurance status"),
+            "required_write_count": applicable_required_writes,
+            "planned_write_count": planned_writes,
+            "actual_write_count": actual_writes,
+            "required_write_set": [],
+            "completion_check_candidate_count": completion_checks,
+            "completion_check_candidates": [],
+            "completion_check_not_evaluated": [],
+            "completion_check_not_evaluated_count": completion_not_evaluated,
+            "planned_write_set": [],
+            "actual_write_set": [],
+            "required_not_planned": [],
+            "required_not_written": [],
+            "planned_not_written": [],
+            "unplanned_written": [],
+        },
+        "gap_report": {
+            "status": "review" if gap_count or completion_not_evaluated else "ok",
+            "gap_count": gap_count,
+            "read_gap_count": required_reads_without_evidence,
+            "write_gap_count": max(0, gap_count - required_reads_without_evidence),
+            "completion_check_not_evaluated_count": completion_not_evaluated,
+            "read_gaps": [],
+            "write_gaps": [],
+            "invalid_refs": [],
+        },
+        "runtime_projection": {
+            "schema": "jikuo.runtime_artifact_assurance_projection.v0",
+            "event": event,
+            "source": "runtime_history_card",
+            "persistence": "runtime_card_history",
+            "history_ref": history_ref,
+            "non_effects": [
+                "does_not_read_files_by_itself",
+                "does_not_inspect_git_diff",
+                "does_not_persist_data01_events",
+            ],
+        },
+    }
+
+
+def count_artifacts(report: dict[str, Any]) -> dict[str, int]:
+    read = report.get("read_assurance") or {}
+    write = report.get("write_assurance") or {}
+    gaps = report.get("gap_report") or {}
+    return {
+        "required_read_count": int(read.get("required_read_count") or 0),
+        "read_evidence_count": int(read.get("read_evidence_count") or 0),
+        "planned_write_count": int(write.get("planned_write_count") or 0),
+        "actual_write_count": int(write.get("actual_write_count") or 0),
+        "completion_check_candidate_count": int(
+            write.get("completion_check_candidate_count")
+            or len(write.get("completion_check_candidates") or [])
+            or 0
+        ),
+        "completion_check_not_evaluated_count": int(
+            gaps.get("completion_check_not_evaluated_count")
+            or write.get("completion_check_not_evaluated_count")
+            or len(write.get("completion_check_not_evaluated") or [])
+            or 0
+        ),
+        "gap_count": int(gaps.get("gap_count") or 0),
+    }
+
+
+def empty_artifact_counts() -> dict[str, int]:
+    return {
+        "required_read_count": 0,
+        "read_evidence_count": 0,
+        "planned_write_count": 0,
+        "actual_write_count": 0,
+        "completion_check_candidate_count": 0,
+        "completion_check_not_evaluated_count": 0,
+        "gap_count": 0,
+    }
+
+
+def round_document_change_status(counts: dict[str, int], *, has_trace: bool) -> str:
+    if not has_trace:
+        return "no_trace"
+    if counts["planned_write_count"] or counts["actual_write_count"]:
+        return "changes_reported"
+    return "no_document_changes_reported"
+
+
+def round_document_change_label(status: str) -> str:
+    return {
+        "changes_reported": "Document changes reported",
+        "no_document_changes_reported": "No document changes reported",
+        "no_trace": "No document trace",
+    }.get(status, status)
+
+
+def round_trace_from_parts(
+    *,
+    project_root: Path,
+    history_ref: str | None,
+    source_kind: str,
+    updated_at_utc: str | None,
+    lifecycle_event: str | None,
+    intent_class: str | None,
+    operation_class: str | None,
+    status: str | None,
+    proposal_id: str | None,
+    artifact_report: dict[str, Any],
+) -> dict[str, Any]:
+    has_trace = bool(artifact_report.get("schema"))
+    counts = count_artifacts(artifact_report) if has_trace else empty_artifact_counts()
+    change_status = round_document_change_status(counts, has_trace=has_trace)
+    round_id = Path(history_ref).stem if history_ref else f"{source_kind}:{updated_at_utc or 'unknown'}"
+    label_time = updated_at_utc or "unknown time"
+    event_label = lifecycle_event or "unknown event"
+    return {
+        "schema": ROUND_DOCUMENT_TRACE_SCHEMA,
+        "round_id": round_id,
+        "label": f"{label_time} / {event_label}",
+        "updated_at_utc": updated_at_utc,
+        "source_kind": source_kind,
+        "history_ref": history_ref,
+        "history_markdown": history_markdown_for_ref(project_root, history_ref),
+        "lifecycle_event": lifecycle_event,
+        "intent_class": intent_class,
+        "operation_class": operation_class,
+        "proposal_status": status,
+        "proposal_id": proposal_id,
+        "has_document_trace": has_trace,
+        "has_document_changes": change_status == "changes_reported",
+        "document_change_status": change_status,
+        "document_change_label": round_document_change_label(change_status),
+        "trace_label": "Document trace available" if has_trace else "No document trace",
+        "counts": counts,
+        "artifact_assurance": artifact_report if has_trace else {},
+        "non_effects": [
+            "does_not_read_files_by_itself",
+            "does_not_inspect_git_diff",
+            "does_not_create_data01_event_ledger_entries",
+        ],
+    }
+
+
+def round_trace_from_state(project_root: Path, state: dict[str, Any]) -> dict[str, Any] | None:
+    if state.get("status") in {"missing", "invalid", "unavailable"} and not state.get(
+        "runtime_visibility"
+    ):
+        return None
+    source = state.get("source") or {}
+    runtime = state.get("runtime_visibility") or {}
+    history_ref = runtime.get("history_ref")
+    artifact_report = state.get("artifact_assurance") or {}
+    return round_trace_from_parts(
+        project_root=project_root,
+        history_ref=str(history_ref) if history_ref else None,
+        source_kind="latest_runtime_state",
+        updated_at_utc=state.get("updated_at_utc"),
+        lifecycle_event=source.get("event"),
+        intent_class=None,
+        operation_class=None,
+        status=source.get("status"),
+        proposal_id=source.get("proposal_id"),
+        artifact_report=artifact_report if isinstance(artifact_report, dict) else {},
+    )
+
+
+def round_trace_from_history_card(project_root: Path, path: Path) -> dict[str, Any]:
+    history_ref = history_ref_for_card(project_root, path)
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        text = ""
+    lifecycle_event = markdown_backtick_value(text, "Lifecycle event")
+    artifact_report = artifact_assurance_from_history_card(
+        text,
+        event=lifecycle_event,
+        history_ref=history_ref,
+    )
+    return round_trace_from_parts(
+        project_root=project_root,
+        history_ref=history_ref,
+        source_kind="runtime_history_card",
+        updated_at_utc=utc_from_history_name(path.name),
+        lifecycle_event=lifecycle_event,
+        intent_class=markdown_backtick_value(text, "Intent class"),
+        operation_class=markdown_backtick_value(text, "Operation class"),
+        status=markdown_backtick_value(text, "Status"),
+        proposal_id=markdown_backtick_value(text, "Proposal id"),
+        artifact_report=artifact_report,
+    )
+
+
+def round_document_traces(project_root: Path, state: dict[str, Any]) -> dict[str, Any]:
+    runtime_root = runtime_visibility.runtime_root_for(project_root)
+    history_root = runtime_root / "history"
+    rounds: list[dict[str, Any]] = []
+    seen_refs: set[str] = set()
+    latest = round_trace_from_state(project_root, state)
+    if latest:
+        rounds.append(latest)
+        if latest.get("history_ref"):
+            seen_refs.add(str(latest["history_ref"]))
+    if history_root.is_dir():
+        for path in sorted(history_root.glob("*.md"), key=lambda item: item.name, reverse=True):
+            history_ref = history_ref_for_card(project_root, path)
+            if history_ref in seen_refs:
+                continue
+            rounds.append(round_trace_from_history_card(project_root, path))
+            seen_refs.add(history_ref)
+            if len(rounds) >= ROUND_DOCUMENT_TRACE_HISTORY_LIMIT:
+                break
+    default_round = rounds[0] if rounds else None
+    return {
+        "schema": ROUND_DOCUMENT_TRACES_SCHEMA,
+        "schema_version": ROUND_DOCUMENT_TRACES_SCHEMA,
+        "status": "available" if rounds else "missing",
+        "default_round_id": default_round.get("round_id") if default_round else None,
+        "default_selection": "latest_runtime_state" if default_round else None,
+        "round_count": len(rounds),
+        "rounds_with_document_trace_count": sum(
+            1 for item in rounds if item.get("has_document_trace")
+        ),
+        "rounds_with_document_changes_count": sum(
+            1 for item in rounds if item.get("has_document_changes")
+        ),
+        "rounds": rounds,
+        "read_model_limitations": [
+            "latest round uses structured state_summary when available",
+            "older round labels are derived from runtime history cards and may expose counts without full artifact path sets",
+            "this read model does not inspect git diff or infer edits outside JIKUO runtime evidence",
+        ],
+        "writes_performed": False,
+        "write_allowed_by_command": False,
+    }
+
+
 def runtime_summary(project_root: Path, diagnostics: list[dict[str, Any]]) -> dict[str, Any]:
     state = runtime_visibility.load_state_summary(project_root=project_root)
     _card, last_card_report = runtime_visibility.load_last_card(project_root=project_root)
@@ -239,6 +579,7 @@ def runtime_summary(project_root: Path, diagnostics: list[dict[str, Any]]) -> di
     display_links = state.get("client_display_links") or {}
     links = display_links.get("links") or {}
     counts = state.get("counts") or {}
+    round_traces = round_document_traces(project_root, state)
     return {
         "status": status,
         "updated_at_utc": state.get("updated_at_utc"),
@@ -252,6 +593,7 @@ def runtime_summary(project_root: Path, diagnostics: list[dict[str, Any]]) -> di
         },
         "observed_lifecycle": state.get("observed_lifecycle") or {},
         "artifact_assurance": state.get("artifact_assurance") or {},
+        "round_document_traces": round_traces,
         "lifecycle_card_count": len(state.get("lifecycle_card_links") or []),
         "card_links": {
             "last_card": (links.get("last_card") or {}).get("markdown"),

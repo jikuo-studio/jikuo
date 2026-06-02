@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-STUDIO-01: Global Console And Configuration Shell
 
-> **Status**: `JIKUO-STUDIO-01A` global status read model, `JIKUO-STUDIO-01B` panel/action registries, `JIKUO-STUDIO-01C` local read-only console, `JIKUO-STUDIO-01D1` document-mount read model, `JIKUO-STUDIO-01D2` visible document-mount frontend section, and `JIKUO-STUDIO-01D3` configuration vocabulary mapping implemented as no-write Python/CLI/backend surfaces. `JIKUO-STUDIO-01D4` records the detailed Document Rules plan/apply design contract; `JIKUO-STUDIO-01D5` implements the first Document Rules no-write plan backend; `JIKUO-STUDIO-01D6` connects that plan to the local Studio page as a no-write preview; `JIKUO-STUDIO-01D7` separates editable configuration from governance guidance in the read model and UI; `JIKUO-STUDIO-01D8` implements minimal guarded apply for `.jikuo/project_context.yaml` Document Rules changes; `JIKUO-STUDIO-01D9` maps that guarded apply to a natural frontend approval confirmation instead of asking users to type the backend approval phrase; `JIKUO-STUDIO-01D10` implements the first no-write document/artifact assurance projection for required, planned, and actual read/write comparison; `JIKUO-STUDIO-01D11` projects that assurance into runtime task cards, history cards, and `state_summary.json`; `JIKUO-STUDIO-01D12` corrects completion-check document semantics so configured completion-check scope is rendered as write candidates/checklist items unless applicability evidence makes a document required for the current slice; `JIKUO-STUDIO-01D13` renders the same data as latest-round document trace instead of metric-first assurance cards; `JIKUO-STUDIO-01E1/01E2` implement a no-write project-file inventory and reusable local web batch selector for Document Rules.
+> **Status**: `JIKUO-STUDIO-01A` global status read model, `JIKUO-STUDIO-01B` panel/action registries, `JIKUO-STUDIO-01C` local read-only console, `JIKUO-STUDIO-01D1` document-mount read model, `JIKUO-STUDIO-01D2` visible document-mount frontend section, and `JIKUO-STUDIO-01D3` configuration vocabulary mapping implemented as no-write Python/CLI/backend surfaces. `JIKUO-STUDIO-01D4` records the detailed Document Rules plan/apply design contract; `JIKUO-STUDIO-01D5` implements the first Document Rules no-write plan backend; `JIKUO-STUDIO-01D6` connects that plan to the local Studio page as a no-write preview; `JIKUO-STUDIO-01D7` separates editable configuration from governance guidance in the read model and UI; `JIKUO-STUDIO-01D8` implements minimal guarded apply for `.jikuo/project_context.yaml` Document Rules changes; `JIKUO-STUDIO-01D9` maps that guarded apply to a natural frontend approval confirmation instead of asking users to type the backend approval phrase; `JIKUO-STUDIO-01D10` implements the first no-write document/artifact assurance projection for required, planned, and actual read/write comparison; `JIKUO-STUDIO-01D11` projects that assurance into runtime task cards, history cards, and `state_summary.json`; `JIKUO-STUDIO-01D12` corrects completion-check document semantics so configured completion-check scope is rendered as write candidates/checklist items unless applicability evidence makes a document required for the current slice; `JIKUO-STUDIO-01D13` renders the same data as latest-round document trace instead of metric-first assurance cards; `JIKUO-STUDIO-01D14` adds selectable runtime rounds with document trace/change labels; `JIKUO-STUDIO-01E1/01E2` implement a no-write project-file inventory and reusable local web batch selector for Document Rules.
 > **Date**: 2026-05-31
 > **JIKUO layer**: product surface / view-model projection / guarded configuration control.
 > **Business meaning**: Users should not need to reconstruct JIKUO's global state from chat alone. A thin JIKUO console should make activation, runtime, policy, template, integration, diagnostics, and guarded configuration status visible in one place while preserving the existing kernel and guarded-write boundaries.
@@ -1132,6 +1132,51 @@ Acceptance:
 - latest runtime evidence is preferred when available; otherwise the section
   shows the configured projection with an explicit `No trace captured` state;
 - round history selection remains deferred to a later slice.
+
+### `JIKUO-STUDIO-01D14`: Selectable Round Document Trace
+
+Add a round selector to the Round Document Trace section so Studio users can
+choose which runtime round to inspect instead of being forced to infer meaning
+from the latest `state_summary.json`.
+
+Implementation status (2026-06-02): implemented in
+`src/jikuo/studio/global_status.py` and
+`src/jikuo/integrations/studio_web/server.py`.
+
+Business meaning:
+
+- users should see whether the latest round actually contains document trace
+  evidence before trusting the trace panel;
+- each runtime round should carry an explicit label for whether document trace
+  exists and whether planned or actual document changes are reported;
+- the default selection remains the latest runtime round, even when that round
+  honestly has no edits, additions, deletions, or comparable document evidence;
+- older rounds remain selectable so users can review the latest captured
+  document-change trace without confusing it with the newest conversation turn.
+
+Model:
+
+```text
+summaries.runtime.round_document_traces
+  -> latest state_summary round
+  -> recent runtime history card rounds
+  -> per-round trace/change labels
+  -> Studio selector defaulting to latest round
+```
+
+Acceptance:
+
+- `summaries.runtime.round_document_traces` exposes a no-write
+  `jikuo.studio.round_document_traces.v0` read model;
+- Studio Web renders a selectable round list in `Round Document Trace`;
+- each round shows whether a document trace is available;
+- each round shows whether document changes are reported;
+- selecting a round updates `Expected`, `Observed`, `Gaps`, and `Action chain`;
+- if the selected/latest round has no trace or no document changes, the UI says
+  so instead of falling back silently to older evidence;
+- the selector reads only existing runtime visibility state/history and does not
+  inspect git diff, create DATA-01 events, mutate policy behavior, or bypass
+  guarded apply.
 
 ### `JIKUO-STUDIO-01E`: File Selection, Batch Changes, And Time Anchors
 

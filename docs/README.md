@@ -44,6 +44,7 @@ The following remain outside this repository's active documentation mount unless
   human-readable projection only; structured task and capability authority
   lives in `docs/registry/`
 - `docs/governance/jikuo_policy_governance_authority.md`
+- `docs/governance/jikuo_scenario_chain_and_atom_registration_guide.md`
 - `docs/governance/jikuo_trust_privacy_provenance_baseline.md`
 - `docs/governance/jikuo_skeleton_kernel_boundary_and_backlog.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-FLOW-02_desktop_app_primary_operating_loop.md`
@@ -110,6 +111,7 @@ Before closing each JIKUO development slice, check whether these main documents 
 - `docs/README.md`
 - `docs/governance/jikuo_execution_mounts.md`
 - `docs/governance/jikuo_policy_governance_authority.md`
+- `docs/governance/jikuo_scenario_chain_and_atom_registration_guide.md`
 - `docs/governance/jikuo_productization_task_map.md`
 - `docs/insights/insights_registry.yaml`
 - `.jikuo/policies/manifest.yaml` when policy-store records changed

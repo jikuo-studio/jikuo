@@ -89,6 +89,7 @@ INDEX_HTML = """<!doctype html>
     .status.refused { color: var(--danger); }
     .status.aligned { color: var(--accent); }
     .status.partial_trace, .status.no_trace { color: var(--warn); }
+    .status.no_changes { color: var(--warn); }
     .status.needs_attention { color: var(--danger); }
     .grid {
       display: grid;
@@ -256,6 +257,63 @@ INDEX_HTML = """<!doctype html>
       flex-wrap: wrap;
       gap: 8px;
       margin: 10px 0;
+    }
+    .trace-round-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 8px;
+      margin: 10px 0;
+    }
+    .round-button {
+      display: grid;
+      gap: 5px;
+      min-height: 72px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--panel);
+      color: var(--ink);
+      text-align: left;
+      padding: 9px 10px;
+    }
+    .round-button.selected {
+      border-color: #7bb2a5;
+      background: #eef8f4;
+    }
+    .round-button strong {
+      display: block;
+      overflow-wrap: anywhere;
+      font-size: 13px;
+    }
+    .round-button span {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+    .trace-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+    .trace-badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 2px 7px;
+      background: #fff;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.2;
+    }
+    .trace-badge.trace-yes, .trace-badge.changes-yes {
+      border-color: #8db8ac;
+      color: #176555;
+      background: #eef8f4;
+    }
+    .trace-badge.trace-no, .trace-badge.changes-no {
+      color: var(--warn);
+      background: #fff8ec;
     }
     .trace-chip {
       min-width: 150px;
@@ -549,7 +607,8 @@ INDEX_HTML = """<!doctype html>
         <h2>Round Document Trace</h2>
         <span id="round-trace-status" class="status">Loading</span>
       </div>
-      <p class="subhead">Latest round trace for expected documents, observed evidence, write activity, and gaps.</p>
+      <p class="subhead">Select a runtime round to inspect expected documents, observed evidence, write activity, and gaps.</p>
+      <div class="trace-round-list" id="round-trace-rounds"></div>
       <div class="trace-summary" id="round-trace-summary"></div>
       <div class="trace-layout">
         <div class="trace-panel">
@@ -636,6 +695,7 @@ INDEX_HTML = """<!doctype html>
     const DOCUMENT_RULES_APPROVAL_PHRASE = "Approve Document Rules update";
     let currentDocumentRulesPlan = null;
     let projectFileItems = [];
+    let selectedRoundTraceId = null;
     const selectedFileRecords = new Map();
     const addPlanMessage = (title, detail, status) => {
       const result = document.getElementById("document-rules-plan-result");
@@ -914,9 +974,14 @@ INDEX_HTML = """<!doctype html>
       const extra = overflowNote(records.length, rows.length, "gaps");
       return rows.length ? [...rows, ...(extra ? [extra] : [])] : [compactItem("No gaps reported", fallback)];
     };
-    const traceState = (latestAvailable, active, gapReport) => {
-      if (!latestAvailable) {
+    const artifactList = (items) => Array.isArray(items) ? items : [];
+    const artifactCount = (items, count) => Array.isArray(items) ? items.length : numberValue(count);
+    const traceState = (round, active, gapReport) => {
+      if (!round || !round.has_document_trace) {
         return {key: "no_trace", label: "No trace captured"};
+      }
+      if (!round.has_document_changes) {
+        return {key: "no_changes", label: "No document changes"};
       }
       if ((active.status || "") === "ok" && numberValue((gapReport || {}).gap_count) === 0) {
         return {key: "aligned", label: "Aligned"};
@@ -926,69 +991,116 @@ INDEX_HTML = """<!doctype html>
       }
       return {key: "partial_trace", label: "Partial trace"};
     };
+    const roundButton = (round, selected, data) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `round-button${selected ? " selected" : ""}`;
+      button.innerHTML = `<strong></strong><span></span><div class="trace-badges"></div>`;
+      button.querySelector("strong").textContent = round.label || round.round_id || "runtime round";
+      const counts = round.counts || {};
+      button.querySelector("span").textContent = `${round.lifecycle_event || "unknown event"} / ${counts.planned_write_count || 0} planned / ${counts.actual_write_count || 0} actual`;
+      const badges = button.querySelector(".trace-badges");
+      const traceBadge = document.createElement("span");
+      traceBadge.className = `trace-badge ${round.has_document_trace ? "trace-yes" : "trace-no"}`;
+      traceBadge.textContent = round.has_document_trace ? "Trace" : "No trace";
+      const changeBadge = document.createElement("span");
+      changeBadge.className = `trace-badge ${round.has_document_changes ? "changes-yes" : "changes-no"}`;
+      changeBadge.textContent = round.has_document_changes ? "Changes" : "No changes";
+      badges.append(traceBadge, changeBadge);
+      button.addEventListener("click", () => {
+        selectedRoundTraceId = round.round_id;
+        renderRoundDocumentTrace(data);
+      });
+      return button;
+    };
     const renderRoundDocumentTrace = (data) => {
       const summaries = data.summaries || {};
       const configured = summaries.artifact_assurance || {};
-      const latest = (summaries.runtime || {}).artifact_assurance || {};
-      const latestAvailable = Boolean(latest && latest.schema);
-      const active = latestAvailable ? latest : configured;
+      const traceList = (summaries.runtime || {}).round_document_traces || {};
+      const rounds = traceList.rounds || [];
+      const defaultRoundId = traceList.default_round_id || (rounds[0] || {}).round_id;
+      if (!selectedRoundTraceId || !rounds.some((round) => round.round_id === selectedRoundTraceId)) {
+        selectedRoundTraceId = defaultRoundId || null;
+      }
+      const selectedRound = rounds.find((round) => round.round_id === selectedRoundTraceId) || null;
+      const activeTrace = (selectedRound || {}).artifact_assurance || {};
+      const latestAvailable = Boolean(selectedRound && selectedRound.has_document_trace && activeTrace.schema);
+      const active = latestAvailable ? activeTrace : configured;
       const configuredRead = configured.read_assurance || {};
       const configuredWrite = configured.write_assurance || {};
       const activeRead = (active || {}).read_assurance || {};
       const activeWrite = (active || {}).write_assurance || {};
       const activeGap = (active || {}).gap_report || {};
-      const runtimeProjection = latest.runtime_projection || {};
-      const statusState = traceState(latestAvailable, active, activeGap);
+      const runtimeProjection = activeTrace.runtime_projection || {};
+      const statusState = traceState(selectedRound, active, activeGap);
       const status = document.getElementById("round-trace-status");
       status.className = statusClass(statusState.key);
       status.textContent = statusState.label;
+      const roundList = document.getElementById("round-trace-rounds");
+      roundList.replaceChildren(
+        ...(rounds.length
+          ? rounds.map((round) => roundButton(round, round.round_id === selectedRoundTraceId, data))
+          : [compactItem("No runtime rounds", "Run a card-producing JIKUO proposal to capture runtime rounds.")])
+      );
 
-      const expectedReads = activeRead.required_read_set || configuredRead.required_read_set || [];
-      const readEvidence = activeRead.read_evidence_set || [];
-      const expectedWrites = activeWrite.required_write_set || configuredWrite.required_write_set || [];
-      const completionCandidates = activeWrite.completion_check_candidates || activeWrite.write_candidate_set || configuredWrite.completion_check_candidates || [];
-      const plannedWrites = activeWrite.planned_write_set || [];
-      const actualWrites = activeWrite.actual_write_set || [];
-      const readGaps = activeGap.read_gaps || activeRead.required_not_read || [];
+      const expectedReads = artifactList(activeRead.required_read_set || configuredRead.required_read_set);
+      const readEvidence = artifactList(activeRead.read_evidence_set);
+      const expectedWrites = artifactList(activeWrite.required_write_set || configuredWrite.required_write_set);
+      const completionCandidates = artifactList(activeWrite.completion_check_candidates || activeWrite.write_candidate_set || configuredWrite.completion_check_candidates);
+      const plannedWrites = artifactList(activeWrite.planned_write_set);
+      const actualWrites = artifactList(activeWrite.actual_write_set);
+      const readGaps = artifactList(activeGap.read_gaps || activeRead.required_not_read);
       const writeGaps = activeGap.write_gaps || [
         ...(activeWrite.required_not_planned || []),
         ...(activeWrite.required_not_written || []),
         ...(activeWrite.planned_not_written || []),
         ...(activeWrite.unplanned_written || []),
       ];
-      const completionNotEvaluated = activeWrite.completion_check_not_evaluated || [];
+      const completionNotEvaluated = artifactList(activeWrite.completion_check_not_evaluated);
+      const requiredReadCount = artifactCount(activeRead.required_read_set, activeRead.required_read_count || configuredRead.required_read_count);
+      const readEvidenceCount = artifactCount(activeRead.read_evidence_set, activeRead.read_evidence_count);
+      const expectedWriteCount = artifactCount(activeWrite.required_write_set, activeWrite.required_write_count || configuredWrite.required_write_count);
+      const completionCandidateCount = artifactCount(
+        activeWrite.completion_check_candidates || activeWrite.write_candidate_set,
+        activeWrite.completion_check_candidate_count || configuredWrite.completion_check_candidate_count
+      );
+      const plannedWriteCount = artifactCount(activeWrite.planned_write_set, activeWrite.planned_write_count);
+      const actualWriteCount = artifactCount(activeWrite.actual_write_set, activeWrite.actual_write_count);
+      const completionNotEvaluatedCount = artifactCount(activeWrite.completion_check_not_evaluated, activeGap.completion_check_not_evaluated_count || activeWrite.completion_check_not_evaluated_count);
 
       document.getElementById("round-trace-summary").replaceChildren(
-        traceChip("Round", latestAvailable ? (runtimeProjection.event || "latest runtime") : "latest configured projection"),
-        traceChip("Trace source", latestAvailable ? (runtimeProjection.source || "state_summary") : "no runtime evidence"),
-        traceChip("Expected reads", detailCount(expectedReads.length, "documents")),
-        traceChip("Observed reads", detailCount(readEvidence.length, "evidence items")),
-        traceChip("Writes", `${plannedWrites.length} planned / ${actualWrites.length} actual`),
-        traceChip("Gaps", detailCount(numberValue(activeGap.gap_count) + numberValue(activeGap.completion_check_not_evaluated_count), "items"))
+        traceChip("Round", selectedRound ? (selectedRound.label || selectedRound.round_id) : "no runtime round"),
+        traceChip("Trace source", selectedRound ? `${selectedRound.source_kind || "runtime"} / ${selectedRound.trace_label || ""}` : "no runtime evidence"),
+        traceChip("Document changes", selectedRound ? selectedRound.document_change_label : "No document trace"),
+        traceChip("Expected reads", detailCount(requiredReadCount, "documents")),
+        traceChip("Observed reads", detailCount(readEvidenceCount, "evidence items")),
+        traceChip("Writes", `${plannedWriteCount} planned / ${actualWriteCount} actual`),
+        traceChip("Gaps", detailCount(numberValue(activeGap.gap_count) + completionNotEvaluatedCount, "items"))
       );
 
       document.getElementById("round-trace-expected").replaceChildren(
-        compactItem("Required reads", detailCount(expectedReads.length, "documents")),
+        compactItem("Required reads", detailCount(requiredReadCount, "documents")),
         ...artifactRows(expectedReads, "No required reads are configured for this projection.", "configured context document"),
-        compactItem("Applicable required writes", detailCount(expectedWrites.length, "documents")),
+        compactItem("Applicable required writes", detailCount(expectedWriteCount, "documents")),
         ...artifactRows(expectedWrites, "No applicable required writes are known for this round.", "required write"),
-        compactItem("Completion checks", detailCount(completionCandidates.length, "candidates")),
+        compactItem("Completion checks", detailCount(completionCandidateCount, "candidates")),
         ...artifactRows(completionCandidates, "No completion-check candidates are configured.", "completion check candidate")
       );
 
       const observedRows = latestAvailable
         ? [
-            compactItem("Runtime projection", `${runtimeProjection.event || "latest task"} / ${runtimeProjection.persistence || "runtime summary"}`),
-            compactItem("Read evidence", detailCount(readEvidence.length, "items")),
+            compactItem("Runtime projection", `${runtimeProjection.event || selectedRound.lifecycle_event || "latest task"} / ${runtimeProjection.persistence || selectedRound.source_kind || "runtime summary"}`),
+            compactItem("History card", selectedRound.history_ref || "history ref not supplied"),
+            compactItem("Read evidence", detailCount(readEvidenceCount, "items")),
             ...artifactRows(readEvidence, "No read evidence was supplied for this round.", "read evidence"),
-            compactItem("Planned writes", detailCount(plannedWrites.length, "documents")),
+            compactItem("Planned writes", detailCount(plannedWriteCount, "documents")),
             ...artifactRows(plannedWrites, "No planned write evidence was supplied for this round.", "planned write"),
-            compactItem("Actual writes", detailCount(actualWrites.length, "documents")),
+            compactItem("Actual writes", detailCount(actualWriteCount, "documents")),
             ...artifactRows(actualWrites, "No actual write evidence was supplied for this round.", "actual write"),
           ]
         : [
-            compactItem("Runtime projection", "No comparable trace was captured for the latest round."),
-            compactItem("Observed evidence", "No read/write evidence is available for this round yet."),
+            compactItem("Runtime projection", selectedRound ? `${selectedRound.lifecycle_event || "runtime round"} has no comparable document trace.` : "No comparable trace was captured."),
+            compactItem("Observed evidence", "No read/write evidence is available for this selected round."),
           ];
       document.getElementById("round-trace-observed").replaceChildren(...observedRows);
 
@@ -997,21 +1109,21 @@ INDEX_HTML = """<!doctype html>
             ...traceGapRows(readGaps, "No required-read gaps are currently reported."),
             ...traceGapRows(writeGaps, "No write gaps are currently reported."),
           ]
-        : [compactItem("No comparable trace", "Configured obligations are visible, but this round has no runtime evidence to compare.")];
+        : [compactItem("No comparable trace", "Configured obligations are visible, but this selected round has no runtime evidence to compare.")];
       document.getElementById("round-trace-gaps").replaceChildren(
         ...gapRowsForTrace,
-        ...(completionNotEvaluated.length
+        ...(completionNotEvaluatedCount
           ? [
-              compactItem("Completion checks not evaluated", detailCount(completionNotEvaluated.length, "documents")),
+              compactItem("Completion checks not evaluated", detailCount(completionNotEvaluatedCount, "documents")),
               ...artifactRows(completionNotEvaluated, "", "needs applicability evidence"),
             ]
           : [compactItem("Completion checks", "No unevaluated completion checks are reported.")])
       );
 
       document.getElementById("round-trace-timeline").replaceChildren(
-        compactItem("1. Round source", latestAvailable ? `${runtimeProjection.event || "latest task"} from ${runtimeProjection.source || "runtime state"}` : "Latest round has no comparable runtime trace."),
-        compactItem("2. Expected documents", `${expectedReads.length} reads / ${completionCandidates.length} completion candidates`),
-        compactItem("3. Observed evidence", `${readEvidence.length} reads / ${plannedWrites.length} planned writes / ${actualWrites.length} actual writes`),
+        compactItem("1. Round source", selectedRound ? `${selectedRound.lifecycle_event || "runtime round"} from ${selectedRound.source_kind || "runtime state"}` : "No runtime round selected."),
+        compactItem("2. Expected documents", `${requiredReadCount} reads / ${completionCandidateCount} completion candidates`),
+        compactItem("3. Observed evidence", `${readEvidenceCount} reads / ${plannedWriteCount} planned writes / ${actualWriteCount} actual writes`),
         compactItem("4. Review result", statusState.label),
         compactItem("5. Guarantee", active.guarantee || "evidence_comparison_only")
       );

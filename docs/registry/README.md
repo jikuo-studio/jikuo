@@ -27,7 +27,9 @@ in place until the registry schema and shard contents are reviewed.
   background.
 - `capabilities.yaml`: observed `CAP-*` capability IDs, implementation status,
   metadata completeness status, and a transitional generated reference cache.
-- `scenario_chains.yaml`: seed scenario-to-capability forward edges.
+- `scenario_chains.yaml`: seed scenario-to-capability forward edges. Complete
+  chain registration should follow
+  `docs/governance/jikuo_scenario_chain_and_atom_registration_guide.md`.
 - `mount_sets.yaml`: seed named document mount sets.
 
 `required_mount_sets` is also the lightweight context-bundle mechanism during

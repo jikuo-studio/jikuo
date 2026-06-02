@@ -43,6 +43,7 @@ Always mount:
 - `docs/governance/jikuo_execution_mounts.md`
 - `docs/governance/jikuo_productization_task_map.md` as a legacy L3 projection only; do not treat it as the source of truth for new task sequencing, open-item facts, capability metadata, or registry authority.
 - `docs/governance/jikuo_policy_governance_authority.md`
+- `docs/governance/jikuo_scenario_chain_and_atom_registration_guide.md`
 - `docs/governance/jikuo_skeleton_kernel_boundary_and_backlog.md`
 - `docs/governance/jikuo_project_context_binding_and_policy_template_portability.md`
 - `docs/governance/jikuo_trust_privacy_provenance_baseline.md`
@@ -79,6 +80,7 @@ Slice completion main document check:
 - Check `docs/README.md` when document roots, directory roles, or entry points change.
 - Check `docs/governance/jikuo_execution_mounts.md` when required mounts, execution order, command previews, program-level roadmap anchor, or active context changes.
 - Check `docs/governance/jikuo_policy_governance_authority.md` when policy lifecycle, source boundaries, trigger routing, task classification, AI hint, deterministic signal priority, fallback expansion, or policy distribution posture changes.
+- Check `docs/governance/jikuo_scenario_chain_and_atom_registration_guide.md` when scenario-chain registration rules, atom registration evidence expectations, corresponding-document selection, or mount coverage policy changes.
 - Check `docs/governance/jikuo_productization_task_map.md` only when repairing projection text, projection links, frozen-section notices, or an explicitly approved regeneration. New task sequencing, open-item facts, capability metadata, and registry authority belong in the DOCREG work order or `docs/registry/*.yaml`.
 - Check `docs/registry/registry_index.yaml` when registry shard authority, projection metadata, or impact-tag routing changes.
 - Check `docs/work_orders/SPRINT_050_WO-PER-JIKUO-DOCREG-01_layered_document_registry.md` while DOCREG is still in transition and registry scope or sequencing changes.
@@ -103,9 +105,10 @@ Atomic capability registry:
 
 Loop composition map:
 
+- registration guide: `docs/governance/jikuo_scenario_chain_and_atom_registration_guide.md`
 - current first loop composition location: `docs/work_orders/SPRINT_050_WO-PER-JIKUO-FLOW-02_desktop_app_primary_operating_loop.md` section `Loop Composition Map`
 - use loop composition maps to understand which `CAP-*` atoms a user-facing loop depends on
-- do not duplicate atom definitions inside loop maps; reference `CAP-*` IDs from the task-map registry
+- do not duplicate atom definitions inside loop maps; reference `CAP-*` IDs from `docs/registry/capabilities.yaml`
 - future `agent_flow.py` and MCP work should preserve loop step ids and atom ids in trace output
 
 Skeleton / kernel boundary:

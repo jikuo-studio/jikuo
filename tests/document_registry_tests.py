@@ -160,6 +160,20 @@ class DocumentRegistryTests(unittest.TestCase):
         self.assertIn("jikuo_policy_governance_authority.md", entry)
         self.assertIn("Do not make intent_classes", entry)
 
+    def test_scenario_chain_atom_registration_guide_is_registered_and_mounted(self) -> None:
+        guide = "docs/governance/jikuo_scenario_chain_and_atom_registration_guide.md"
+        context = read_rel(".jikuo/project_context.yaml")
+        mount_sets = read_rel("docs/registry/mount_sets.yaml")
+        index = read_rel("docs/registry/registry_index.yaml")
+        docs_readme = read_rel("docs/README.md")
+
+        self.assertTrue(existing_rel(guide), guide)
+        self.assertIn(guide, context)
+        self.assertIn(guide, mount_sets)
+        self.assertIn("MOUNT-SCENARIO-CHAIN-ATOM-REGISTRATION", mount_sets)
+        self.assertIn(guide, index)
+        self.assertIn(guide, docs_readme)
+
     def test_registry_shards_do_not_hand_maintain_reverse_edges(self) -> None:
         reverse_field_re = re.compile(r"^\s+(used_by|referenced_by|source_work_orders|source_refs):", re.MULTILINE)
         for path in REGISTRY_ROOT.glob("*.yaml"):

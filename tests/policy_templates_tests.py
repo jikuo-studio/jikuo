@@ -222,6 +222,26 @@ class PolicyTemplateTests(unittest.TestCase):
                 self.assertIn('local_path: "redacted"', text)
                 self.assertIn("applies_to_work_profile:", text)
 
+    def test_post_feature_atom_registration_template_keeps_document_selection_portable(self):
+        template_path = (
+            ROOT
+            / "src"
+            / "jikuo"
+            / "policy_templates"
+            / "engineering_governance"
+            / "POLICYTEMPLATE-local-policy-jikuo-post-feature-action-chain-atom-registration.yaml"
+        )
+        template = policy_templates.read_yaml_subset(template_path)
+        policy = template["template_policy"]
+        action = policy["required_actions"][0]
+        evidence = policy["required_evidence"][0]
+
+        self.assertIn("corresponding project document", action["document_registration_contract"])
+        self.assertIn("Do not hard-code document paths", action["document_path_policy"])
+        self.assertIn("active document mount scope", action["mount_coverage_contract"])
+        self.assertIn("active mount coverage", evidence["evidence_contract"])
+        self.assertEqual(policy_templates.detect_project_refs(policy), [])
+
     def test_inspect_source_lists_approved_policy_candidates(self):
         with temp_project_dir() as root:
             source_dir = root / "approved"

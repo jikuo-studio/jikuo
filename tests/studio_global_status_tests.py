@@ -91,6 +91,114 @@ class StudioGlobalStatusTests(unittest.TestCase):
                 1,
             )
 
+    def test_runtime_summary_exposes_selectable_round_document_traces(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            runtime_root = project_root / ".jikuo" / "runtime"
+            history_root = runtime_root / "history"
+            history_root.mkdir(parents=True)
+            (project_root / ".jikuo" / "project_context.yaml").write_text(
+                "\n".join(
+                    [
+                        'schema_version: "jikuo.project_context.v0"',
+                        "document_roles: {}",
+                        "main_document_mounts:",
+                        '  canonical_path_root: "."',
+                        "  active_mount_authority: []",
+                        "  checked_before_slice_completion: []",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            latest_ref = ".jikuo/runtime/history/20260602T010000Z_proposal_latest.md"
+            older_ref = ".jikuo/runtime/history/20260602T000000Z_proposal_old.md"
+            (project_root / latest_ref).write_text(
+                "\n".join(
+                    [
+                        "# JIKUO Agent Flow Proposal",
+                        "",
+                        "- Status: `review`",
+                        "- Proposal id: `proposal_latest`",
+                        "",
+                        "## Work Profile",
+                        "",
+                        "- Lifecycle event: `conversation_turn`",
+                        "- Intent class: `discussion`",
+                        "- Operation class: `no_tool`",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            (project_root / older_ref).write_text(
+                "\n".join(
+                    [
+                        "# JIKUO Agent Flow Proposal",
+                        "",
+                        "- Status: `review`",
+                        "- Proposal id: `proposal_old`",
+                        "",
+                        "## Work Profile",
+                        "",
+                        "- Lifecycle event: `completion_review`",
+                        "- Intent class: `editing`",
+                        "- Operation class: `write_file`",
+                        "",
+                        "## Artifact Assurance",
+                        "",
+                        "- Status: `review`",
+                        "- Guarantee: `evidence_comparison_only`",
+                        "- Read assurance status: `review`",
+                        "- Write assurance status: `review`",
+                        "- Required reads: `2`",
+                        "- Read evidence: `1`",
+                        "- Completion-check documents: `1`",
+                        "- Completion-check documents not evaluated: `0`",
+                        "- Applicable required writes: `0`",
+                        "- Planned writes: `2`",
+                        "- Actual writes: `1`",
+                        "- Gap count: `1`",
+                        "- Required reads without evidence: `1`",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            (runtime_root / "state_summary.json").write_text(
+                json.dumps(
+                    {
+                        "schema": "jikuo.runtime_state_summary.v0",
+                        "status": "available",
+                        "updated_at_utc": "2026-06-02T01:00:00Z",
+                        "source": {
+                            "proposal_id": "proposal_latest",
+                            "status": "review",
+                            "event": "conversation_turn",
+                        },
+                        "runtime_visibility": {"history_ref": latest_ref},
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            report = global_status.build_global_status(project_root=project_root)
+
+            traces = report["summaries"]["runtime"]["round_document_traces"]
+            self.assertEqual(traces["schema"], global_status.ROUND_DOCUMENT_TRACES_SCHEMA)
+            self.assertEqual(traces["default_round_id"], Path(latest_ref).stem)
+            self.assertGreaterEqual(traces["round_count"], 2)
+            latest = traces["rounds"][0]
+            older = traces["rounds"][1]
+            self.assertEqual(latest["history_ref"], latest_ref)
+            self.assertFalse(latest["has_document_trace"])
+            self.assertEqual(latest["document_change_status"], "no_trace")
+            self.assertEqual(older["history_ref"], older_ref)
+            self.assertTrue(older["has_document_trace"])
+            self.assertTrue(older["has_document_changes"])
+            self.assertEqual(older["counts"]["planned_write_count"], 2)
+            self.assertEqual(older["counts"]["actual_write_count"], 1)
+
     def test_global_status_reports_document_mount_read_model(self):
         report = global_status.build_global_status(project_root=ROOT)
 

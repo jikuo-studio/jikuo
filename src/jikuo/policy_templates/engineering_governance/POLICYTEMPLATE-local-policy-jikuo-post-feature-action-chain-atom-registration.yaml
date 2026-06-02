@@ -1,14 +1,14 @@
 schema_version: "jikuo.policy_template.v0"
 template_id: "POLICYTEMPLATE-local-policy-jikuo-post-feature-action-chain-atom-registration"
 namespace: "local"
-version: 1
+version: 2
 title: "Post-feature action chain and atom registration"
 source:
   type: "local_project_policy"
   ref: "redacted://local_project_policy/policy-jikuo-post-feature-action-chain-atom-registration"
   source_project_ref: "redacted"
   source_policy_id: "POLICY-jikuo-post-feature-action-chain-atom-registration"
-  source_sha256: "8bd16276c20a11b2a05d59a38b4672e8ab980b3f19ffa6bff61896d2abb15330"
+  source_sha256: "e1a96b44906832f4a13de0feed5f3bf6784f7e685be76c5251b013ca86e4c6ba"
   privacy:
     local_path: "redacted"
     project_identity: "redacted"
@@ -21,7 +21,7 @@ required_bindings: []
 template_policy:
   schema_version: "jikuo.configurable_rule_policy.v0"
   policy_id: "POLICY-jikuo-post-feature-action-chain-atom-registration"
-  version: 1
+  version: 2
   status: "active_report_only"
   title: "Post-feature action chain and atom registration"
   scenario_package: "engineering_governance"
@@ -36,10 +36,14 @@ template_policy:
   required_actions:
     - action_id: "ACT-restore-user-action-chain-and-register-feature-atoms"
       type: "restore_user_action_chain_and_register_feature_atoms"
+      document_registration_contract: "After a user-facing feature is added or changed, select the corresponding project document(s) that own the real user operation chain and atom registration for that feature, then update or cite those documents instead of relying only on registry metadata."
+      document_path_policy: "Do not hard-code document paths in this policy; resolve the corresponding documents from the current project context, document roles, work-order scope, registry authority, and mounted governance guidance."
+      mount_coverage_contract: "Before completion, verify that the selected corresponding documents are covered by the active document mount scope, or update the document-rule/mount configuration so they are covered."
   required_evidence:
     - evidence_id: "EVD-feature-atom-registration-evidence"
       type: "feature_atom_registration_evidence"
       satisfies_action: "ACT-restore-user-action-chain-and-register-feature-atoms"
+      evidence_contract: "Evidence must identify the corresponding document(s) used, summarize the actual user operation chain, list the decomposed atom(s) or capability IDs, and state how active mount coverage was verified."
   enforcement:
     phase: "report_only"
     level: "review_required"

@@ -28,6 +28,7 @@ shards:
   - id: "scenario_chains"
     path: "docs/registry/scenario_chains.yaml"
     authority: "source_of_truth_draft"
+    registration_contract_ref: "docs/governance/jikuo_scenario_chain_and_atom_registration_guide.md"
   - id: "mount_sets"
     path: "docs/registry/mount_sets.yaml"
     authority: "source_of_truth_draft"

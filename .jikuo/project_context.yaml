@@ -52,6 +52,10 @@ document_roles:
     path: "docs/governance/jikuo_policy_governance_authority.md"
     required: true
     note: "Current authority for policy lifecycle, source boundaries, trigger routing, AI hint handling, deterministic signal priority, and fallback expansion."
+  scenario_chain_atom_registration_guide:
+    path: "docs/governance/jikuo_scenario_chain_and_atom_registration_guide.md"
+    required: true
+    note: "Guidance for registering complete user operation chains, structured scenario-chain entries, atom/capability refs, and mount coverage after feature work."
   policy_trigger_scope_evaluator_work_order:
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-POLTRIG-03_policy_scope_evaluator_consumption.md"
     required: true
@@ -214,6 +218,8 @@ main_document_mounts:
       update_required_when: "required mounts, execution order, command previews, program-level roadmap anchor, or active context changes"
     - path: "docs/governance/jikuo_policy_governance_authority.md"
       update_required_when: "policy lifecycle, source boundary, trigger routing, task classification, AI hint, deterministic signal priority, fallback expansion, or policy distribution posture changes"
+    - path: "docs/governance/jikuo_scenario_chain_and_atom_registration_guide.md"
+      update_required_when: "scenario-chain registration rules, atom registration evidence expectations, corresponding-document selection, or mount coverage policy changes"
     - path: "docs/governance/jikuo_productization_task_map.md"
       update_required_when: "explicit task-map projection repair, link fix, frozen-section notice, or approved regeneration; new task sequencing, open-item facts, capability metadata, and registry authority belong in DOCREG work orders or docs/registry shards"
     - path: "docs/insights/insights_registry.yaml"
