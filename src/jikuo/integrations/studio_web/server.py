@@ -320,11 +320,8 @@ INDEX_HTML = """<!doctype html>
         </form>
         <div class="plan-result" id="document-rules-plan-result" aria-live="polite"></div>
         <div class="plan-apply-row">
-          <label>
-            Approval phrase
-            <input id="document-rules-approval-phrase" name="approval_phrase" placeholder="Approve Document Rules update" autocomplete="off">
-          </label>
-          <button id="document-rules-apply-button" type="button" disabled>Apply update</button>
+          <p class="subhead" id="document-rules-apply-note">Preview and review a plan to enable approval.</p>
+          <button id="document-rules-apply-button" type="button" disabled>Approve and apply</button>
         </div>
       </div>
     </section>
@@ -367,6 +364,7 @@ INDEX_HTML = """<!doctype html>
     const termsById = (items) => Object.fromEntries((items || []).map((item) => [item.term_id, item]));
     const termLabel = (terms, id, fallback) => (terms[id] && terms[id].user_label) || fallback;
     const termDescription = (terms, id, fallback) => (terms[id] && terms[id].user_description) || fallback;
+    const DOCUMENT_RULES_APPROVAL_PHRASE = "Approve Document Rules update";
     let currentDocumentRulesPlan = null;
     const addPlanMessage = (title, detail, status) => {
       const result = document.getElementById("document-rules-plan-result");
@@ -374,8 +372,13 @@ INDEX_HTML = """<!doctype html>
     };
     const updateApplyButton = () => {
       const button = document.getElementById("document-rules-apply-button");
-      const phrase = document.getElementById("document-rules-approval-phrase").value.trim();
-      button.disabled = !(currentDocumentRulesPlan && currentDocumentRulesPlan.status === "review" && phrase === "Approve Document Rules update");
+      const note = document.getElementById("document-rules-apply-note");
+      const ready = currentDocumentRulesPlan && currentDocumentRulesPlan.status === "review";
+      button.disabled = !ready;
+      button.textContent = "Approve and apply";
+      note.textContent = ready
+        ? "This will ask for confirmation before writing .jikuo/project_context.yaml."
+        : "Preview and review a plan to enable approval.";
     };
     const renderPlanPreview = (plan) => {
       currentDocumentRulesPlan = plan;
@@ -415,7 +418,6 @@ INDEX_HTML = """<!doctype html>
       container.append(summary, operations);
       if (status === "applied") {
         currentDocumentRulesPlan = null;
-        document.getElementById("document-rules-approval-phrase").value = "";
         updateApplyButton();
         fetch("/api/status", {cache: "no-store"}).then((response) => response.json()).then(render);
       }
@@ -570,12 +572,17 @@ INDEX_HTML = """<!doctype html>
           button.textContent = "Preview plan";
         });
     });
-    document.getElementById("document-rules-approval-phrase").addEventListener("input", updateApplyButton);
     document.getElementById("document-rules-apply-button").addEventListener("click", () => {
-      const phrase = document.getElementById("document-rules-approval-phrase").value.trim();
       const button = document.getElementById("document-rules-apply-button");
       if (!currentDocumentRulesPlan) {
         addPlanMessage("Plan required", "Preview and review a Document Rules plan before applying.", "unavailable");
+        return;
+      }
+      const changeCount = currentDocumentRulesPlan.change_count || 0;
+      const confirmed = window.confirm(
+        `Apply this Document Rules change?\n\nTarget: .jikuo/project_context.yaml\nChanges: ${changeCount}\n\nThis updates project configuration after guarded validation.`
+      );
+      if (!confirmed) {
         return;
       }
       button.disabled = true;
@@ -586,14 +593,15 @@ INDEX_HTML = """<!doctype html>
         body: JSON.stringify({
           plan: currentDocumentRulesPlan,
           confirm_apply: true,
-          approval_phrase: phrase,
+          approval_phrase: DOCUMENT_RULES_APPROVAL_PHRASE,
+          approval_source: "studio_confirmation_dialog",
         }),
       })
         .then((response) => response.json())
         .then(renderApplyResult)
         .catch((error) => addPlanMessage("Apply failed", error.message, "unavailable"))
         .finally(() => {
-          button.textContent = "Apply update";
+          button.textContent = "Approve and apply";
           updateApplyButton();
         });
     });

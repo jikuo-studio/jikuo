@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-STUDIO-01: Global Console And Configuration Shell
 
-> **Status**: `JIKUO-STUDIO-01A` global status read model, `JIKUO-STUDIO-01B` panel/action registries, `JIKUO-STUDIO-01C` local read-only console, `JIKUO-STUDIO-01D1` document-mount read model, `JIKUO-STUDIO-01D2` visible document-mount frontend section, and `JIKUO-STUDIO-01D3` configuration vocabulary mapping implemented as no-write Python/CLI/backend surfaces. `JIKUO-STUDIO-01D4` records the detailed Document Rules plan/apply design contract; `JIKUO-STUDIO-01D5` implements the first Document Rules no-write plan backend; `JIKUO-STUDIO-01D6` connects that plan to the local Studio page as a no-write preview; `JIKUO-STUDIO-01D7` separates editable configuration from governance guidance in the read model and UI; `JIKUO-STUDIO-01D8` implements minimal guarded apply for `.jikuo/project_context.yaml` Document Rules changes.
+> **Status**: `JIKUO-STUDIO-01A` global status read model, `JIKUO-STUDIO-01B` panel/action registries, `JIKUO-STUDIO-01C` local read-only console, `JIKUO-STUDIO-01D1` document-mount read model, `JIKUO-STUDIO-01D2` visible document-mount frontend section, and `JIKUO-STUDIO-01D3` configuration vocabulary mapping implemented as no-write Python/CLI/backend surfaces. `JIKUO-STUDIO-01D4` records the detailed Document Rules plan/apply design contract; `JIKUO-STUDIO-01D5` implements the first Document Rules no-write plan backend; `JIKUO-STUDIO-01D6` connects that plan to the local Studio page as a no-write preview; `JIKUO-STUDIO-01D7` separates editable configuration from governance guidance in the read model and UI; `JIKUO-STUDIO-01D8` implements minimal guarded apply for `.jikuo/project_context.yaml` Document Rules changes; `JIKUO-STUDIO-01D9` maps that guarded apply to a natural frontend approval confirmation instead of asking users to type the backend approval phrase.
 > **Date**: 2026-05-31
 > **JIKUO layer**: product surface / view-model projection / guarded configuration control.
 > **Business meaning**: Users should not need to reconstruct JIKUO's global state from chat alone. A thin JIKUO console should make activation, runtime, policy, template, integration, diagnostics, and guarded configuration status visible in one place while preserving the existing kernel and guarded-write boundaries.
@@ -226,9 +226,15 @@ Every guarded action must preserve the existing sequence:
 1. user edits form state;
 2. backend returns no-write plan;
 3. UI displays write effect, non-effects, risks, and card links;
-4. user confirms approval phrase;
+4. user approves the reviewed plan in a confirmation prompt or equivalent
+   client-native approval surface;
 5. backend calls guarded apply;
 6. UI refreshes global status and shows result card.
+
+The backend may still require an exact approval phrase as structured guarded
+evidence. User-facing Studio controls should translate that requirement into a
+natural approve/confirm flow rather than asking users to memorize fixed
+technical strings.
 
 ### 7.1 Customer Configuration Action Inventory
 
@@ -867,11 +873,79 @@ Acceptance:
 - successful apply can add/remove context document roles, completion checks,
   and active mount authority entries that were already represented in the
   reviewed plan;
-- the local Studio page exposes an approval phrase input and guarded apply
-  button only after a reviewable plan is present;
+- the local Studio page exposes a guarded approval control only after a
+  reviewable plan is present;
 - `docs/governance/jikuo_productization_task_map.md`, `docs/registry/*.yaml`,
   active policies, package templates, starter manifests, and runtime cards are
   not mutated by Document Rules apply.
+
+### `JIKUO-STUDIO-01D9`: Natural Document Rules Approval UX
+
+Map the backend guarded apply contract to a frontend interaction users expect:
+review the plan, click an approval button, and confirm the write target in a
+dialog.
+
+Implementation status (2026-06-02): implemented in the local Studio Web
+Document Rules section. The backend still receives `confirm_apply=true` and
+the existing approval phrase evidence, but the user-facing page no longer asks
+the user to type the exact phrase.
+
+Business meaning:
+
+- users approve configuration writes in the same shape they expect from a
+  desktop or web control surface;
+- the stable backend guarded-apply contract remains intact for CLI, MCP, and
+  future wrapper/plugin clients;
+- the frontend can improve usability without becoming a second governance
+  authority.
+
+Acceptance:
+
+- the approval phrase input is not shown in the Document Rules web UI;
+- `Approve and apply` is disabled until a reviewable no-write plan exists;
+- clicking `Approve and apply` shows a confirmation dialog that names
+  `.jikuo/project_context.yaml` and the reviewed change count;
+- only after user confirmation does the browser call
+  `POST /api/document-rules/apply`;
+- the apply payload still includes `confirm_apply=true` and the existing
+  guarded approval phrase expected by the backend;
+- backend refusal behavior, source-fingerprint checks, target-file restriction,
+  and write effects remain unchanged.
+
+### `JIKUO-STUDIO-01E`: File Selection, Batch Changes, And Time Anchors
+
+Future richer Document Rules editing should be based on a reusable project-file
+selection model rather than more single-path text fields.
+
+Planned slices:
+
+- `JIKUO-STUDIO-01E1`: expose a no-write project file inventory/read model for
+  Studio, with file path, display label, file kind, current Document Rules
+  membership, and last-known modification metadata;
+- `JIKUO-STUDIO-01E2`: add a reusable file-picker-style selection component for
+  batch add/remove operations, first for Document Rules and later for policy
+  and template management;
+- `JIKUO-STUDIO-01E3`: design and migrate explicit membership timestamps such
+  as `added_at_utc` only after deciding the canonical schema location, so users
+  can undo or remove recently added items with a visible time reference.
+
+Business meaning:
+
+- users should be able to configure document scope by selecting files, not by
+  memorizing project-relative paths;
+- batch selection keeps main-document and context-document maintenance usable
+  as projects grow;
+- timestamps provide a human recovery cue after accidental additions without
+  forcing a heavy event-ledger design into the Studio frontend.
+
+Boundaries:
+
+- `01E` is not implemented by `01D9`;
+- timestamps must not be added as optional-looking fields until every writer
+  that mutates the relevant membership can reliably populate them;
+- file-selection components must call existing no-write plan and guarded apply
+  APIs rather than writing configuration directly;
+- the same selection model should be reusable by future policy-management UI.
 
 ### `JIKUO-STUDIO-01D`: Guarded Configuration Actions
 

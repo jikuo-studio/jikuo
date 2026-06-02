@@ -1566,6 +1566,21 @@ entries:
       - "does_not_write_runtime_cards"
     referenced_by_transitional_cache:
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md"
+  - id: "CAP-STUDIO-DOCUMENT-RULES-NATURAL-APPROVAL-UX-01"
+    title: "Studio Document Rules natural approval UX"
+    status: "implemented local web approval confirmation by JIKUO-STUDIO-01D9"
+    metadata_status: "complete"
+    entry_point: "src/jikuo/integrations/studio_web/server.py Document Rules Approve and apply control"
+    write_effect: "none by itself; translates the existing guarded apply contract into a browser confirmation before POST /api/document-rules/apply"
+    approval: "user-facing approval is an Approve and apply button plus confirmation dialog; backend still receives confirm_apply=true and the existing guarded approval phrase"
+    non_effects:
+      - "does_not_change_document_rules_backend_apply_contract"
+      - "does_not_bypass_source_fingerprint_validation"
+      - "does_not_create_file_picker_or_batch_selection"
+      - "does_not_mutate_policy_evaluator_or_policy_store"
+      - "does_not_regenerate_legacy_task_map"
+    referenced_by_transitional_cache:
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md"
   - id: "CAP-TODO-SNAPSHOT-POSTURE-01"
     title: "Previous/latest todo snapshot posture"
     status: "implemented context/documentation guard"
