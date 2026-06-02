@@ -126,6 +126,40 @@ def write_agent_flow_project_context(root: Path) -> None:
     )
 
 
+def write_agent_flow_document_mount_project_context(root: Path) -> None:
+    docs_dir = root / "docs"
+    docs_dir.mkdir(parents=True, exist_ok=True)
+    (docs_dir / "governance.md").write_text("governance", encoding="utf-8")
+    (docs_dir / "required.md").write_text("required", encoding="utf-8")
+    (docs_dir / "main.md").write_text("main", encoding="utf-8")
+    context_path = root / ".jikuo" / "project_context.yaml"
+    context_path.parent.mkdir(parents=True, exist_ok=True)
+    context_path.write_text(
+        "\n".join(
+            [
+                'schema_version: "jikuo.project_context.v0"',
+                "project:",
+                '  project_id: "agent_flow_artifact_assurance_fixture"',
+                '  project_type: "test"',
+                '  project_root_policy: "bindings_must_resolve_inside_project_root"',
+                "document_roles:",
+                "  required_context:",
+                '    path: "docs/required.md"',
+                "    required: true",
+                "main_document_mounts:",
+                "  active_mount_authority:",
+                '    - ".jikuo/project_context.yaml"',
+                '    - "docs/governance.md"',
+                "  checked_before_slice_completion:",
+                '    - path: "docs/main.md"',
+                '      update_required_when: "runtime assurance card projection changes"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+
 def write_taskmap_distinction_policy_store(root: Path) -> None:
     store = root / ".jikuo" / "policies"
     approved = store / "approved"
@@ -3856,6 +3890,208 @@ class AgentFlowProposalTests(unittest.TestCase):
                 (project_root / ".jikuo" / "runtime" / "last_card.md").is_file()
             )
             self.assertFalse((project_root / ".jikuo" / "task_sessions").exists())
+
+    def test_completion_review_projects_artifact_assurance_into_runtime_card(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            write_agent_flow_document_mount_project_context(project_root)
+            produced_evidence = [
+                {
+                    "evidence_id": "read-project-context",
+                    "evidence_type": "document_read_evidence",
+                    "path": ".jikuo/project_context.yaml",
+                    "summary": "read configured project context",
+                },
+                {
+                    "evidence_id": "read-execution-mounts",
+                    "evidence_type": "document_read_evidence",
+                    "path": "docs/governance.md",
+                    "summary": "read active mount authority",
+                },
+                {
+                    "evidence_id": "read-required-context",
+                    "evidence_type": "document_read_evidence",
+                    "path": "docs/required.md",
+                    "summary": "read required document role",
+                },
+                {
+                    "evidence_id": "plan-main-doc",
+                    "evidence_type": "document_write_plan_evidence",
+                    "path": "docs/main.md",
+                    "summary": "planned main document maintenance",
+                },
+                {
+                    "evidence_id": "write-main-doc",
+                    "evidence_type": "document_write_evidence",
+                    "path": "docs/main.md",
+                    "summary": "updated main document maintenance",
+                },
+            ]
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "propose",
+                    "--event",
+                    "completion_review",
+                    "--task-title",
+                    "Artifact Assurance Probe",
+                    "--project-root",
+                    str(project_root),
+                    "--summary",
+                    "Completion card should persist document read/write assurance.",
+                    "--produced-evidence-json",
+                    json.dumps(produced_evidence),
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            proposal = json.loads(completed.stdout)
+            assurance = proposal["artifact_assurance"]
+            self.assertEqual(assurance["status"], "ok")
+            self.assertEqual(
+                assurance["runtime_projection"]["persistence"],
+                "runtime_card_and_state_summary",
+            )
+            self.assertEqual(assurance["gap_report"]["gap_count"], 0)
+            self.assertIn("## Artifact Assurance", proposal["chat_ready_markdown"])
+            self.assertIn("- Required reads: `3`", proposal["chat_ready_markdown"])
+            self.assertIn("- Read evidence: `3`", proposal["chat_ready_markdown"])
+            self.assertIn("- Completion-check documents: `1`", proposal["chat_ready_markdown"])
+            self.assertIn("- Completion-check documents not evaluated: `0`", proposal["chat_ready_markdown"])
+            self.assertIn("- Applicable required writes: `1`", proposal["chat_ready_markdown"])
+            self.assertIn("- Planned writes: `1`", proposal["chat_ready_markdown"])
+            self.assertIn("- Actual writes: `1`", proposal["chat_ready_markdown"])
+            self.assertIn("- Gap count: `0`", proposal["chat_ready_markdown"])
+
+            state_summary = json.loads(
+                (project_root / ".jikuo" / "runtime" / "state_summary.json").read_text(
+                    encoding="utf-8",
+                )
+            )
+            self.assertEqual(state_summary["artifact_assurance"]["status"], "ok")
+            self.assertEqual(
+                state_summary["artifact_assurance"]["gap_report"]["gap_count"],
+                0,
+            )
+            history_ref = proposal["runtime_visibility"]["history_ref"]
+            history_text = (project_root / history_ref).read_text(encoding="utf-8")
+            self.assertIn("## Artifact Assurance", history_text)
+
+    def test_completion_review_artifact_assurance_surfaces_write_gaps(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            write_agent_flow_document_mount_project_context(project_root)
+            produced_evidence = [
+                {
+                    "evidence_id": "plan-main-doc",
+                    "evidence_type": "document_write_plan_evidence",
+                    "path": "docs/main.md",
+                    "summary": "planned main document maintenance",
+                },
+            ]
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "propose",
+                    "--event",
+                    "completion_review",
+                    "--task-title",
+                    "Artifact Assurance Gap Probe",
+                    "--project-root",
+                    str(project_root),
+                    "--changed-path",
+                    "docs/unrelated.md",
+                    "--produced-evidence-json",
+                    json.dumps(produced_evidence),
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            proposal = json.loads(completed.stdout)
+            assurance = proposal["artifact_assurance"]
+            self.assertEqual(assurance["status"], "review")
+            self.assertEqual(assurance["gap_report"]["write_gap_count"], 3)
+            self.assertEqual(
+                assurance["write_assurance"]["required_not_written"][0]["path"],
+                "docs/main.md",
+            )
+            self.assertEqual(
+                assurance["write_assurance"]["planned_not_written"][0]["path"],
+                "docs/main.md",
+            )
+            self.assertEqual(
+                assurance["write_assurance"]["unplanned_written"][0]["path"],
+                "docs/unrelated.md",
+            )
+            self.assertIn("`required_write_not_observed` / `docs/main.md`", proposal["chat_ready_markdown"])
+            self.assertIn("`planned_write_not_observed` / `docs/main.md`", proposal["chat_ready_markdown"])
+            self.assertIn("`actual_write_not_planned` / `docs/unrelated.md`", proposal["chat_ready_markdown"])
+
+    def test_completion_review_unappraised_candidates_do_not_emit_required_write_gaps(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            write_agent_flow_document_mount_project_context(project_root)
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "propose",
+                    "--event",
+                    "completion_review",
+                    "--task-title",
+                    "Artifact Assurance Candidate Probe",
+                    "--project-root",
+                    str(project_root),
+                    "--changed-path",
+                    "docs/unrelated.md",
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            proposal = json.loads(completed.stdout)
+            assurance = proposal["artifact_assurance"]
+            write = assurance["write_assurance"]
+            self.assertEqual(assurance["status"], "review")
+            self.assertEqual(write["completion_check_candidate_count"], 1)
+            self.assertEqual(len(write["completion_check_not_evaluated"]), 1)
+            self.assertEqual(write["required_write_count"], 0)
+            self.assertEqual(write["required_not_written"], [])
+            self.assertEqual(assurance["gap_report"]["gap_count"], 0)
+            self.assertIn("- Completion-check documents: `1`", proposal["chat_ready_markdown"])
+            self.assertIn("- Applicable required writes: `0`", proposal["chat_ready_markdown"])
+            self.assertNotIn("`required_write_not_observed`", proposal["chat_ready_markdown"])
 
     def test_task_start_projects_pre_code_change_classification_policy(self):
         completed = subprocess.run(

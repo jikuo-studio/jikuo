@@ -97,6 +97,60 @@ class StudioArtifactAssuranceTests(unittest.TestCase):
             self.assertEqual(report["write_assurance"]["required_write_count"], 1)
             self.assertEqual(report["write_assurance"]["required_not_written"], [])
 
+    def test_completion_check_documents_are_candidates_until_applicable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+
+            report = artifact_assurance.build_document_artifact_assurance_report(
+                project_root=project_root,
+                required_writes=[
+                    {
+                        "path": "docs/main.md",
+                        "role": "completion_check",
+                        "obligation_level": artifact_assurance.COMPLETION_CHECK_CANDIDATE,
+                        "applicability_status": "not_evaluated",
+                    }
+                ],
+                actual_writes=[{"path": "docs/other.md"}],
+            )
+
+            write = report["write_assurance"]
+            self.assertEqual(report["status"], "review")
+            self.assertEqual(write["completion_check_candidate_count"], 1)
+            self.assertEqual(write["required_write_count"], 0)
+            self.assertEqual(write["required_not_written"], [])
+            self.assertEqual(
+                report["gap_report"]["completion_check_not_evaluated_count"],
+                1,
+            )
+
+    def test_completion_check_candidate_can_become_applicable_required_write(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+
+            report = artifact_assurance.build_document_artifact_assurance_report(
+                project_root=project_root,
+                required_writes=[
+                    {
+                        "path": "docs/main.md",
+                        "role": "completion_check",
+                        "obligation_level": artifact_assurance.COMPLETION_CHECK_CANDIDATE,
+                        "applicability_status": "applicable",
+                    }
+                ],
+                actual_writes=[],
+            )
+
+            write = report["write_assurance"]
+            self.assertEqual(report["status"], "review")
+            self.assertEqual(write["required_write_count"], 1)
+            self.assertEqual(
+                [item["path"] for item in write["required_not_written"]],
+                ["docs/main.md"],
+            )
+
     def test_absolute_paths_are_normalized_and_outside_paths_are_refused(self):
         with tempfile.TemporaryDirectory() as tmp:
             project_root = Path(tmp) / "project"
@@ -127,7 +181,7 @@ class StudioArtifactAssuranceTests(unittest.TestCase):
         self.assertEqual(assurance["schema"], artifact_assurance.ARTIFACT_ASSURANCE_SCHEMA)
         self.assertEqual(assurance["status"], "not_evaluated")
         self.assertGreaterEqual(
-            assurance["write_assurance"]["required_write_count"],
+            assurance["write_assurance"]["completion_check_candidate_count"],
             1,
         )
         self.assertFalse(assurance["writes_performed"])

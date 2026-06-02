@@ -27,8 +27,11 @@ if __package__:
         task_session_cards,
         work_profile,
     )
+    from .studio import artifact_assurance as studio_artifact_assurance
+    from .studio import document_rules as studio_document_rules
 else:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     import activation_settings
     import configuration_review
     import policy_templates
@@ -36,6 +39,8 @@ else:
     import policy_store
     import runtime_visibility
     import starter_policies
+    from jikuo.studio import artifact_assurance as studio_artifact_assurance
+    from jikuo.studio import document_rules as studio_document_rules
     import task_session
     import task_session_cards
     import work_profile
@@ -236,6 +241,35 @@ NO_WRITE_ATOMS = {
     "CAP-HOST-SEMANTIC-INTENT-WORK-PROFILE-01",
     "CAP-SEMANTIC-INTENT-CLASSIFICATION-EVIDENCE-01",
     "CAP-SEMANTIC-INTENT-PRECONDITION-01",
+    "CAP-STUDIO-ARTIFACT-ASSURANCE-RUNTIME-CARD-01",
+}
+
+ARTIFACT_ASSURANCE_EVENTS = {
+    "task_start",
+    "evidence_review",
+    "verification_review",
+    "completion_review",
+    "handoff",
+}
+ARTIFACT_READ_EVIDENCE_TYPES = {
+    "artifact_read_evidence",
+    "document_read_evidence",
+    "document_mount_read_evidence",
+}
+ARTIFACT_PLANNED_WRITE_EVIDENCE_TYPES = {
+    "artifact_write_plan_evidence",
+    "document_write_plan_evidence",
+    "planned_artifact_write_evidence",
+}
+ARTIFACT_ACTUAL_WRITE_EVIDENCE_TYPES = {
+    "artifact_write_evidence",
+    "document_write_evidence",
+    "actual_artifact_write_evidence",
+}
+ARTIFACT_WRITE_APPLICABILITY_EVIDENCE_TYPES = {
+    "artifact_write_applicability_evidence",
+    "document_write_applicability_evidence",
+    "completion_check_applicability_evidence",
 }
 
 
@@ -300,6 +334,289 @@ def generic_card(
             ],
         },
     }
+
+
+def artifact_items_from_evidence(
+    evidence_items: list[dict[str, Any]] | None,
+    evidence_types: set[str],
+) -> list[dict[str, Any]]:
+    output: list[dict[str, Any]] = []
+    for item in evidence_items or []:
+        if not isinstance(item, dict):
+            continue
+        evidence_type = str(item.get("evidence_type") or item.get("type") or "")
+        if evidence_type not in evidence_types:
+            continue
+        path = (
+            item.get("path")
+            or item.get("path_ref")
+            or item.get("target")
+            or item.get("ref")
+        )
+        if not path:
+            continue
+        output.append(
+            {
+                "path": path,
+                "reason": item.get("summary") or item.get("reason"),
+                "role": item.get("role"),
+                "source_ref": item.get("source_ref") or "agent_flow.produced_evidence",
+                "evidence_ref": item.get("evidence_id") or item.get("evidence_ref"),
+                "plan_ref": item.get("plan_ref"),
+                "applicability_status": item.get("applicability_status")
+                or item.get("status"),
+                "applicability_reason": item.get("applicability_reason")
+                or item.get("summary"),
+            }
+        )
+    return output
+
+
+def artifact_items_from_paths(
+    paths: list[str] | None,
+    *,
+    reason: str,
+    source_ref: str,
+) -> list[dict[str, Any]]:
+    return [
+        {
+            "path": path,
+            "reason": reason,
+            "source_ref": source_ref,
+        }
+        for path in paths or []
+    ]
+
+
+def nonempty_or_none(items: list[dict[str, Any]]) -> list[dict[str, Any]] | None:
+    return items if items else None
+
+
+def path_keys_for_items(
+    *,
+    project_root: Path,
+    items: list[dict[str, Any]],
+) -> set[str]:
+    keys: set[str] = set()
+    for item in items:
+        normalized, _ = studio_artifact_assurance.normalize_path_ref(
+            project_root,
+            item.get("path"),
+        )
+        if normalized:
+            keys.add(normalized)
+    return keys
+
+
+def apply_write_applicability_to_candidates(
+    *,
+    project_root: Path,
+    required_writes: list[dict[str, Any]],
+    planned_writes: list[dict[str, Any]],
+    actual_writes: list[dict[str, Any]],
+    applicability_evidence: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    planned_or_actual = path_keys_for_items(
+        project_root=project_root,
+        items=[*planned_writes, *actual_writes],
+    )
+    explicit: dict[str, dict[str, Any]] = {}
+    for item in applicability_evidence:
+        normalized, _ = studio_artifact_assurance.normalize_path_ref(
+            project_root,
+            item.get("path"),
+        )
+        if normalized:
+            explicit[normalized] = item
+
+    output: list[dict[str, Any]] = []
+    for item in required_writes:
+        normalized, _ = studio_artifact_assurance.normalize_path_ref(
+            project_root,
+            item.get("path"),
+        )
+        updated = dict(item)
+        explicit_item = explicit.get(normalized or "")
+        if explicit_item:
+            explicit_status = explicit_item.get("applicability_status")
+            if explicit_status == "ok":
+                explicit_status = "applicable"
+            updated["applicability_status"] = explicit_status
+            updated["applicability_reason"] = explicit_item.get("applicability_reason")
+            updated["evidence_ref"] = explicit_item.get("evidence_ref")
+        elif normalized in planned_or_actual:
+            updated["applicability_status"] = "applicable"
+            updated["applicability_reason"] = (
+                "candidate appeared in planned or actual write evidence for this slice"
+            )
+        output.append(updated)
+    return output
+
+
+def unavailable_artifact_assurance_report(
+    *,
+    project_root: Path | None,
+    reason: str,
+    diagnostics: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    return {
+        "schema": studio_artifact_assurance.ARTIFACT_ASSURANCE_SCHEMA,
+        "schema_version": studio_artifact_assurance.ARTIFACT_ASSURANCE_SCHEMA,
+        "status": "unavailable",
+        "project_root": str(project_root) if project_root else None,
+        "guarantee": "evidence_comparison_only",
+        "reason": reason,
+        "diagnostics": diagnostics or [],
+        "inputs_supplied": {},
+        "read_assurance": {
+            "status": "unavailable",
+            "required_read_count": 0,
+            "read_evidence_count": 0,
+            "required_read_set": [],
+            "read_evidence_set": [],
+            "required_not_read": [],
+        },
+        "write_assurance": {
+            "status": "unavailable",
+            "required_write_count": 0,
+            "planned_write_count": 0,
+            "actual_write_count": 0,
+            "required_write_set": [],
+            "write_candidate_count": 0,
+            "write_candidate_set": [],
+            "completion_check_candidate_count": 0,
+            "completion_check_candidates": [],
+            "completion_check_status": "unavailable",
+            "completion_check_not_evaluated": [],
+            "completion_check_not_applicable": [],
+            "planned_write_set": [],
+            "actual_write_set": [],
+            "required_not_planned": [],
+            "required_not_written": [],
+            "planned_not_written": [],
+            "unplanned_written": [],
+        },
+        "gap_report": {
+            "status": "unavailable",
+            "gap_count": 0,
+            "read_gap_count": 0,
+            "write_gap_count": 0,
+            "completion_check_not_evaluated_count": 0,
+            "read_gaps": [],
+            "write_gaps": [],
+            "invalid_refs": [],
+        },
+        "writes_performed": False,
+        "write_allowed_by_command": False,
+        "non_effects": [
+            "does_not_read_files_by_itself",
+            "does_not_write_files",
+            "does_not_inspect_git_by_itself",
+            "does_not_prove_model_understanding",
+            "does_not_replace_guarded_apply",
+        ],
+    }
+
+
+def build_runtime_artifact_assurance_report(
+    *,
+    event: str | None,
+    project_root: Path | None,
+    changed_paths: list[str] | None,
+    added_paths: list[str] | None,
+    produced_evidence: list[dict[str, Any]] | None,
+) -> dict[str, Any] | None:
+    if event not in ARTIFACT_ASSURANCE_EVENTS:
+        return None
+    try:
+        resolved_root = project_state.discover_project_root(project_root=project_root)
+    except Exception as exc:
+        return unavailable_artifact_assurance_report(
+            project_root=project_root,
+            reason=f"project_root_unavailable: {exc}",
+        )
+
+    context, context_errors = studio_document_rules.load_project_context(resolved_root)
+    if context_errors:
+        return unavailable_artifact_assurance_report(
+            project_root=resolved_root,
+            reason="project_context_unavailable",
+            diagnostics=context_errors,
+        )
+    document_mounts = dict(context.get("main_document_mounts") or {})
+    document_roles = context.get("document_roles") or {}
+    if isinstance(document_roles, dict):
+        document_mounts["roles"] = [
+            {"role": role, **value}
+            for role, value in document_roles.items()
+            if isinstance(value, dict)
+        ]
+    supplied_paths = list(changed_paths or []) + list(added_paths or [])
+
+    read_evidence = artifact_items_from_evidence(
+        produced_evidence,
+        ARTIFACT_READ_EVIDENCE_TYPES,
+    )
+    planned_writes = artifact_items_from_evidence(
+        produced_evidence,
+        ARTIFACT_PLANNED_WRITE_EVIDENCE_TYPES,
+    )
+    actual_writes = artifact_items_from_evidence(
+        produced_evidence,
+        ARTIFACT_ACTUAL_WRITE_EVIDENCE_TYPES,
+    )
+    applicability_evidence = artifact_items_from_evidence(
+        produced_evidence,
+        ARTIFACT_WRITE_APPLICABILITY_EVIDENCE_TYPES,
+    )
+    if not planned_writes and event == "task_start":
+        planned_writes = artifact_items_from_paths(
+            supplied_paths,
+            reason="agent-supplied task_start changed/added paths are treated as a plan preview",
+            source_ref="agent_flow.changed_paths_or_added_paths",
+        )
+    if not actual_writes and event in {"verification_review", "completion_review", "handoff"}:
+        actual_writes = artifact_items_from_paths(
+            supplied_paths,
+            reason="agent-supplied lifecycle review changed/added paths are treated as observed writes",
+            source_ref="agent_flow.changed_paths_or_added_paths",
+        )
+
+    required_writes = studio_artifact_assurance.required_writes_from_document_mounts(
+        document_mounts
+    )
+    required_writes = apply_write_applicability_to_candidates(
+        project_root=resolved_root,
+        required_writes=required_writes,
+        planned_writes=planned_writes,
+        actual_writes=actual_writes,
+        applicability_evidence=applicability_evidence,
+    )
+    report = studio_artifact_assurance.build_document_artifact_assurance_report(
+        project_root=resolved_root,
+        required_reads=studio_artifact_assurance.required_reads_from_document_mounts(
+            document_mounts
+        ),
+        read_evidence=nonempty_or_none(read_evidence),
+        required_writes=required_writes,
+        planned_writes=nonempty_or_none(planned_writes),
+        actual_writes=nonempty_or_none(actual_writes),
+    )
+    report["runtime_projection"] = {
+        "schema": "jikuo.runtime_artifact_assurance_projection.v0",
+        "event": event,
+        "source": "agent_flow.propose",
+        "persistence": "runtime_card_and_state_summary",
+        "planned_write_source": "produced_evidence_or_task_start_changed_paths",
+        "actual_write_source": "produced_evidence_or_lifecycle_changed_paths",
+        "read_evidence_source": "produced_evidence_only",
+        "non_effects": [
+            "does_not_force_file_reads",
+            "does_not_inspect_git_diff",
+            "does_not_persist_data01_events",
+        ],
+    }
+    return report
 
 
 def semantic_intent_precondition_unmet(
@@ -4152,6 +4469,26 @@ def build_proposal(
             governance_path=governance_path,
         )
         inline_produced_evidence.extend(produced_evidence or [])
+        artifact_assurance_report = build_runtime_artifact_assurance_report(
+            event=event,
+            project_root=project_root,
+            changed_paths=changed_paths,
+            added_paths=added_paths,
+            produced_evidence=inline_produced_evidence,
+        )
+        if artifact_assurance_report:
+            traces.append(
+                atom_trace(
+                    loop_step_id="DPL-06",
+                    atom_id="CAP-STUDIO-ARTIFACT-ASSURANCE-RUNTIME-CARD-01",
+                    mode="runtime-projection",
+                    status=str(artifact_assurance_report.get("status") or "unknown"),
+                    summary=(
+                        "projected required/planned/actual document artifact "
+                        "assurance into the runtime task card"
+                    ),
+                )
+            )
         policy_context, policy_traces, policy_sections = build_policy_context(
             project_root=project_root,
             event=policy_eval_event or event,
@@ -4166,6 +4503,7 @@ def build_proposal(
         traces.extend(policy_traces)
     else:
         policy_context = build_policy_not_inspected_context()
+        artifact_assurance_report = None
         policy_sections = {
             "triggered_policies": [],
             "required_actions": [],
@@ -4251,6 +4589,7 @@ def build_proposal(
         "work_profile": work_profile_projection,
         "semantic_intent_evidence": semantic_intent_evidence,
         "work_routing": work_routing,
+        "artifact_assurance": artifact_assurance_report,
         "atom_trace": traces,
         "cards": cards,
         "approval_boundary": {
@@ -5152,6 +5491,88 @@ def render_work_profile(work_profile_projection: dict[str, Any]) -> list[str]:
     return lines
 
 
+def render_artifact_gap_lines(
+    *,
+    label: str,
+    items: list[dict[str, Any]],
+    limit: int = 8,
+) -> list[str]:
+    if not items:
+        return [f"- {label}: `0`"]
+    lines = [f"- {label}: `{len(items)}`"]
+    for item in items[:limit]:
+        path = item.get("path") or (item.get("expected") or {}).get("path")
+        lines.append(f"  - `{item.get('gap_type')}` / `{path}`")
+    if len(items) > limit:
+        lines.append(f"  - ... {len(items) - limit} more")
+    return lines
+
+
+def render_artifact_assurance(report: dict[str, Any]) -> list[str]:
+    gap_report = report.get("gap_report") or {}
+    read = report.get("read_assurance") or {}
+    write = report.get("write_assurance") or {}
+    runtime_projection = report.get("runtime_projection") or {}
+    lines = [
+        "## Artifact Assurance",
+        "",
+        f"- Status: `{report.get('status')}`",
+        f"- Guarantee: `{report.get('guarantee')}`",
+        f"- Runtime persistence: `{runtime_projection.get('persistence', 'runtime_card')}`",
+        f"- Read assurance status: `{read.get('status')}`",
+        f"- Write assurance status: `{write.get('status')}`",
+        f"- Required reads: `{read.get('required_read_count', 0)}`",
+        f"- Read evidence: `{read.get('read_evidence_count', 0)}`",
+        f"- Completion-check documents: `{write.get('completion_check_candidate_count', 0)}`",
+        f"- Completion-check documents not evaluated: `{len(write.get('completion_check_not_evaluated') or [])}`",
+        f"- Applicable required writes: `{write.get('required_write_count', 0)}`",
+        f"- Planned writes: `{write.get('planned_write_count', 0)}`",
+        f"- Actual writes: `{write.get('actual_write_count', 0)}`",
+        f"- Gap count: `{gap_report.get('gap_count', 0)}`",
+    ]
+    if report.get("reason"):
+        lines.append(f"- Reason: {report['reason']}")
+    lines.extend(
+        render_artifact_gap_lines(
+            label="Required reads without evidence",
+            items=read.get("required_not_read") or [],
+        )
+    )
+    lines.extend(
+        render_artifact_gap_lines(
+            label="Applicable required writes not planned",
+            items=write.get("required_not_planned") or [],
+        )
+    )
+    lines.extend(
+        render_artifact_gap_lines(
+            label="Applicable required writes not observed",
+            items=write.get("required_not_written") or [],
+        )
+    )
+    lines.extend(
+        render_artifact_gap_lines(
+            label="Planned writes not observed",
+            items=write.get("planned_not_written") or [],
+        )
+    )
+    lines.extend(
+        render_artifact_gap_lines(
+            label="Observed writes not planned",
+            items=write.get("unplanned_written") or [],
+        )
+    )
+    invalid_refs = gap_report.get("invalid_refs") or []
+    if invalid_refs:
+        lines.extend(render_artifact_gap_lines(label="Invalid refs", items=invalid_refs))
+    non_effects = report.get("non_effects") or []
+    if non_effects:
+        lines.extend(["", "### Non-Effects", ""])
+        lines.extend(f"- {item}" for item in non_effects)
+    lines.append("")
+    return lines
+
+
 def render_markdown(proposal: dict[str, Any]) -> str:
     policy_context = proposal["policy_context"]
     lines = [
@@ -5189,6 +5610,9 @@ def render_markdown(proposal: dict[str, Any]) -> str:
     work_profile_projection = proposal.get("work_profile")
     if work_profile_projection:
         lines.extend(render_work_profile(work_profile_projection))
+    artifact_report = proposal.get("artifact_assurance")
+    if artifact_report:
+        lines.extend(render_artifact_assurance(artifact_report))
     work_routing = proposal.get("work_routing")
     if work_routing:
         lines.extend(render_work_routing(work_routing))

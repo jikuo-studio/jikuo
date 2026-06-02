@@ -165,6 +165,7 @@ def build_state_summary(
         },
         "triggered_policies": proposal.get("triggered_policies", []),
         "missing_evidence_reports": proposal.get("missing_evidence_reports", []),
+        "artifact_assurance": proposal.get("artifact_assurance"),
         "write_boundary": {
             "governance_writes_performed": bool(
                 (proposal.get("write_effect") or {}).get("writes_performed")
@@ -713,6 +714,29 @@ def format_state_summary(summary: dict[str, Any]) -> str:
             lines.append(f"- Status: `{display_links.get('status', 'unavailable')}`")
             if display_links.get("reason"):
                 lines.append(f"- Reason: {display_links['reason']}")
+    artifact = summary.get("artifact_assurance") or {}
+    if artifact:
+        read = artifact.get("read_assurance") or {}
+        write = artifact.get("write_assurance") or {}
+        gaps = artifact.get("gap_report") or {}
+        lines.extend(
+            [
+                "",
+                "## Artifact Assurance",
+                "",
+                f"- Status: `{artifact.get('status')}`",
+                f"- Read assurance status: `{read.get('status')}`",
+                f"- Write assurance status: `{write.get('status')}`",
+                f"- Required reads: `{read.get('required_read_count', 0)}`",
+                f"- Read evidence: `{read.get('read_evidence_count', 0)}`",
+                f"- Completion-check documents: `{write.get('completion_check_candidate_count', 0)}`",
+                f"- Completion-check documents not evaluated: `{len(write.get('completion_check_not_evaluated') or [])}`",
+                f"- Applicable required writes: `{write.get('required_write_count', 0)}`",
+                f"- Planned writes: `{write.get('planned_write_count', 0)}`",
+                f"- Actual writes: `{write.get('actual_write_count', 0)}`",
+                f"- Gap count: `{gaps.get('gap_count', 0)}`",
+            ]
+        )
     task_session_index = summary.get("task_session_index") or {}
     if task_session_index:
         lines.extend(

@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-STUDIO-01: Global Console And Configuration Shell
 
-> **Status**: `JIKUO-STUDIO-01A` global status read model, `JIKUO-STUDIO-01B` panel/action registries, `JIKUO-STUDIO-01C` local read-only console, `JIKUO-STUDIO-01D1` document-mount read model, `JIKUO-STUDIO-01D2` visible document-mount frontend section, and `JIKUO-STUDIO-01D3` configuration vocabulary mapping implemented as no-write Python/CLI/backend surfaces. `JIKUO-STUDIO-01D4` records the detailed Document Rules plan/apply design contract; `JIKUO-STUDIO-01D5` implements the first Document Rules no-write plan backend; `JIKUO-STUDIO-01D6` connects that plan to the local Studio page as a no-write preview; `JIKUO-STUDIO-01D7` separates editable configuration from governance guidance in the read model and UI; `JIKUO-STUDIO-01D8` implements minimal guarded apply for `.jikuo/project_context.yaml` Document Rules changes; `JIKUO-STUDIO-01D9` maps that guarded apply to a natural frontend approval confirmation instead of asking users to type the backend approval phrase; `JIKUO-STUDIO-01D10` implements the first no-write document/artifact assurance projection for required, planned, and actual read/write comparison.
+> **Status**: `JIKUO-STUDIO-01A` global status read model, `JIKUO-STUDIO-01B` panel/action registries, `JIKUO-STUDIO-01C` local read-only console, `JIKUO-STUDIO-01D1` document-mount read model, `JIKUO-STUDIO-01D2` visible document-mount frontend section, and `JIKUO-STUDIO-01D3` configuration vocabulary mapping implemented as no-write Python/CLI/backend surfaces. `JIKUO-STUDIO-01D4` records the detailed Document Rules plan/apply design contract; `JIKUO-STUDIO-01D5` implements the first Document Rules no-write plan backend; `JIKUO-STUDIO-01D6` connects that plan to the local Studio page as a no-write preview; `JIKUO-STUDIO-01D7` separates editable configuration from governance guidance in the read model and UI; `JIKUO-STUDIO-01D8` implements minimal guarded apply for `.jikuo/project_context.yaml` Document Rules changes; `JIKUO-STUDIO-01D9` maps that guarded apply to a natural frontend approval confirmation instead of asking users to type the backend approval phrase; `JIKUO-STUDIO-01D10` implements the first no-write document/artifact assurance projection for required, planned, and actual read/write comparison; `JIKUO-STUDIO-01D11` projects that assurance into runtime task cards, history cards, and `state_summary.json`; `JIKUO-STUDIO-01D12` corrects completion-check document semantics so configured completion-check scope is rendered as write candidates/checklist items unless applicability evidence makes a document required for the current slice.
 > **Date**: 2026-05-31
 > **JIKUO layer**: product surface / view-model projection / guarded configuration control.
 > **Business meaning**: Users should not need to reconstruct JIKUO's global state from chat alone. A thin JIKUO console should make activation, runtime, policy, template, integration, diagnostics, and guarded configuration status visible in one place while preserving the existing kernel and guarded-write boundaries.
@@ -965,6 +965,127 @@ Acceptance:
   review action for future frontend rendering;
 - this slice does not inspect git, create DATA-01 events, prove model
   understanding, change the policy evaluator, or replace guarded apply.
+
+### `JIKUO-STUDIO-01D11`: Runtime Artifact Assurance Cards
+
+Persist the `JIKUO-STUDIO-01D10` read/write comparison into the runtime card
+stream whenever a task-related lifecycle proposal already exists.
+
+Implementation status (2026-06-02): implemented in `src/jikuo/agent_flow.py`
+and `src/jikuo/runtime_visibility.py`. `agent_flow propose` now builds an
+`artifact_assurance` report for `task_start`, `evidence_review`,
+`verification_review`, `completion_review`, and `handoff` events, renders a
+`## Artifact Assurance` section in the chat-ready runtime card, and stores the
+same structured report in `.jikuo/runtime/state_summary.json`.
+
+Business meaning:
+
+- users should not have to trust a transient Studio calculation to know whether
+  the last governed task satisfied configured document read/write obligations;
+- task and history cards become the first durable-ish operating evidence for
+  "should read / did read" and "should write / planned write / did write";
+- the frontend can render the latest task card plus recent history cards from a
+  stable runtime source, while DATA-01 remains the future analytics ledger.
+
+Model:
+
+```text
+runtime proposal
+  -> artifact_assurance report
+  -> chat-ready card section for humans
+  -> state_summary.artifact_assurance for Studio/read-model consumers
+  -> history card for task-level review
+```
+
+Input interpretation:
+
+- `document_read_evidence`, `artifact_read_evidence`, and
+  `document_mount_read_evidence` produced-evidence records count as read
+  evidence when they include a project path;
+- `document_write_plan_evidence`, `artifact_write_plan_evidence`, and
+  `planned_artifact_write_evidence` count as planned writes;
+- `document_write_evidence`, `artifact_write_evidence`, and
+  `actual_artifact_write_evidence` count as actual writes;
+- when no explicit planned-write evidence is provided on `task_start`,
+  agent-supplied `changed_paths` / `added_paths` are treated only as a plan
+  preview;
+- when no explicit actual-write evidence is provided on lifecycle review events,
+  agent-supplied `changed_paths` / `added_paths` are treated as observed writes.
+
+Acceptance:
+
+- runtime cards contain a `## Artifact Assurance` section with status,
+  guarantee, required/read evidence counts, required/planned/actual write
+  counts, and gap counts;
+- `state_summary.json` preserves the same structured `artifact_assurance`
+  report for Studio rendering;
+- gap lines distinguish `required_write_not_observed`,
+  `planned_write_not_observed`, and `actual_write_not_planned`;
+- no file read, git diff inspection, DATA-01 event write, policy evaluator
+  change, or guarded apply behavior is introduced by this runtime projection;
+- legacy `docs/governance/jikuo_productization_task_map.md` remains untouched.
+
+### `JIKUO-STUDIO-01D12`: Completion-Check Candidate Semantics
+
+Correct the `JIKUO-STUDIO-01D11` runtime assurance display so configured
+completion-check documents are not reported as unconditional write failures.
+
+Implementation status (2026-06-02): implemented in
+`src/jikuo/studio/artifact_assurance.py`, `src/jikuo/agent_flow.py`, and
+`src/jikuo/runtime_visibility.py`.
+
+Business meaning:
+
+- `.jikuo/project_context.yaml main_document_mounts.checked_before_slice_completion`
+  means "check whether these documents should be updated before completion",
+  not "write every listed document every slice";
+- users should see a completion checklist and applicability state before they
+  see a missing-write gap;
+- true write gaps should remain visible when a document is applicable for the
+  slice but is not planned or not actually written.
+
+Corrected model:
+
+```text
+completion_check_candidate_set
+  configured documents that must be considered before completion
+
+applicability_status
+  not_evaluated | applicable | not_applicable | unchanged_ok | deferred
+
+applicable_required_write_set
+  completion-check candidates or explicit required writes that are applicable
+  for this slice
+
+required_write_not_observed
+  emitted only for applicable required writes, not every configured candidate
+```
+
+Runtime evidence rules:
+
+- completion-check documents start as
+  `obligation_level=completion_check_candidate` and
+  `applicability_status=not_evaluated`;
+- if a candidate appears in planned or actual write evidence, it becomes
+  `applicable`;
+- explicit `document_write_applicability_evidence`,
+  `artifact_write_applicability_evidence`, or
+  `completion_check_applicability_evidence` may mark a candidate
+  `applicable`, `not_applicable`, `unchanged_ok`, or `deferred`;
+- the runtime card renders `Completion-check documents`,
+  `Completion-check documents not evaluated`, and
+  `Applicable required writes` separately.
+
+Acceptance:
+
+- no runtime card reports every configured completion-check document as
+  `required_write_not_observed` merely because it was not changed;
+- generic caller-supplied `required_writes` still behave as required writes;
+- completion-check candidates become required-write gaps only when they are
+  applicable for the current slice;
+- read assurance can show `not_evaluated` without pretending there are zero
+  read obligations;
+- state summary preserves the corrected fields for Studio rendering.
 
 ### `JIKUO-STUDIO-01E`: File Selection, Batch Changes, And Time Anchors
 

@@ -14,6 +14,16 @@ from typing import Any
 
 
 ARTIFACT_ASSURANCE_SCHEMA = "jikuo.studio.artifact_assurance.v0"
+COMPLETION_CHECK_CANDIDATE = "completion_check_candidate"
+APPLICABLE_STATUSES = {"applicable", "required"}
+NOT_APPLICABLE_STATUSES = {"not_applicable", "unchanged_ok", "deferred"}
+
+
+def normalize_applicability_status(value: Any, *, default: str) -> str:
+    text = str(value or "").strip().lower()
+    if text in APPLICABLE_STATUSES | NOT_APPLICABLE_STATUSES | {"not_evaluated"}:
+        return text
+    return default
 
 
 def utc_now_iso() -> str:
@@ -68,6 +78,20 @@ def _coerce_artifact_items(
         if normalized in seen:
             continue
         seen.add(normalized)
+        obligation_level = (
+            record.get("obligation_level")
+            or record.get("write_obligation")
+            or (
+                COMPLETION_CHECK_CANDIDATE
+                if record.get("role") == "completion_check"
+                else "required"
+            )
+        )
+        default_applicability = (
+            "not_evaluated"
+            if obligation_level == COMPLETION_CHECK_CANDIDATE
+            else "applicable"
+        )
         items.append(
             {
                 "path": normalized,
@@ -80,6 +104,15 @@ def _coerce_artifact_items(
                 "evidence_ref": record.get("evidence_ref"),
                 "plan_ref": record.get("plan_ref"),
                 "fingerprint": record.get("fingerprint"),
+                "obligation_level": obligation_level,
+                "applicability_status": normalize_applicability_status(
+                    record.get("applicability_status")
+                    or record.get("applicability")
+                    or record.get("status"),
+                    default=default_applicability,
+                ),
+                "applicability_reason": record.get("applicability_reason")
+                or record.get("decision_reason"),
             }
         )
     return items, invalid
@@ -87,6 +120,18 @@ def _coerce_artifact_items(
 
 def _by_path(items: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
     return {str(item.get("path")): item for item in items if item.get("path")}
+
+
+def _applicable_required_writes(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    output: list[dict[str, Any]] = []
+    for item in items:
+        if item.get("obligation_level") == COMPLETION_CHECK_CANDIDATE:
+            if item.get("applicability_status") in APPLICABLE_STATUSES:
+                output.append(item)
+            continue
+        if item.get("applicability_status") not in NOT_APPLICABLE_STATUSES:
+            output.append(item)
+    return output
 
 
 def _missing_items(
@@ -170,9 +215,25 @@ def build_document_artifact_assurance_report(
 
     required_read_by_path = _by_path(required_read_items)
     read_evidence_by_path = _by_path(read_evidence_items)
-    required_write_by_path = _by_path(required_write_items)
+    applicable_required_write_items = _applicable_required_writes(required_write_items)
+    applicable_required_write_by_path = _by_path(applicable_required_write_items)
     planned_write_by_path = _by_path(planned_write_items)
     actual_write_by_path = _by_path(actual_write_items)
+    completion_check_candidates = [
+        item
+        for item in required_write_items
+        if item.get("obligation_level") == COMPLETION_CHECK_CANDIDATE
+    ]
+    completion_check_not_evaluated = [
+        item
+        for item in completion_check_candidates
+        if item.get("applicability_status") == "not_evaluated"
+    ]
+    completion_check_not_applicable = [
+        item
+        for item in completion_check_candidates
+        if item.get("applicability_status") in NOT_APPLICABLE_STATUSES
+    ]
 
     read_gaps: list[dict[str, Any]] = []
     if read_evidence is not None:
@@ -188,7 +249,7 @@ def build_document_artifact_assurance_report(
     if planned_writes is not None:
         write_gaps.extend(
             _missing_items(
-                required_write_by_path,
+                applicable_required_write_by_path,
                 planned_write_by_path,
                 gap_type="required_write_not_planned",
             )
@@ -196,7 +257,7 @@ def build_document_artifact_assurance_report(
     if actual_writes is not None:
         write_gaps.extend(
             _missing_items(
-                required_write_by_path,
+                applicable_required_write_by_path,
                 actual_write_by_path,
                 gap_type="required_write_not_observed",
             )
@@ -219,11 +280,32 @@ def build_document_artifact_assurance_report(
 
     evidence_supplied = read_evidence is not None or planned_writes is not None or actual_writes is not None
     gap_count = len(read_gaps) + len(write_gaps)
+    read_status = (
+        "not_evaluated"
+        if required_read_items and read_evidence is None
+        else "review"
+        if read_gaps
+        else "ok"
+    )
+    write_status = (
+        "review"
+        if write_gaps or completion_check_not_evaluated
+        else "not_evaluated"
+        if required_writes is not None and not evidence_supplied
+        else "ok"
+    )
+    completion_check_status = (
+        "not_evaluated"
+        if completion_check_not_evaluated
+        else "ok"
+        if completion_check_candidates
+        else "not_applicable"
+    )
     if invalid_refs:
         status = "refused"
     elif not evidence_supplied:
         status = "not_evaluated"
-    elif gap_count:
+    elif gap_count or read_status == "not_evaluated" or completion_check_not_evaluated:
         status = "review"
     else:
         status = "ok"
@@ -243,6 +325,7 @@ def build_document_artifact_assurance_report(
             "actual_writes": actual_writes is not None,
         },
         "read_assurance": {
+            "status": read_status,
             "required_read_count": len(required_read_items),
             "read_evidence_count": len(read_evidence_items),
             "required_read_set": required_read_items,
@@ -250,10 +333,18 @@ def build_document_artifact_assurance_report(
             "required_not_read": read_gaps,
         },
         "write_assurance": {
-            "required_write_count": len(required_write_items),
+            "status": write_status,
+            "required_write_count": len(applicable_required_write_items),
             "planned_write_count": len(planned_write_items),
             "actual_write_count": len(actual_write_items),
-            "required_write_set": required_write_items,
+            "required_write_set": applicable_required_write_items,
+            "write_candidate_count": len(completion_check_candidates),
+            "write_candidate_set": completion_check_candidates,
+            "completion_check_candidate_count": len(completion_check_candidates),
+            "completion_check_candidates": completion_check_candidates,
+            "completion_check_status": completion_check_status,
+            "completion_check_not_evaluated": completion_check_not_evaluated,
+            "completion_check_not_applicable": completion_check_not_applicable,
             "planned_write_set": planned_write_items,
             "actual_write_set": actual_write_items,
             "required_not_planned": [
@@ -270,10 +361,15 @@ def build_document_artifact_assurance_report(
             ],
         },
         "gap_report": {
-            "status": "ok" if gap_count == 0 and not invalid_refs else "review",
+            "status": (
+                "ok"
+                if gap_count == 0 and not invalid_refs and not completion_check_not_evaluated
+                else "review"
+            ),
             "gap_count": gap_count,
             "read_gap_count": len(read_gaps),
             "write_gap_count": len(write_gaps),
+            "completion_check_not_evaluated_count": len(completion_check_not_evaluated),
             "read_gaps": read_gaps,
             "write_gaps": write_gaps,
             "invalid_refs": invalid_refs,
@@ -302,8 +398,8 @@ def next_actions_for(status: str) -> list[str]:
     if status == "refused":
         return ["repair artifact path refs before evaluating assurance gaps"]
     return [
-        "review required_not_written, planned_not_written, and unplanned_written gaps",
-        "update the plan, perform the missing required write, or record an explicit deferral",
+        "review completion-check candidates, applicability, and write gaps",
+        "update the plan, perform the missing applicable write, or record not-applicable/unchanged evidence",
     ]
 
 
@@ -314,6 +410,12 @@ def required_writes_from_document_mounts(document_mounts: dict[str, Any]) -> lis
             "reason": item.get("update_required_when"),
             "source_ref": ".jikuo/project_context.yaml main_document_mounts.checked_before_slice_completion",
             "role": "completion_check",
+            "obligation_level": COMPLETION_CHECK_CANDIDATE,
+            "applicability_status": "not_evaluated",
+            "applicability_reason": (
+                "completion-check documents are candidates until this slice "
+                "records applicability, unchanged, planned-write, or actual-write evidence"
+            ),
         }
         for item in document_mounts.get("checked_before_slice_completion") or []
         if isinstance(item, dict) and item.get("path")
