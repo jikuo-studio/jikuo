@@ -1581,6 +1581,22 @@ entries:
       - "does_not_regenerate_legacy_task_map"
     referenced_by_transitional_cache:
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md"
+  - id: "CAP-STUDIO-ARTIFACT-ASSURANCE-PROJECTION-01"
+    title: "Studio document/artifact assurance projection"
+    status: "implemented no-write required/planned/actual read-write comparison by JIKUO-STUDIO-01D10"
+    metadata_status: "complete"
+    entry_point: "src/jikuo/studio/artifact_assurance.py; src/jikuo/studio/global_status.py summaries.artifact_assurance; src/jikuo/studio/panels.py Read/Write Assurance panel"
+    write_effect: "none; compares caller-supplied required read/write, planned write, actual write, and read-evidence sets"
+    approval: "read-only projection; future guarded writes remain behind existing plan/apply approval surfaces"
+    non_effects:
+      - "does_not_read_files_by_itself"
+      - "does_not_write_files"
+      - "does_not_inspect_git_by_itself"
+      - "does_not_prove_model_understanding"
+      - "does_not_replace_guarded_apply"
+      - "does_not_mutate_policy_evaluator_or_policy_store"
+    referenced_by_transitional_cache:
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md"
   - id: "CAP-TODO-SNAPSHOT-POSTURE-01"
     title: "Previous/latest todo snapshot posture"
     status: "implemented context/documentation guard"

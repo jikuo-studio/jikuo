@@ -1195,7 +1195,7 @@ entries:
     title: "SPRINT_050_WO-PER-JIKUO-STUDIO-01: Global Console And Configuration Shell"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md"
     sprint: "SPRINT_050"
-    status: "JIKUO-STUDIO-01A implemented no-write global status read model and CLI; JIKUO-STUDIO-01B implemented no-write panel/action registries; JIKUO-STUDIO-01C implemented local read-only console; JIKUO-STUDIO-01D0 recorded customer configuration action inventory and document-mount configuration boundary; JIKUO-STUDIO-01D1 implemented document-mount read model; JIKUO-STUDIO-01D2 implemented visible document-mount frontend section; JIKUO-STUDIO-01D3 implemented configuration vocabulary mapping; JIKUO-STUDIO-01D4 documented Document Rules plan/apply contract; JIKUO-STUDIO-01D5 implemented Document Rules no-write plan backend; JIKUO-STUDIO-01D6 implemented local web no-write plan preview; JIKUO-STUDIO-01D7 implemented source semantics split for editable configuration vs governance guidance; JIKUO-STUDIO-01D8 implemented minimal guarded apply for .jikuo/project_context.yaml Document Rules changes; JIKUO-STUDIO-01D9 implemented natural Approve and apply confirmation UX while preserving backend guarded apply evidence"
+    status: "JIKUO-STUDIO-01A implemented no-write global status read model and CLI; JIKUO-STUDIO-01B implemented no-write panel/action registries; JIKUO-STUDIO-01C implemented local read-only console; JIKUO-STUDIO-01D0 recorded customer configuration action inventory and document-mount configuration boundary; JIKUO-STUDIO-01D1 implemented document-mount read model; JIKUO-STUDIO-01D2 implemented visible document-mount frontend section; JIKUO-STUDIO-01D3 implemented configuration vocabulary mapping; JIKUO-STUDIO-01D4 documented Document Rules plan/apply contract; JIKUO-STUDIO-01D5 implemented Document Rules no-write plan backend; JIKUO-STUDIO-01D6 implemented local web no-write plan preview; JIKUO-STUDIO-01D7 implemented source semantics split for editable configuration vs governance guidance; JIKUO-STUDIO-01D8 implemented minimal guarded apply for .jikuo/project_context.yaml Document Rules changes; JIKUO-STUDIO-01D9 implemented natural Approve and apply confirmation UX while preserving backend guarded apply evidence; JIKUO-STUDIO-01D10 implemented no-write artifact assurance projection for required/planned/actual read-write comparison"
     impact_tags:
       - "studio"
       - "frontend"
@@ -1217,6 +1217,7 @@ entries:
       - "CAP-STUDIO-DOCUMENT-RULES-SOURCE-SEMANTICS-01"
       - "CAP-STUDIO-DOCUMENT-RULES-GUARDED-APPLY-01"
       - "CAP-STUDIO-DOCUMENT-RULES-NATURAL-APPROVAL-UX-01"
+      - "CAP-STUDIO-ARTIFACT-ASSURANCE-PROJECTION-01"
     capability_extraction_status: "extracted_from_work_order_body"
     required_mount_sets:
       - "MOUNT-STUDIO-01"

@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-STUDIO-01: Global Console And Configuration Shell
 
-> **Status**: `JIKUO-STUDIO-01A` global status read model, `JIKUO-STUDIO-01B` panel/action registries, `JIKUO-STUDIO-01C` local read-only console, `JIKUO-STUDIO-01D1` document-mount read model, `JIKUO-STUDIO-01D2` visible document-mount frontend section, and `JIKUO-STUDIO-01D3` configuration vocabulary mapping implemented as no-write Python/CLI/backend surfaces. `JIKUO-STUDIO-01D4` records the detailed Document Rules plan/apply design contract; `JIKUO-STUDIO-01D5` implements the first Document Rules no-write plan backend; `JIKUO-STUDIO-01D6` connects that plan to the local Studio page as a no-write preview; `JIKUO-STUDIO-01D7` separates editable configuration from governance guidance in the read model and UI; `JIKUO-STUDIO-01D8` implements minimal guarded apply for `.jikuo/project_context.yaml` Document Rules changes; `JIKUO-STUDIO-01D9` maps that guarded apply to a natural frontend approval confirmation instead of asking users to type the backend approval phrase.
+> **Status**: `JIKUO-STUDIO-01A` global status read model, `JIKUO-STUDIO-01B` panel/action registries, `JIKUO-STUDIO-01C` local read-only console, `JIKUO-STUDIO-01D1` document-mount read model, `JIKUO-STUDIO-01D2` visible document-mount frontend section, and `JIKUO-STUDIO-01D3` configuration vocabulary mapping implemented as no-write Python/CLI/backend surfaces. `JIKUO-STUDIO-01D4` records the detailed Document Rules plan/apply design contract; `JIKUO-STUDIO-01D5` implements the first Document Rules no-write plan backend; `JIKUO-STUDIO-01D6` connects that plan to the local Studio page as a no-write preview; `JIKUO-STUDIO-01D7` separates editable configuration from governance guidance in the read model and UI; `JIKUO-STUDIO-01D8` implements minimal guarded apply for `.jikuo/project_context.yaml` Document Rules changes; `JIKUO-STUDIO-01D9` maps that guarded apply to a natural frontend approval confirmation instead of asking users to type the backend approval phrase; `JIKUO-STUDIO-01D10` implements the first no-write document/artifact assurance projection for required, planned, and actual read/write comparison.
 > **Date**: 2026-05-31
 > **JIKUO layer**: product surface / view-model projection / guarded configuration control.
 > **Business meaning**: Users should not need to reconstruct JIKUO's global state from chat alone. A thin JIKUO console should make activation, runtime, policy, template, integration, diagnostics, and guarded configuration status visible in one place while preserving the existing kernel and guarded-write boundaries.
@@ -911,6 +911,60 @@ Acceptance:
   guarded approval phrase expected by the backend;
 - backend refusal behavior, source-fingerprint checks, target-file restriction,
   and write effects remain unchanged.
+
+### `JIKUO-STUDIO-01D10`: Document/Artifact Assurance Projection
+
+Implement the first no-write backend projection for proving whether document and
+artifact interactions are aligned with the current governed task.
+
+Implementation status (2026-06-02): implemented in
+`src/jikuo/studio/artifact_assurance.py`, exposed through
+`jikuo.studio.global_status.v0.summaries.artifact_assurance`, and registered as
+the `Read/Write Assurance` panel plus `studio.artifact_assurance.review`
+action descriptor.
+
+Business meaning:
+
+- Document Rules should not stop at "these documents are configured"; users
+  need to know whether the governed work actually read and wrote the expected
+  artifacts;
+- write assurance must distinguish `required`, `planned`, and `actual` writes:
+  missing required writes are different from out-of-plan writes;
+- the projection creates a stable backend surface for future Studio UI without
+  making the frontend responsible for governance comparison logic.
+
+Model:
+
+```text
+required_read_set      documents that should be read for this work
+read_evidence          documents observed/read and reported as used
+
+required_write_set     artifacts that should be updated in this scenario
+planned_write_set      artifacts the reviewed plan says will be updated
+actual_write_set       artifacts actually observed as changed
+
+required_not_planned   required_write_set - planned_write_set
+required_not_written   required_write_set - actual_write_set
+planned_not_written    planned_write_set - actual_write_set
+unplanned_written      actual_write_set - planned_write_set
+```
+
+Acceptance:
+
+- `jikuo.studio.artifact_assurance.v0` is a no-write projection and performs no
+  file reads/writes by itself;
+- the projection normalizes absolute paths to project-relative paths and refuses
+  paths outside the project root;
+- when no per-slice evidence is supplied, configured required reads/writes are
+  shown with status `not_evaluated` rather than fake missing evidence;
+- when planned and actual sets are supplied, the projection reports
+  `required_not_planned`, `required_not_written`, `planned_not_written`, and
+  `unplanned_written` separately;
+- global Studio status exposes `summaries.artifact_assurance`;
+- the panel/action registries expose a `Read/Write Assurance` panel and
+  review action for future frontend rendering;
+- this slice does not inspect git, create DATA-01 events, prove model
+  understanding, change the policy evaluator, or replace guarded apply.
 
 ### `JIKUO-STUDIO-01E`: File Selection, Batch Changes, And Time Anchors
 

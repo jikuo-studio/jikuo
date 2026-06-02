@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 if __package__:
+    from . import artifact_assurance
     from . import actions as studio_actions
     from . import panels as studio_panels
     from .. import (
@@ -28,6 +29,7 @@ if __package__:
     from ..integrations.mcp import adapter as mcp_adapter
 else:
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    from jikuo.studio import artifact_assurance
     from jikuo.studio import actions as studio_actions
     from jikuo.studio import panels as studio_panels
     from jikuo import (
@@ -744,6 +746,11 @@ def build_global_status(*, project_root: Path | None = None) -> dict[str, Any]:
         *list(configuration_decisions or []),
         *list(policy_decisions or []),
     ]
+    document_mounts = safe_section(
+        "document_mounts",
+        lambda: document_mounts_summary(resolved_root, diagnostics),
+        diagnostics=diagnostics,
+    )
     summaries = {
         "runtime": safe_section(
             "runtime",
@@ -752,10 +759,10 @@ def build_global_status(*, project_root: Path | None = None) -> dict[str, Any]:
         ),
         "activation": activation,
         "configuration": configuration,
-        "document_mounts": safe_section(
-            "document_mounts",
-            lambda: document_mounts_summary(resolved_root, diagnostics),
-            diagnostics=diagnostics,
+        "document_mounts": document_mounts,
+        "artifact_assurance": artifact_assurance.build_summary_from_document_mounts(
+            project_root=resolved_root,
+            document_mounts=document_mounts,
         ),
         "policy_management": policy_summary,
         "registry": safe_section(
@@ -804,6 +811,7 @@ def build_global_status(*, project_root: Path | None = None) -> dict[str, Any]:
             source_ref(runtime_visibility.STATE_SUMMARY_REF),
             source_ref(activation_settings.SETTINGS_REF),
             source_ref("src/jikuo/studio/global_status.py"),
+            source_ref("src/jikuo/studio/artifact_assurance.py"),
             source_ref("src/jikuo/studio/panels.py"),
             source_ref("src/jikuo/studio/actions.py"),
         ],
@@ -813,6 +821,7 @@ def build_global_status(*, project_root: Path | None = None) -> dict[str, Any]:
             "panels and actions are descriptors only; execution remains behind existing no-write and guarded apply surfaces",
             "policy-management summary does not activate user projects or mutate starter manifests",
             "document-mount summary is read-only and does not decide which documents are canonical for the user",
+            "artifact-assurance summary lists configured required reads/writes but needs per-slice evidence before it can prove read/write completion",
         ],
         "privacy": {
             "raw_prompt_stored": False,
@@ -849,6 +858,9 @@ def format_markdown(report: dict[str, Any]) -> str:
     completion_checks_label = completion_checks_term.get("user_label") or "Completion checks"
     rule_sources_label = rule_sources_term.get("user_label") or "Configuration sources and guidance"
     runtime = summaries.get("runtime") or {}
+    assurance = summaries.get("artifact_assurance") or {}
+    assurance_write = assurance.get("write_assurance") or {}
+    assurance_gap = assurance.get("gap_report") or {}
     integrations = summaries.get("integrations") or {}
     mcp = integrations.get("mcp") or {}
     lines = [
@@ -864,6 +876,7 @@ def format_markdown(report: dict[str, Any]) -> str:
         f"- Activation: `{activation.get('source_status') or activation.get('status')}` / trigger_mode=`{activation.get('desired_trigger_mode')}` / strict_mount=`{activation.get('strict_mount_status')}`",
         f"- Runtime: `{runtime.get('status')}` / triggered_policies=`{(runtime.get('counts') or {}).get('triggered_policy_count', 0)}` / missing_evidence=`{(runtime.get('counts') or {}).get('missing_evidence_count', 0)}`",
         f"- {document_rules_label}: `{document_mounts.get('status')}` / configured roles=`{document_mounts.get('role_count', 0)}` / {completion_checks_label.lower()}=`{document_mounts.get('checked_document_count', 0)}`",
+        f"- Artifact assurance: `{assurance.get('status')}` / required_writes=`{assurance_write.get('required_write_count', 0)}` / gaps=`{assurance_gap.get('gap_count', 0)}`",
         f"- Policies: active=`{policy_counts.get('active_policy_count', 0)}` / templates=`{policy_counts.get('package_template_count', 0)}` / starter_refs=`{policy_counts.get('starter_template_ref_count', 0)}`",
         f"- MCP tools: `{mcp.get('tool_count', 0)}` / sampling_probe=`{str(mcp.get('sampling_probe_exposed')).lower()}`",
         f"- Pending decisions: `{len(report.get('pending_user_decisions') or [])}`",
@@ -874,6 +887,14 @@ def format_markdown(report: dict[str, Any]) -> str:
         f"- {rule_sources_label}: editable=`{len(document_mounts.get('editable_configuration_sources') or [])}` / guidance=`{len(document_mounts.get('governance_guidance_sources') or [])}`",
         f"- Missing required roles: `{document_mounts.get('missing_required_role_count', 0)}`",
         f"- Rule sets: `{document_mounts.get('mount_set_count', 0)}` / Studio status=`{document_mounts.get('studio_mount_set_status')}`",
+        "",
+        "## Artifact Assurance",
+        "",
+        f"- Status: `{assurance.get('status')}`",
+        f"- Required reads: `{(assurance.get('read_assurance') or {}).get('required_read_count', 0)}`",
+        f"- Required writes: `{assurance_write.get('required_write_count', 0)}`",
+        f"- Gap count: `{assurance_gap.get('gap_count', 0)}`",
+        f"- Guarantee: `{assurance.get('guarantee')}`",
         "",
         "## Panels",
         "",
