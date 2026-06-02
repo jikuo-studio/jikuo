@@ -12,10 +12,10 @@ from typing import Any
 from urllib.parse import urlparse
 
 if __package__:
-    from ...studio import document_rules, global_status
+    from ...studio import document_rules, global_status, project_files
 else:  # pragma: no cover - direct module execution fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from jikuo.studio import document_rules, global_status
+    from jikuo.studio import document_rules, global_status, project_files
 
 
 STUDIO_WEB_SCHEMA = "jikuo.studio.web_console.v0"
@@ -217,6 +217,68 @@ INDEX_HTML = """<!doctype html>
       padding-top: 10px;
       border-top: 1px solid var(--line);
     }
+    .file-picker {
+      display: grid;
+      gap: 10px;
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid var(--line);
+    }
+    .file-toolbar {
+      display: grid;
+      grid-template-columns: minmax(200px, 1fr) auto;
+      gap: 10px;
+      align-items: end;
+    }
+    .file-list {
+      display: grid;
+      gap: 6px;
+      max-height: 260px;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      padding: 8px;
+    }
+    .file-row {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: start;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--panel);
+    }
+    .file-row input {
+      width: auto;
+      min-height: auto;
+      margin-top: 3px;
+    }
+    .file-meta {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .selected-files {
+      display: grid;
+      gap: 6px;
+    }
+    .selected-file {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--soft);
+    }
+    .secondary-button {
+      border-color: var(--line);
+      background: #fff;
+      color: var(--ink);
+    }
     button {
       min-height: 36px;
       border: 1px solid #176555;
@@ -256,7 +318,7 @@ INDEX_HTML = """<!doctype html>
       main { padding: 18px 16px 32px; }
       .row { grid-template-columns: 1fr; }
       .split { grid-template-columns: 1fr; }
-      .form-grid, .plan-rule-row { grid-template-columns: 1fr; }
+      .form-grid, .plan-rule-row, .file-toolbar { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -317,6 +379,20 @@ INDEX_HTML = """<!doctype html>
             </label>
             <button id="document-rules-preview-button" type="submit">Preview plan</button>
           </div>
+          <div class="file-picker" aria-labelledby="project-files-title">
+            <h3 id="project-files-title">Project documents</h3>
+            <p class="subhead">Select one or more project files, then preview the selected Document Rules change.</p>
+            <div class="file-toolbar">
+              <label>
+                Filter project documents
+                <input id="document-rules-file-filter" placeholder="docs, policy, yaml..." autocomplete="off">
+              </label>
+              <button class="secondary-button" id="document-rules-clear-selection" type="button">Clear selection</button>
+            </div>
+            <div class="file-list" id="document-rules-file-list" aria-live="polite"></div>
+            <p class="subhead">Selected files</p>
+            <div class="selected-files" id="document-rules-selected-files"></div>
+          </div>
         </form>
         <div class="plan-result" id="document-rules-plan-result" aria-live="polite"></div>
         <div class="plan-apply-row">
@@ -366,6 +442,8 @@ INDEX_HTML = """<!doctype html>
     const termDescription = (terms, id, fallback) => (terms[id] && terms[id].user_description) || fallback;
     const DOCUMENT_RULES_APPROVAL_PHRASE = "Approve Document Rules update";
     let currentDocumentRulesPlan = null;
+    let projectFileItems = [];
+    const selectedFileRecords = new Map();
     const addPlanMessage = (title, detail, status) => {
       const result = document.getElementById("document-rules-plan-result");
       result.replaceChildren(row(title, detail, status));
@@ -422,12 +500,108 @@ INDEX_HTML = """<!doctype html>
         fetch("/api/status", {cache: "no-store"}).then((response) => response.json()).then(render);
       }
     };
+    const membershipSummary = (membership) => {
+      const parts = [];
+      if (membership && membership.is_context_document) {
+        parts.push(`context: ${(membership.context_role_refs || []).join(", ")}`);
+      }
+      if (membership && membership.is_completion_check) {
+        parts.push("completion check");
+      }
+      if (membership && membership.is_governance_reference) {
+        parts.push("rule source");
+      }
+      return parts.length ? parts.join(" / ") : "not in Document Rules";
+    };
+    const renderSelectedFiles = () => {
+      const container = document.getElementById("document-rules-selected-files");
+      const records = Array.from(selectedFileRecords.values());
+      if (!records.length) {
+        container.replaceChildren(row("No files selected", "Use the project document list or type a single path.", "available"));
+        return;
+      }
+      container.replaceChildren(...records.map((record) => {
+        const item = document.createElement("div");
+        item.className = "selected-file";
+        const details = document.createElement("div");
+        details.innerHTML = `<strong></strong><div class="file-meta"></div>`;
+        details.querySelector("strong").textContent = record.path;
+        details.querySelector(".file-meta").textContent = `selected at ${record.selected_at_utc}`;
+        const remove = document.createElement("button");
+        remove.className = "secondary-button";
+        remove.type = "button";
+        remove.textContent = "Remove";
+        remove.addEventListener("click", () => {
+          selectedFileRecords.delete(record.path);
+          renderProjectFiles();
+          renderSelectedFiles();
+        });
+        item.append(details, remove);
+        return item;
+      }));
+    };
+    const setSelectedPath = (path, selected) => {
+      if (selected) {
+        if (!selectedFileRecords.has(path)) {
+          selectedFileRecords.set(path, {path, selected_at_utc: new Date().toISOString()});
+        }
+      } else {
+        selectedFileRecords.delete(path);
+      }
+      renderSelectedFiles();
+    };
+    const renderProjectFiles = () => {
+      const list = document.getElementById("document-rules-file-list");
+      const filter = document.getElementById("document-rules-file-filter").value.trim().toLowerCase();
+      const filtered = projectFileItems.filter((item) =>
+        !filter || `${item.path} ${item.file_kind} ${membershipSummary(item.document_rules_membership)}`.toLowerCase().includes(filter)
+      ).slice(0, 120);
+      if (!filtered.length) {
+        list.replaceChildren(row("No project documents", "No matching markdown, YAML, JSON, or text files were found.", "degraded"));
+        return;
+      }
+      list.replaceChildren(...filtered.map((item) => {
+        const record = document.createElement("label");
+        record.className = "file-row";
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = selectedFileRecords.has(item.path);
+        checkbox.addEventListener("change", () => setSelectedPath(item.path, checkbox.checked));
+        const details = document.createElement("div");
+        details.innerHTML = `<strong></strong><div class="file-meta"></div>`;
+        details.querySelector("strong").textContent = item.path;
+        details.querySelector(".file-meta").textContent =
+          `${item.file_kind} / ${membershipSummary(item.document_rules_membership)} / modified ${item.modified_at_utc}`;
+        const badge = document.createElement("span");
+        badge.className = "status available";
+        badge.textContent = item.file_kind || "file";
+        record.append(checkbox, details, badge);
+        return record;
+      }));
+    };
+    const loadProjectFiles = () => {
+      fetch("/api/project-files", {cache: "no-store"})
+        .then((response) => response.json())
+        .then((inventory) => {
+          projectFileItems = inventory.items || [];
+          renderProjectFiles();
+          renderSelectedFiles();
+        })
+        .catch((error) => {
+          document.getElementById("document-rules-file-list").replaceChildren(
+            row("Project documents unavailable", error.message, "unavailable")
+          );
+          renderSelectedFiles();
+        });
+    };
     const requestFromDocumentRulesForm = () => {
       const operation = document.getElementById("document-rules-operation").value;
       const path = document.getElementById("document-rules-path").value.trim();
       const role = document.getElementById("document-rules-role").value.trim();
       const completionRule = document.getElementById("document-rules-completion-rule").value.trim();
-      if (!path) {
+      const selectedPaths = Array.from(selectedFileRecords.keys());
+      const paths = selectedPaths.length ? selectedPaths : (path ? [path] : []);
+      if (!paths.length) {
         return null;
       }
       const payload = {
@@ -437,22 +611,23 @@ INDEX_HTML = """<!doctype html>
         remove_completion_checks: [],
         add_governance_references: [],
         remove_governance_references: [],
+        selection_records: Array.from(selectedFileRecords.values()),
       };
       if (completionRule) {
         payload.completion_update_rule = completionRule;
       }
       if (operation === "add_context_doc") {
-        payload.add_context_docs.push(role ? `${role}=${path}` : path);
+        payload.add_context_docs.push(...paths.map((item) => role && paths.length === 1 ? `${role}=${item}` : item));
       } else if (operation === "remove_context_doc") {
-        payload.remove_context_docs.push(path);
+        payload.remove_context_docs.push(...paths);
       } else if (operation === "add_completion_check") {
-        payload.add_completion_checks.push(path);
+        payload.add_completion_checks.push(...paths);
       } else if (operation === "remove_completion_check") {
-        payload.remove_completion_checks.push(path);
+        payload.remove_completion_checks.push(...paths);
       } else if (operation === "add_governance_reference") {
-        payload.add_governance_references.push(path);
+        payload.add_governance_references.push(...paths);
       } else if (operation === "remove_governance_reference") {
-        payload.remove_governance_references.push(path);
+        payload.remove_governance_references.push(...paths);
       }
       return payload;
     };
@@ -549,6 +724,13 @@ INDEX_HTML = """<!doctype html>
         global.textContent = "unavailable";
         document.getElementById("diagnostics").replaceChildren(row("fetch_failed", error.message, "error"));
       });
+    loadProjectFiles();
+    document.getElementById("document-rules-file-filter").addEventListener("input", renderProjectFiles);
+    document.getElementById("document-rules-clear-selection").addEventListener("click", () => {
+      selectedFileRecords.clear();
+      renderProjectFiles();
+      renderSelectedFiles();
+    });
     document.getElementById("document-rules-form").addEventListener("submit", (event) => {
       event.preventDefault();
       const payload = requestFromDocumentRulesForm();
@@ -660,6 +842,7 @@ def api_document_rules_plan_payload(
         "write_mode": "no-write-plan",
         "writes_performed": False,
         "write_allowed_by_command": False,
+        "selection_records": request_payload.get("selection_records") or [],
     }
     return HTTPStatus.OK, plan
 
@@ -705,6 +888,10 @@ def api_payload_for_path(path: str, *, project_root: Path | None = None) -> tupl
     if route == "/api/actions":
         status = global_status.build_global_status(project_root=project_root)
         return HTTPStatus.OK, status.get("action_registry") or {}
+    if route == "/api/project-files":
+        return HTTPStatus.OK, project_files.build_project_file_inventory(
+            project_root=project_root
+        )
     if route == "/api/health":
         return HTTPStatus.OK, {
             "schema": STUDIO_WEB_SCHEMA,

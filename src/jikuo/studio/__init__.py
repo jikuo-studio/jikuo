@@ -2,4 +2,10 @@
 
 from __future__ import annotations
 
-__all__ = ["actions", "artifact_assurance", "global_status", "panels"]
+__all__ = [
+    "actions",
+    "artifact_assurance",
+    "global_status",
+    "panels",
+    "project_files",
+]

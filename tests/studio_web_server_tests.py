@@ -54,19 +54,23 @@ class StudioWebServerTests(unittest.TestCase):
         status_code, status = server.api_payload_for_path("/api/status", project_root=ROOT)
         panels_code, panels = server.api_payload_for_path("/api/panels", project_root=ROOT)
         actions_code, actions = server.api_payload_for_path("/api/actions", project_root=ROOT)
+        files_code, files = server.api_payload_for_path("/api/project-files", project_root=ROOT)
         health_code, health = server.api_payload_for_path("/api/health", project_root=ROOT)
 
         self.assertEqual(status_code, 200)
         self.assertEqual(panels_code, 200)
         self.assertEqual(actions_code, 200)
+        self.assertEqual(files_code, 200)
         self.assertEqual(health_code, 200)
         self.assertEqual(status["schema"], "jikuo.studio.global_status.v0")
         self.assertEqual(panels["schema"], "jikuo.studio.panel_registry.v0")
         self.assertEqual(actions["schema"], "jikuo.studio.action_registry.v0")
+        self.assertEqual(files["schema"], "jikuo.studio.project_file_inventory.v0")
         self.assertEqual(health["schema"], server.STUDIO_WEB_SCHEMA)
         self.assertFalse(status["writes_performed"])
         self.assertFalse(panels["writes_performed"])
         self.assertFalse(actions["writes_performed"])
+        self.assertFalse(files["writes_performed"])
         self.assertFalse(health["writes_performed"])
 
     def test_document_rules_plan_api_returns_no_write_plan(self):
@@ -78,9 +82,16 @@ class StudioWebServerTests(unittest.TestCase):
 
             status_code, plan = server.api_document_rules_plan_payload(
                 {
-                    "add_context_docs": ["customer_guide=docs/customer-guide.md"],
+                    "add_context_docs": ["docs/customer-guide.md"],
                     "add_completion_checks": ["docs/customer-guide.md"],
+                    "add_governance_references": ["docs/customer-guide.md"],
                     "completion_update_rule": "customer guide changes",
+                    "selection_records": [
+                        {
+                            "path": "docs/customer-guide.md",
+                            "selected_at_utc": "2026-06-02T00:00:00Z",
+                        }
+                    ],
                 },
                 project_root=project_root,
             )
@@ -88,10 +99,14 @@ class StudioWebServerTests(unittest.TestCase):
             self.assertEqual(status_code, 200)
             self.assertEqual(plan["schema"], "jikuo.studio.document_rules_update_plan.v0")
             self.assertEqual(plan["status"], "review")
-            self.assertEqual(plan["change_count"], 2)
+            self.assertEqual(plan["change_count"], 3)
             self.assertFalse(plan["writes_performed"])
             self.assertFalse(plan["write_allowed_by_command"])
             self.assertEqual(plan["studio_web"]["route"], "/api/document-rules/plan")
+            self.assertEqual(
+                plan["studio_web"]["selection_records"][0]["selected_at_utc"],
+                "2026-06-02T00:00:00Z",
+            )
 
     def test_document_rules_plan_api_surfaces_refused_validation_without_writes(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -118,6 +133,7 @@ class StudioWebServerTests(unittest.TestCase):
         self.assertIn("data-jikuo-studio=\"guarded-control-shell\"", html)
         self.assertIn("JIKUO Studio", html)
         self.assertIn("/api/status", html)
+        self.assertIn("/api/project-files", html)
         self.assertIn("/api/document-rules/plan", html)
         self.assertIn("/api/document-rules/apply", html)
         self.assertIn("Document Rules", html)
@@ -127,6 +143,9 @@ class StudioWebServerTests(unittest.TestCase):
         self.assertIn("Editable configuration", html)
         self.assertIn("Governance guidance", html)
         self.assertIn("document-rules-form", html)
+        self.assertIn("document-rules-file-list", html)
+        self.assertIn("document-rules-selected-files", html)
+        self.assertIn("document-rules-clear-selection", html)
         self.assertIn("Preview plan", html)
         self.assertIn("document-rules-apply-note", html)
         self.assertIn("Approve and apply", html)
@@ -155,6 +174,8 @@ class StudioWebServerTests(unittest.TestCase):
                 panels = json.loads(response.read().decode("utf-8"))
             with urlopen(f"{base_url}/api/actions", timeout=10) as response:
                 actions = json.loads(response.read().decode("utf-8"))
+            with urlopen(f"{base_url}/api/project-files", timeout=10) as response:
+                files = json.loads(response.read().decode("utf-8"))
 
             self.assertIn("JIKUO Studio", html)
             self.assertIn("Document Rules", html)
@@ -175,6 +196,8 @@ class StudioWebServerTests(unittest.TestCase):
             )
             self.assertEqual(panels["schema"], "jikuo.studio.panel_registry.v0")
             self.assertEqual(actions["schema"], "jikuo.studio.action_registry.v0")
+            self.assertEqual(files["schema"], "jikuo.studio.project_file_inventory.v0")
+            self.assertFalse(files["writes_performed"])
         finally:
             httpd.shutdown()
             httpd.server_close()
