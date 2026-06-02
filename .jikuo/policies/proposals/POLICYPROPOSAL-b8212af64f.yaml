@@ -1,0 +1,79 @@
+schema: "jikuo.policy_write_plan.v0"
+schema_version: "jikuo.policy_write_plan.v0"
+report_only: true
+plan_id: "POLICYWRITEPLAN-81637579e9"
+operation: "append_policy"
+status: "review"
+proposal_ref: ".jikuo/policies/proposals/POLICYPROPOSAL-b8212af64f.yaml"
+policy_ref: "POLICY-jikuo-post-feature-action-chain-atom-registration"
+project_root: "D:\\personal_project\\Jikuo"
+policy_store_status: "active"
+policy_store_root: "D:\\personal_project\\Jikuo\\.jikuo\\policies"
+preflight:
+  project_state_initialized: true
+  store_exists: true
+  target_collision: false
+  decision_record_collision: false
+  proposal_snapshot_collision: false
+  manifest_stale: false
+  approval_present: false
+write_set:
+  - path: ".jikuo/policies/approved/POLICY-jikuo-post-feature-action-chain-atom-registration.yaml"
+    effect: "create approved policy file"
+    operation: "create"
+  - path: ".jikuo/policies/decisions/POLICYDECISION-54fe02af41.yaml"
+    effect: "create policy decision record"
+    operation: "create"
+  - path: ".jikuo/policies/manifest.yaml"
+    effect: "create or update policy-store manifest active_policy_refs"
+    operation: "create_or_update"
+  - path: ".jikuo/policies/proposals/POLICYPROPOSAL-b8212af64f.yaml"
+    effect: "create policy write proposal snapshot"
+    operation: "create"
+non_effects: ["does not create .jikuo/policies/", "does not write approved policy files", "does not update manifest.yaml", "does not execute policy actions", "does not create task-session evidence", "does not promote gates"]
+approval_required: true
+write_allowed_by_command: false
+writes_performed: false
+guarded_apply_available: false
+authoring_review:
+  mode: "scope_only"
+  scope_first: true
+  compatibility_trigger_event: "conversation_turn"
+  policy_scopes: ["editing"]
+  lifecycle_events: []
+  hard_gated_by_lifecycle: false
+  warnings: []
+  summary: "scope-only policy plan; trigger_event is a compatibility anchor"
+proposed_policy:
+  schema_version: "jikuo.configurable_rule_policy.v0"
+  policy_id: "POLICY-jikuo-post-feature-action-chain-atom-registration"
+  version: 1
+  status: "active_report_only"
+  title: "Post-feature action chain and atom registration"
+  scenario_package: "engineering_governance"
+  source_refs:
+    - type: "user_natural_language"
+      ref: "user_request_2026-06-02_post_feature_action_chain_atom_registration_policy_template"
+  triggers:
+    - trigger_id: "TRG-conversation-turn"
+      type: "task_lifecycle_event"
+      event: "conversation_turn"
+  conditions: []
+  required_actions:
+    - action_id: "ACT-restore-user-action-chain-and-register-feature-atoms"
+      type: "restore_user_action_chain_and_register_feature_atoms"
+  required_evidence:
+    - evidence_id: "EVD-feature-atom-registration-evidence"
+      type: "feature_atom_registration_evidence"
+      satisfies_action: "ACT-restore-user-action-chain-and-register-feature-atoms"
+  enforcement:
+    phase: "report_only"
+    level: "review_required"
+  applies_to_work_profile:
+    - lifecycle_events: []
+      policy_scopes: ["editing"]
+refusal_reasons: []
+warnings: []
+source_refs: ["pkg://jikuo/governance/jikuo_policy_store_configuration_flow.md", "pkg://jikuo/governance/jikuo_configurable_rule_trigger_policy.md", "pkg://jikuo/governance/jikuo_rule_action_evidence_model.md", "pkg://jikuo/governance/jikuo_policy_aware_agent_flow_contract.md"]
+status_reason: "policy write plan is ready for desktop review; no durable write was performed"
+next_actions: ["review the proposed policy, write targets, and non-effects in chat", "approve a future guarded policy writer only after the plan is correct"]

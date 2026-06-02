@@ -1,0 +1,17 @@
+schema_version: "jikuo.policy_decision.v0"
+decision_id: "POLICYDECISION-3f94e36c0e"
+proposal_ref: ".jikuo/policies/proposals/POLICYPROPOSAL-33812a0c2c.yaml"
+policy_ref: "POLICY-jikuo-discussion-first-no-write-boundary"
+decision: "approve_write"
+target:
+  kind: "approved_policy"
+  ref: "POLICY-jikuo-discussion-first-no-write-boundary"
+effect: "append_policy POLICY-jikuo-discussion-first-no-write-boundary and update policy-store manifest active refs"
+non_effect: "does not execute policy actions, persist evidence, or promote gates"
+approval_phrase: "用户明确要求讨论优先不写文件原则固化成激活的 policy，同时作为 template"
+created_at: "2026-06-02T14:56:51Z"
+source_plan_ref: "POLICYWRITEPLAN-66587c0e35"
+source_plan_schema: "jikuo.policy_write_plan.v0"
+storage:
+  path: ".jikuo/policies/decisions/POLICYDECISION-3f94e36c0e.yaml"
+  policy_store_ref: ".jikuo/policies"

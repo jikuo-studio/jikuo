@@ -1,0 +1,17 @@
+schema_version: "jikuo.policy_decision.v0"
+decision_id: "POLICYDECISION-54fe02af41"
+proposal_ref: ".jikuo/policies/proposals/POLICYPROPOSAL-b8212af64f.yaml"
+policy_ref: "POLICY-jikuo-post-feature-action-chain-atom-registration"
+decision: "approve_write"
+target:
+  kind: "approved_policy"
+  ref: "POLICY-jikuo-post-feature-action-chain-atom-registration"
+effect: "append_policy POLICY-jikuo-post-feature-action-chain-atom-registration and update policy-store manifest active refs"
+non_effect: "does not execute policy actions, persist evidence, or promote gates"
+approval_phrase: "用户明确要求 atom 注册 policy 固化成激活的 policy，同时作为 template"
+created_at: "2026-06-02T14:56:43Z"
+source_plan_ref: "POLICYWRITEPLAN-81637579e9"
+source_plan_schema: "jikuo.policy_write_plan.v0"
+storage:
+  path: ".jikuo/policies/decisions/POLICYDECISION-54fe02af41.yaml"
+  policy_store_ref: ".jikuo/policies"

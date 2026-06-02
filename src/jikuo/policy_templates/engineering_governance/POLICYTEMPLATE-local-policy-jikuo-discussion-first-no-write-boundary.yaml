@@ -1,0 +1,48 @@
+schema_version: "jikuo.policy_template.v0"
+template_id: "POLICYTEMPLATE-local-policy-jikuo-discussion-first-no-write-boundary"
+namespace: "local"
+version: 1
+title: "Discussion-first no-write boundary"
+source:
+  type: "local_project_policy"
+  ref: "redacted://local_project_policy/policy-jikuo-discussion-first-no-write-boundary"
+  source_project_ref: "redacted"
+  source_policy_id: "POLICY-jikuo-discussion-first-no-write-boundary"
+  source_sha256: "6d672135739f427bd507793f9453a62ab9e88d46167cc1d4344fb551847615a1"
+  privacy:
+    local_path: "redacted"
+    project_identity: "redacted"
+    source_refs: "redacted"
+portability:
+  status: "portable"
+  detected_project_refs: []
+  warnings: []
+required_bindings: []
+template_policy:
+  schema_version: "jikuo.configurable_rule_policy.v0"
+  policy_id: "POLICY-jikuo-discussion-first-no-write-boundary"
+  version: 1
+  status: "active_report_only"
+  title: "Discussion-first no-write boundary"
+  scenario_package: "engineering_governance"
+  source_refs:
+    - type: "policy_template"
+      ref: "POLICYTEMPLATE-local-policy-jikuo-discussion-first-no-write-boundary"
+  triggers:
+    - trigger_id: "TRG-conversation-turn"
+      type: "task_lifecycle_event"
+      event: "conversation_turn"
+  conditions: []
+  required_actions:
+    - action_id: "ACT-discuss-without-file-changes-until-explicit-edit-request"
+      type: "discuss_without_file_changes_until_explicit_edit_request"
+  required_evidence:
+    - evidence_id: "EVD-discussion-no-write-boundary-evidence"
+      type: "discussion_no_write_boundary_evidence"
+      satisfies_action: "ACT-discuss-without-file-changes-until-explicit-edit-request"
+  enforcement:
+    phase: "report_only"
+    level: "review_required"
+  applies_to_work_profile:
+    - lifecycle_events: []
+      policy_scopes: ["discussion"]

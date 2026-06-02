@@ -1,0 +1,79 @@
+schema: "jikuo.policy_write_plan.v0"
+schema_version: "jikuo.policy_write_plan.v0"
+report_only: true
+plan_id: "POLICYWRITEPLAN-66587c0e35"
+operation: "append_policy"
+status: "review"
+proposal_ref: ".jikuo/policies/proposals/POLICYPROPOSAL-33812a0c2c.yaml"
+policy_ref: "POLICY-jikuo-discussion-first-no-write-boundary"
+project_root: "D:\\personal_project\\Jikuo"
+policy_store_status: "active"
+policy_store_root: "D:\\personal_project\\Jikuo\\.jikuo\\policies"
+preflight:
+  project_state_initialized: true
+  store_exists: true
+  target_collision: false
+  decision_record_collision: false
+  proposal_snapshot_collision: false
+  manifest_stale: false
+  approval_present: false
+write_set:
+  - path: ".jikuo/policies/approved/POLICY-jikuo-discussion-first-no-write-boundary.yaml"
+    effect: "create approved policy file"
+    operation: "create"
+  - path: ".jikuo/policies/decisions/POLICYDECISION-3f94e36c0e.yaml"
+    effect: "create policy decision record"
+    operation: "create"
+  - path: ".jikuo/policies/manifest.yaml"
+    effect: "create or update policy-store manifest active_policy_refs"
+    operation: "create_or_update"
+  - path: ".jikuo/policies/proposals/POLICYPROPOSAL-33812a0c2c.yaml"
+    effect: "create policy write proposal snapshot"
+    operation: "create"
+non_effects: ["does not create .jikuo/policies/", "does not write approved policy files", "does not update manifest.yaml", "does not execute policy actions", "does not create task-session evidence", "does not promote gates"]
+approval_required: true
+write_allowed_by_command: false
+writes_performed: false
+guarded_apply_available: false
+authoring_review:
+  mode: "scope_only"
+  scope_first: true
+  compatibility_trigger_event: "conversation_turn"
+  policy_scopes: ["discussion"]
+  lifecycle_events: []
+  hard_gated_by_lifecycle: false
+  warnings: []
+  summary: "scope-only policy plan; trigger_event is a compatibility anchor"
+proposed_policy:
+  schema_version: "jikuo.configurable_rule_policy.v0"
+  policy_id: "POLICY-jikuo-discussion-first-no-write-boundary"
+  version: 1
+  status: "active_report_only"
+  title: "Discussion-first no-write boundary"
+  scenario_package: "engineering_governance"
+  source_refs:
+    - type: "user_natural_language"
+      ref: "user_request_2026-06-02_discussion_first_no_write_policy_template"
+  triggers:
+    - trigger_id: "TRG-conversation-turn"
+      type: "task_lifecycle_event"
+      event: "conversation_turn"
+  conditions: []
+  required_actions:
+    - action_id: "ACT-discuss-without-file-changes-until-explicit-edit-request"
+      type: "discuss_without_file_changes_until_explicit_edit_request"
+  required_evidence:
+    - evidence_id: "EVD-discussion-no-write-boundary-evidence"
+      type: "discussion_no_write_boundary_evidence"
+      satisfies_action: "ACT-discuss-without-file-changes-until-explicit-edit-request"
+  enforcement:
+    phase: "report_only"
+    level: "review_required"
+  applies_to_work_profile:
+    - lifecycle_events: []
+      policy_scopes: ["discussion"]
+refusal_reasons: []
+warnings: []
+source_refs: ["pkg://jikuo/governance/jikuo_policy_store_configuration_flow.md", "pkg://jikuo/governance/jikuo_configurable_rule_trigger_policy.md", "pkg://jikuo/governance/jikuo_rule_action_evidence_model.md", "pkg://jikuo/governance/jikuo_policy_aware_agent_flow_contract.md"]
+status_reason: "policy write plan is ready for desktop review; no durable write was performed"
+next_actions: ["review the proposed policy, write targets, and non-effects in chat", "approve a future guarded policy writer only after the plan is correct"]

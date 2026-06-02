@@ -1,0 +1,27 @@
+schema_version: "jikuo.configurable_rule_policy.v0"
+policy_id: "POLICY-jikuo-post-feature-action-chain-atom-registration"
+version: 1
+status: "active_report_only"
+title: "Post-feature action chain and atom registration"
+scenario_package: "engineering_governance"
+source_refs:
+  - type: "user_natural_language"
+    ref: "user_request_2026-06-02_post_feature_action_chain_atom_registration_policy_template"
+triggers:
+  - trigger_id: "TRG-conversation-turn"
+    type: "task_lifecycle_event"
+    event: "conversation_turn"
+conditions: []
+required_actions:
+  - action_id: "ACT-restore-user-action-chain-and-register-feature-atoms"
+    type: "restore_user_action_chain_and_register_feature_atoms"
+required_evidence:
+  - evidence_id: "EVD-feature-atom-registration-evidence"
+    type: "feature_atom_registration_evidence"
+    satisfies_action: "ACT-restore-user-action-chain-and-register-feature-atoms"
+enforcement:
+  phase: "report_only"
+  level: "review_required"
+applies_to_work_profile:
+  - lifecycle_events: []
+    policy_scopes: ["editing"]

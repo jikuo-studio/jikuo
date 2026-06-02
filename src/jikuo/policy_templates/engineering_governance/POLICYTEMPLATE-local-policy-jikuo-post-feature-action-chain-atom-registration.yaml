@@ -1,0 +1,48 @@
+schema_version: "jikuo.policy_template.v0"
+template_id: "POLICYTEMPLATE-local-policy-jikuo-post-feature-action-chain-atom-registration"
+namespace: "local"
+version: 1
+title: "Post-feature action chain and atom registration"
+source:
+  type: "local_project_policy"
+  ref: "redacted://local_project_policy/policy-jikuo-post-feature-action-chain-atom-registration"
+  source_project_ref: "redacted"
+  source_policy_id: "POLICY-jikuo-post-feature-action-chain-atom-registration"
+  source_sha256: "8bd16276c20a11b2a05d59a38b4672e8ab980b3f19ffa6bff61896d2abb15330"
+  privacy:
+    local_path: "redacted"
+    project_identity: "redacted"
+    source_refs: "redacted"
+portability:
+  status: "portable"
+  detected_project_refs: []
+  warnings: []
+required_bindings: []
+template_policy:
+  schema_version: "jikuo.configurable_rule_policy.v0"
+  policy_id: "POLICY-jikuo-post-feature-action-chain-atom-registration"
+  version: 1
+  status: "active_report_only"
+  title: "Post-feature action chain and atom registration"
+  scenario_package: "engineering_governance"
+  source_refs:
+    - type: "policy_template"
+      ref: "POLICYTEMPLATE-local-policy-jikuo-post-feature-action-chain-atom-registration"
+  triggers:
+    - trigger_id: "TRG-conversation-turn"
+      type: "task_lifecycle_event"
+      event: "conversation_turn"
+  conditions: []
+  required_actions:
+    - action_id: "ACT-restore-user-action-chain-and-register-feature-atoms"
+      type: "restore_user_action_chain_and_register_feature_atoms"
+  required_evidence:
+    - evidence_id: "EVD-feature-atom-registration-evidence"
+      type: "feature_atom_registration_evidence"
+      satisfies_action: "ACT-restore-user-action-chain-and-register-feature-atoms"
+  enforcement:
+    phase: "report_only"
+    level: "review_required"
+  applies_to_work_profile:
+    - lifecycle_events: []
+      policy_scopes: ["editing"]
