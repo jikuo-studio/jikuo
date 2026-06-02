@@ -484,7 +484,7 @@ def eval_status_reason_for(
 ) -> str:
     if eval_status == POLICY_EVAL_STATUS_EVALUATED:
         return (
-            f"evaluated active policies against the lifecycle event; "
+            f"evaluated active policies against event surface and work profile; "
             f"triggered policies: {triggered_count}"
         )
     if store_status == "missing":
@@ -2512,6 +2512,56 @@ def trigger_matches_event(trigger: dict[str, Any], event: str) -> bool:
     )
 
 
+def work_profile_applicability_is_scope_first(
+    applicability: dict[str, Any] | None,
+) -> bool:
+    if not applicability:
+        return False
+    return bool(applicability.get("policy_scopes")) and not bool(
+        applicability.get("lifecycle_events")
+    )
+
+
+def policy_trigger_candidates(
+    *,
+    triggers: list[Any],
+    event: str,
+    work_profile_applicability: dict[str, Any] | None,
+) -> list[tuple[dict[str, Any], str]]:
+    exact: list[tuple[dict[str, Any], str]] = []
+    first_task_lifecycle_trigger: dict[str, Any] | None = None
+    for trigger in triggers:
+        if not isinstance(trigger, dict):
+            continue
+        if (
+            first_task_lifecycle_trigger is None
+            and trigger.get("type") == "task_lifecycle_event"
+        ):
+            first_task_lifecycle_trigger = trigger
+        if trigger_matches_event(trigger, event):
+            exact.append((trigger, "event_exact"))
+    if exact:
+        return exact
+    if (
+        first_task_lifecycle_trigger is not None
+        and work_profile_applicability_is_scope_first(work_profile_applicability)
+    ):
+        return [(first_task_lifecycle_trigger, "work_profile_scope")]
+    return []
+
+
+def trigger_reason_for(
+    *, trigger: dict[str, Any], event: str, match_mode: str
+) -> str:
+    if match_mode == "work_profile_scope":
+        declared_event = trigger.get("event") or "unspecified"
+        return (
+            f"work_profile scope matched during {event}; declared trigger event "
+            f"{declared_event} is an evaluation-surface anchor"
+        )
+    return f"task_lifecycle_event matched {event}"
+
+
 def normalize_path_for_match(value: str) -> str:
     return value.replace("\\", "/")
 
@@ -3162,16 +3212,19 @@ def evaluate_policy_triggers(
             warnings.append(f"policy triggers must be a list: {policy_ref.get('policy_id')}")
             continue
 
-        for trigger in triggers:
-            if not isinstance(trigger, dict):
-                continue
-            if not trigger_matches_event(trigger, event):
-                continue
-            policy_id = str(record.get("policy_id") or policy_ref.get("policy_id"))
+        policy_id = str(record.get("policy_id") or policy_ref.get("policy_id"))
+        work_profile_applicability = normalize_work_profile_applicability(
+            record.get("applies_to_work_profile")
+        )
+        trigger_candidates = policy_trigger_candidates(
+            triggers=triggers,
+            event=event,
+            work_profile_applicability=work_profile_applicability,
+        )
+
+        for trigger, trigger_match_mode in trigger_candidates:
             trigger_ref = trigger.get("trigger_id")
-            work_profile_applicability = normalize_work_profile_applicability(
-                record.get("applies_to_work_profile")
-            )
+            trigger_ref_text = trigger_ref if isinstance(trigger_ref, str) else None
             work_profile_match_report: dict[str, Any] | None = None
             if work_profile_applicability:
                 (
@@ -3179,7 +3232,7 @@ def evaluate_policy_triggers(
                     work_profile_match_report,
                 ) = evaluate_work_profile_applicability(
                     policy_ref=policy_id,
-                    trigger_ref=trigger_ref if isinstance(trigger_ref, str) else None,
+                    trigger_ref=trigger_ref_text,
                     applicability=work_profile_applicability,
                     work_profile_projection=effective_work_profile,
                 )
@@ -3208,7 +3261,7 @@ def evaluate_policy_triggers(
                 continue
             conditions_matched, reports = evaluate_policy_conditions(
                 policy_ref=policy_id,
-                trigger_ref=trigger_ref if isinstance(trigger_ref, str) else None,
+                trigger_ref=trigger_ref_text,
                 conditions=raw_conditions,
                 task_type=task_type,
                 jikuo_layer=jikuo_layer,
@@ -3224,7 +3277,14 @@ def evaluate_policy_triggers(
                 "version": record.get("version") or policy_ref.get("version"),
                 "source": "project_approved_policy",
                 "trigger_ref": trigger_ref,
-                "trigger_reason": f"task_lifecycle_event matched {event}",
+                "trigger_reason": trigger_reason_for(
+                    trigger=trigger,
+                    event=event,
+                    match_mode=trigger_match_mode,
+                ),
+                "trigger_match_mode": trigger_match_mode,
+                "declared_trigger_event": trigger.get("event"),
+                "evaluation_event": event,
                 "condition_status": "matched",
                 "status": "triggered",
                 "confidence": "tool_verified",
@@ -3238,7 +3298,7 @@ def evaluate_policy_triggers(
             if isinstance(actions, list):
                 projected_actions = project_required_actions(
                     policy_ref=policy_id,
-                    trigger_ref=trigger_ref if isinstance(trigger_ref, str) else None,
+                    trigger_ref=trigger_ref_text,
                     actions=actions,
                     event=event,
                 )
@@ -3251,7 +3311,7 @@ def evaluate_policy_triggers(
                 evidence_requirements.extend(
                     project_evidence_requirements(
                         policy_ref=policy_id,
-                        trigger_ref=trigger_ref if isinstance(trigger_ref, str) else None,
+                        trigger_ref=trigger_ref_text,
                         requirements=raw_requirements,
                         actions_by_ref={
                             str(action["action_ref"]): action

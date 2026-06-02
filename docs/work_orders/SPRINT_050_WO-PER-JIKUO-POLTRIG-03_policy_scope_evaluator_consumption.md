@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-POLTRIG-03: Policy Scope Evaluator Consumption
 
-> **Status**: Implemented and verified; evaluator consumes lifecycle_events and policy_scopes only.
+> **Status**: Implemented and verified; evaluator consumes lifecycle_events and policy_scopes only. Later compatibility slice `POLTRIG-04` extends scope-only policy triggering so exact event triggers no longer gate intent-driven scope-only policies.
 > **Date**: 2026-05-17
 > **JIKUO layer**: policy governance / trigger routing.
 > **Business meaning**: JIKUO policy triggering must stop relying on under-specified task context that can leave active policies untriggered for real governed work. The evaluator should eventually consume declared work-profile scope only after the dead-zone evidence, report-only projections, and task-start boundaries are mounted together.
@@ -64,7 +64,8 @@ Accepted POLTRIG-03 evaluator boundary:
 
 - `work_profile.lifecycle_event` and `work_profile.policy_scopes` become hard
   inputs when a policy declares `applies_to_work_profile`.
-- Exact event triggers still gate the policy first.
+- Exact event triggers still gate the policy first in this slice. This boundary
+  was later narrowed by `POLTRIG-04` for scope-only intent-driven policies.
 - Exact conditions remain additional filters after work-profile applicability
   matches.
 - Missing `applies_to_work_profile` remains a legacy-compatible policy path.

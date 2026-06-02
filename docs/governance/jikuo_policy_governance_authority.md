@@ -20,6 +20,7 @@ It complements, but does not replace:
 - `docs/insights/INSIGHT-2026-05-17-work-unit-task-association-boundary.md`: deferred data-architecture insight for future task-to-runtime execution association.
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-20_policy_dead_zone_detection.md`: policy dead-zone visibility work.
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-POLTRIG-03_policy_scope_evaluator_consumption.md`: registered evaluator-consumption task with dead-zone evidence and stop boundary.
+- `docs/work_orders/SPRINT_050_WO-PER-JIKUO-POLTRIG-04_scope_first_policy_triggering.md`: compatibility slice that makes scope-only policies trigger from work-profile scope instead of brittle lifecycle-node invocation.
 
 When these documents appear to conflict, use this document for policy-governance
 direction and use the lower-level contracts for current implemented storage,
@@ -489,7 +490,8 @@ The field-specific target is:
   evidence, risks, assumptions, card links, or follow-up decisions.
 
 This proof ladder keeps the architecture light. The evaluator consumes the
-implemented trigger event and `work_profile.policy_scopes`; a declared
+current evaluation event as a runtime surface and `work_profile.policy_scopes`
+as the business applicability signal. A declared
 `work_profile.lifecycle_event` is consumed only when the policy author declares
 `lifecycle_events`. Policy authors express the richer contract through required
 actions, required evidence, and runtime-card explanation.
@@ -544,11 +546,15 @@ belong to a lifecycle node;
 conditions and evidence decide whether a specific policy is satisfied.
 ```
 
-Compatibility warning:
+Current compatibility behavior:
 
-- In current code, a declared `lifecycle_events` value can still gate policy
-  applicability.
-- This is useful for existing task-session, runtime-card, and completion-review
+- Exact event matches still evaluate first, preserving legacy and checkpoint
+  policies.
+- Scope-only policies (`policy_scopes` declared and `lifecycle_events` empty)
+  can now match from the current work profile even when the policy's declared
+  trigger event is only a compatibility anchor.
+- A declared `lifecycle_events` value still gates policy applicability. This is
+  useful for existing task-session, runtime-card, and completion-review
   policies, but it is too strong for intent-driven reasoning policies.
 - Intent-driven reasoning policies should use `conversation_turn` plus
   scope-only applicability unless a lifecycle filter is genuinely part of the
@@ -740,7 +746,8 @@ the guarded policy evolution path.
 
 Current JIKUO has:
 
-- exact lifecycle event matching;
+- exact lifecycle event matching for legacy and checkpoint policies;
+- scope-first matching for scope-only intent-driven policies;
 - report-only condition evaluation;
 - policy runtime status cards;
 - conversation-turn router follow-up obligations;
@@ -750,8 +757,8 @@ Current JIKUO has:
 - lightweight `task_start` processing projection that is separate from guarded
   `task_session_start` creation;
 - policy `applies_to_work_profile` declarations consumed by the evaluator for
-  `work_profile.lifecycle_event` and `work_profile.policy_scopes`, with exact
-  conditions preserved as additional filters;
+  `work_profile.policy_scopes` and, when declared, `work_profile.lifecycle_event`,
+  with exact conditions preserved as additional filters;
 - runtime cards that show work-profile inputs and scope-match reports for
   triggered-policy decisions;
 - two formerly held `DOCREG-01` policy candidates activated as
@@ -824,12 +831,19 @@ Recommended future slices:
    `work_profile.policy_scopes`. `intent_class`, `operation_class`, and
    `output_class` remain explanatory projection fields until a later reviewed
    slice.
-5. `LIFECYCLE-01`: current priority. Define and implement the record-only
+5. `POLTRIG-04`: make scope-only intent-driven policies scope-first. Registered
+   work order:
+   `docs/work_orders/SPRINT_050_WO-PER-JIKUO-POLTRIG-04_scope_first_policy_triggering.md`;
+   current implementation keeps exact event matches for legacy / checkpoint
+   policies, but lets policies with `policy_scopes` and empty
+   `lifecycle_events` match from `work_profile.policy_scopes` even when the
+   current evaluation surface is a different JIKUO event.
+6. `LIFECYCLE-01`: current priority. Define and implement the record-only
    observed lifecycle projection so that when JIKUO is pulled up, lifecycle
    nodes that actually produced cards stay visible from the latest card. This is
    about lifecycle observability; it is not a lifecycle runner and not a promise
    that GUI clients can force JIKUO invocation before hooks are proven.
-6. `POLICY-MGMT-01`: keep the policy-management MVP lightweight. Current status:
+7. `POLICY-MGMT-01`: keep the policy-management MVP lightweight. Current status:
    two user-authored candidates are active report-only policies; the closeout
    design now defines policy source categories, official distribution flow, and
    active-policy maintenance outcomes. No-write distribution review is available
@@ -842,11 +856,11 @@ Recommended future slices:
    through `python -B -m jikuo policy-management status` and
    `jikuo.get_policy_management_status` for future GUI/global configuration
    surfaces.
-7. `POLTRIG-04`: update MCP and host adapter surfaces to require or strongly
+8. `POLTRIG-05`: update MCP and host adapter surfaces to require or strongly
    encourage agent hints.
-8. `POLTRIG-05`: surface hint/signal/fallback basis in runtime cards and
+9. `POLTRIG-06`: surface hint/signal/fallback basis in runtime cards and
    structured execution events.
-9. `POLCAT-01`: keep self-bootstrap policy promotion hard-gated so official
+10. `POLCAT-01`: keep self-bootstrap policy promotion hard-gated so official
    starter packs are selected, reviewed, and opt-in. This is a distribution
    boundary dependency of `POLICY-MGMT-01`, not a substitute for candidate
    promotion and held-candidate cleanup.

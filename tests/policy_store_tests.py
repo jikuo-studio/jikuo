@@ -473,7 +473,7 @@ class PolicyStoreStatusTests(unittest.TestCase):
                 triggered["work_profile_match"]["matched_refs"],
             )
 
-    def test_scope_only_work_profile_applicability_does_not_require_lifecycle_match(self):
+    def test_scope_only_work_profile_applicability_does_not_require_event_or_lifecycle_match(self):
         with tempfile.TemporaryDirectory() as tmp:
             project_root = Path(tmp) / "project"
             shutil.copytree(ACTIVE_PROJECT, project_root)
@@ -494,14 +494,14 @@ class PolicyStoreStatusTests(unittest.TestCase):
                     str(TOOL),
                     "evaluate",
                     "--event",
-                    "conversation_turn",
+                    "task_start",
                     "--project-root",
                     str(project_root),
                     "--work-profile-json",
                     json.dumps(
                         {
                             "schema": "jikuo.work_profile.v0",
-                            "lifecycle_event": "conversation_turn",
+                            "lifecycle_event": "task_start",
                             "policy_scopes": ["editing"],
                         }
                     ),
@@ -520,6 +520,10 @@ class PolicyStoreStatusTests(unittest.TestCase):
             self.assertEqual(len(report["triggered_policies"]), 1)
             triggered = report["triggered_policies"][0]
             self.assertEqual(triggered["policy_ref"], "POLICY-three-phase-audit")
+            self.assertEqual(triggered["trigger_match_mode"], "work_profile_scope")
+            self.assertEqual(triggered["declared_trigger_event"], "conversation_turn")
+            self.assertEqual(triggered["evaluation_event"], "task_start")
+            self.assertIn("work_profile scope matched", triggered["trigger_reason"])
             self.assertEqual(
                 triggered["work_profile_match"]["expected"],
                 {"lifecycle_events": [], "policy_scopes": ["editing"]},

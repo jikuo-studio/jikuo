@@ -1017,7 +1017,7 @@ entries:
     title: "SPRINT_050_WO-PER-JIKUO-POLTRIG-03: Policy Scope Evaluator Consumption"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-POLTRIG-03_policy_scope_evaluator_consumption.md"
     sprint: "SPRINT_050"
-    status: "Implemented and verified; evaluator consumes lifecycle_events and policy_scopes only"
+    status: "Implemented and verified; evaluator consumes lifecycle_events and policy_scopes only; POLTRIG-04 later adds scope-first matching for scope-only intent-driven policies"
     impact_tags:
       - "policy_governance"
       - "trigger_routing"
@@ -1037,6 +1037,32 @@ entries:
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-POLTRIG-03_policy_scope_evaluator_consumption.md"
     stop_boundaries:
       - "Do not make intent_classes, operation_classes, or output_classes hard evaluator gates without a new reviewed slice."
+  - id: "JIKUO-POLTRIG-04"
+    title: "SPRINT_050_WO-PER-JIKUO-POLTRIG-04: Scope-First Policy Triggering"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-POLTRIG-04_scope_first_policy_triggering.md"
+    sprint: "SPRINT_050"
+    status: "Implemented and verified as compatibility slice; scope-only policies can match by work_profile.policy_scopes across event surfaces"
+    impact_tags:
+      - "policy_governance"
+      - "trigger_routing"
+      - "scope_first_matching"
+    implements_capabilities:
+      - "CAP-POLICY-TRIGGER-EVALUATE-01"
+      - "CAP-POLICY-CONDITION-EVALUATOR-01"
+      - "CAP-POLICY-WORK-PROFILE-APPLICABILITY-01"
+      - "CAP-POLICY-SCOPE-FIRST-TRIGGERING-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets:
+      - "MOUNT-POLICY-TRIGGER-DEAD-ZONE-REPAIR"
+    originating_evidence_refs:
+      - "docs/insights/INSIGHT-2026-05-21-from-lifecycle-to-action-grammar.md"
+      - "docs/insights/INSIGHT-2026-05-21-lifecycle-sequencing-owner-gap.md"
+    authority_refs:
+      - "docs/governance/jikuo_policy_governance_authority.md"
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-POLTRIG-04_scope_first_policy_triggering.md"
+    stop_boundaries:
+      - "Do not make intent_class, operation_class, output_class, requested_outcome, execution_boundary, or response_contract hard evaluator inputs in this slice."
+      - "Do not migrate all active policies automatically; checkpoint policies may still intentionally declare lifecycle_events."
   - id: "JIKUO-PRD-01"
     title: "SPRINT_050_WO-PER-JIKUO-PRD-01: Product Definition"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-PRD-01_product_definition.md"

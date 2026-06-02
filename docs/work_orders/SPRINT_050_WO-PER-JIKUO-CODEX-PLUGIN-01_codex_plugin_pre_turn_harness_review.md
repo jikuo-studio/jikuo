@@ -541,9 +541,10 @@ implemented, the Codex GUI path should behave as one governed turn pipeline:
 6. JIKUO builds the final work profile by merging explicit lifecycle context,
    host semantic intent, intent slices, negative constraints, deterministic
    path / keyword / tool signals, activation settings, and registry context.
-7. JIKUO policy distribution uses only the final lifecycle event and aggregate
-   policy scopes. Hook-supplied intent is evidence for the final classifier, not
-   direct policy authority.
+7. JIKUO policy distribution uses aggregate policy scopes plus optional
+   declared lifecycle filters. Under `POLTRIG-04`, scope-only policies can
+   match across event surfaces; hook-supplied intent remains evidence for the
+   final classifier, not direct policy authority.
 8. JIKUO writes runtime visibility: latest card, state summary, history card,
    lifecycle card links, semantic-intent status, final work profile, triggered
    policies, missing evidence, and required follow-up tools.

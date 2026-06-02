@@ -28,6 +28,8 @@ entries:
     status: "draft"
     documents:
       - path: "docs/governance/jikuo_policy_governance_authority.md"
+      - path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-POLTRIG-03_policy_scope_evaluator_consumption.md"
+      - path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-POLTRIG-04_scope_first_policy_triggering.md"
       - path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-20_policy_dead_zone_detection.md"
       - path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-LIVE-21_governed_slice_task_session_resolution.md"
       - path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-DOCREG-01_layered_document_registry.md"

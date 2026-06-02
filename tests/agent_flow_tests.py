@@ -1141,6 +1141,67 @@ class AgentFlowProposalTests(unittest.TestCase):
             self.assertIn("Semantic intent status: `provided`", discussion["chat_ready_markdown"])
             self.assertIn("Semantic intent status: `provided`", editing["chat_ready_markdown"])
 
+    def test_scope_only_policy_distribution_is_not_blocked_by_task_start_event(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            create_agent_flow_ready_project(project_root)
+            write_semantic_scope_distribution_policy_store(project_root)
+            semantic_intent = {
+                "schema": "jikuo.host_semantic_intent.v0",
+                "provider": "host_ai",
+                "confidence": "high",
+                "work_profile": {
+                    "intent_class": "implementation_request",
+                    "operation_class": "write_file",
+                    "output_class": "repository_change",
+                    "policy_scopes": ["editing"],
+                },
+                "requested_outcome": "route editing policy from task start surface",
+                "execution_boundary": "no durable write in test",
+                "response_contract": ["show which policy matched"],
+            }
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "propose",
+                    "--event",
+                    "task_start",
+                    "--task-title",
+                    "Apply scoped implementation update",
+                    "--host-semantic-intent-json",
+                    json.dumps(semantic_intent),
+                    "--project-root",
+                    str(project_root),
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            proposal = json.loads(completed.stdout)
+            self.assertEqual(proposal["work_profile"]["policy_scopes"], ["editing"])
+            self.assertEqual(
+                [policy["policy_ref"] for policy in proposal["triggered_policies"]],
+                ["POLICY-jikuo-data-model-drift-alarm"],
+            )
+            triggered = proposal["triggered_policies"][0]
+            self.assertEqual(triggered["trigger_match_mode"], "work_profile_scope")
+            self.assertEqual(triggered["declared_trigger_event"], "conversation_turn")
+            self.assertEqual(triggered["evaluation_event"], "task_start")
+            self.assertIn("work_profile scope matched", triggered["trigger_reason"])
+            self.assertIn(
+                "work_profile scope matched during task_start",
+                proposal["chat_ready_markdown"],
+            )
+
     def test_work_profile_does_not_treat_no_write_as_editing(self):
         completed = subprocess.run(
             [

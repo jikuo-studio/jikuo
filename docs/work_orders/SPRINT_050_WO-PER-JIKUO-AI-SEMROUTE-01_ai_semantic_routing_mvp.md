@@ -196,8 +196,9 @@ MVP design acceptance requires:
   raw prompts;
 - `policy_scopes` remain `discussion`, `editing`, and `progress_summary`;
 - multi-intent turns use ordered `intent_slices`;
-- evaluator consumption stays limited to final lifecycle event, aggregate
-  scopes, and existing exact conditions;
+- evaluator consumption stays limited to aggregate scopes, optional declared
+  lifecycle filters, and existing exact conditions; `POLTRIG-04` lets
+  scope-only policies match across event surfaces;
 - future wrapper / plugin work reuses the same `host_semantic_intent` contract.
 
 ## 11. Semantic Intent Evidence Gate

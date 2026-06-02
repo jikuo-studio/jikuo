@@ -198,9 +198,7 @@ document_roles:
 main_document_mounts:
   canonical_path_root: "."
   path_policy: "standalone_repo_paths_only"
-  active_mount_authority:
-    - ".jikuo/project_context.yaml"
-    - "docs/governance/jikuo_execution_mounts.md"
+  active_mount_authority: [".jikuo/project_context.yaml", "docs/governance/jikuo_execution_mounts.md"]
   checked_before_slice_completion:
     - path: "docs/registry/registry_index.yaml"
       update_required_when: "registry shard authority, projection metadata, or impact-tag routing changes"
