@@ -224,6 +224,56 @@ INDEX_HTML = """<!doctype html>
       padding-top: 10px;
       border-top: 1px solid var(--line);
     }
+    .rules-overview {
+      display: grid;
+      gap: 12px;
+      margin: 12px 0 16px;
+    }
+    .rules-groups {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .rules-group {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--panel);
+      padding: 10px;
+      min-width: 0;
+    }
+    .rules-group h3 {
+      margin: 0 0 3px;
+      font-size: 14px;
+    }
+    .rules-group .subhead {
+      margin: 0 0 8px;
+    }
+    .compact-list {
+      display: grid;
+      gap: 6px;
+    }
+    .compact-item {
+      min-width: 0;
+      padding: 7px 0;
+      border-top: 1px solid var(--line);
+    }
+    .compact-item:first-child {
+      border-top: 0;
+      padding-top: 0;
+    }
+    .compact-item strong {
+      display: block;
+      overflow-wrap: anywhere;
+      font-size: 13px;
+    }
+    .compact-item span {
+      color: var(--muted);
+      display: block;
+      font-size: 12px;
+      line-height: 1.4;
+      margin-top: 2px;
+      overflow-wrap: anywhere;
+    }
     .file-toolbar {
       display: grid;
       grid-template-columns: minmax(200px, 1fr) auto;
@@ -345,6 +395,7 @@ INDEX_HTML = """<!doctype html>
       main { padding: 18px 16px 32px; }
       .row { grid-template-columns: 1fr; }
       .split { grid-template-columns: 1fr; }
+      .rules-groups { grid-template-columns: 1fr; }
       .form-grid, .plan-rule-row, .file-toolbar { grid-template-columns: 1fr; }
     }
   </style>
@@ -363,16 +414,25 @@ INDEX_HTML = """<!doctype html>
       </div>
       <p class="subhead" id="document-rules-description"></p>
       <div class="grid" id="document-mounts-metrics"></div>
-      <div class="split">
-        <div>
-          <p class="subhead" id="completion-checks-label">Completion checks</p>
-          <div class="list" id="document-mounts-completion"></div>
-        </div>
-        <div>
-          <p class="subhead" id="editable-configuration-label">Editable configuration</p>
-          <div class="list" id="document-mounts-editable-sources"></div>
-          <p class="subhead" id="governance-guidance-label" style="margin-top: 12px;">Governance guidance</p>
-          <div class="list" id="document-mounts-guidance-sources"></div>
+      <div class="rules-overview" aria-labelledby="document-rules-overview-title">
+        <h3 id="document-rules-overview-title">Current Document Rules</h3>
+        <p class="subhead">Each column is one Document Rules purpose. The rows inside that column are the documents currently configured for that purpose.</p>
+        <div class="rules-groups">
+          <div class="rules-group">
+            <h3>Context documents</h3>
+            <p class="subhead">Used before or during work as project context. Source: document roles.</p>
+            <div class="compact-list" id="document-rules-context-overview"></div>
+          </div>
+          <div class="rules-group">
+            <h3>Completion checks</h3>
+            <p class="subhead">Checked before claiming a governed slice is complete. Source: completion-check rules.</p>
+            <div class="compact-list" id="document-rules-completion-overview"></div>
+          </div>
+          <div class="rules-group">
+            <h3>Governance references</h3>
+            <p class="subhead">Explain boundaries and editable configuration. Source: rule-source references.</p>
+            <div class="compact-list" id="document-rules-guidance-overview"></div>
+          </div>
         </div>
       </div>
       <div class="plan-tool" aria-labelledby="document-rules-plan-title">
@@ -407,7 +467,7 @@ INDEX_HTML = """<!doctype html>
             <button id="document-rules-preview-button" type="submit">Preview plan</button>
           </div>
           <div class="file-picker" aria-labelledby="project-files-title">
-            <h3 id="project-files-title">Available project files</h3>
+            <h3 id="project-files-title">Add files to Document Rules</h3>
             <p class="subhead">Candidate local files. This is not the current mount set; each row shows current Document Rules membership.</p>
             <div class="file-toolbar">
               <label>
@@ -464,6 +524,18 @@ INDEX_HTML = """<!doctype html>
       return item;
     };
     const emptyRow = (message) => row("No issues", message, "available");
+    const compactItem = (title, detail) => {
+      const item = document.createElement("div");
+      item.className = "compact-item";
+      item.innerHTML = `<strong></strong><span></span>`;
+      item.querySelector("strong").textContent = title;
+      item.querySelector("span").textContent = detail || "";
+      return item;
+    };
+    const overflowNote = (count, shown, label) => {
+      const hidden = Math.max(0, count - shown);
+      return hidden ? compactItem(`+ ${hidden} more`, `${label} are configured but hidden in this preview.`) : null;
+    };
     const termsById = (items) => Object.fromEntries((items || []).map((item) => [item.term_id, item]));
     const termLabel = (terms, id, fallback) => (terms[id] && terms[id].user_label) || fallback;
     const termDescription = (terms, id, fallback) => (terms[id] && terms[id].user_description) || fallback;
@@ -689,9 +761,6 @@ INDEX_HTML = """<!doctype html>
         "document_rules",
         "Which project documents JIKUO should use as context, checks, and governance references."
       );
-      document.getElementById("completion-checks-label").textContent = termLabel(terms, "completion_checks", "Completion checks");
-      document.getElementById("editable-configuration-label").textContent = termLabel(terms, "editable_configuration", "Editable configuration");
-      document.getElementById("governance-guidance-label").textContent = termLabel(terms, "governance_guidance", "Governance guidance");
       const status = document.getElementById("document-mounts-status");
       status.className = statusClass(mounts.status || "unavailable");
       status.textContent = mounts.status || "unavailable";
@@ -702,31 +771,25 @@ INDEX_HTML = """<!doctype html>
         metric(mounts.missing_required_role_count || 0, "Missing required roles"),
         metric(mounts.mount_set_count || 0, "Rule sets")
       );
-      const completion = document.getElementById("document-mounts-completion");
-      const completionDocs = (mounts.checked_before_slice_completion || []).slice(0, 8);
-      completion.replaceChildren(...(completionDocs.length ? completionDocs.map((item) =>
-        row(item.path || "unbound", item.update_required_when || "", item.status || "available")
-      ) : [emptyRow("No completion-check documents are configured.")]));
-      const actions = data.available_actions || [];
-      const planAction = actions.find((item) => item.action_id === "studio.document_mounts.plan_update") || {};
-      const editableSources = document.getElementById("document-mounts-editable-sources");
-      const editableRows = (mounts.editable_configuration_sources || []).map((item) =>
-        row(item.path || "unbound", `${item.user_description || ""} ${termLabel(terms, "edit_status", "How changes are applied")}: ${planAction.disabled_reason || "preview now, guarded apply later"}`, planAction.status || "available")
+      const contextOverview = document.getElementById("document-rules-context-overview");
+      const roles = mounts.roles || [];
+      const contextRows = roles.slice(0, 6).map((item) =>
+        compactItem(item.path || "unbound", `role: ${item.role || "unlabeled"}${item.note ? ` / ${item.note}` : ""}`)
       );
-      editableSources.replaceChildren(...(editableRows.length ? editableRows : [
-        row("No editable configuration source", "Document Rules has no structured configuration target.", "unavailable")
-      ]));
-      const guidanceSources = document.getElementById("document-mounts-guidance-sources");
-      const guidanceRows = (mounts.governance_guidance_sources || []).map((item) =>
-        row(item.path || "unbound", item.user_description || "Read as context; not edited by Document Rules.", "available")
+      const contextOverflow = overflowNote(roles.length, contextRows.length, "context documents");
+      contextOverview.replaceChildren(...(contextRows.length ? contextRows : [compactItem("No context documents", "No document roles are configured.")]), ...(contextOverflow ? [contextOverflow] : []));
+      const completionOverview = document.getElementById("document-rules-completion-overview");
+      const completionOverviewDocs = mounts.checked_before_slice_completion || [];
+      const completionRows = completionOverviewDocs.slice(0, 6).map((item) =>
+        compactItem(item.path || "unbound", item.update_required_when || "review before declaring the slice complete")
       );
-      const missing = mounts.missing_required_roles || [];
-      guidanceSources.replaceChildren(
-        ...(guidanceRows.length ? guidanceRows : [emptyRow("No governance guidance source is configured.")]),
-        ...(missing.length ? missing.slice(0, 4).map((item) =>
-          row(item.role || "missing role", item.path || "unbound", "warning")
-        ) : [])
+      const completionOverflow = overflowNote(completionOverviewDocs.length, completionRows.length, "completion checks");
+      completionOverview.replaceChildren(...(completionRows.length ? completionRows : [compactItem("No completion checks", "No completion-check documents are configured.")]), ...(completionOverflow ? [completionOverflow] : []));
+      const guidanceOverview = document.getElementById("document-rules-guidance-overview");
+      const guidanceOverviewRows = (mounts.document_rule_sources || []).map((item) =>
+        compactItem(item.path || "unbound", `${item.user_label || item.source_kind || "source"} / ${item.user_description || ""}`)
       );
+      guidanceOverview.replaceChildren(...(guidanceOverviewRows.length ? guidanceOverviewRows : [compactItem("No governance references", "No rule sources are configured.")]));
     };
     const render = (data) => {
       const global = document.getElementById("global-status");
