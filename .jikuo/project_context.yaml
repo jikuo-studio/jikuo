@@ -179,6 +179,10 @@ document_roles:
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md"
     required: false
     note: "Global JIKUO console / Studio design anchor: view-model first, action registry second, thin local UI third; not a policy-only frontend."
+  mvp_work_receipt_configuration_work_order:
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-MVP-01_work_receipt_and_configuration_mvp.md"
+    required: true
+    note: "Current MVP sequence for shipping a usable configuration CRUD surface plus an independently checkable AI work receipt viewer. Mount with MOUNT-MVP-WORK-RECEIPT-CONFIGURATION before MVP implementation."
   structured_execution_event_ledger_work_order:
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-DATA-01_structured_execution_event_ledger_and_analytics_contract.md"
     required: true

@@ -1253,6 +1253,21 @@ entries:
     capability_extraction_status: "extracted_from_work_order_body"
     required_mount_sets:
       - "MOUNT-STUDIO-01"
+  - id: "JIKUO-MVP-01"
+    title: "SPRINT_050_WO-PER-JIKUO-MVP-01: Work Receipt And Configuration MVP"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-MVP-01_work_receipt_and_configuration_mvp.md"
+    sprint: "SPRINT_050"
+    status: "Planned MVP work-order sequence for a usable configuration CRUD surface plus independently checkable AI work receipt viewer"
+    impact_tags:
+      - "mvp"
+      - "studio"
+      - "configuration"
+      - "runtime_visibility"
+      - "artifact_assurance"
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets:
+      - "MOUNT-MVP-WORK-RECEIPT-CONFIGURATION"
   - id: "JIKUO-UX-00"
     title: "SPRINT_050_WO-PER-JIKUO-UX-00: User Scenarios And Atomic Action Map"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-UX-00_user_scenarios_and_atomic_action_map.md"
