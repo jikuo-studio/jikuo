@@ -91,6 +91,7 @@ Routine completion receipt for workspace writes:
 
 - If the agent performs workspace writes in a turn, including file creation, edits, deletion, generated outputs, git staging, commits, or guarded project writes, run `python -B -m jikuo.agent_flow propose --event completion_review --project-root "<absolute project root>" --format json` after verification and before the final response, then surface the returned card Markdown.
 - This is a host-AI instruction obligation and a practical MVP receipt path. It is not proof of a mounted post-turn hook or a full lifecycle runner.
+- On Windows PowerShell, use `python --% -B -m jikuo.agent_flow propose ... --host-semantic-intent-json "{\"schema\":\"jikuo.host_semantic_intent.v0\",\"status\":\"provided\"}"` when passing inline JSON so PowerShell does not strip JSON quotes.
 - Do not ask the ordinary user to run this routine receipt. If completion review cannot run or fails, say that the completion receipt is missing or failed.
 
 ---

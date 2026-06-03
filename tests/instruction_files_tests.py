@@ -83,6 +83,8 @@ class InstructionFilesTests(unittest.TestCase):
             self.assertIn("semantic intent coverage as degraded or missing", agents_text)
             self.assertIn("--event completion_review", agents_text)
             self.assertIn("after verification and before the final response", agents_text)
+            self.assertIn("python --% -B -m jikuo.agent_flow propose", agents_text)
+            self.assertIn("does not strip JSON quotes", agents_text)
             self.assertIn("completion receipt is missing or failed", agents_text)
             self.assertIn("Activation settings:", agents_text)
             self.assertIn("Ask the user to choose `semantic` mode or `mounted` mode", agents_text)
@@ -111,6 +113,7 @@ class InstructionFilesTests(unittest.TestCase):
             self.assertIn("Configured trigger mode for this client: `mounted`", block)
             self.assertIn("host_semantic_intent", block)
             self.assertIn("--event completion_review", block)
+            self.assertIn("python --% -B -m jikuo.agent_flow propose", block)
             self.assertIn("not strictly enforceable until a pre-turn adapter is installed", block)
 
     def test_install_all_detects_existing_client_instruction_files(self):

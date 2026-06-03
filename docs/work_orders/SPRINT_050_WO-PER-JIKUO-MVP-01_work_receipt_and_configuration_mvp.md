@@ -361,6 +361,7 @@ Deliverables:
   completion receipt obligation into `JIKUO.md` and synced client instruction
   files;
 - CLI command example;
+- PowerShell stop-parsing example for inline `--host-semantic-intent-json`;
 - MCP/tool instruction wording for host AI;
 - optional Studio action descriptor for "Run completion review" if a no-write
   or guarded boundary already exists;
@@ -376,6 +377,8 @@ Acceptance:
   <project-root> --format json` before final response;
 - if completion review cannot run, the host AI must report the missing or failed
   receipt instead of implying a receipt exists;
+- Windows PowerShell users can pass compact host semantic intent JSON without
+  quote loss by using `python --% -B -m jikuo.agent_flow propose ...`;
 - a tester can produce a receipt after an AI task without relying on a hidden
   automatic lifecycle runner;
 - docs state that full lifecycle automation is deferred.

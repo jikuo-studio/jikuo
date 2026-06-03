@@ -92,6 +92,7 @@ def common_instruction_lines() -> list[str]:
         "For governed turns, after reading and understanding the user request and before governed action, tool use, workspace writes, or final response, call the appropriate JIKUO router or proposal surface with compact `host_semantic_intent` using status=provided, provider=host_ai, policy_scopes limited to discussion/editing/progress_summary, requested_outcome, execution_boundary, response_contract, and a short user_expression.",
         "If compact semantic intent cannot be returned in GUI subscription mode, report semantic intent coverage as degraded or missing instead of implying strict semantic gating.",
         "If you perform workspace writes in a turn, including file creation, edits, deletion, generated outputs, git staging, commits, or guarded project writes, run `python -B -m jikuo.agent_flow propose --event completion_review --project-root \"<absolute project root>\" --format json` after verification and before the final response.",
+        "On Windows PowerShell, use `python --% -B -m jikuo.agent_flow propose ... --host-semantic-intent-json \"{\\\"schema\\\":\\\"jikuo.host_semantic_intent.v0\\\",\\\"status\\\":\\\"provided\\\"}\"` when passing inline JSON so PowerShell does not strip JSON quotes.",
         "Do not ask the user to run that routine completion receipt; if it cannot run or fails, report that the completion receipt is missing or failed.",
         "Do not treat SDK hooks, client plugins, or chat instructions as replacements for local JIKUO evidence.",
     ]

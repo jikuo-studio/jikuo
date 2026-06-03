@@ -1232,6 +1232,11 @@ INDEX_HTML = """<!doctype html>
       const plannedWrites = artifactList(activeWrite.planned_write_set);
       const declaredWrites = firstArtifactList(activeWrite.declared_write_set, activeWrite.planned_write_set);
       const actualWrites = artifactList(activeWrite.actual_write_set);
+      const actualWriteSource = runtimeProjection.actual_write_source || "";
+      const actualWriteGroupTitle = actualWriteSource === "git_status_observed" ? "Git-observed actual writes" : "Actual writes";
+      const actualWriteFallback = actualWriteSource === "git_status_observed"
+        ? "No git-observed actual write evidence was supplied for this round."
+        : "No actual write evidence was supplied for this round.";
       const companionTriggers = artifactList(companionProjection.triggers);
       const companionIgnoredItems = artifactList(companionProjection.ignored_items);
       const readGaps = firstArtifactList(activeGap.read_gaps, activeRead.required_not_read);
@@ -1315,7 +1320,7 @@ INDEX_HTML = """<!doctype html>
               traceGroup("Runtime source", "Projection and observation provenance", [
                 compactItem("Runtime projection", `${runtimeProjection.event || selectedRound.lifecycle_event || "latest task"} / ${runtimeProjection.persistence || selectedRound.source_kind || "runtime summary"}`),
                 compactItem("History card", selectedRound.history_ref || "history ref not supplied"),
-                compactItem("Actual write source", runtimeProjection.actual_write_source || "source not supplied"),
+                compactItem("Actual write source", actualWriteSource || "source not supplied"),
                 compactItem("Git observation", runtimeProjection.git_write_observation
                   ? `${runtimeProjection.git_write_observation.status || "unknown"} / ${numberValue(runtimeProjection.git_write_observation.observed_actual_write_count)} observed / ${runtimeProjection.git_write_observation.attribution_status || "attribution not supplied"}`
                   : "not supplied for this round"),
@@ -1333,8 +1338,8 @@ INDEX_HTML = """<!doctype html>
                 compactItem("Declared actual writes", detailCount(runtimeProjection.declared_actual_write_count, "items")),
                 ...artifactRows(declaredWrites, "No declared write evidence was supplied for this round.", "declared write", declaredWriteCount, "declared writes"),
               ]),
-              traceGroup("Actual writes", detailCount(actualWriteCount, "documents"), [
-                ...artifactRows(actualWrites, "No actual write evidence was supplied for this round.", "actual write", actualWriteCount, "actual writes"),
+              traceGroup(actualWriteGroupTitle, detailCount(actualWriteCount, "documents"), [
+                ...artifactRows(actualWrites, actualWriteFallback, "actual write", actualWriteCount, "actual writes"),
               ]),
             ]
           : [

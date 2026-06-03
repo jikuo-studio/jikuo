@@ -176,6 +176,8 @@ class StudioWebServerTests(unittest.TestCase):
         self.assertIn("const artifactCount = (items, ...counts)", html)
         self.assertIn("Actual write source", html)
         self.assertIn("Git observation", html)
+        self.assertIn("Git-observed actual writes", html)
+        self.assertIn("No git-observed actual write evidence was supplied", html)
         self.assertIn("Declared actual writes", html)
         self.assertIn("Required companion writes", html)
         self.assertIn("Declared writes", html)
