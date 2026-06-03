@@ -956,7 +956,16 @@ INDEX_HTML = """<!doctype html>
     const artifactPath = (item) => text((item || {}).path || (item || {}).path_ref || (item || {}).ref || (item || {}).target || "path not supplied");
     const artifactDetail = (item, fallback) => {
       const record = item || {};
-      return text(record.reason || record.applicability_reason || record.role || record.source_ref || fallback || "");
+      const evidenceParts = [
+        record.operation,
+        record.source_kind,
+        record.evidence_status,
+        record.attribution_status,
+        record.git_status ? `git ${record.git_status}` : "",
+        record.previous_path ? `from ${record.previous_path}` : "",
+      ].filter(Boolean);
+      const reason = text(record.reason || record.applicability_reason || record.role || record.source_ref || fallback || "");
+      return [evidenceParts.join(" / "), reason].filter(Boolean).join(" / ");
     };
     const artifactRows = (items, fallback, detailFallback, counted, noun) => {
       const records = items || [];
@@ -975,9 +984,12 @@ INDEX_HTML = """<!doctype html>
     };
     const traceGapRows = (items, fallback, counted) => {
       const records = items || [];
-      const rows = records.slice(0, 6).map((item) =>
-        compactItem(item.gap_type || "gap", artifactPath(item))
-      );
+      const rows = records.slice(0, 6).map((item) => {
+        const nested = (item || {}).observed || (item || {}).expected || {};
+        const nestedDetail = artifactDetail(nested, "");
+        const detail = [artifactPath(item), nestedDetail].filter(Boolean).join(" / ");
+        return compactItem(item.gap_type || "gap", detail);
+      });
       const extra = overflowNote(records.length, rows.length, "gaps");
       if (rows.length) {
         return [...rows, ...(extra ? [extra] : [])];
@@ -1135,6 +1147,11 @@ INDEX_HTML = """<!doctype html>
         ? [
             compactItem("Runtime projection", `${runtimeProjection.event || selectedRound.lifecycle_event || "latest task"} / ${runtimeProjection.persistence || selectedRound.source_kind || "runtime summary"}`),
             compactItem("History card", selectedRound.history_ref || "history ref not supplied"),
+            compactItem("Actual write source", runtimeProjection.actual_write_source || "source not supplied"),
+            compactItem("Git observation", runtimeProjection.git_write_observation
+              ? `${runtimeProjection.git_write_observation.status || "unknown"} / ${numberValue(runtimeProjection.git_write_observation.observed_actual_write_count)} observed / ${runtimeProjection.git_write_observation.attribution_status || "attribution not supplied"}`
+              : "not supplied for this round"),
+            compactItem("Declared actual writes", detailCount(runtimeProjection.declared_actual_write_count, "items")),
             compactItem("Read evidence", detailCount(readEvidenceCount, "items")),
             ...artifactRows(readEvidence, "No read evidence was supplied for this round.", "read evidence", readEvidenceCount, "read evidence items"),
             compactItem("Planned writes", detailCount(plannedWriteCount, "documents")),

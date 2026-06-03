@@ -21,6 +21,7 @@ if __package__:
         policy_store,
         policy_templates,
         project_state,
+        runtime_write_observation,
         runtime_visibility,
         starter_policies,
         task_session,
@@ -37,6 +38,7 @@ else:
     import policy_templates
     import project_state
     import policy_store
+    import runtime_write_observation
     import runtime_visibility
     import starter_policies
     from jikuo.studio import artifact_assurance as studio_artifact_assurance
@@ -355,20 +357,30 @@ def artifact_items_from_evidence(
         )
         if not path:
             continue
-        output.append(
-            {
-                "path": path,
-                "reason": item.get("summary") or item.get("reason"),
-                "role": item.get("role"),
-                "source_ref": item.get("source_ref") or "agent_flow.produced_evidence",
-                "evidence_ref": item.get("evidence_id") or item.get("evidence_ref"),
-                "plan_ref": item.get("plan_ref"),
-                "applicability_status": item.get("applicability_status")
-                or item.get("status"),
-                "applicability_reason": item.get("applicability_reason")
-                or item.get("summary"),
-            }
-        )
+        record = {
+            "path": path,
+            "reason": item.get("summary") or item.get("reason"),
+            "role": item.get("role"),
+            "source_ref": item.get("source_ref") or "agent_flow.produced_evidence",
+            "evidence_ref": item.get("evidence_id") or item.get("evidence_ref"),
+            "plan_ref": item.get("plan_ref"),
+            "applicability_status": item.get("applicability_status")
+            or item.get("status"),
+            "applicability_reason": item.get("applicability_reason")
+            or item.get("summary"),
+        }
+        for metadata_key in (
+            "source_kind",
+            "evidence_kind",
+            "evidence_status",
+            "attribution_status",
+            "operation",
+            "previous_path",
+            "git_status",
+        ):
+            if item.get(metadata_key) is not None:
+                record[metadata_key] = item.get(metadata_key)
+        output.append(record)
     return output
 
 
@@ -377,15 +389,47 @@ def artifact_items_from_paths(
     *,
     reason: str,
     source_ref: str,
+    source_kind: str | None = None,
+    evidence_kind: str | None = None,
+    evidence_status: str | None = None,
+    attribution_status: str | None = None,
 ) -> list[dict[str, Any]]:
-    return [
-        {
+    output: list[dict[str, Any]] = []
+    for path in paths or []:
+        item = {
             "path": path,
             "reason": reason,
             "source_ref": source_ref,
         }
-        for path in paths or []
-    ]
+        if source_kind:
+            item["source_kind"] = source_kind
+        if evidence_kind:
+            item["evidence_kind"] = evidence_kind
+        if evidence_status:
+            item["evidence_status"] = evidence_status
+        if attribution_status:
+            item["attribution_status"] = attribution_status
+        output.append(item)
+    return output
+
+
+def compact_git_write_observation(report: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not report:
+        return None
+    return {
+        "schema": report.get("schema"),
+        "status": report.get("status"),
+        "reason": report.get("reason"),
+        "source_kind": report.get("source_kind"),
+        "command_ref": report.get("command_ref"),
+        "observed_actual_write_count": report.get("observed_actual_write_count", 0),
+        "observed_actual_write_set": report.get("observed_actual_write_set") or [],
+        "observed_actual_write_paths": report.get("observed_actual_write_paths") or [],
+        "attribution_status": report.get("attribution_status"),
+        "warnings": report.get("warnings") or [],
+        "diagnostics": report.get("diagnostics") or [],
+        "non_effects": report.get("non_effects") or [],
+    }
 
 
 def nonempty_or_none(items: list[dict[str, Any]]) -> list[dict[str, Any]] | None:
@@ -565,6 +609,7 @@ def build_runtime_artifact_assurance_report(
         produced_evidence,
         ARTIFACT_ACTUAL_WRITE_EVIDENCE_TYPES,
     )
+    declared_actual_writes = list(actual_writes)
     applicability_evidence = artifact_items_from_evidence(
         produced_evidence,
         ARTIFACT_WRITE_APPLICABILITY_EVIDENCE_TYPES,
@@ -575,12 +620,41 @@ def build_runtime_artifact_assurance_report(
             reason="agent-supplied task_start changed/added paths are treated as a plan preview",
             source_ref="agent_flow.changed_paths_or_added_paths",
         )
-    if not actual_writes and event in {"verification_review", "completion_review", "handoff"}:
+    if event in {"verification_review", "completion_review", "handoff"} and supplied_paths:
+        declared_actual_writes.extend(
+            artifact_items_from_paths(
+                supplied_paths,
+                reason="agent-supplied lifecycle review changed/added paths are declared write evidence",
+                source_ref="agent_flow.changed_paths_or_added_paths",
+                source_kind="declared",
+                evidence_kind="actual_write",
+                evidence_status="declared",
+                attribution_status="agent_declared",
+            )
+        )
+    if not actual_writes and event in {"verification_review", "handoff"}:
         actual_writes = artifact_items_from_paths(
             supplied_paths,
-            reason="agent-supplied lifecycle review changed/added paths are treated as observed writes",
+            reason="agent-supplied lifecycle review changed/added paths are treated as declared observed writes",
             source_ref="agent_flow.changed_paths_or_added_paths",
+            source_kind="declared",
+            evidence_kind="actual_write",
+            evidence_status="declared",
+            attribution_status="agent_declared",
         )
+    git_write_observation = None
+    git_observed_actual_writes: list[dict[str, Any]] = []
+    if event == "completion_review":
+        git_write_observation = runtime_write_observation.observe_git_actual_writes(
+            resolved_root
+        )
+        if git_write_observation.get("status") == "ok":
+            git_observed_actual_writes = list(
+                git_write_observation.get("observed_actual_write_set") or []
+            )
+            actual_writes = git_observed_actual_writes
+        elif not actual_writes:
+            actual_writes = declared_actual_writes
 
     required_writes = studio_artifact_assurance.required_writes_from_document_mounts(
         document_mounts
@@ -608,11 +682,22 @@ def build_runtime_artifact_assurance_report(
         "source": "agent_flow.propose",
         "persistence": "runtime_card_and_state_summary",
         "planned_write_source": "produced_evidence_or_task_start_changed_paths",
-        "actual_write_source": "produced_evidence_or_lifecycle_changed_paths",
+        "actual_write_source": (
+            "git_status_observed"
+            if event == "completion_review"
+            and (git_write_observation or {}).get("status") == "ok"
+            else "declared_lifecycle_evidence"
+            if event == "completion_review"
+            else "produced_evidence_or_lifecycle_changed_paths"
+        ),
+        "declared_actual_write_count": len(declared_actual_writes),
+        "declared_actual_write_set": declared_actual_writes,
+        "git_write_observation": compact_git_write_observation(git_write_observation),
         "read_evidence_source": "produced_evidence_only",
         "non_effects": [
             "does_not_force_file_reads",
-            "does_not_inspect_git_diff",
+            "artifact_assurance_engine_does_not_inspect_git_by_itself",
+            "git_observation_does_not_read_file_contents",
             "does_not_persist_data01_events",
         ],
     }
@@ -4489,6 +4574,25 @@ def build_proposal(
             produced_evidence=inline_produced_evidence,
         )
         if artifact_assurance_report:
+            git_write_observation = (
+                (artifact_assurance_report.get("runtime_projection") or {}).get(
+                    "git_write_observation"
+                )
+                or {}
+            )
+            if git_write_observation:
+                traces.append(
+                    atom_trace(
+                        loop_step_id="DPL-06",
+                        atom_id="CAP-RUNTIME-WRITE-OBSERVATION-COMPLETION-REVIEW-01",
+                        mode="runtime-observation",
+                        status=str(git_write_observation.get("status") or "unknown"),
+                        summary=(
+                            "observed completion-review actual-write evidence through "
+                            "the read-only git adapter"
+                        ),
+                    )
+                )
             traces.append(
                 atom_trace(
                     loop_step_id="DPL-06",
@@ -5542,6 +5646,16 @@ def render_artifact_assurance(report: dict[str, Any]) -> list[str]:
         f"- Actual writes: `{write.get('actual_write_count', 0)}`",
         f"- Gap count: `{gap_report.get('gap_count', 0)}`",
     ]
+    git_write_observation = runtime_projection.get("git_write_observation") or {}
+    if git_write_observation:
+        lines.extend(
+            [
+                f"- Actual write source: `{runtime_projection.get('actual_write_source')}`",
+                f"- Declared actual writes: `{runtime_projection.get('declared_actual_write_count', 0)}`",
+                f"- Git observed writes: `{git_write_observation.get('observed_actual_write_count', 0)}`",
+                f"- Git observation status: `{git_write_observation.get('status')}`",
+            ]
+        )
     if report.get("reason"):
         lines.append(f"- Reason: {report['reason']}")
     lines.extend(

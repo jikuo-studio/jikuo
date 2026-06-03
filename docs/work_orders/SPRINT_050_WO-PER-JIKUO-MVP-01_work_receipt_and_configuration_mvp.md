@@ -94,6 +94,10 @@ Receipt risk is addressed first because it is the core product promise.
 Add a small read-only adapter that observes working-tree writes during
 completion review.
 
+Capability:
+
+- `CAP-RUNTIME-WRITE-OBSERVATION-01`
+
 Likely module:
 
 ```text
@@ -127,6 +131,10 @@ Acceptance:
 ### `MVP-RECEIPT-02`: Completion Review Uses Git Observed Actual Writes
 
 Wire the adapter into `agent_flow.py` completion review only.
+
+Capability:
+
+- `CAP-RUNTIME-WRITE-OBSERVATION-COMPLETION-REVIEW-01`
 
 Behavior:
 

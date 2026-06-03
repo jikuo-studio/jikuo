@@ -28,6 +28,32 @@ POLICY_TEMPLATE = (
 )
 
 
+def require_git() -> None:
+    if shutil.which("git") is None:
+        raise unittest.SkipTest("git executable is not available")
+
+
+def run_git(project_root: Path, *args: str) -> None:
+    subprocess.run(
+        ["git", "-C", str(project_root), "-c", "core.excludesFile=", *args],
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+
+def initialize_git_repo(project_root: Path) -> None:
+    require_git()
+    run_git(project_root, "init")
+    run_git(project_root, "config", "user.name", "JIKUO Test")
+    run_git(project_root, "config", "user.email", "jikuo-test@example.com")
+
+
+def commit_project_baseline(project_root: Path) -> None:
+    run_git(project_root, "add", ".")
+    run_git(project_root, "commit", "-m", "baseline")
+
+
 def create_agent_flow_ready_project(root: Path) -> None:
     registry = root / "docs" / "governance"
     registry.mkdir(parents=True, exist_ok=True)
@@ -4109,6 +4135,72 @@ class AgentFlowProposalTests(unittest.TestCase):
             self.assertIn("`required_write_not_observed` / `docs/main.md`", proposal["chat_ready_markdown"])
             self.assertIn("`planned_write_not_observed` / `docs/main.md`", proposal["chat_ready_markdown"])
             self.assertIn("`actual_write_not_planned` / `docs/unrelated.md`", proposal["chat_ready_markdown"])
+
+    def test_completion_review_uses_git_observed_actual_writes_when_available(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            write_agent_flow_document_mount_project_context(project_root)
+            initialize_git_repo(project_root)
+            commit_project_baseline(project_root)
+            (project_root / "docs" / "unreported.md").write_text(
+                "real write not declared\n",
+                encoding="utf-8",
+            )
+            produced_evidence = [
+                {
+                    "evidence_id": "plan-main-doc",
+                    "evidence_type": "document_write_plan_evidence",
+                    "path": "docs/main.md",
+                    "summary": "planned main document maintenance",
+                },
+            ]
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "propose",
+                    "--event",
+                    "completion_review",
+                    "--task-title",
+                    "Git Actual Write Probe",
+                    "--project-root",
+                    str(project_root),
+                    "--produced-evidence-json",
+                    json.dumps(produced_evidence),
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            proposal = json.loads(completed.stdout)
+            assurance = proposal["artifact_assurance"]
+            runtime_projection = assurance["runtime_projection"]
+            git_observation = runtime_projection["git_write_observation"]
+            self.assertEqual(runtime_projection["actual_write_source"], "git_status_observed")
+            self.assertEqual(runtime_projection["declared_actual_write_count"], 0)
+            self.assertEqual(git_observation["status"], "ok")
+            self.assertEqual(git_observation["observed_actual_write_paths"], ["docs/unreported.md"])
+            self.assertEqual(
+                assurance["write_assurance"]["actual_write_set"][0]["source_kind"],
+                "git_diff",
+            )
+            self.assertEqual(
+                assurance["write_assurance"]["unplanned_written"][0]["path"],
+                "docs/unreported.md",
+            )
+            atom_ids = {trace["atom_id"] for trace in proposal["atom_trace"]}
+            self.assertIn("CAP-RUNTIME-WRITE-OBSERVATION-COMPLETION-REVIEW-01", atom_ids)
+            self.assertIn("- Actual write source: `git_status_observed`", proposal["chat_ready_markdown"])
+            self.assertIn("`actual_write_not_planned` / `docs/unreported.md`", proposal["chat_ready_markdown"])
 
     def test_completion_review_unappraised_candidates_do_not_emit_required_write_gaps(self):
         with tempfile.TemporaryDirectory() as tmp:

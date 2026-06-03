@@ -92,29 +92,39 @@ def _coerce_artifact_items(
             if obligation_level == COMPLETION_CHECK_CANDIDATE
             else "applicable"
         )
-        items.append(
-            {
-                "path": normalized,
-                "reason": record.get("reason")
-                or record.get("required_when")
-                or record.get("update_required_when")
-                or record.get("purpose"),
-                "role": record.get("role"),
-                "source_ref": record.get("source_ref"),
-                "evidence_ref": record.get("evidence_ref"),
-                "plan_ref": record.get("plan_ref"),
-                "fingerprint": record.get("fingerprint"),
-                "obligation_level": obligation_level,
-                "applicability_status": normalize_applicability_status(
-                    record.get("applicability_status")
-                    or record.get("applicability")
-                    or record.get("status"),
-                    default=default_applicability,
-                ),
-                "applicability_reason": record.get("applicability_reason")
-                or record.get("decision_reason"),
-            }
-        )
+        item = {
+            "path": normalized,
+            "reason": record.get("reason")
+            or record.get("required_when")
+            or record.get("update_required_when")
+            or record.get("purpose"),
+            "role": record.get("role"),
+            "source_ref": record.get("source_ref"),
+            "evidence_ref": record.get("evidence_ref"),
+            "plan_ref": record.get("plan_ref"),
+            "fingerprint": record.get("fingerprint"),
+            "obligation_level": obligation_level,
+            "applicability_status": normalize_applicability_status(
+                record.get("applicability_status")
+                or record.get("applicability")
+                or record.get("status"),
+                default=default_applicability,
+            ),
+            "applicability_reason": record.get("applicability_reason")
+            or record.get("decision_reason"),
+        }
+        for metadata_key in (
+            "source_kind",
+            "evidence_kind",
+            "evidence_status",
+            "attribution_status",
+            "operation",
+            "previous_path",
+            "git_status",
+        ):
+            if record.get(metadata_key) is not None:
+                item[metadata_key] = record.get(metadata_key)
+        items.append(item)
     return items, invalid
 
 

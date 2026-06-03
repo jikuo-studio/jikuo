@@ -526,8 +526,10 @@ entries:
     sprint: "SPRINT_050"
     status: "Planned; transitional authority for the current documentation-registry task list"
     impact_tags: []
-    implements_capabilities: []
-    capability_extraction_status: "no_capability_refs_found"
+    implements_capabilities:
+      - "CAP-RUNTIME-WRITE-OBSERVATION-01"
+      - "CAP-RUNTIME-WRITE-OBSERVATION-COMPLETION-REVIEW-01"
+    capability_extraction_status: "extracted_from_work_order_body"
     required_mount_sets:
       - "MOUNT-DOCREG-01A"
     authority_refs:
