@@ -87,6 +87,8 @@ entries:
           - "required companion write list"
           - "declared write list"
           - "observed actual write list"
+          - "companion trigger list"
+          - "ignored actual-write list"
           - "path-level write gap list"
     capability_refs:
       - "CAP-STUDIO-ARTIFACT-ASSURANCE-PROJECTION-01"

@@ -298,6 +298,8 @@ def artifact_assurance_from_history_card(
     actual_writes = markdown_int_value(section, "Actual writes")
     required_companion_writes = markdown_int_value(section, "Required companion writes")
     declared_writes = markdown_int_value(section, "Declared writes")
+    companion_triggers = markdown_int_value(section, "Companion write triggers")
+    companion_ignored = markdown_int_value(section, "Companion ignored actual writes")
     gap_count = markdown_int_value(section, "Gap count")
     required_reads_without_evidence = markdown_int_value(
         section,
@@ -322,6 +324,8 @@ def artifact_assurance_from_history_card(
             "status": markdown_backtick_value(section, "Write assurance status"),
             "required_write_count": applicable_required_writes,
             "required_companion_write_count": required_companion_writes,
+            "companion_trigger_count": companion_triggers,
+            "companion_ignored_item_count": companion_ignored,
             "planned_write_count": planned_writes,
             "declared_write_count": declared_writes,
             "actual_write_count": actual_writes,
@@ -377,6 +381,16 @@ def count_artifacts(report: dict[str, Any]) -> dict[str, int]:
             or len(write.get("required_companion_write_set") or [])
             or 0
         ),
+        "companion_trigger_count": int(
+            write.get("companion_trigger_count")
+            or ((report.get("runtime_projection") or {}).get("companion_write_obligations") or {}).get("trigger_count")
+            or 0
+        ),
+        "companion_ignored_item_count": int(
+            write.get("companion_ignored_item_count")
+            or ((report.get("runtime_projection") or {}).get("companion_write_obligations") or {}).get("ignored_item_count")
+            or 0
+        ),
         "declared_write_count": int(
             write.get("declared_write_count")
             or len(write.get("declared_write_set") or [])
@@ -405,6 +419,8 @@ def empty_artifact_counts() -> dict[str, int]:
         "read_evidence_count": 0,
         "planned_write_count": 0,
         "required_companion_write_count": 0,
+        "companion_trigger_count": 0,
+        "companion_ignored_item_count": 0,
         "declared_write_count": 0,
         "actual_write_count": 0,
         "completion_check_candidate_count": 0,

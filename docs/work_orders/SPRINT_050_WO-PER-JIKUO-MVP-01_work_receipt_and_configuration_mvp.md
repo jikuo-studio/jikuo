@@ -167,6 +167,9 @@ Implementation status:
   git or infer by itself;
 - Studio Round Document Trace now separates required companion writes, declared
   writes, and actual writes in the selected-round view;
+- runtime cards and Studio now expose companion projection trigger count and
+  ignored actual-write count, so a dirty workspace item such as a non-governance
+  scratch file can be distinguished from a missing companion obligation;
 - future refinements still need better round attribution/baselines and more
   precise trigger rules.
 

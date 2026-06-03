@@ -953,7 +953,7 @@ INDEX_HTML = """<!doctype html>
       item.querySelector("span").textContent = detail || "";
       return item;
     };
-    const artifactPath = (item) => text((item || {}).path || (item || {}).path_ref || (item || {}).ref || (item || {}).target || "path not supplied");
+    const artifactPath = (item) => text((item || {}).path || (item || {}).path_ref || (item || {}).ref || (item || {}).target || (item || {}).source_ref || "path not supplied");
     const artifactDetail = (item, fallback) => {
       const record = item || {};
       const evidenceParts = [
@@ -1081,6 +1081,7 @@ INDEX_HTML = """<!doctype html>
       const activeWrite = (active || {}).write_assurance || {};
       const activeGap = (active || {}).gap_report || {};
       const runtimeProjection = activeTrace.runtime_projection || {};
+      const companionProjection = runtimeProjection.companion_write_obligations || {};
       const statusState = traceState(selectedRound, active, activeGap);
       const status = document.getElementById("round-trace-status");
       status.className = statusClass(statusState.key);
@@ -1100,6 +1101,8 @@ INDEX_HTML = """<!doctype html>
       const plannedWrites = artifactList(activeWrite.planned_write_set);
       const declaredWrites = firstArtifactList(activeWrite.declared_write_set, activeWrite.planned_write_set);
       const actualWrites = artifactList(activeWrite.actual_write_set);
+      const companionTriggers = artifactList(companionProjection.triggers);
+      const companionIgnoredItems = artifactList(companionProjection.ignored_items);
       const readGaps = firstArtifactList(activeGap.read_gaps, activeRead.required_not_read);
       const writeGapFallbacks = [
         ...(activeWrite.required_not_planned || []),
@@ -1131,6 +1134,8 @@ INDEX_HTML = """<!doctype html>
         selectedCounts.planned_write_count
       );
       const actualWriteCount = artifactCount(activeWrite.actual_write_set, activeWrite.actual_write_count, selectedCounts.actual_write_count);
+      const companionTriggerCount = artifactCount(companionProjection.triggers, activeWrite.companion_trigger_count, companionProjection.trigger_count, selectedCounts.companion_trigger_count);
+      const companionIgnoredCount = artifactCount(companionProjection.ignored_items, activeWrite.companion_ignored_item_count, companionProjection.ignored_item_count, selectedCounts.companion_ignored_item_count);
       const readGapCount = artifactCount(activeGap.read_gaps || activeRead.required_not_read, activeGap.read_gap_count, activeRead.required_reads_without_evidence_count);
       const writeGapCount = artifactCount(activeGap.write_gaps, activeGap.write_gap_count);
       const gapCount = artifactCount(null, activeGap.gap_count, selectedCounts.gap_count);
@@ -1174,6 +1179,11 @@ INDEX_HTML = """<!doctype html>
               ? `${runtimeProjection.git_write_observation.status || "unknown"} / ${numberValue(runtimeProjection.git_write_observation.observed_actual_write_count)} observed / ${runtimeProjection.git_write_observation.attribution_status || "attribution not supplied"}`
               : "not supplied for this round"),
             compactItem("Declared actual writes", detailCount(runtimeProjection.declared_actual_write_count, "items")),
+            compactItem("Companion projection", companionProjection.schema
+              ? `${companionProjection.status || "unknown"} / ${requiredCompanionWriteCount} required / ${companionTriggerCount} triggers / ${companionIgnoredCount} ignored`
+              : "not supplied for this round"),
+            ...artifactRows(companionTriggers, "No companion write triggers were projected for this round.", "companion write trigger", companionTriggerCount, "companion triggers"),
+            ...artifactRows(companionIgnoredItems, "No actual writes were ignored by companion rules.", "ignored actual write", companionIgnoredCount, "ignored actual writes"),
             compactItem("Read evidence", detailCount(readEvidenceCount, "items")),
             ...artifactRows(readEvidence, "No read evidence was supplied for this round.", "read evidence", readEvidenceCount, "read evidence items"),
             compactItem("Declared writes", detailCount(declaredWriteCount, "documents")),

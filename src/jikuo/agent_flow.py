@@ -5710,6 +5710,15 @@ def render_artifact_assurance(report: dict[str, Any]) -> list[str]:
                 f"- Git observation status: `{git_write_observation.get('status')}`",
             ]
         )
+    companion_projection = runtime_projection.get("companion_write_obligations") or {}
+    if companion_projection:
+        lines.extend(
+            [
+                f"- Companion projection status: `{companion_projection.get('status')}`",
+                f"- Companion write triggers: `{companion_projection.get('trigger_count', 0)}`",
+                f"- Companion ignored actual writes: `{companion_projection.get('ignored_item_count', 0)}`",
+            ]
+        )
     if report.get("reason"):
         lines.append(f"- Reason: {report['reason']}")
     lines.extend(
@@ -5736,6 +5745,13 @@ def render_artifact_assurance(report: dict[str, Any]) -> list[str]:
             items=write.get("required_companion_not_observed") or [],
         )
     )
+    if companion_projection:
+        lines.extend(
+            render_artifact_gap_lines(
+                label="Companion ignored actual writes",
+                items=companion_projection.get("ignored_items") or [],
+            )
+        )
     lines.extend(
         render_artifact_gap_lines(
             label="Planned writes not observed",
