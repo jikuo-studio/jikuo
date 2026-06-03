@@ -81,6 +81,60 @@ entries:
       - "CAP-AI-SEMANTIC-ROUTING-MVP-01"
       - "CAP-SEMANTIC-INTENT-CLASSIFICATION-EVIDENCE-01"
       - "CAP-PROGRESS-SUMMARY-BUSINESS-MEANING-POLICY-01"
+  - id: "SCENARIO-INSTRUCTION-COMPLETION-RECEIPT"
+    title: "Instruction-guided completion receipt"
+    status: "implemented"
+    user_outcome: "A host AI that reads generated JIKUO project instructions knows to produce a completion_review receipt after it changes workspace files, without the user manually running a receipt command."
+    corresponding_document_refs:
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-INTG-01_universal_instruction_file_distribution.md"
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-MVP-01_work_receipt_and_configuration_mvp.md"
+      - "docs/governance/jikuo_desktop_agent_instruction_pack.md"
+    mount_coverage:
+      status: "verified"
+      refs:
+        - "MOUNT-MVP-WORK-RECEIPT-CONFIGURATION"
+        - "MOUNT-SCENARIO-CHAIN-ATOM-REGISTRATION"
+    steps:
+      - step_id: "INSTRUCTION-COMPLETION-RECEIPT-01"
+        user_action: "Install or sync JIKUO project instructions for a supported host AI client."
+        visible_result: "The managed instruction block includes the completion receipt obligation and preserves unrelated local instruction content."
+        operation_chain: "`jikuo install` renders common_instruction_lines into JIKUO.md and selected client instruction files through the guarded instruction writer."
+        atom_refs:
+          - "CAP-UNIVERSAL-INSTRUCTION-FILE-01"
+          - "CAP-UNIVERSAL-INSTRUCTION-COMPLETION-RECEIPT-01"
+        approval_boundary: "guarded_instruction_write"
+        evidence_outputs:
+          - "managed instruction block"
+          - "install plan/result JSON"
+      - step_id: "INSTRUCTION-COMPLETION-RECEIPT-02"
+        user_action: "Ask the host AI to perform work that writes files."
+        visible_result: "After verification and before the final response, the host AI runs completion_review or reports that the receipt is missing or failed."
+        operation_chain: "The instruction block names `python -B -m jikuo.agent_flow propose --event completion_review --project-root \"<absolute project root>\" --format json` as the routine receipt path for workspace writes."
+        atom_refs:
+          - "CAP-UNIVERSAL-INSTRUCTION-COMPLETION-RECEIPT-01"
+          - "CAP-RUNTIME-WRITE-OBSERVATION-COMPLETION-REVIEW-01"
+        approval_boundary: "no_write_completion_receipt"
+        evidence_outputs:
+          - "completion_review runtime card"
+          - "state_summary artifact assurance"
+          - "history receipt card"
+      - step_id: "INSTRUCTION-COMPLETION-RECEIPT-03"
+        user_action: "Open Studio after later turns have occurred."
+        visible_result: "Studio can still show the latest completion receipt as the default selected round and preserve itemized evidence when a per-history state snapshot exists."
+        operation_chain: "The receipt path writes runtime history/state evidence; Studio reads latest_completion_receipt_round_id and per-history state snapshots rather than relying only on the newest runtime state."
+        atom_refs:
+          - "CAP-STUDIO-LATEST-COMPLETION-RECEIPT-01"
+          - "CAP-STUDIO-ROUND-DOCUMENT-TRACE-SELECTOR-01"
+        approval_boundary: "read_only_studio_view"
+        evidence_outputs:
+          - "latest completion receipt chip"
+          - "selected round detail panels"
+    capability_refs:
+      - "CAP-UNIVERSAL-INSTRUCTION-FILE-01"
+      - "CAP-UNIVERSAL-INSTRUCTION-COMPLETION-RECEIPT-01"
+      - "CAP-RUNTIME-WRITE-OBSERVATION-COMPLETION-REVIEW-01"
+      - "CAP-STUDIO-LATEST-COMPLETION-RECEIPT-01"
+      - "CAP-STUDIO-ROUND-DOCUMENT-TRACE-SELECTOR-01"
   - id: "SCENARIO-DOCUMENT-REGISTRY-TRANSITION"
     title: "Layered document registry migration"
     status: "seed"

@@ -357,6 +357,9 @@ Deliverables:
 - Codex hook `additionalContext` instruction that tells the host AI to run
   `completion_review` after file creation, edits, deletion, generated outputs,
   git staging, commits, or guarded project writes;
+- universal instruction-file managed block wording that carries the same
+  completion receipt obligation into `JIKUO.md` and synced client instruction
+  files;
 - CLI command example;
 - MCP/tool instruction wording for host AI;
 - optional Studio action descriptor for "Run completion review" if a no-write
@@ -366,7 +369,8 @@ Deliverables:
 Acceptance:
 
 - a host AI receives an explicit completion receipt obligation before it starts
-  substantive work;
+  substantive work, either from the Codex hook additionalContext or from the
+  managed instruction file it has loaded;
 - if the host AI performs workspace writes, it is instructed to run
   `python -B -m jikuo.agent_flow propose --event completion_review --project-root
   <project-root> --format json` before final response;

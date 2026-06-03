@@ -43,6 +43,9 @@ The canonical instruction file must include:
 - Returned governance card markdown must be shown verbatim before commentary.
 - Runtime visibility files and `jikuo show` are user verification channels.
 - Guarded writes require explicit approval phrases and technical confirmation.
+- When the host AI performs workspace writes, it must run a routine
+  `completion_review` receipt after verification and before the final response,
+  or report that the receipt is missing or failed.
 - First-use activation settings must be visible: trigger mode, MCP availability, card display, runtime links, guarded-write approval boundary, starter policy initialization, and project-context bindings.
 
 ## 5. Out Of Scope
@@ -74,6 +77,9 @@ Implementation:
 - generated files use managed blocks bounded by `# BEGIN JIKUO MANAGED INSTRUCTIONS` and `# END JIKUO MANAGED INSTRUCTIONS`, preserving unrelated existing content.
 - `--all` detects existing supported client instruction files and always includes canonical `JIKUO.md`.
 - generated instructions now include activation settings and can pin `ask`, `semantic`, or `mounted` trigger mode per client.
+- generated instructions now include the MVP completion receipt obligation for
+  host AI workspace writes, using `agent_flow propose --event completion_review`
+  as the routine receipt path without claiming a mounted post-turn hook.
 - `vscode-copilot` is supported as a client target through `.github/copilot-instructions.md`.
 
 Verification:

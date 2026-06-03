@@ -78,6 +78,9 @@ class InstructionFilesTests(unittest.TestCase):
             self.assertIn(instruction_files.MANAGED_BEGIN, agents_text)
             self.assertIn(instruction_files.MANAGED_END, agents_text)
             self.assertIn("Show returned governance card Markdown verbatim", agents_text)
+            self.assertIn("--event completion_review", agents_text)
+            self.assertIn("after verification and before the final response", agents_text)
+            self.assertIn("completion receipt is missing or failed", agents_text)
             self.assertIn("Activation settings:", agents_text)
             self.assertIn("Ask the user to choose `semantic` mode or `mounted` mode", agents_text)
             self.assertIn("Keep this managed block aligned with `JIKUO.md`", agents_text)
@@ -103,6 +106,7 @@ class InstructionFilesTests(unittest.TestCase):
                 trigger_mode="mounted",
             )
             self.assertIn("Configured trigger mode for this client: `mounted`", block)
+            self.assertIn("--event completion_review", block)
             self.assertIn("not strictly enforceable until a pre-turn adapter is installed", block)
 
     def test_install_all_detects_existing_client_instruction_files(self):

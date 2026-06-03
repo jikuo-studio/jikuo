@@ -624,10 +624,12 @@ entries:
     title: "SPRINT_050_WO-PER-JIKUO-INTG-01: Universal Instruction File Distribution"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-INTG-01_universal_instruction_file_distribution.md"
     sprint: "SPRINT_050"
-    status: "Implemented and accepted on 2026-05-14, pre-MCP companion for cross-client behavior"
+    status: "Implemented and accepted on 2026-05-14, pre-MCP companion for cross-client behavior; managed instruction blocks now include the MVP completion receipt obligation for host AI workspace writes"
     impact_tags: []
-    implements_capabilities: []
-    capability_extraction_status: "no_capability_refs_found"
+    implements_capabilities:
+      - "CAP-UNIVERSAL-INSTRUCTION-FILE-01"
+      - "CAP-UNIVERSAL-INSTRUCTION-COMPLETION-RECEIPT-01"
+    capability_extraction_status: "extracted_from_work_order_body"
     required_mount_sets: []
   - id: "JIKUO-INTG-02"
     title: "SPRINT_050_WO-PER-JIKUO-INTG-02: Client Onboarding Settings And Trigger Mode Selection"
@@ -1261,7 +1263,7 @@ entries:
     title: "SPRINT_050_WO-PER-JIKUO-MVP-01: Work Receipt And Configuration MVP"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-MVP-01_work_receipt_and_configuration_mvp.md"
     sprint: "SPRINT_050"
-    status: "MVP work-order sequence active; git actual-write observation, completion-review wiring, latest receipt default selection, first companion-write obligation projection/view, trigger/ignored-write receipt hints, Gaps vs Unchecked applicability wording, grouped receipt detail subpanels, and expandable overflow detail rows implemented"
+    status: "MVP work-order sequence active; git actual-write observation, completion-review wiring, latest receipt default selection, first companion-write obligation projection/view, trigger/ignored-write receipt hints, Gaps vs Unchecked applicability wording, grouped receipt detail subpanels, expandable overflow detail rows, and universal instruction completion-receipt wording implemented"
     impact_tags:
       - "mvp"
       - "studio"
@@ -1273,6 +1275,7 @@ entries:
       - "CAP-RUNTIME-WRITE-OBSERVATION-COMPLETION-REVIEW-01"
       - "CAP-RUNTIME-COMPANION-WRITE-OBLIGATION-01"
       - "CAP-CODEX-HOOK-COMPLETION-RECEIPT-INSTRUCTION-01"
+      - "CAP-UNIVERSAL-INSTRUCTION-COMPLETION-RECEIPT-01"
       - "CAP-STUDIO-LATEST-COMPLETION-RECEIPT-01"
       - "CAP-STUDIO-COMPANION-WRITE-RECEIPT-VIEW-01"
     capability_extraction_status: "extracted_from_work_order_body"

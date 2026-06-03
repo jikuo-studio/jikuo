@@ -94,9 +94,11 @@ entries:
       - path: "docs/insights/INSIGHT-2026-06-03-completion-check-applicability-evidence-gap.md"
   - id: "MOUNT-MVP-WORK-RECEIPT-CONFIGURATION"
     title: "MVP work receipt and configuration context bundle"
-    status: "active planning mount for JIKUO-MVP-01"
+    status: "active planning mount for JIKUO-MVP-01, including instruction-file completion receipt guidance"
     documents:
       - path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-MVP-01_work_receipt_and_configuration_mvp.md"
+      - path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-INTG-01_universal_instruction_file_distribution.md"
+      - path: "docs/governance/jikuo_desktop_agent_instruction_pack.md"
       - path: "docs/governance/jikuo_document_evidence_chain_design.md"
       - path: "docs/insights/INSIGHT-2026-06-03-runtime-history-card-itemized-document-evidence-gap.md"
       - path: "docs/insights/INSIGHT-2026-06-03-completion-check-applicability-evidence-gap.md"
