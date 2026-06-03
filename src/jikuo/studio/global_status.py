@@ -266,6 +266,30 @@ def history_markdown_for_ref(project_root: Path, history_ref: str | None) -> str
     return f"[{Path(history_ref).name}]({resolved.as_posix()})"
 
 
+def state_summary_for_history_card(project_root: Path, path: Path) -> dict[str, Any] | None:
+    state_path = path.with_suffix(".json").resolve()
+    runtime_root = runtime_visibility.runtime_root_for(project_root)
+    try:
+        state_path.relative_to(runtime_root)
+    except ValueError:
+        return None
+    if not state_path.is_file():
+        return None
+    try:
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if state.get("schema") != runtime_visibility.RUNTIME_STATE_SUMMARY_SCHEMA:
+        return None
+    expected_ref = history_ref_for_card(project_root, path)
+    runtime = state.setdefault("runtime_visibility", {})
+    observed_ref = runtime.get("history_ref")
+    if observed_ref and observed_ref != expected_ref:
+        return None
+    runtime["history_ref"] = expected_ref
+    return state
+
+
 def utc_from_history_name(name: str) -> str | None:
     match = re.match(r"(?P<stamp>\d{8}T\d{6}Z)_", name)
     if not match:
@@ -492,7 +516,12 @@ def round_trace_from_parts(
     }
 
 
-def round_trace_from_state(project_root: Path, state: dict[str, Any]) -> dict[str, Any] | None:
+def round_trace_from_state(
+    project_root: Path,
+    state: dict[str, Any],
+    *,
+    source_kind: str = "latest_runtime_state",
+) -> dict[str, Any] | None:
     if state.get("status") in {"missing", "invalid", "unavailable"} and not state.get(
         "runtime_visibility"
     ):
@@ -504,7 +533,7 @@ def round_trace_from_state(project_root: Path, state: dict[str, Any]) -> dict[st
     return round_trace_from_parts(
         project_root=project_root,
         history_ref=str(history_ref) if history_ref else None,
-        source_kind="latest_runtime_state",
+        source_kind=source_kind,
         updated_at_utc=state.get("updated_at_utc"),
         lifecycle_event=source.get("event"),
         intent_class=None,
@@ -516,6 +545,21 @@ def round_trace_from_state(project_root: Path, state: dict[str, Any]) -> dict[st
 
 
 def round_trace_from_history_card(project_root: Path, path: Path) -> dict[str, Any]:
+    state = state_summary_for_history_card(project_root, path)
+    if state:
+        trace = round_trace_from_state(
+            project_root,
+            state,
+            source_kind="runtime_history_state_summary",
+        )
+        if trace:
+            trace["trace_label"] = (
+                "Structured document receipt"
+                if trace.get("has_document_trace")
+                else trace.get("trace_label")
+            )
+            return trace
+
     history_ref = history_ref_for_card(project_root, path)
     try:
         text = path.read_text(encoding="utf-8")

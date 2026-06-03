@@ -171,6 +171,11 @@ Implementation status:
 - runtime cards and Studio now expose companion projection trigger count and
   ignored actual-write count, so a dirty workspace item such as a non-governance
   scratch file can be distinguished from a missing companion obligation;
+- host-semantic follow-up wording and the progress-summary business-meaning
+  policy now align with the same receipt model: a user asking for progress /
+  todo output should produce `progress_summary` semantic evidence and trigger
+  the business-meaning obligation by scope, not only after a completion-review
+  lifecycle event;
 - future refinements still need better round attribution/baselines and more
   precise trigger rules.
 
@@ -253,6 +258,7 @@ Preferred first shape:
 state_summary.artifact_assurance
 state_summary.work_receipt_preview
 history card Work Receipt section
+.jikuo/runtime/history/<round>.json structured state snapshot
 ```
 
 Fields:
@@ -269,6 +275,9 @@ Acceptance:
 
 - latest runtime summary exposes a receipt preview;
 - old count-only history cards remain compatible;
+- each new history card has a matching structured state-summary snapshot, so a
+  later non-completion runtime turn does not erase the latest completion
+  receipt's itemized path evidence;
 - receipt display never claims AI understanding;
 - receipt data preserves itemized path lists whenever the producer had itemized
   evidence;
@@ -309,6 +318,9 @@ Acceptance:
 - selecting a round still binds all details to that round;
 - the default selected round prefers the latest `completion_review` receipt when
   one exists, while still showing the latest runtime turn separately;
+- if latest `state_summary.json` is overwritten by a later non-completion round,
+  Studio loads the selected receipt's per-history state snapshot before falling
+  back to count-only Markdown parsing;
 - required companion write gaps, actual writes without declarations, and
   obligation-not-projected gaps are visible without reading chat history;
 - evidence labels distinguish configured, declared, git observed, and

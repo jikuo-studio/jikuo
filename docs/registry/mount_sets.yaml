@@ -67,7 +67,7 @@ entries:
       - path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-DOCREG-01_layered_document_registry.md"
   - id: "MOUNT-STRICT-HARNESS-PROOF"
     title: "Strict mounted harness adapter proof mount set"
-    status: "seed"
+    status: "active for strict mounted / host-semantic proof work; Codex hook currently provides pre-turn mounting plus explicit post-start host_semantic_intent follow-up instructions, not automatic hook-time semantic classification"
     documents:
       - path: "docs/governance/jikuo_execution_mounts.md"
       - path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-INTG-03_strict_mounted_harness_adapter_contract.md"

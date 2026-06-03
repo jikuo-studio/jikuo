@@ -103,9 +103,13 @@ class RuntimeVisibilityTests(unittest.TestCase):
             last_card_path = project_root / runtime_report["last_card_ref"]
             state_summary_path = project_root / runtime_report["state_summary_ref"]
             history_path = project_root / runtime_report["history_ref"]
+            history_state_summary_path = (
+                project_root / runtime_report["history_state_summary_ref"]
+            )
             self.assertTrue(last_card_path.is_file())
             self.assertTrue(state_summary_path.is_file())
             self.assertTrue(history_path.is_file())
+            self.assertTrue(history_state_summary_path.is_file())
             self.assertEqual(
                 last_card_path.read_text(encoding="utf-8"),
                 proposal["chat_ready_markdown"],
@@ -115,7 +119,19 @@ class RuntimeVisibilityTests(unittest.TestCase):
                 display_links["links"]["last_card"]["markdown_target"],
             )
             state_summary = json.loads(state_summary_path.read_text(encoding="utf-8"))
+            history_state_summary = json.loads(
+                history_state_summary_path.read_text(encoding="utf-8")
+            )
             self.assertEqual(state_summary["schema"], "jikuo.runtime_state_summary.v0")
+            self.assertEqual(history_state_summary, state_summary)
+            self.assertEqual(
+                display_links["links"]["history_state_summary"]["ref"],
+                runtime_report["history_state_summary_ref"],
+            )
+            self.assertEqual(
+                state_summary["runtime_visibility"]["history_state_summary_ref"],
+                runtime_report["history_state_summary_ref"],
+            )
             self.assertEqual(
                 state_summary["client_display_links"]["links"]["last_card"]["ref"],
                 ".jikuo/runtime/last_card.md",

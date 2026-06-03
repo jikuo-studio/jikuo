@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-AI-SEMROUTE-01: AI Semantic Routing MVP
 
-> **Status**: Design accepted; first projection slice implemented for short `user_expression`, MVP scope filtering, ordered `intent_slices` card rendering, Codex hook wording, no-write smoke for `semantic_intent_status=provided`, raw `user_phrase` redaction in trigger/router projections, local policy-distribution proof that host semantic scopes select different scope-aware policies, explicit Codex-host-AI semantic-intent transport proof, MCP Sampling unavailable proof, report-only `semantic_intent_classification_evidence`, accepted cooperative Codex GUI MCP router proof that `host_semantic_intent` can be exposed and passed, no-write `semantic_intent_precondition` feedback for selected governed editing / write-capable MCP entry points, direct `host_semantic_intent` passthrough on those proposal tools, and accepted external Codex GUI MCP proposal-tool smoke proving the host can re-call successfully. Automatic hook-time semantic classification, MCP Sampling provider support, and any evaluator expansion remain pending.
+> **Status**: Design accepted; first projection slice implemented for short `user_expression`, MVP scope filtering, ordered `intent_slices` card rendering, Codex hook wording, no-write smoke for `semantic_intent_status=provided`, raw `user_phrase` redaction in trigger/router projections, local policy-distribution proof that host semantic scopes select different scope-aware policies, explicit Codex-host-AI semantic-intent transport proof, MCP Sampling unavailable proof, report-only `semantic_intent_classification_evidence`, accepted cooperative Codex GUI MCP router proof that `host_semantic_intent` can be exposed and passed, no-write `semantic_intent_precondition` feedback for selected governed editing / write-capable MCP entry points, direct `host_semantic_intent` passthrough on those proposal tools, accepted external Codex GUI MCP proposal-tool smoke proving the host can re-call successfully, Codex hook additionalContext now states the cooperative post-start semantic follow-up contract, and progress-summary business-meaning policy applicability has been corrected to scope-first for `progress_summary` turns. Automatic hook-time semantic classification, MCP Sampling provider support, and any evaluator expansion remain pending.
 > **Date**: 2026-05-28
 > **JIKUO layer**: integration / policy distribution.
 > **Business meaning**: JIKUO should stay thin. The host AI understands the user's natural-language intent; JIKUO receives a compact semantic object, records it, explains policy routing, and keeps deterministic fallback honest.
@@ -306,6 +306,11 @@ Implementation boundary:
 - the Codex hook treats structured JIKUO refusal JSON as a successful mounted
   result so `additionalContext` can show the precondition instead of degrading
   into an opaque command failure.
+- the Codex hook `additionalContext` now makes the cooperative follow-up timing
+  explicit: the host AI reads and understands the turn first, then supplies
+  compact `host_semantic_intent` before later router or proposal calls for
+  task start, policy work, or progress summaries. This is still instruction
+  and transport, not automatic hook-time semantic classification.
 
 ## 12. Implemented Slices
 
@@ -320,6 +325,9 @@ existing host-semantic-intent pipeline against this MVP contract:
 - the Codex `UserPromptSubmit` hook `additionalContext` tells the host AI how
   to pass compact `host_semantic_intent` later without claiming the hook itself
   forces host-time classification;
+- the hook wording now distinguishes pre-turn mounting from post-start host-AI
+  semantic follow-up, so a summary turn can be re-routed with
+  `policy_scopes=["progress_summary"]` after the host reads the request;
 - the official MCP server router surfaces now expose the
   `host_semantic_intent` argument in the callable function signature, so GUI
   clients can see and pass the same compact semantic object that the SDK-free
@@ -442,6 +450,15 @@ This accepts the cooperative re-call path for selected MCP proposal tools: a
 host can satisfy the semantic precondition in the same proposal surface instead
 of detouring through a router-only call. It still does not prove automatic
 hook-time semantic classification.
+
+A 2026-06-03 correction removed the completion-review hard filter from
+`POLICY-jikuo-progress-summary-business-meaning` while preserving its trigger,
+action, evidence, and report-only enforcement. The policy remains anchored to
+`TRG-completion-review` for compatibility, but its applicability is now
+scope-first for `policy_scopes=["progress_summary"]`. This means a host-AI
+follow-up route for "summarize progress / output todos" can trigger the
+business-meaning obligation from `conversation_turn`, `task_start`, or
+`completion_review` without expanding the scope taxonomy or evaluator inputs.
 
 A follow-up real-policy distribution smoke found and fixed a narrower
 precondition gap: `jikuo.propose_policy_distribution_review` without

@@ -94,12 +94,14 @@ def runtime_paths(project_root: Path, *, source_id: str) -> dict[str, Path]:
     runtime_root = runtime_root_for(project_root)
     history_root = runtime_root / "history"
     history_name = f"{utc_now_compact()}_{slugify_ref(source_id)}.md"
+    history_state_summary_name = f"{Path(history_name).stem}.json"
     paths = {
         "runtime_root": runtime_root,
         "last_card": runtime_root / "last_card.md",
         "state_summary": runtime_root / "state_summary.json",
         "history_root": history_root,
         "history_card": history_root / history_name,
+        "history_state_summary": history_root / history_state_summary_name,
     }
     for key, value in paths.items():
         if key == "runtime_root":
@@ -152,6 +154,9 @@ def build_state_summary(
             "last_card_ref": runtime_report.get("last_card_ref"),
             "state_summary_ref": runtime_report.get("state_summary_ref"),
             "history_ref": runtime_report.get("history_ref"),
+            "history_state_summary_ref": runtime_report.get(
+                "history_state_summary_ref"
+            ),
         },
         "client_display_links": build_client_display_links(runtime_report),
         "lifecycle_card_links": runtime_report.get("lifecycle_card_links", []),
@@ -434,6 +439,12 @@ def build_client_display_links(runtime_report: dict[str, Any]) -> dict[str, Any]
             label="History card",
             ref=runtime_report.get("history_ref"),
         ),
+        "history_state_summary": runtime_link_item(
+            project_root=project_root,
+            key="history_state_summary",
+            label="History state summary",
+            ref=runtime_report.get("history_state_summary_ref"),
+        ),
     }
     return {
         "schema": CLIENT_DISPLAY_LINKS_SCHEMA,
@@ -459,6 +470,7 @@ def skipped_report(*, project_root: Path, reason: str) -> dict[str, Any]:
         "last_card_ref": LAST_CARD_REF,
         "state_summary_ref": STATE_SUMMARY_REF,
         "history_ref": None,
+        "history_state_summary_ref": None,
         "lifecycle_card_links": [],
         "observed_lifecycle": observed_lifecycle_for_links([]),
         "project_root": str(project_root),
@@ -487,6 +499,10 @@ def prepare_agent_flow_snapshot(
         "last_card_ref": rel_ref(paths["last_card"], project_root=resolved_root),
         "state_summary_ref": rel_ref(paths["state_summary"], project_root=resolved_root),
         "history_ref": rel_ref(paths["history_card"], project_root=resolved_root),
+        "history_state_summary_ref": rel_ref(
+            paths["history_state_summary"],
+            project_root=resolved_root,
+        ),
         "project_root": str(resolved_root),
         "updated_at_utc": updated_at,
     }
@@ -518,6 +534,9 @@ def persist_prepared_agent_flow_snapshot(
             resolved_root / str(prepared_report["state_summary_ref"])
         ).resolve(),
         "history_card": (resolved_root / str(prepared_report["history_ref"])).resolve(),
+        "history_state_summary": (
+            resolved_root / str(prepared_report["history_state_summary_ref"])
+        ).resolve(),
     }
     for key, value in paths.items():
         if not is_relative_to(value, runtime_root):
@@ -537,6 +556,10 @@ def persist_prepared_agent_flow_snapshot(
     atomic_write_text(paths["history_card"], card_markdown)
     atomic_write_text(
         paths["state_summary"],
+        json.dumps(state_summary, ensure_ascii=False, indent=2) + "\n",
+    )
+    atomic_write_text(
+        paths["history_state_summary"],
         json.dumps(state_summary, ensure_ascii=False, indent=2) + "\n",
     )
     return report

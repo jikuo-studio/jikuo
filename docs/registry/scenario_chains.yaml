@@ -24,6 +24,63 @@ entries:
       - "CAP-CONFIGURATION-REVIEW-01"
       - "CAP-CLIENT-ONBOARDING-SETTINGS-01"
       - "CAP-CONFIGURATION-SOURCE-PROVENANCE-01"
+  - id: "SCENARIO-HOST-SEMANTIC-FOLLOW-UP"
+    title: "Host semantic intent follow-up for governed turns"
+    status: "implemented"
+    user_outcome: "A user who asks for progress, todos, policy work, or edits gets JIKUO routing based on host-provided semantic evidence after the host AI has read the turn, without JIKUO pretending to classify the prompt itself."
+    corresponding_document_refs:
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-AI-SEMROUTE-01_ai_semantic_routing_mvp.md"
+      - ".codex/hooks/README.md"
+    mount_coverage:
+      status: "verified"
+      refs:
+        - "MOUNT-STRICT-HARNESS-PROOF"
+        - "MOUNT-SCENARIO-CHAIN-ATOM-REGISTRATION"
+    steps:
+      - step_id: "HOST-SEMANTIC-FOLLOW-UP-01"
+        user_action: "Submit a turn that asks for progress summary, todos, policy work, or implementation."
+        visible_result: "The pre-turn Codex hook reports whether host semantic intent was already supplied and instructs the host AI to provide compact intent before follow-up JIKUO calls."
+        operation_chain: "Codex UserPromptSubmit invokes JIKUO conversation_turn, projects runtime links, and renders the post-start host_semantic_intent follow-up contract in additionalContext without storing the raw prompt."
+        atom_refs:
+          - "CAP-CODEX-PLUGIN-HARNESS-REVIEW-01"
+          - "CAP-HOST-ADAPTER-CONTRACT-01"
+          - "CAP-SEMANTIC-INTENT-CLASSIFICATION-EVIDENCE-01"
+        approval_boundary: "no_write"
+        evidence_outputs:
+          - "additionalContext semantic follow-up contract"
+          - "semantic_intent_status"
+          - "runtime card links"
+      - step_id: "HOST-SEMANTIC-FOLLOW-UP-02"
+        user_action: "Host AI starts work and classifies the turn compactly."
+        visible_result: "JIKUO receives `host_semantic_intent.status=provided` with MVP policy scopes, requested outcome, boundary, response contract, and a short user expression."
+        operation_chain: "The host AI calls `jikuo.route_user_request`, `jikuo.propose_task_start`, or the matching proposal surface with compact `host_semantic_intent`; JIKUO normalizes it into work_profile without expanding evaluator inputs."
+        atom_refs:
+          - "CAP-HOST-SEMANTIC-INTENT-WORK-PROFILE-01"
+          - "CAP-AI-SEMANTIC-ROUTING-MVP-01"
+        approval_boundary: "no_write"
+        evidence_outputs:
+          - "work_profile.policy_scopes"
+          - "semantic_intent_evidence.status=ok"
+          - "ordered intent_slices when supplied"
+      - step_id: "HOST-SEMANTIC-FOLLOW-UP-03"
+        user_action: "Ask for a progress summary or todo list."
+        visible_result: "The progress-summary business-meaning policy triggers from the `progress_summary` scope even when the active JIKUO surface is conversation_turn or task_start."
+        operation_chain: "The progress-summary policy keeps its completion-review trigger as a compatibility anchor but removes lifecycle_events from applies_to_work_profile, so POLTRIG-04 scope-first matching can trigger it from work_profile.policy_scopes."
+        atom_refs:
+          - "CAP-PROGRESS-SUMMARY-BUSINESS-MEANING-POLICY-01"
+          - "CAP-HOST-SEMANTIC-INTENT-WORK-PROFILE-01"
+        approval_boundary: "report_only_policy_evidence"
+        evidence_outputs:
+          - "trigger_match_mode=work_profile_scope"
+          - "matched_refs includes policy_scope:progress_summary"
+          - "progress_summary_business_meaning_evidence requirement"
+    capability_refs:
+      - "CAP-CODEX-PLUGIN-HARNESS-REVIEW-01"
+      - "CAP-HOST-ADAPTER-CONTRACT-01"
+      - "CAP-HOST-SEMANTIC-INTENT-WORK-PROFILE-01"
+      - "CAP-AI-SEMANTIC-ROUTING-MVP-01"
+      - "CAP-SEMANTIC-INTENT-CLASSIFICATION-EVIDENCE-01"
+      - "CAP-PROGRESS-SUMMARY-BUSINESS-MEANING-POLICY-01"
   - id: "SCENARIO-DOCUMENT-REGISTRY-TRANSITION"
     title: "Layered document registry migration"
     status: "seed"
@@ -74,6 +131,19 @@ entries:
         evidence_outputs:
           - "count-only detail rows"
           - "no-trace selected-round state"
+      - step_id: "STUDIO-ROUND-TRACE-03A"
+        user_action: "Inspect a completion receipt after later runtime turns have overwritten the latest state summary."
+        visible_result: "Studio still shows the selected completion receipt's itemized required companion writes, applicable writes, actual writes, and overflow expansion controls when that receipt has a structured history snapshot."
+        operation_chain: "Runtime visibility writes a same-stem history JSON state snapshot beside each Markdown history card; Studio resolves the selected history card to that structured snapshot before falling back to count-only Markdown parsing, preserving path-level receipt evidence across later conversation_turn/task_start projections."
+        atom_refs:
+          - "CAP-RUNTIME-VISIBILITY-CHANNEL-01"
+          - "CAP-STUDIO-ROUND-DOCUMENT-TRACE-SELECTOR-01"
+          - "CAP-STUDIO-COMPANION-WRITE-RECEIPT-VIEW-01"
+        approval_boundary: "read_only_runtime_projection"
+        evidence_outputs:
+          - "history state summary JSON"
+          - "itemized selected-round detail rows"
+          - "expandable overflow detail rows"
       - step_id: "STUDIO-ROUND-TRACE-04"
         user_action: "Inspect write-side governance reconciliation for a selected round."
         visible_result: "Studio shows required companion write paths, declared write paths, observed actual write paths, and path-level gaps when itemized evidence exists."

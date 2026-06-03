@@ -433,6 +433,39 @@ def write_semantic_scope_distribution_policy_store(root: Path) -> None:
     (store / "manifest.yaml").write_text("\n".join(manifest_lines), encoding="utf-8")
 
 
+def write_progress_summary_policy_store(root: Path) -> None:
+    store = root / ".jikuo" / "policies"
+    approved = store / "approved"
+    approved.mkdir(parents=True, exist_ok=True)
+    policy_id = "POLICY-jikuo-progress-summary-business-meaning"
+    shutil.copyfile(
+        ROOT / ".jikuo" / "policies" / "approved" / f"{policy_id}.yaml",
+        approved / f"{policy_id}.yaml",
+    )
+    (store / "manifest.yaml").write_text(
+        "\n".join(
+            [
+                'schema_version: "jikuo.policy_store_manifest.v0"',
+                'project_id: "agent_flow_progress_summary_fixture"',
+                'store_root: ".jikuo/policies"',
+                "active_policy_refs:",
+                f'  - policy_id: "{policy_id}"',
+                "    version: 1",
+                f'    path: ".jikuo/policies/approved/{policy_id}.yaml"',
+                "proposal_refs: []",
+                "deprecated_policy_refs: []",
+                "superseded_policy_refs: []",
+                'last_updated_at: "2026-06-03T00:00:00Z"',
+                "compatibility:",
+                '  unknown_fields: "preserve"',
+                '  writer: "test_fixture"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+
 def write_main_doc_mount_policy_store(root: Path) -> None:
     store = root / ".jikuo" / "policies"
     approved = store / "approved"
@@ -1225,6 +1258,80 @@ class AgentFlowProposalTests(unittest.TestCase):
             self.assertIn("work_profile scope matched", triggered["trigger_reason"])
             self.assertIn(
                 "work_profile scope matched during task_start",
+                proposal["chat_ready_markdown"],
+            )
+
+    def test_progress_summary_policy_triggers_from_conversation_scope(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            create_agent_flow_ready_project(project_root)
+            write_progress_summary_policy_store(project_root)
+            semantic_intent = {
+                "schema": "jikuo.host_semantic_intent.v0",
+                "provider": "host_ai",
+                "confidence": "high",
+                "policy_scopes": ["progress_summary"],
+                "requested_outcome": "summarize progress and remaining todos",
+                "execution_boundary": "no file writes required for this summary",
+                "response_contract": [
+                    "include product or business meaning for major items",
+                    "separate completed work from next todos",
+                ],
+                "intent_slices": [
+                    {
+                        "id": "progress_summary",
+                        "index": 1,
+                        "user_expression": "总结进度，输出代办",
+                        "policy_scopes": ["progress_summary"],
+                        "requested_outcome": "summarize current progress and next todos",
+                    }
+                ],
+            }
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "propose",
+                    "--event",
+                    "conversation_turn",
+                    "--trigger-mode",
+                    "mounted",
+                    "--user-phrase",
+                    "\u603b\u7ed3\u8fdb\u5ea6\uff0c\u8f93\u51fa\u4ee3\u529e",
+                    "--host-semantic-intent-json",
+                    json.dumps(semantic_intent),
+                    "--project-root",
+                    str(project_root),
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            proposal = json.loads(completed.stdout)
+            self.assertEqual(proposal["work_profile"]["policy_scopes"], ["progress_summary"])
+            self.assertEqual(proposal["semantic_intent_evidence"]["status"], "ok")
+            self.assertEqual(
+                [policy["policy_ref"] for policy in proposal["triggered_policies"]],
+                ["POLICY-jikuo-progress-summary-business-meaning"],
+            )
+            triggered = proposal["triggered_policies"][0]
+            self.assertEqual(triggered["trigger_match_mode"], "work_profile_scope")
+            self.assertEqual(triggered["declared_trigger_event"], "completion_review")
+            self.assertEqual(triggered["evaluation_event"], "conversation_turn")
+            self.assertIn(
+                "policy_scope:progress_summary",
+                triggered["work_profile_match"]["matched_refs"],
+            )
+            self.assertIn(
+                "work_profile scope matched during conversation_turn",
                 proposal["chat_ready_markdown"],
             )
 

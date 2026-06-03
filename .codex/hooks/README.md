@@ -33,8 +33,11 @@ transport path:
   `hostSemanticIntent`, the hook forwards it to JIKUO for final work-profile
   projection.
 - If no semantic object is supplied, `additionalContext` instructs the host AI
-  to classify the turn before later JIKUO router tool calls and pass compact
-  `host_semantic_intent` with no raw prompt or transcript.
+  to classify the turn after it has read and understood the user request, then
+  pass compact `host_semantic_intent` before later JIKUO router or proposal
+  tool calls such as task start, policy work, or progress summaries. This is a
+  cooperative post-start follow-up contract, not a pre-turn classifier inside
+  the hook.
 - If no compact semantic intent is supplied, `semantic_intent_status` is
   reported as `unavailable`.
 - If the host AI performs workspace writes during the turn, `additionalContext`
@@ -43,9 +46,11 @@ transport path:
   instruction-level host-AI obligation, not proof of a mounted post-turn hook.
 
 Do not claim Codex GUI AI-semantic routing from this hook. The current code can
-transport and label semantic intent, but it does not generate host-time AI
-classification by itself. A real GUI proof must still show whether Codex can
-provide that semantic object before JIKUO runs.
+transport and label semantic intent, and it can instruct the host AI to make a
+follow-up JIKUO call with compact semantic evidence after the host has begun
+reasoning. It does not generate host-time AI classification by itself. A real
+GUI proof must still show whether Codex can provide that semantic object before
+JIKUO runs.
 
 The project-local Codex GUI proof has shown that `additionalContext` can be
 injected before the assistant answer. A 2026-05-28 GUI probe also showed that

@@ -472,12 +472,14 @@ def render_additional_context(
         semantic_classification_note(semantic_intent_status),
         *_semantic_intent_precondition_lines(proposal),
         (
-            "Host semantic intent contract: before calling JIKUO router tools for "
-            "this turn, classify the request when you have enough context and pass "
-            "compact host_semantic_intent; use status=provided, provider=host_ai, "
-            "policy_scopes limited to discussion/editing/progress_summary, "
-            "requested_outcome, execution_boundary, response_contract, and short "
-            "user_expression. Do not include the raw prompt or transcript."
+            "Host semantic intent follow-up contract: after reading and "
+            "understanding this turn, and before calling JIKUO router or proposal "
+            "tools for task_start, policy work, or progress summaries, classify "
+            "the request and pass compact host_semantic_intent; use "
+            "status=provided, provider=host_ai, policy_scopes limited to "
+            "discussion/editing/progress_summary, requested_outcome, "
+            "execution_boundary, response_contract, and short user_expression. "
+            "Do not include the raw prompt or transcript."
         ),
         f"Project root: {project_root}.",
         f"Session id: {hook_input.session_id or 'unavailable'}.",

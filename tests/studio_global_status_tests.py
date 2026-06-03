@@ -206,6 +206,152 @@ class StudioGlobalStatusTests(unittest.TestCase):
             self.assertEqual(older["counts"]["planned_write_count"], 2)
             self.assertEqual(older["counts"]["actual_write_count"], 1)
 
+    def test_history_state_summary_preserves_itemized_round_trace_details(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            runtime_root = project_root / ".jikuo" / "runtime"
+            history_root = runtime_root / "history"
+            history_root.mkdir(parents=True)
+            (project_root / ".jikuo" / "project_context.yaml").write_text(
+                "\n".join(
+                    [
+                        'schema_version: "jikuo.project_context.v0"',
+                        "document_roles: {}",
+                        "main_document_mounts:",
+                        '  canonical_path_root: "."',
+                        "  active_mount_authority: []",
+                        "  checked_before_slice_completion: []",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            latest_ref = ".jikuo/runtime/history/20260602T010000Z_proposal_latest.md"
+            receipt_ref = ".jikuo/runtime/history/20260602T000000Z_proposal_receipt.md"
+            (project_root / latest_ref).write_text(
+                "\n".join(
+                    [
+                        "# JIKUO Agent Flow Proposal",
+                        "",
+                        "- Status: `review`",
+                        "- Proposal id: `proposal_latest`",
+                        "",
+                        "## Work Profile",
+                        "",
+                        "- Lifecycle event: `conversation_turn`",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            (project_root / receipt_ref).write_text(
+                "\n".join(
+                    [
+                        "# JIKUO Agent Flow Proposal",
+                        "",
+                        "- Status: `review`",
+                        "- Proposal id: `proposal_receipt`",
+                        "",
+                        "## Work Profile",
+                        "",
+                        "- Lifecycle event: `completion_review`",
+                        "",
+                        "## Artifact Assurance",
+                        "",
+                        "- Status: `review`",
+                        "- Required companion writes: `1`",
+                        "- Actual writes: `6`",
+                        "- Gap count: `0`",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            actual_writes = [
+                {"path": f"docs/item_{index}.md", "operation": "modified"}
+                for index in range(6)
+            ]
+            (project_root / receipt_ref).with_suffix(".json").write_text(
+                json.dumps(
+                    {
+                        "schema": "jikuo.runtime_state_summary.v0",
+                        "status": "available",
+                        "updated_at_utc": "2026-06-02T00:00:00Z",
+                        "source": {
+                            "proposal_id": "proposal_receipt",
+                            "status": "review",
+                            "event": "completion_review",
+                        },
+                        "runtime_visibility": {"history_ref": receipt_ref},
+                        "artifact_assurance": {
+                            "schema": "jikuo.studio.artifact_assurance.v0",
+                            "status": "ok",
+                            "read_assurance": {"required_read_count": 0},
+                            "write_assurance": {
+                                "required_write_count": 1,
+                                "required_companion_write_count": 1,
+                                "actual_write_count": 6,
+                                "required_write_set": [
+                                    {
+                                        "path": "docs/registry/capabilities.yaml",
+                                        "reason": "capability registration",
+                                    }
+                                ],
+                                "required_companion_write_set": [
+                                    {
+                                        "path": "docs/registry/capabilities.yaml",
+                                        "reason": "feature atom registration",
+                                    }
+                                ],
+                                "completion_check_candidate_count": 1,
+                                "completion_check_candidates": [
+                                    {
+                                        "path": "docs/work_orders/receipt.md",
+                                        "reason": "completion check",
+                                    }
+                                ],
+                                "actual_write_set": actual_writes,
+                            },
+                            "gap_report": {"gap_count": 0, "write_gaps": []},
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (runtime_root / "state_summary.json").write_text(
+                json.dumps(
+                    {
+                        "schema": "jikuo.runtime_state_summary.v0",
+                        "status": "available",
+                        "updated_at_utc": "2026-06-02T01:00:00Z",
+                        "source": {
+                            "proposal_id": "proposal_latest",
+                            "status": "review",
+                            "event": "conversation_turn",
+                        },
+                        "runtime_visibility": {"history_ref": latest_ref},
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            report = global_status.build_global_status(project_root=project_root)
+
+            traces = report["summaries"]["runtime"]["round_document_traces"]
+            self.assertEqual(traces["default_round_id"], Path(receipt_ref).stem)
+            receipt = next(
+                item for item in traces["rounds"] if item["round_id"] == Path(receipt_ref).stem
+            )
+            self.assertEqual(receipt["source_kind"], "runtime_history_state_summary")
+            self.assertEqual(receipt["trace_label"], "Structured document receipt")
+            write = receipt["artifact_assurance"]["write_assurance"]
+            self.assertEqual(
+                write["required_companion_write_set"][0]["path"],
+                "docs/registry/capabilities.yaml",
+            )
+            self.assertEqual(len(write["actual_write_set"]), 6)
+            self.assertEqual(receipt["counts"]["actual_write_count"], 6)
+
     def test_global_status_reports_document_mount_read_model(self):
         report = global_status.build_global_status(project_root=ROOT)
 

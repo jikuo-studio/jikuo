@@ -560,6 +560,22 @@ Current compatibility behavior:
   scope-only applicability unless a lifecycle filter is genuinely part of the
   policy.
 
+2026-06-03 correction:
+
+- `POLICY-jikuo-progress-summary-business-meaning` is an intent / response
+  obligation, not a completion-review-only lifecycle checkpoint.
+- Its `applies_to_work_profile` now uses scope-only
+  `policy_scopes: ["progress_summary"]` while retaining the existing
+  completion-review trigger as a compatibility anchor.
+- This lets host-AI follow-up routing for "summarize progress / output todos"
+  trigger the business-meaning obligation from `conversation_turn`,
+  `task_start`, or `completion_review` without adding new scope names,
+  evaluator inputs, policy actions, evidence types, or enforcement behavior.
+- The Codex hook may instruct the host AI to submit compact
+  `host_semantic_intent` after the host has read the turn, but that remains a
+  cooperative transport contract. It is not hook-time semantic classification
+  and not proof of strict mounted lifecycle orchestration.
+
 ---
 
 ## 8. Policy Dead-Zone Relationship
