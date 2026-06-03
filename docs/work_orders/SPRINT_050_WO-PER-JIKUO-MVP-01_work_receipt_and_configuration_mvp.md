@@ -82,6 +82,7 @@ expanding the architecture.
 | Insight | MVP handling |
 |---|---|
 | `INSIGHT-2026-06-03-runtime-history-card-itemized-document-evidence-gap` | Drives the work receipt model. MVP implements write-side observed evidence first and keeps true observed-read telemetry deferred. |
+| `INSIGHT-2026-06-03-completion-check-applicability-evidence-gap` | Keeps completion-check applicability separate from concrete reconciliation gaps. MVP fixes Studio wording now and defers itemized per-document applicability decisions. |
 | `INSIGHT-2026-05-19-completion-review-evidence-bridge-gap` | Completion review should surface receipt and gap evidence so policy/runtime cards do not stay blind after real work occurred. |
 | `INSIGHT-2026-05-21-lifecycle-sequencing-owner-gap` | MVP does not build a lifecycle runner. It adds explicit host-AI/manual completion-review invocation guidance. |
 | `INSIGHT-2026-05-21-from-lifecycle-to-action-grammar` | MVP treats completion review as a lightweight checkpoint, not a rigid lifecycle engine. |
@@ -314,6 +315,13 @@ Acceptance:
   count-only;
 - path-level lists are visible for every required companion, declared, observed,
   and gap set that has itemized evidence;
+- the Round Document Trace summary shows concrete `Gaps` separately from
+  `Unchecked applicability` so completion-check candidates without per-document
+  applicability evidence are not presented as reconciliation failures;
+- the Expected, Observed, and Gaps detail columns use labeled subpanels so
+  different evidence classes remain scannable when path lists become long;
+- `+ N more` overflow rows can be expanded in place so users can inspect the
+  full itemized receipt when path-level evidence exists;
 - Studio does not infer paths from counts.
 
 ### `MVP-RECEIPT-05`: Completion Review Invocation Path

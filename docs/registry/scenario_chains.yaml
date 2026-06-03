@@ -90,6 +90,31 @@ entries:
           - "companion trigger list"
           - "ignored actual-write list"
           - "path-level write gap list"
+      - step_id: "STUDIO-ROUND-TRACE-05"
+        user_action: "Inspect completion-check status for a selected round."
+        visible_result: "Studio shows concrete Gaps separately from Unchecked applicability so unevaluated completion-check candidates are not presented as evidence mismatches."
+        operation_chain: "Round Document Trace renders gap_count as the Gaps summary and renders completion_check_not_evaluated_count as Unchecked applicability, preserving the distinction between observed reconciliation gaps and missing per-document applicability decisions."
+        atom_refs:
+          - "CAP-STUDIO-ARTIFACT-ASSURANCE-COMPLETION-CHECK-SEMANTICS-01"
+          - "CAP-STUDIO-ROUND-DOCUMENT-TRACE-01"
+        approval_boundary: "read_only"
+        evidence_outputs:
+          - "gap count summary chip"
+          - "unchecked applicability summary chip"
+          - "completion-check applicability detail rows"
+      - step_id: "STUDIO-ROUND-TRACE-06"
+        user_action: "Scan the Expected, Observed, and Gaps detail columns for a selected round."
+        visible_result: "Each column is split into labeled subpanels so required reads, companion writes, runtime source, observed evidence, read gaps, write gaps, and unchecked applicability are visually separated; overflow rows can be expanded from the `+ N more` control."
+        operation_chain: "Studio builds lightweight trace groups inside each detail column from the same selected-round artifact_assurance payload, and overflow controls reveal hidden itemized rows in place without creating a second data source or changing reconciliation semantics."
+        atom_refs:
+          - "CAP-STUDIO-ROUND-DOCUMENT-TRACE-01"
+          - "CAP-STUDIO-COMPANION-WRITE-RECEIPT-VIEW-01"
+        approval_boundary: "read_only"
+        evidence_outputs:
+          - "Expected subpanel groups"
+          - "Observed subpanel groups"
+          - "Gaps subpanel groups"
+          - "expandable overflow detail rows"
     capability_refs:
       - "CAP-STUDIO-ARTIFACT-ASSURANCE-PROJECTION-01"
       - "CAP-STUDIO-ARTIFACT-ASSURANCE-RUNTIME-CARD-01"
@@ -98,3 +123,4 @@ entries:
       - "CAP-STUDIO-LATEST-COMPLETION-RECEIPT-01"
       - "CAP-RUNTIME-COMPANION-WRITE-OBLIGATION-01"
       - "CAP-STUDIO-COMPANION-WRITE-RECEIPT-VIEW-01"
+      - "CAP-STUDIO-ARTIFACT-ASSURANCE-COMPLETION-CHECK-SEMANTICS-01"

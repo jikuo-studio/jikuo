@@ -252,6 +252,34 @@ INDEX_HTML = """<!doctype html>
       margin: 0 0 3px;
       font-size: 14px;
     }
+    .trace-group {
+      min-width: 0;
+      padding: 10px 0 0 10px;
+      border-top: 1px solid var(--line);
+      border-left: 3px solid #b8c8d6;
+    }
+    .trace-group:first-child {
+      padding-top: 0;
+      border-top: 0;
+    }
+    .trace-group-title {
+      display: grid;
+      gap: 2px;
+      margin: 0 0 7px -10px;
+      padding: 5px 8px;
+      background: var(--soft);
+      border-left: 3px solid var(--accent);
+    }
+    .trace-group-title strong {
+      color: var(--accent);
+      font-size: 13px;
+      line-height: 1.3;
+    }
+    .trace-group-title span {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
     .trace-summary {
       display: flex;
       flex-wrap: wrap;
@@ -386,6 +414,52 @@ INDEX_HTML = """<!doctype html>
       line-height: 1.4;
       margin-top: 2px;
       overflow-wrap: anywhere;
+    }
+    .compact-expander {
+      min-width: 0;
+      border-top: 1px solid var(--line);
+    }
+    .compact-expander:first-child {
+      border-top: 0;
+    }
+    .compact-toggle {
+      width: 100%;
+      min-height: auto;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      color: var(--accent);
+      display: block;
+      padding: 7px 0;
+      text-align: left;
+      font: inherit;
+      cursor: pointer;
+    }
+    .compact-toggle strong {
+      display: block;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+    .compact-toggle span {
+      color: var(--muted);
+      display: block;
+      font-size: 12px;
+      line-height: 1.4;
+      margin-top: 2px;
+      overflow-wrap: anywhere;
+    }
+    .compact-toggle:hover strong {
+      text-decoration: underline;
+    }
+    .compact-expanded {
+      display: grid;
+      gap: 0;
+      margin: 0 0 4px;
+      padding-left: 10px;
+      border-left: 2px solid var(--line);
+    }
+    .compact-expanded[hidden] {
+      display: none;
     }
     .file-toolbar {
       display: grid;
@@ -676,17 +750,58 @@ INDEX_HTML = """<!doctype html>
       item.querySelector("span").textContent = detail || "";
       return item;
     };
-    const overflowNote = (count, shown, label) => {
+    const traceGroup = (title, detail, rows) => {
+      const group = document.createElement("div");
+      group.className = "trace-group";
+      group.innerHTML = `<div class="trace-group-title"><strong></strong><span></span></div><div class="compact-list"></div>`;
+      group.querySelector("strong").textContent = title;
+      group.querySelector("span").textContent = detail || "";
+      group.querySelector(".compact-list").replaceChildren(...(rows || []));
+      return group;
+    };
+    const overflowNote = (count, shown, label, hiddenRows) => {
       const hidden = Math.max(0, count - shown);
-      return hidden ? compactItem(`+ ${hidden} more`, `${label} are configured but hidden in this preview.`) : null;
+      if (!hidden) {
+        return null;
+      }
+      const rows = hiddenRows || [];
+      if (!rows.length) {
+        return compactItem(`+ ${hidden} more`, `${label} are configured but hidden in this preview.`);
+      }
+      const wrapper = document.createElement("div");
+      wrapper.className = "compact-expander";
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "compact-toggle";
+      button.innerHTML = `<strong></strong><span></span>`;
+      const title = button.querySelector("strong");
+      const detail = button.querySelector("span");
+      const expanded = document.createElement("div");
+      expanded.className = "compact-expanded";
+      expanded.hidden = true;
+      expanded.replaceChildren(...rows);
+      const setExpanded = (open) => {
+        expanded.hidden = !open;
+        button.setAttribute("aria-expanded", String(open));
+        title.textContent = open ? `Hide ${hidden} ${label}` : `+ ${hidden} more`;
+        detail.textContent = open ? "Collapse hidden rows." : `Show hidden ${label}.`;
+      };
+      button.addEventListener("click", () => setExpanded(expanded.hidden));
+      setExpanded(false);
+      wrapper.append(button, expanded);
+      return wrapper;
     };
     const numberValue = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
     const detailCount = (count, label) => `${numberValue(count)} ${label}`;
     const gapRows = (items, fallback) => {
-      const rows = (items || []).slice(0, 4).map((item) =>
+      const records = items || [];
+      const rows = records.slice(0, 4).map((item) =>
         compactItem(item.gap_type || "gap", item.path || "path not supplied")
       );
-      const extra = overflowNote((items || []).length, rows.length, "gaps");
+      const hiddenRows = records.slice(4).map((item) =>
+        compactItem(item.gap_type || "gap", item.path || "path not supplied")
+      );
+      const extra = overflowNote(records.length, rows.length, "gaps", hiddenRows);
       return rows.length ? [...rows, ...(extra ? [extra] : [])] : [compactItem("No gaps", fallback)];
     };
     const termsById = (items) => Object.fromEntries((items || []).map((item) => [item.term_id, item]));
@@ -930,14 +1045,20 @@ INDEX_HTML = """<!doctype html>
       const contextRows = roles.slice(0, 6).map((item) =>
         compactItem(item.path || "unbound", `role: ${item.role || "unlabeled"}${item.note ? ` / ${item.note}` : ""}`)
       );
-      const contextOverflow = overflowNote(roles.length, contextRows.length, "context documents");
+      const contextHiddenRows = roles.slice(6).map((item) =>
+        compactItem(item.path || "unbound", `role: ${item.role || "unlabeled"}${item.note ? ` / ${item.note}` : ""}`)
+      );
+      const contextOverflow = overflowNote(roles.length, contextRows.length, "context documents", contextHiddenRows);
       contextOverview.replaceChildren(...(contextRows.length ? contextRows : [compactItem("No context documents", "No document roles are configured.")]), ...(contextOverflow ? [contextOverflow] : []));
       const completionOverview = document.getElementById("document-rules-completion-overview");
       const completionOverviewDocs = mounts.checked_before_slice_completion || [];
       const completionRows = completionOverviewDocs.slice(0, 6).map((item) =>
         compactItem(item.path || "unbound", item.update_required_when || "review before declaring the slice complete")
       );
-      const completionOverflow = overflowNote(completionOverviewDocs.length, completionRows.length, "completion checks");
+      const completionHiddenRows = completionOverviewDocs.slice(6).map((item) =>
+        compactItem(item.path || "unbound", item.update_required_when || "review before declaring the slice complete")
+      );
+      const completionOverflow = overflowNote(completionOverviewDocs.length, completionRows.length, "completion checks", completionHiddenRows);
       completionOverview.replaceChildren(...(completionRows.length ? completionRows : [compactItem("No completion checks", "No completion-check documents are configured.")]), ...(completionOverflow ? [completionOverflow] : []));
       const guidanceOverview = document.getElementById("document-rules-guidance-overview");
       const guidanceOverviewRows = (mounts.document_rule_sources || []).map((item) =>
@@ -974,7 +1095,10 @@ INDEX_HTML = """<!doctype html>
       const rows = records.slice(0, 5).map((item) =>
         compactItem(artifactPath(item), artifactDetail(item, detailFallback))
       );
-      const extra = overflowNote(records.length, rows.length, "trace items");
+      const hiddenRows = records.slice(5).map((item) =>
+        compactItem(artifactPath(item), artifactDetail(item, detailFallback))
+      );
+      const extra = overflowNote(records.length, rows.length, "trace items", hiddenRows);
       if (rows.length) {
         return [...rows, ...(extra ? [extra] : [])];
       }
@@ -992,7 +1116,13 @@ INDEX_HTML = """<!doctype html>
         const detail = [artifactPath(item), nestedDetail].filter(Boolean).join(" / ");
         return compactItem(item.gap_type || "gap", detail);
       });
-      const extra = overflowNote(records.length, rows.length, "gaps");
+      const hiddenRows = records.slice(6).map((item) => {
+        const nested = (item || {}).observed || (item || {}).expected || {};
+        const nestedDetail = artifactDetail(nested, "");
+        const detail = [artifactPath(item), nestedDetail].filter(Boolean).join(" / ");
+        return compactItem(item.gap_type || "gap", detail);
+      });
+      const extra = overflowNote(records.length, rows.length, "gaps", hiddenRows);
       if (rows.length) {
         return [...rows, ...(extra ? [extra] : [])];
       }
@@ -1156,46 +1286,60 @@ INDEX_HTML = """<!doctype html>
         traceChip("Expected reads", detailCount(requiredReadCount, "documents")),
         traceChip("Observed reads", detailCount(readEvidenceCount, "evidence items")),
         traceChip("Writes", `${requiredCompanionWriteCount} required / ${declaredWriteCount} declared / ${actualWriteCount} actual`),
-        traceChip("Gaps", detailCount(gapCount + completionNotEvaluatedCount, "items"))
+        traceChip("Gaps", detailCount(gapCount, "items")),
+        traceChip("Unchecked applicability", detailCount(completionNotEvaluatedCount, "items"))
       );
 
       document.getElementById("round-trace-expected").replaceChildren(
-        compactItem("Required reads", detailCount(requiredReadCount, "documents")),
-        ...artifactRows(expectedReads, "No required reads are configured for this selected round.", "configured context document", requiredReadCount, "documents"),
-        compactItem("Required companion writes", detailCount(requiredCompanionWriteCount, "documents")),
-        ...artifactRows(requiredCompanionWrites, "No required companion writes were projected for this selected round.", "required companion write", requiredCompanionWriteCount, "required companion writes"),
-        compactItem("Applicable required writes", detailCount(expectedWriteCount, "documents")),
-        ...artifactRows(expectedWrites, "No applicable required writes are known for this selected round.", "required write", expectedWriteCount, "documents"),
-        compactItem("Completion checks", detailCount(completionCandidateCount, "candidates")),
-        ...artifactRows(completionCandidates, "No completion-check candidates are configured for this selected round.", "completion check candidate", completionCandidateCount, "candidates")
+        traceGroup("Read obligations", detailCount(requiredReadCount, "documents"), [
+          ...artifactRows(expectedReads, "No required reads are configured for this selected round.", "configured context document", requiredReadCount, "documents"),
+        ]),
+        traceGroup("Required companion writes", detailCount(requiredCompanionWriteCount, "documents"), [
+          ...artifactRows(requiredCompanionWrites, "No required companion writes were projected for this selected round.", "required companion write", requiredCompanionWriteCount, "required companion writes"),
+        ]),
+        traceGroup("Applicable writes", detailCount(expectedWriteCount, "documents"), [
+          ...artifactRows(expectedWrites, "No applicable required writes are known for this selected round.", "required write", expectedWriteCount, "documents"),
+        ]),
+        traceGroup("Completion-check candidates", detailCount(completionCandidateCount, "candidates"), [
+          ...artifactRows(completionCandidates, "No completion-check candidates are configured for this selected round.", "completion check candidate", completionCandidateCount, "candidates"),
+        ])
       );
 
-      const observedRows = latestAvailable
-        ? [
-            compactItem("Runtime projection", `${runtimeProjection.event || selectedRound.lifecycle_event || "latest task"} / ${runtimeProjection.persistence || selectedRound.source_kind || "runtime summary"}`),
-            compactItem("History card", selectedRound.history_ref || "history ref not supplied"),
-            compactItem("Actual write source", runtimeProjection.actual_write_source || "source not supplied"),
-            compactItem("Git observation", runtimeProjection.git_write_observation
-              ? `${runtimeProjection.git_write_observation.status || "unknown"} / ${numberValue(runtimeProjection.git_write_observation.observed_actual_write_count)} observed / ${runtimeProjection.git_write_observation.attribution_status || "attribution not supplied"}`
-              : "not supplied for this round"),
-            compactItem("Declared actual writes", detailCount(runtimeProjection.declared_actual_write_count, "items")),
-            compactItem("Companion projection", companionProjection.schema
-              ? `${companionProjection.status || "unknown"} / ${requiredCompanionWriteCount} required / ${companionTriggerCount} triggers / ${companionIgnoredCount} ignored`
-              : "not supplied for this round"),
-            ...artifactRows(companionTriggers, "No companion write triggers were projected for this round.", "companion write trigger", companionTriggerCount, "companion triggers"),
-            ...artifactRows(companionIgnoredItems, "No actual writes were ignored by companion rules.", "ignored actual write", companionIgnoredCount, "ignored actual writes"),
-            compactItem("Read evidence", detailCount(readEvidenceCount, "items")),
-            ...artifactRows(readEvidence, "No read evidence was supplied for this round.", "read evidence", readEvidenceCount, "read evidence items"),
-            compactItem("Declared writes", detailCount(declaredWriteCount, "documents")),
-            ...artifactRows(declaredWrites, "No declared write evidence was supplied for this round.", "declared write", declaredWriteCount, "declared writes"),
-            compactItem("Actual writes", detailCount(actualWriteCount, "documents")),
-            ...artifactRows(actualWrites, "No actual write evidence was supplied for this round.", "actual write", actualWriteCount, "actual writes"),
-          ]
-        : [
-            compactItem("Runtime projection", selectedRound ? `${selectedRound.lifecycle_event || "runtime round"} has no comparable document trace.` : "No comparable trace was captured."),
-            compactItem("Observed evidence", "No read/write evidence is available for this selected round."),
-          ];
-      document.getElementById("round-trace-observed").replaceChildren(...observedRows);
+      document.getElementById("round-trace-observed").replaceChildren(
+        ...(latestAvailable
+          ? [
+              traceGroup("Runtime source", "Projection and observation provenance", [
+                compactItem("Runtime projection", `${runtimeProjection.event || selectedRound.lifecycle_event || "latest task"} / ${runtimeProjection.persistence || selectedRound.source_kind || "runtime summary"}`),
+                compactItem("History card", selectedRound.history_ref || "history ref not supplied"),
+                compactItem("Actual write source", runtimeProjection.actual_write_source || "source not supplied"),
+                compactItem("Git observation", runtimeProjection.git_write_observation
+                  ? `${runtimeProjection.git_write_observation.status || "unknown"} / ${numberValue(runtimeProjection.git_write_observation.observed_actual_write_count)} observed / ${runtimeProjection.git_write_observation.attribution_status || "attribution not supplied"}`
+                  : "not supplied for this round"),
+              ]),
+              traceGroup("Companion projection", companionProjection.schema
+                ? `${companionProjection.status || "unknown"} / ${requiredCompanionWriteCount} required / ${companionTriggerCount} triggers / ${companionIgnoredCount} ignored`
+                : "not supplied for this round", [
+                ...artifactRows(companionTriggers, "No companion write triggers were projected for this round.", "companion write trigger", companionTriggerCount, "companion triggers"),
+                ...artifactRows(companionIgnoredItems, "No actual writes were ignored by companion rules.", "ignored actual write", companionIgnoredCount, "ignored actual writes"),
+              ]),
+              traceGroup("Read evidence", detailCount(readEvidenceCount, "items"), [
+                ...artifactRows(readEvidence, "No read evidence was supplied for this round.", "read evidence", readEvidenceCount, "read evidence items"),
+              ]),
+              traceGroup("Declared writes", detailCount(declaredWriteCount, "documents"), [
+                compactItem("Declared actual writes", detailCount(runtimeProjection.declared_actual_write_count, "items")),
+                ...artifactRows(declaredWrites, "No declared write evidence was supplied for this round.", "declared write", declaredWriteCount, "declared writes"),
+              ]),
+              traceGroup("Actual writes", detailCount(actualWriteCount, "documents"), [
+                ...artifactRows(actualWrites, "No actual write evidence was supplied for this round.", "actual write", actualWriteCount, "actual writes"),
+              ]),
+            ]
+          : [
+              traceGroup("Runtime source", "No comparable document evidence", [
+                compactItem("Runtime projection", selectedRound ? `${selectedRound.lifecycle_event || "runtime round"} has no comparable document trace.` : "No comparable trace was captured."),
+                compactItem("Observed evidence", "No read/write evidence is available for this selected round."),
+              ]),
+            ])
+      );
 
       const gapRowsForTrace = latestAvailable
         ? [
@@ -1207,13 +1351,24 @@ INDEX_HTML = """<!doctype html>
           ]
         : [compactItem("No comparable trace", "This selected round has no runtime document evidence to compare.")];
       document.getElementById("round-trace-gaps").replaceChildren(
-        ...gapRowsForTrace,
-        ...(completionNotEvaluatedCount
-          ? [
-              compactItem("Completion checks not evaluated", detailCount(completionNotEvaluatedCount, "documents")),
-              ...artifactRows(completionNotEvaluated, "", "needs applicability evidence", completionNotEvaluatedCount, "documents"),
-            ]
-          : [compactItem("Completion checks", "No unevaluated completion checks are reported.")])
+        traceGroup("Read gaps", detailCount(readGapCount, "items"), [
+          ...(latestAvailable ? traceGapRows(readGaps, "No required-read gaps are currently reported.", readGapCount) : gapRowsForTrace),
+        ]),
+        traceGroup("Write gaps", detailCount(writeGapCount + uncategorizedGapCount, "items"), [
+          ...(latestAvailable
+            ? [
+                ...traceGapRows(writeGaps, "No write gaps are currently reported.", writeGapCount),
+                ...(uncategorizedGapCount
+                  ? [compactItem(`${uncategorizedGapCount} total gaps counted`, "Detailed gap categories are not available in this history card.")]
+                  : []),
+              ]
+            : [compactItem("No comparable trace", "This selected round has no runtime document evidence to compare.")]),
+        ]),
+        traceGroup("Unchecked applicability", detailCount(completionNotEvaluatedCount, "completion checks"), [
+          ...(completionNotEvaluatedCount
+            ? artifactRows(completionNotEvaluated, "", "needs applicability decision evidence", completionNotEvaluatedCount, "completion checks")
+            : [compactItem("No unchecked applicability", "No unevaluated completion-check applicability is reported.")]),
+        ])
       );
 
       document.getElementById("round-trace-timeline").replaceChildren(

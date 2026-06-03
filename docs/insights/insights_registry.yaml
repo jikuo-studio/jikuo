@@ -207,3 +207,20 @@ entries:
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md"
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-DATA-01_structured_execution_event_ledger_and_analytics_contract.md"
     summary: "Studio Round Document Trace exposed a broader audit gap: JIKUO cannot prove AI cognitive document consumption, and current runtime history cards can retain read/write/gap counts without per-round observed-read, citation, decision-bound, required-companion-write, declared-write, actual-write, and operation evidence needed for a trustworthy document-consumption and editing evidence chain."
+  - insight_id: "INSIGHT-2026-06-03-completion-check-applicability-evidence-gap"
+    title: "Completion-check applicability needs itemized evidence"
+    classification: "task_candidate"
+    status: "open"
+    file: "docs/insights/INSIGHT-2026-06-03-completion-check-applicability-evidence-gap.md"
+    related_insight_refs:
+      - "docs/insights/INSIGHT-2026-06-03-runtime-history-card-itemized-document-evidence-gap.md"
+    related_design_refs:
+      - "docs/governance/jikuo_document_evidence_chain_design.md"
+    related_task_refs:
+      - "src/jikuo/studio/artifact_assurance.py"
+      - "src/jikuo/agent_flow.py"
+      - "src/jikuo/runtime_visibility.py"
+      - "src/jikuo/studio/global_status.py"
+      - "src/jikuo/integrations/studio_web/server.py"
+      - ".jikuo/project_context.yaml"
+    summary: "Completion-check candidates from checked_before_slice_completion are currently projected as not_evaluated until per-document applicability evidence exists; Studio should keep unchecked applicability separate from concrete reconciliation gaps and future completion review should persist itemized applicability decisions."

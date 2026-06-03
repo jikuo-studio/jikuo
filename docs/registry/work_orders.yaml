@@ -1261,7 +1261,7 @@ entries:
     title: "SPRINT_050_WO-PER-JIKUO-MVP-01: Work Receipt And Configuration MVP"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-MVP-01_work_receipt_and_configuration_mvp.md"
     sprint: "SPRINT_050"
-    status: "MVP work-order sequence active; git actual-write observation, completion-review wiring, latest receipt default selection, first companion-write obligation projection/view, and trigger/ignored-write receipt hints implemented"
+    status: "MVP work-order sequence active; git actual-write observation, completion-review wiring, latest receipt default selection, first companion-write obligation projection/view, trigger/ignored-write receipt hints, Gaps vs Unchecked applicability wording, grouped receipt detail subpanels, and expandable overflow detail rows implemented"
     impact_tags:
       - "mvp"
       - "studio"
