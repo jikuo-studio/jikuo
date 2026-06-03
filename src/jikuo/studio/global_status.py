@@ -506,6 +506,19 @@ def round_trace_from_history_card(project_root: Path, path: Path) -> dict[str, A
     )
 
 
+def latest_completion_receipt_round(rounds: list[dict[str, Any]]) -> dict[str, Any] | None:
+    for round_trace in rounds:
+        if (
+            round_trace.get("lifecycle_event") == "completion_review"
+            and round_trace.get("has_document_trace")
+        ):
+            return round_trace
+    for round_trace in rounds:
+        if round_trace.get("lifecycle_event") == "completion_review":
+            return round_trace
+    return None
+
+
 def round_document_traces(project_root: Path, state: dict[str, Any]) -> dict[str, Any]:
     runtime_root = runtime_visibility.runtime_root_for(project_root)
     history_root = runtime_root / "history"
@@ -525,13 +538,34 @@ def round_document_traces(project_root: Path, state: dict[str, Any]) -> dict[str
             seen_refs.add(history_ref)
             if len(rounds) >= ROUND_DOCUMENT_TRACE_HISTORY_LIMIT:
                 break
-    default_round = rounds[0] if rounds else None
+    latest_runtime_round = rounds[0] if rounds else None
+    latest_receipt_round = latest_completion_receipt_round(rounds)
+    default_round = latest_receipt_round or latest_runtime_round
     return {
         "schema": ROUND_DOCUMENT_TRACES_SCHEMA,
         "schema_version": ROUND_DOCUMENT_TRACES_SCHEMA,
         "status": "available" if rounds else "missing",
         "default_round_id": default_round.get("round_id") if default_round else None,
-        "default_selection": "latest_runtime_state" if default_round else None,
+        "default_selection": (
+            "latest_completion_receipt"
+            if latest_receipt_round
+            else "latest_runtime_state"
+            if latest_runtime_round
+            else None
+        ),
+        "latest_runtime_round_id": (
+            latest_runtime_round.get("round_id") if latest_runtime_round else None
+        ),
+        "latest_runtime_round_label": (
+            latest_runtime_round.get("label") if latest_runtime_round else None
+        ),
+        "latest_completion_receipt_round_id": (
+            latest_receipt_round.get("round_id") if latest_receipt_round else None
+        ),
+        "latest_completion_receipt_label": (
+            latest_receipt_round.get("label") if latest_receipt_round else None
+        ),
+        "completion_receipt_status": "available" if latest_receipt_round else "missing",
         "round_count": len(rounds),
         "rounds_with_document_trace_count": sum(
             1 for item in rounds if item.get("has_document_trace")
@@ -541,7 +575,8 @@ def round_document_traces(project_root: Path, state: dict[str, Any]) -> dict[str
         ),
         "rounds": rounds,
         "read_model_limitations": [
-            "latest round uses structured state_summary when available",
+            "latest runtime round uses structured state_summary when available",
+            "default selected trace prefers the latest completion_review receipt when available",
             "older round labels are derived from runtime history cards and may expose counts without full artifact path sets",
             "this read model does not inspect git diff or infer edits outside JIKUO runtime evidence",
         ],

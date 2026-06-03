@@ -206,4 +206,4 @@ entries:
       - "src/jikuo/integrations/studio_web/server.py"
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md"
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-DATA-01_structured_execution_event_ledger_and_analytics_contract.md"
-    summary: "Studio Round Document Trace exposed a broader audit gap: JIKUO cannot prove AI cognitive document consumption, and current runtime history cards can retain read/write/gap counts without per-round observed-read, citation, decision-bound, planned-write, actual-write, and operation evidence needed for a trustworthy document-consumption and editing evidence chain."
+    summary: "Studio Round Document Trace exposed a broader audit gap: JIKUO cannot prove AI cognitive document consumption, and current runtime history cards can retain read/write/gap counts without per-round observed-read, citation, decision-bound, required-companion-write, declared-write, actual-write, and operation evidence needed for a trustworthy document-consumption and editing evidence chain."

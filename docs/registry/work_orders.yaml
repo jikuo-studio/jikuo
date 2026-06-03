@@ -530,6 +530,7 @@ entries:
       - "CAP-RUNTIME-WRITE-OBSERVATION-01"
       - "CAP-RUNTIME-WRITE-OBSERVATION-COMPLETION-REVIEW-01"
       - "CAP-CODEX-HOOK-COMPLETION-RECEIPT-INSTRUCTION-01"
+      - "CAP-STUDIO-LATEST-COMPLETION-RECEIPT-01"
     capability_extraction_status: "extracted_from_work_order_body"
     required_mount_sets:
       - "MOUNT-DOCREG-01A"
@@ -1267,8 +1268,14 @@ entries:
       - "configuration"
       - "runtime_visibility"
       - "artifact_assurance"
-    implements_capabilities: []
-    capability_extraction_status: "no_capability_refs_found"
+    implements_capabilities:
+      - "CAP-RUNTIME-WRITE-OBSERVATION-01"
+      - "CAP-RUNTIME-WRITE-OBSERVATION-COMPLETION-REVIEW-01"
+      - "CAP-RUNTIME-COMPANION-WRITE-OBLIGATION-01"
+      - "CAP-CODEX-HOOK-COMPLETION-RECEIPT-INSTRUCTION-01"
+      - "CAP-STUDIO-LATEST-COMPLETION-RECEIPT-01"
+      - "CAP-STUDIO-COMPANION-WRITE-RECEIPT-VIEW-01"
+    capability_extraction_status: "extracted_from_work_order_body"
     required_mount_sets:
       - "MOUNT-MVP-WORK-RECEIPT-CONFIGURATION"
   - id: "JIKUO-UX-00"

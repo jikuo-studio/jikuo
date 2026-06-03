@@ -20,6 +20,11 @@ same runtime round. That exposed a deeper runtime evidence gap:
   those counts;
 - therefore Studio can honestly show that items were counted while also saying
   the detailed item paths are unavailable in the history card.
+- the write-side product value is sharper than generic planned-vs-actual
+  comparison: when code, document, policy, registry, or work-order changes
+  happen, JIKUO should show which companion governance files were required by
+  policy/work-order/registry rules and whether those exact files were actually
+  updated.
 
 This is not proof that no documents were written. It means the runtime/history
 card evidence did not retain enough path-level detail for Studio to reconstruct
@@ -39,7 +44,8 @@ The combined gap is:
 expected documents
   -> observed reads
   -> cited or decision-bound refs
-  -> planned writes
+  -> required companion writes
+  -> declared writes
   -> actual writes
   -> reconciliation gaps
   -> completion evidence
@@ -56,7 +62,8 @@ Users reasonably expect a round trace to answer:
 - which documents were expected to be read;
 - which documents were actually accessed through observable tooling;
 - which documents the AI claims influenced a decision;
-- which documents were planned for write;
+- which companion governance documents were required for write;
+- which documents the AI or guarded plan declared for write;
 - which documents were actually written;
 - whether each write was an addition, modification, or deletion;
 - which evidence source produced the claim.
@@ -86,7 +93,9 @@ At minimum, each relevant round should be able to expose:
 - `cited_read_refs` for documents named or cited in the model output;
 - `decision_bound_refs` for documents explicitly linked to a plan, refusal,
   design choice, or write decision;
-- `planned_write_set` with path, intended operation, and source;
+- `required_companion_write_set` with path, intended operation, source rule,
+  trigger source, and reason;
+- `declared_write_set` with path, intended operation, and source;
 - `actual_write_set` with path, observed operation, and source;
 - write operation type such as added, modified, deleted, or unchanged;
 - before/after hashes or patch refs when available;
@@ -104,7 +113,8 @@ Evidence strength should be explicit, for example:
 - `observed_read`: a tool or mounted-context path accessed the document;
 - `cited`: the model output referenced the document or a specific section;
 - `decision_bound`: a plan or decision explicitly depends on the document;
-- `write_bound`: a planned or actual write is linked to document evidence;
+- `write_bound`: a required companion, declared, or actual write is linked to
+  document evidence;
 - `verified`: review or tests found no contradiction with the referenced
   document constraints.
 
@@ -114,17 +124,21 @@ Completion review should reconcile:
 
 - expected reads vs observed reads;
 - observed reads vs cited or decision-bound refs;
-- planned writes vs actual writes;
-- actual writes without a plan;
-- planned writes that did not happen;
+- required companion writes vs actual writes;
+- declared writes vs actual writes;
+- actual writes without a declaration;
+- required companion writes that did not happen;
+- trigger signals that did not project a concrete companion-write obligation;
 - writes without an observable read/citation/decision basis;
 - final results that contradict required context.
 
 ## Candidate Follow-Up
 
-Investigate a future slice that extends runtime artifact assurance or DATA-01
-event-ledger planning so `agent_flow` and completion review can persist a
-round-level evidence chain for AI document consumption and editing.
+Investigate a future slice that extends runtime artifact assurance so
+`agent_flow` and completion review can persist a round-level evidence chain for
+AI document consumption and editing. The near-term MVP path should project
+`required_companion_write_set`, `declared_write_set`, and `actual_write_set`
+without requiring DATA-01 event-ledger persistence.
 
 Initial design draft:
 

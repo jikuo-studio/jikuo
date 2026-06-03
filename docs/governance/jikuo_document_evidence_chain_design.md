@@ -20,7 +20,10 @@ Two gaps are linked:
 
 1. A runtime history card may preserve counts such as planned writes, actual
    writes, required reads, completion-check candidates, and gap counts, while
-   omitting path-level item evidence.
+   omitting path-level item evidence. For newer receipts, the write-side counts
+   must be separated into required companion writes, declared writes, and actual
+   writes so the user can see which governance files were required and which
+   files actually changed.
 2. Even when a document is mounted or read by a tool, JIKUO cannot prove the AI
    cognitively understood or used it.
 
@@ -30,7 +33,8 @@ The design target is therefore an evidence chain, not a mental-state proof:
 expected documents
   -> observed reads
   -> cited or decision-bound refs
-  -> planned writes
+  -> required companion writes
+  -> declared writes
   -> actual writes
   -> reconciliation gaps
   -> completion evidence
@@ -52,7 +56,8 @@ Display instead:
 - configured document obligations;
 - observed tool or mounted-context reads;
 - model-declared citations and decision bindings;
-- planned writes;
+- required companion writes projected from governance rules;
+- declared writes from the host AI or guarded plans;
 - actual writes;
 - gaps between those sets;
 - explicit evidence limits.
@@ -81,7 +86,8 @@ expected_read_set: []
 observed_read_set: []
 cited_read_refs: []
 decision_bound_refs: []
-planned_write_set: []
+required_companion_write_set: []
+declared_write_set: []
 actual_write_set: []
 reconciliation: {}
 evidence_strength_summary: {}
@@ -97,7 +103,7 @@ Use one compact shape for document refs across sets:
 path: "docs/example.md"
 path_ref: "docs/example.md#section-optional"
 document_role: "project_context | work_order | policy | ..."
-source_kind: "document_rules | work_order | policy | user_instruction | tool_observation | agent_declaration | guarded_apply | git_diff"
+source_kind: "document_rules | work_order | policy | registry_rule | user_instruction | tool_observation | agent_declaration | guarded_apply | git_diff"
 source_ref: "<config path, card ref, tool call id, policy id, or task ref>"
 reason: "Why this document matters for this round."
 ```
@@ -146,15 +152,53 @@ refusal, design choice, or write decision:
 
 This is still a declaration unless backed by observed reads or citations.
 
-### 3.4 Planned Write Evidence
+### 3.4 Required Companion Write Obligations
 
-Before a file change, the agent or guarded tool should produce a planned write
-record:
+`required_companion_write_set` is the primary write-side governance set. It is
+not the AI's free-form plan. It records files that JIKUO expects to be updated
+because a class of work happened and a mounted policy, work order, registry, or
+document rule says a companion update is required.
+
+Examples:
+
+- a new feature or code path requires user action-chain and atomic capability
+  registration updates;
+- a new document requires the corresponding document registry or mount guidance
+  to include it;
+- work order progress requires the active work order and relevant registry
+  projection to be updated;
+- policy, evaluator, or document-registry changes require the matching registry,
+  tests, and governance guidance to stay in sync.
+
+The projector should resolve concrete paths from mounted configuration,
+registries, work orders, or active policies. A policy may say "register the
+corresponding document" or "update the corresponding atom registry" without
+hard-coding a universal path; the receipt still has to show the resolved path
+when a comparable path is available.
+
+```yaml
+- id: "RCW-001"
+  path: "docs/registry/capabilities.yaml"
+  operation: "modify"
+  evidence_kind: "required_companion_write"
+  source_kind: "policy | work_order | registry_rule | document_rule | user_instruction"
+  source_ref: "POLICY-jikuo-atom-registration-after-feature-change"
+  trigger:
+    type: "feature_or_code_change | new_document | work_order_progress | policy_change | registry_change"
+    source_ref: "<observed write path, work-order slice, policy id, or decision id>"
+  reason: "A new atomic capability must be registered after the feature slice."
+```
+
+### 3.5 Declared Planned Write Evidence
+
+`declared_write_set` records what the host AI or a guarded plan says it expects
+to write. This is useful evidence, but it is weaker than required companion
+write obligations because it is agent-declared.
 
 ```yaml
 - path: "src/jikuo/example.py"
   operation: "add | modify | delete | migrate | check_only"
-  evidence_kind: "planned_write"
+  evidence_kind: "declared_write"
   source_kind: "agent_plan | no_write_plan | guarded_apply_plan"
   reason: "Implement document evidence chain builder."
   bound_read_refs:
@@ -162,7 +206,10 @@ record:
   approval_boundary: "none | guarded_apply | user_confirmation"
 ```
 
-### 3.5 Actual Write Evidence
+For backward compatibility, existing `planned_write_set` values may be displayed
+as declared writes until the runtime schema is migrated.
+
+### 3.6 Actual Write Evidence
 
 After a file change, the runtime sidecar should preserve itemized actual write
 evidence:
@@ -175,7 +222,8 @@ evidence:
   before_hash: "sha256:..."
   after_hash: "sha256:..."
   diff_ref: ".jikuo/runtime/evidence/<round>.diff"
-  bound_planned_write_id: "PW-001"
+  bound_required_companion_write_id: "RCW-001"
+  bound_declared_write_id: "DW-001"
   attribution_status: "round_attributed | mixed_or_uncertain | user_supplied"
 ```
 
@@ -193,7 +241,7 @@ Expose evidence strength as first-class data:
 | `observed_read` | A tool or mounted-context path accessed the document. |
 | `cited` | Output visibly referenced the document or section. |
 | `decision_bound` | A plan, decision, refusal, or write decision links to the document. |
-| `write_bound` | A planned or actual write links to document evidence. |
+| `write_bound` | A required companion, declared, or actual write links to document evidence. |
 | `verified` | Review or tests found no contradiction with the referenced constraints. |
 
 The summary should report the strongest evidence per document without hiding
@@ -215,12 +263,24 @@ reconciliation:
       path: "docs/example.md"
       severity: "info"
       summary: "Read was observed, but no output citation or decision binding exists."
-    - gap_type: "planned_write_without_actual_write"
+    - gap_type: "declared_write_without_actual_write"
       path: "src/example.py"
       severity: "review"
-    - gap_type: "actual_write_without_plan"
+    - gap_type: "actual_write_without_declaration"
       path: "src/example.py"
       severity: "review"
+    - gap_type: "required_companion_write_without_actual_write"
+      path: "docs/registry/capabilities.yaml"
+      severity: "review"
+      summary: "Governance rules required this companion update, but no actual write evidence exists."
+    - gap_type: "actual_write_without_required_companion_obligation"
+      path: "src/example.py"
+      severity: "info"
+      summary: "The file changed, but it is not itself a required companion governance write."
+    - gap_type: "governance_write_obligation_not_projected"
+      source_ref: "<trigger source>"
+      severity: "review"
+      summary: "A trigger signal existed, but no concrete required companion write was projected."
     - gap_type: "write_without_read_or_decision_basis"
       path: "src/example.py"
       severity: "review"
@@ -268,7 +328,7 @@ Cards:
 - round;
 - evidence status;
 - strongest read evidence;
-- planned / actual writes;
+- required companion / declared / actual writes;
 - reconciliation gaps;
 - limits.
 
@@ -315,7 +375,8 @@ Rows group by path.
 
 Columns:
 
-- planned operation;
+- required companion operation;
+- declared operation;
 - actual operation;
 - before/after hash status;
 - bound read refs;
@@ -323,8 +384,10 @@ Columns:
 
 Empty-state examples:
 
-- "2 planned writes counted; item paths unavailable in this history card."
-- "Actual write observed without a planned write record."
+- "2 declared writes counted; item paths unavailable in this history card."
+- "No required companion writes were projected for this round."
+- "Actual write observed without a required companion obligation."
+- "Required companion write was not observed."
 
 ### 7.5 Reconciliation Panel
 
@@ -335,8 +398,11 @@ Primary gap types:
 
 - missing observed read;
 - read not cited or decision-bound;
-- planned write missing actual write;
-- actual write missing plan;
+- required companion write missing actual write;
+- declared write missing actual write;
+- actual write missing declaration;
+- actual write outside required companion set;
+- governance write obligation not projected;
 - write missing read/decision basis;
 - count-only evidence;
 - no comparable runtime evidence.

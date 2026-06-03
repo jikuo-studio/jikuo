@@ -62,12 +62,16 @@ explicit user-approved configuration.
 
 Users can inspect what happened:
 
-- expected documents and write candidates from configuration and plans;
-- declared planned writes from the host AI / no-write plan;
+- expected documents and required companion writes from configuration,
+  work orders, registries, and policies;
+- declared writes from the host AI / no-write plan;
 - actual writes observed by JIKUO through read-only git inspection during
   completion review;
-- gaps such as actual write not planned, planned write not observed, and
-  count-only evidence;
+- path-level file lists for required companion writes, declared writes,
+  actual writes, and gaps whenever comparable item evidence exists;
+- gaps such as required companion write not observed, declared write not
+  observed, actual write not declared, obligation not projected, and count-only
+  evidence;
 - limits such as mixed attribution and no proof of model understanding.
 
 ## 4. Integrated Insights
@@ -146,10 +150,82 @@ Behavior:
 Acceptance:
 
 - `actual_write_not_planned` can trigger when git observes a file not present
-  in planned writes;
+  in declared/planned writes, as a legacy gap until companion-write obligation
+  projection is available;
 - declared-only and git-observed evidence remain distinguishable;
 - runtime card non-effects honestly say git was inspected by the completion
   review adapter, not by the pure comparison engine.
+
+### `MVP-RECEIPT-02A`: Required Companion Write Obligation Projection
+
+Project the governance files that should be updated because a class of work
+happened. This is the receipt value behind the old planned-vs-actual write
+count: not "how many files did the AI say it would write", but "which companion
+governance files were required, and were they actually written."
+
+Capabilities:
+
+- `CAP-RUNTIME-COMPANION-WRITE-OBLIGATION-01`
+- `CAP-STUDIO-COMPANION-WRITE-RECEIPT-VIEW-01`
+
+Likely module:
+
+```text
+src/jikuo/companion_write_obligations.py
+```
+
+Inputs:
+
+- observed actual-write paths and operations from `MVP-RECEIPT-01/02`;
+- mounted work order and active policy context;
+- registry guidance from `docs/registry/*.yaml`;
+- document evidence-chain design rules;
+- optional host-declared write evidence.
+
+Outputs:
+
+- itemized `required_companion_write_set` with path, operation, source kind,
+  source ref, trigger type, trigger source, and reason;
+- `declared_write_set` remains separate and uses existing planned-write evidence
+  for compatibility;
+- explicit `governance_write_obligation_not_projected` gap when a trigger signal
+  exists but no concrete companion path can be resolved.
+
+Initial trigger classes:
+
+- `feature_or_code_change`: requires the corresponding user action-chain and
+  atomic capability registration evidence;
+- `new_document`: requires the corresponding document registry or mount guidance
+  registration;
+- `work_order_progress`: requires work order progress and registry projection
+  updates when the slice status changes;
+- `policy_or_evaluator_change`: requires the corresponding policy/evaluator
+  registry, tests, and governance guidance to stay in sync;
+- `registry_change`: requires related scenario/capability/work-order registry
+  consistency where applicable.
+
+Non-goals:
+
+- no automatic companion writes;
+- no LLM-based classification inside JIKUO;
+- no universal hard-coded document path inside policy text;
+- no change to `artifact_assurance.py` purity;
+- no DATA-01 event ledger requirement.
+
+Acceptance:
+
+- a receipt can show concrete paths for required companion writes, declared
+  writes, actual writes, and write gaps;
+- `planned writes = 0` no longer hides the distinction between "no declared
+  plan" and "no required companion obligations were projected";
+- if code or document changes are observed but no companion write obligations
+  are projected, Studio shows that as a review gap instead of silently reporting
+  zero planned writes;
+- if a required companion file is not actually written, Studio shows the exact
+  missing path and the reason it was required;
+- the projector resolves paths from mounted context, registry/work-order
+  authority, or active policy references rather than storing a single global
+  hard-coded path list in policy text.
 
 ### `MVP-RECEIPT-03`: Runtime Work Receipt Projection
 
@@ -166,7 +242,8 @@ history card Work Receipt section
 Fields:
 
 - expected reads;
-- declared planned writes;
+- required companion writes;
+- declared writes;
 - git observed actual writes;
 - gaps;
 - evidence strengths;
@@ -177,6 +254,8 @@ Acceptance:
 - latest runtime summary exposes a receipt preview;
 - old count-only history cards remain compatible;
 - receipt display never claims AI understanding;
+- receipt data preserves itemized path lists whenever the producer had itemized
+  evidence;
 - no DATA-01 event ledger is required for this slice.
 
 ### `MVP-RECEIPT-04`: Studio Work Receipt Viewer
@@ -184,29 +263,42 @@ Acceptance:
 Upgrade the current Round Document Trace section rather than creating a new
 frontend architecture.
 
+Capability:
+
+- `CAP-STUDIO-LATEST-COMPLETION-RECEIPT-01`
+- `CAP-STUDIO-COMPANION-WRITE-RECEIPT-VIEW-01`
+
 Panels:
 
 - round selector;
 - Expected;
-- Declared / Planned;
+- Required companion writes;
+- Declared writes;
 - Observed;
 - Gaps;
 - Limits.
 
 Priority display:
 
+- required companion writes and whether each path was observed;
 - actual writes observed by git;
-- actual writes not planned;
-- planned writes not observed;
+- actual writes not declared;
+- declared writes not observed;
+- governance write obligations not projected;
 - count-only evidence;
 - mixed or uncertain attribution.
 
 Acceptance:
 
 - selecting a round still binds all details to that round;
-- `actual_write_not_planned` is visible without reading chat history;
+- the default selected round prefers the latest `completion_review` receipt when
+  one exists, while still showing the latest runtime turn separately;
+- required companion write gaps, actual writes without declarations, and
+  obligation-not-projected gaps are visible without reading chat history;
 - evidence labels distinguish configured, declared, git observed, and
   count-only;
+- path-level lists are visible for every required companion, declared, observed,
+  and gap set that has itemized evidence;
 - Studio does not infer paths from counts.
 
 ### `MVP-RECEIPT-05`: Completion Review Invocation Path
@@ -376,15 +468,16 @@ Defer these until the MVP receipt and configuration loop is usable:
 
 1. `MVP-RECEIPT-01`
 2. `MVP-RECEIPT-02`
-3. `MVP-RECEIPT-03`
-4. `MVP-RECEIPT-04`
-5. `MVP-RECEIPT-05`
-6. `MVP-CONFIG-01`
-7. `MVP-CONFIG-02`
-8. `MVP-CONFIG-03`
-9. `MVP-CONFIG-04`
-10. `MVP-CONFIG-05`
-11. `MVP-RELEASE-01`
+3. `MVP-RECEIPT-02A`
+4. `MVP-RECEIPT-03`
+5. `MVP-RECEIPT-04`
+6. `MVP-RECEIPT-05`
+7. `MVP-CONFIG-01`
+8. `MVP-CONFIG-02`
+9. `MVP-CONFIG-03`
+10. `MVP-CONFIG-04`
+11. `MVP-CONFIG-05`
+12. `MVP-RELEASE-01`
 
 `MVP-CONFIG-01` may start in parallel with `MVP-RECEIPT-01` if capacity allows,
 but receipt observation should be proven early because it carries the core MVP

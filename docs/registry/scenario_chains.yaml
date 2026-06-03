@@ -44,10 +44,11 @@ entries:
     steps:
       - step_id: "STUDIO-ROUND-TRACE-01"
         user_action: "Open Studio Round Document Trace."
-        visible_result: "The latest runtime round is selected by default."
-        operation_chain: "Studio reads summaries.runtime.round_document_traces and binds selectedRoundTraceId to default_round_id when no user selection exists."
+        visible_result: "The latest completion_review receipt is selected by default when available, and the latest runtime turn remains visible as a separate summary chip."
+        operation_chain: "Studio reads summaries.runtime.round_document_traces, binds selectedRoundTraceId to default_round_id when no user selection exists, and uses latest_runtime_round_id plus latest_completion_receipt_round_id to explain the distinction."
         atom_refs:
           - "CAP-STUDIO-ROUND-DOCUMENT-TRACE-SELECTOR-01"
+          - "CAP-STUDIO-LATEST-COMPLETION-RECEIPT-01"
         approval_boundary: "read_only"
         evidence_outputs:
           - "selected round card"
@@ -73,8 +74,25 @@ entries:
         evidence_outputs:
           - "count-only detail rows"
           - "no-trace selected-round state"
+      - step_id: "STUDIO-ROUND-TRACE-04"
+        user_action: "Inspect write-side governance reconciliation for a selected round."
+        visible_result: "Studio shows required companion write paths, declared write paths, observed actual write paths, and path-level gaps when itemized evidence exists."
+        operation_chain: "Completion review projects required companion writes from mounted governance context, keeps declared writes separate, preserves git-observed actual writes, and the Round Document Trace view renders the comparable path sets without inferring paths from count-only cards."
+        atom_refs:
+          - "CAP-RUNTIME-COMPANION-WRITE-OBLIGATION-01"
+          - "CAP-RUNTIME-WRITE-OBSERVATION-COMPLETION-REVIEW-01"
+          - "CAP-STUDIO-COMPANION-WRITE-RECEIPT-VIEW-01"
+        approval_boundary: "read_only"
+        evidence_outputs:
+          - "required companion write list"
+          - "declared write list"
+          - "observed actual write list"
+          - "path-level write gap list"
     capability_refs:
       - "CAP-STUDIO-ARTIFACT-ASSURANCE-PROJECTION-01"
       - "CAP-STUDIO-ARTIFACT-ASSURANCE-RUNTIME-CARD-01"
       - "CAP-STUDIO-ROUND-DOCUMENT-TRACE-01"
       - "CAP-STUDIO-ROUND-DOCUMENT-TRACE-SELECTOR-01"
+      - "CAP-STUDIO-LATEST-COMPLETION-RECEIPT-01"
+      - "CAP-RUNTIME-COMPANION-WRITE-OBLIGATION-01"
+      - "CAP-STUDIO-COMPANION-WRITE-RECEIPT-VIEW-01"

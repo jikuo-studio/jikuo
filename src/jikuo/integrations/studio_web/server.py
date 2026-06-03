@@ -1069,6 +1069,8 @@ INDEX_HTML = """<!doctype html>
         selectedRoundTraceId = defaultRoundId || null;
       }
       const selectedRound = rounds.find((round) => round.round_id === selectedRoundTraceId) || null;
+      const latestRuntimeRound = rounds.find((round) => round.round_id === traceList.latest_runtime_round_id) || (rounds[0] || null);
+      const latestReceiptRound = rounds.find((round) => round.round_id === traceList.latest_completion_receipt_round_id) || null;
       const selectedCounts = (selectedRound || {}).counts || {};
       const activeTrace = (selectedRound || {}).artifact_assurance || {};
       const latestAvailable = Boolean(selectedRound && selectedRound.has_document_trace && activeTrace.schema);
@@ -1125,7 +1127,9 @@ INDEX_HTML = """<!doctype html>
       );
 
       document.getElementById("round-trace-summary").replaceChildren(
-        traceChip("Round", selectedRound ? (selectedRound.label || selectedRound.round_id) : "no runtime round"),
+        traceChip("Latest runtime turn", latestRuntimeRound ? (latestRuntimeRound.label || latestRuntimeRound.round_id) : "no runtime round"),
+        traceChip("Latest completion receipt", latestReceiptRound ? (latestReceiptRound.label || latestReceiptRound.round_id) : "No completion receipt"),
+        traceChip("Selected round", selectedRound ? (selectedRound.label || selectedRound.round_id) : "no runtime round"),
         traceChip("Trace source", selectedRound ? `${selectedRound.source_kind || "runtime"} / ${selectedRound.trace_label || ""}` : "no runtime evidence"),
         traceChip("Document changes", selectedRound ? selectedRound.document_change_label : "No document trace"),
         traceChip("Expected reads", detailCount(requiredReadCount, "documents")),

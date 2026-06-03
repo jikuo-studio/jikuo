@@ -186,7 +186,14 @@ class StudioGlobalStatusTests(unittest.TestCase):
 
             traces = report["summaries"]["runtime"]["round_document_traces"]
             self.assertEqual(traces["schema"], global_status.ROUND_DOCUMENT_TRACES_SCHEMA)
-            self.assertEqual(traces["default_round_id"], Path(latest_ref).stem)
+            self.assertEqual(traces["default_round_id"], Path(older_ref).stem)
+            self.assertEqual(traces["default_selection"], "latest_completion_receipt")
+            self.assertEqual(traces["latest_runtime_round_id"], Path(latest_ref).stem)
+            self.assertEqual(
+                traces["latest_completion_receipt_round_id"],
+                Path(older_ref).stem,
+            )
+            self.assertEqual(traces["completion_receipt_status"], "available")
             self.assertGreaterEqual(traces["round_count"], 2)
             latest = traces["rounds"][0]
             older = traces["rounds"][1]
