@@ -1261,7 +1261,7 @@ entries:
     title: "SPRINT_050_WO-PER-JIKUO-MVP-01: Work Receipt And Configuration MVP"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-MVP-01_work_receipt_and_configuration_mvp.md"
     sprint: "SPRINT_050"
-    status: "Planned MVP work-order sequence for a usable configuration CRUD surface plus independently checkable AI work receipt viewer"
+    status: "MVP work-order sequence active; git actual-write observation, completion-review wiring, latest receipt default selection, and first companion-write obligation projection/view implemented"
     impact_tags:
       - "mvp"
       - "studio"

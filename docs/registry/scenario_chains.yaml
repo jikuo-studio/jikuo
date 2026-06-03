@@ -77,7 +77,7 @@ entries:
       - step_id: "STUDIO-ROUND-TRACE-04"
         user_action: "Inspect write-side governance reconciliation for a selected round."
         visible_result: "Studio shows required companion write paths, declared write paths, observed actual write paths, and path-level gaps when itemized evidence exists."
-        operation_chain: "Completion review projects required companion writes from mounted governance context, keeps declared writes separate, preserves git-observed actual writes, and the Round Document Trace view renders the comparable path sets without inferring paths from count-only cards."
+        operation_chain: "Completion review uses the companion-write obligation projector to derive required governance write paths from observed write triggers, keeps declared writes separate, preserves git-observed actual writes, and the Round Document Trace view renders the comparable path sets without inferring paths from count-only cards."
         atom_refs:
           - "CAP-RUNTIME-COMPANION-WRITE-OBLIGATION-01"
           - "CAP-RUNTIME-WRITE-OBSERVATION-COMPLETION-REVIEW-01"

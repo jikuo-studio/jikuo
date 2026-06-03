@@ -1660,9 +1660,9 @@ entries:
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-MVP-01_work_receipt_and_configuration_mvp.md"
   - id: "CAP-RUNTIME-COMPANION-WRITE-OBLIGATION-01"
     title: "Runtime companion write obligation projection"
-    status: "planned design by MVP-RECEIPT-02A"
+    status: "implemented first deterministic projector by MVP-RECEIPT-02A"
     metadata_status: "complete"
-    entry_point: "planned src/jikuo/companion_write_obligations.py; completion_review caller supplies required_companion_write_set to existing artifact assurance comparison"
+    entry_point: "src/jikuo/companion_write_obligations.py project_required_companion_writes; src/jikuo/agent_flow.py build_runtime_artifact_assurance_report"
     write_effect: "none; projects required companion governance write paths and reasons without editing the companion files"
     approval: "read-only runtime projection; companion file writes remain ordinary host/guarded writes outside this projector"
     non_effects:
@@ -1758,9 +1758,9 @@ entries:
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-MVP-01_work_receipt_and_configuration_mvp.md"
   - id: "CAP-STUDIO-COMPANION-WRITE-RECEIPT-VIEW-01"
     title: "Studio companion write receipt view"
-    status: "planned design by MVP-RECEIPT-04"
+    status: "implemented first Round Document Trace companion/declared/actual write display by MVP-RECEIPT-02A"
     metadata_status: "complete"
-    entry_point: "planned src/jikuo/integrations/studio_web/server.py Round Document Trace write evidence panels"
+    entry_point: "src/jikuo/integrations/studio_web/server.py Round Document Trace write evidence panels; src/jikuo/studio/global_status.py count_artifacts"
     write_effect: "none; renders required companion writes, declared writes, observed actual writes, and path-level gaps from runtime receipt evidence"
     approval: "read-only Studio projection; does not run completion_review or mutate runtime evidence"
     non_effects:

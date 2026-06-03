@@ -296,6 +296,8 @@ def artifact_assurance_from_history_card(
     applicable_required_writes = markdown_int_value(section, "Applicable required writes")
     planned_writes = markdown_int_value(section, "Planned writes")
     actual_writes = markdown_int_value(section, "Actual writes")
+    required_companion_writes = markdown_int_value(section, "Required companion writes")
+    declared_writes = markdown_int_value(section, "Declared writes")
     gap_count = markdown_int_value(section, "Gap count")
     required_reads_without_evidence = markdown_int_value(
         section,
@@ -319,14 +321,18 @@ def artifact_assurance_from_history_card(
         "write_assurance": {
             "status": markdown_backtick_value(section, "Write assurance status"),
             "required_write_count": applicable_required_writes,
+            "required_companion_write_count": required_companion_writes,
             "planned_write_count": planned_writes,
+            "declared_write_count": declared_writes,
             "actual_write_count": actual_writes,
             "required_write_set": [],
+            "required_companion_write_set": [],
             "completion_check_candidate_count": completion_checks,
             "completion_check_candidates": [],
             "completion_check_not_evaluated": [],
             "completion_check_not_evaluated_count": completion_not_evaluated,
             "planned_write_set": [],
+            "declared_write_set": [],
             "actual_write_set": [],
             "required_not_planned": [],
             "required_not_written": [],
@@ -366,6 +372,17 @@ def count_artifacts(report: dict[str, Any]) -> dict[str, int]:
         "required_read_count": int(read.get("required_read_count") or 0),
         "read_evidence_count": int(read.get("read_evidence_count") or 0),
         "planned_write_count": int(write.get("planned_write_count") or 0),
+        "required_companion_write_count": int(
+            write.get("required_companion_write_count")
+            or len(write.get("required_companion_write_set") or [])
+            or 0
+        ),
+        "declared_write_count": int(
+            write.get("declared_write_count")
+            or len(write.get("declared_write_set") or [])
+            or write.get("planned_write_count")
+            or 0
+        ),
         "actual_write_count": int(write.get("actual_write_count") or 0),
         "completion_check_candidate_count": int(
             write.get("completion_check_candidate_count")
@@ -387,6 +404,8 @@ def empty_artifact_counts() -> dict[str, int]:
         "required_read_count": 0,
         "read_evidence_count": 0,
         "planned_write_count": 0,
+        "required_companion_write_count": 0,
+        "declared_write_count": 0,
         "actual_write_count": 0,
         "completion_check_candidate_count": 0,
         "completion_check_not_evaluated_count": 0,

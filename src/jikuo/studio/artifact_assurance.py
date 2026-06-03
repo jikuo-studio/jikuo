@@ -121,6 +121,9 @@ def _coerce_artifact_items(
             "operation",
             "previous_path",
             "git_status",
+            "trigger",
+            "triggers",
+            "trigger_count",
         ):
             if record.get(metadata_key) is not None:
                 item[metadata_key] = record.get(metadata_key)

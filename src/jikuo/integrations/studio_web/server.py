@@ -963,6 +963,8 @@ INDEX_HTML = """<!doctype html>
         record.attribution_status,
         record.git_status ? `git ${record.git_status}` : "",
         record.previous_path ? `from ${record.previous_path}` : "",
+        record.trigger ? `trigger ${record.trigger.type || "write"}` : "",
+        record.trigger_count ? `${record.trigger_count} triggers` : "",
       ].filter(Boolean);
       const reason = text(record.reason || record.applicability_reason || record.role || record.source_ref || fallback || "");
       return [evidenceParts.join(" / "), reason].filter(Boolean).join(" / ");
@@ -1045,7 +1047,7 @@ INDEX_HTML = """<!doctype html>
       button.innerHTML = `<strong></strong><span></span><div class="trace-badges"></div>`;
       button.querySelector("strong").textContent = round.label || round.round_id || "runtime round";
       const counts = round.counts || {};
-      button.querySelector("span").textContent = `${round.lifecycle_event || "unknown event"} / ${numberValue(counts.planned_write_count)} planned / ${numberValue(counts.actual_write_count)} actual`;
+      button.querySelector("span").textContent = `${round.lifecycle_event || "unknown event"} / ${numberValue(counts.required_companion_write_count)} required / ${numberValue(counts.declared_write_count || counts.planned_write_count)} declared / ${numberValue(counts.actual_write_count)} actual`;
       const badges = button.querySelector(".trace-badges");
       const traceBadge = document.createElement("span");
       traceBadge.className = `trace-badge ${round.has_document_trace ? "trace-yes" : "trace-no"}`;
@@ -1093,8 +1095,10 @@ INDEX_HTML = """<!doctype html>
       const expectedReads = artifactList(activeRead.required_read_set);
       const readEvidence = artifactList(activeRead.read_evidence_set);
       const expectedWrites = artifactList(activeWrite.required_write_set);
+      const requiredCompanionWrites = artifactList(activeWrite.required_companion_write_set);
       const completionCandidates = firstArtifactList(activeWrite.completion_check_candidates, activeWrite.write_candidate_set);
       const plannedWrites = artifactList(activeWrite.planned_write_set);
+      const declaredWrites = firstArtifactList(activeWrite.declared_write_set, activeWrite.planned_write_set);
       const actualWrites = artifactList(activeWrite.actual_write_set);
       const readGaps = firstArtifactList(activeGap.read_gaps, activeRead.required_not_read);
       const writeGapFallbacks = [
@@ -1108,12 +1112,24 @@ INDEX_HTML = """<!doctype html>
       const requiredReadCount = artifactCount(activeRead.required_read_set, activeRead.required_read_count, selectedCounts.required_read_count);
       const readEvidenceCount = artifactCount(activeRead.read_evidence_set, activeRead.read_evidence_count, selectedCounts.read_evidence_count);
       const expectedWriteCount = artifactCount(activeWrite.required_write_set, activeWrite.required_write_count, selectedCounts.required_write_count);
+      const requiredCompanionWriteCount = artifactCount(
+        activeWrite.required_companion_write_set,
+        activeWrite.required_companion_write_count,
+        selectedCounts.required_companion_write_count
+      );
       const completionCandidateCount = artifactCount(
         activeWrite.completion_check_candidates || activeWrite.write_candidate_set,
         activeWrite.completion_check_candidate_count,
         selectedCounts.completion_check_candidate_count
       );
       const plannedWriteCount = artifactCount(activeWrite.planned_write_set, activeWrite.planned_write_count, selectedCounts.planned_write_count);
+      const declaredWriteCount = artifactCount(
+        activeWrite.declared_write_set || activeWrite.planned_write_set,
+        activeWrite.declared_write_count,
+        selectedCounts.declared_write_count,
+        activeWrite.planned_write_count,
+        selectedCounts.planned_write_count
+      );
       const actualWriteCount = artifactCount(activeWrite.actual_write_set, activeWrite.actual_write_count, selectedCounts.actual_write_count);
       const readGapCount = artifactCount(activeGap.read_gaps || activeRead.required_not_read, activeGap.read_gap_count, activeRead.required_reads_without_evidence_count);
       const writeGapCount = artifactCount(activeGap.write_gaps, activeGap.write_gap_count);
@@ -1134,13 +1150,15 @@ INDEX_HTML = """<!doctype html>
         traceChip("Document changes", selectedRound ? selectedRound.document_change_label : "No document trace"),
         traceChip("Expected reads", detailCount(requiredReadCount, "documents")),
         traceChip("Observed reads", detailCount(readEvidenceCount, "evidence items")),
-        traceChip("Writes", `${plannedWriteCount} planned / ${actualWriteCount} actual`),
+        traceChip("Writes", `${requiredCompanionWriteCount} required / ${declaredWriteCount} declared / ${actualWriteCount} actual`),
         traceChip("Gaps", detailCount(gapCount + completionNotEvaluatedCount, "items"))
       );
 
       document.getElementById("round-trace-expected").replaceChildren(
         compactItem("Required reads", detailCount(requiredReadCount, "documents")),
         ...artifactRows(expectedReads, "No required reads are configured for this selected round.", "configured context document", requiredReadCount, "documents"),
+        compactItem("Required companion writes", detailCount(requiredCompanionWriteCount, "documents")),
+        ...artifactRows(requiredCompanionWrites, "No required companion writes were projected for this selected round.", "required companion write", requiredCompanionWriteCount, "required companion writes"),
         compactItem("Applicable required writes", detailCount(expectedWriteCount, "documents")),
         ...artifactRows(expectedWrites, "No applicable required writes are known for this selected round.", "required write", expectedWriteCount, "documents"),
         compactItem("Completion checks", detailCount(completionCandidateCount, "candidates")),
@@ -1158,8 +1176,8 @@ INDEX_HTML = """<!doctype html>
             compactItem("Declared actual writes", detailCount(runtimeProjection.declared_actual_write_count, "items")),
             compactItem("Read evidence", detailCount(readEvidenceCount, "items")),
             ...artifactRows(readEvidence, "No read evidence was supplied for this round.", "read evidence", readEvidenceCount, "read evidence items"),
-            compactItem("Planned writes", detailCount(plannedWriteCount, "documents")),
-            ...artifactRows(plannedWrites, "No planned write evidence was supplied for this round.", "planned write", plannedWriteCount, "planned writes"),
+            compactItem("Declared writes", detailCount(declaredWriteCount, "documents")),
+            ...artifactRows(declaredWrites, "No declared write evidence was supplied for this round.", "declared write", declaredWriteCount, "declared writes"),
             compactItem("Actual writes", detailCount(actualWriteCount, "documents")),
             ...artifactRows(actualWrites, "No actual write evidence was supplied for this round.", "actual write", actualWriteCount, "actual writes"),
           ]
@@ -1191,7 +1209,7 @@ INDEX_HTML = """<!doctype html>
       document.getElementById("round-trace-timeline").replaceChildren(
         compactItem("1. Round source", selectedRound ? `${selectedRound.lifecycle_event || "runtime round"} from ${selectedRound.source_kind || "runtime state"}` : "No runtime round selected."),
         compactItem("2. Expected documents", `${requiredReadCount} reads / ${completionCandidateCount} completion candidates`),
-        compactItem("3. Observed evidence", `${readEvidenceCount} reads / ${plannedWriteCount} planned writes / ${actualWriteCount} actual writes`),
+        compactItem("3. Observed evidence", `${readEvidenceCount} reads / ${requiredCompanionWriteCount} required writes / ${declaredWriteCount} declared writes / ${actualWriteCount} actual writes`),
         compactItem("4. Review result", statusState.label),
         compactItem("5. Guarantee", active.guarantee || "evidence_comparison_only")
       );

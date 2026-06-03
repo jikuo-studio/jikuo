@@ -17,6 +17,7 @@ from typing import Any
 if __package__:
     from . import (
         activation_settings,
+        companion_write_obligations,
         configuration_review,
         policy_store,
         policy_templates,
@@ -34,6 +35,7 @@ else:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     import activation_settings
+    import companion_write_obligations
     import configuration_review
     import policy_templates
     import project_state
@@ -656,9 +658,19 @@ def build_runtime_artifact_assurance_report(
         elif not actual_writes:
             actual_writes = declared_actual_writes
 
+    companion_projection = companion_write_obligations.project_required_companion_writes(
+        project_root=resolved_root,
+        observed_actual_writes=actual_writes,
+        declared_writes=planned_writes,
+        document_roles=document_roles if isinstance(document_roles, dict) else {},
+    )
+    required_companion_writes = list(
+        companion_projection.get("required_companion_write_set") or []
+    )
     required_writes = studio_artifact_assurance.required_writes_from_document_mounts(
         document_mounts
     )
+    required_writes = [*required_writes, *required_companion_writes]
     required_writes = apply_write_applicability_to_candidates(
         project_root=resolved_root,
         required_writes=required_writes,
@@ -676,6 +688,44 @@ def build_runtime_artifact_assurance_report(
         planned_writes=nonempty_or_none(planned_writes),
         actual_writes=nonempty_or_none(actual_writes),
     )
+    write_assurance = report.setdefault("write_assurance", {})
+    write_assurance["required_companion_write_count"] = len(required_companion_writes)
+    write_assurance["required_companion_write_set"] = required_companion_writes
+    write_assurance["declared_write_count"] = len(planned_writes)
+    write_assurance["declared_write_set"] = planned_writes
+    write_assurance["required_companion_not_observed"] = [
+        item
+        for item in write_assurance.get("required_not_written") or []
+        if (item.get("expected") or {}).get("evidence_kind")
+        == "required_companion_write"
+    ]
+    write_assurance["required_companion_not_declared"] = [
+        item
+        for item in write_assurance.get("required_not_planned") or []
+        if (item.get("expected") or {}).get("evidence_kind")
+        == "required_companion_write"
+    ]
+    gap_report = report.setdefault("gap_report", {})
+    if companion_projection.get("unprojected_triggers"):
+        projection_gaps = [
+            {
+                "gap_type": "governance_write_obligation_not_projected",
+                "source_ref": item.get("source_ref"),
+                "expected": item,
+                "observed": None,
+            }
+            for item in companion_projection.get("unprojected_triggers") or []
+        ]
+        gap_report.setdefault("write_gaps", []).extend(projection_gaps)
+        gap_report["write_gap_count"] = int(gap_report.get("write_gap_count") or 0) + len(
+            projection_gaps
+        )
+        gap_report["gap_count"] = int(gap_report.get("gap_count") or 0) + len(
+            projection_gaps
+        )
+        gap_report["status"] = "review"
+        report["status"] = "review"
+        write_assurance["status"] = "review"
     report["runtime_projection"] = {
         "schema": "jikuo.runtime_artifact_assurance_projection.v0",
         "event": event,
@@ -690,6 +740,8 @@ def build_runtime_artifact_assurance_report(
             if event == "completion_review"
             else "produced_evidence_or_lifecycle_changed_paths"
         ),
+        "companion_write_obligations": companion_projection,
+        "required_companion_write_count": len(required_companion_writes),
         "declared_actual_write_count": len(declared_actual_writes),
         "declared_actual_write_set": declared_actual_writes,
         "git_write_observation": compact_git_write_observation(git_write_observation),
@@ -5641,6 +5693,8 @@ def render_artifact_assurance(report: dict[str, Any]) -> list[str]:
         f"- Read evidence: `{read.get('read_evidence_count', 0)}`",
         f"- Completion-check documents: `{write.get('completion_check_candidate_count', 0)}`",
         f"- Completion-check documents not evaluated: `{len(write.get('completion_check_not_evaluated') or [])}`",
+        f"- Required companion writes: `{write.get('required_companion_write_count', 0)}`",
+        f"- Declared writes: `{write.get('declared_write_count', write.get('planned_write_count', 0))}`",
         f"- Applicable required writes: `{write.get('required_write_count', 0)}`",
         f"- Planned writes: `{write.get('planned_write_count', 0)}`",
         f"- Actual writes: `{write.get('actual_write_count', 0)}`",
@@ -5674,6 +5728,12 @@ def render_artifact_assurance(report: dict[str, Any]) -> list[str]:
         render_artifact_gap_lines(
             label="Applicable required writes not observed",
             items=write.get("required_not_written") or [],
+        )
+    )
+    lines.extend(
+        render_artifact_gap_lines(
+            label="Required companion writes not observed",
+            items=write.get("required_companion_not_observed") or [],
         )
     )
     lines.extend(

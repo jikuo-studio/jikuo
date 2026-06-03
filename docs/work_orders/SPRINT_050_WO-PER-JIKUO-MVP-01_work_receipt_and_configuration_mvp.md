@@ -158,6 +158,18 @@ Acceptance:
 
 ### `MVP-RECEIPT-02A`: Required Companion Write Obligation Projection
 
+Implementation status:
+
+- first deterministic projector implemented in
+  `src/jikuo/companion_write_obligations.py`;
+- `completion_review` now feeds projected companion writes into the existing
+  artifact-assurance comparison without making `artifact_assurance.py` inspect
+  git or infer by itself;
+- Studio Round Document Trace now separates required companion writes, declared
+  writes, and actual writes in the selected-round view;
+- future refinements still need better round attribution/baselines and more
+  precise trigger rules.
+
 Project the governance files that should be updated because a class of work
 happened. This is the receipt value behind the old planned-vs-actual write
 count: not "how many files did the AI say it would write", but "which companion
