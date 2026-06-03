@@ -16,6 +16,50 @@ READY_PROJECT = FIXTURES / "task_session_ready_project"
 
 
 class RuntimeVisibilityTests(unittest.TestCase):
+    def test_semantic_intent_coverage_classifies_host_provided_and_missing(self):
+        provided = runtime_visibility.semantic_intent_coverage_for(
+            {
+                "work_profile": {
+                    "policy_scopes": ["editing"],
+                    "fallback_expanded": False,
+                    "basis": {
+                        "host_semantic_intent": {
+                            "status": "provided",
+                            "provider": "host_ai",
+                            "policy_scopes": ["editing"],
+                        }
+                    },
+                    "semantic_intent_evidence": {
+                        "required": True,
+                        "status": "ok",
+                        "provider": "host_ai",
+                        "semantic_intent_status": "provided",
+                    },
+                }
+            }
+        )
+        self.assertEqual(provided["schema"], "jikuo.semantic_intent_coverage.v0")
+        self.assertEqual(provided["coverage_status"], "complete")
+        self.assertEqual(provided["provider"], "host_ai")
+        self.assertEqual(provided["policy_scopes"], ["editing"])
+
+        missing = runtime_visibility.semantic_intent_coverage_for(
+            {
+                "work_profile": {
+                    "policy_scopes": ["editing"],
+                    "fallback_expanded": False,
+                    "semantic_intent_evidence": {
+                        "required": True,
+                        "status": "missing",
+                        "provider": "unavailable",
+                        "semantic_intent_status": "unavailable",
+                    },
+                }
+            }
+        )
+        self.assertEqual(missing["coverage_status"], "missing")
+        self.assertEqual(missing["gap_reason"], "host_ai_did_not_return_intent")
+
     def test_agent_flow_writes_runtime_snapshot_and_show_reads_it(self):
         with tempfile.TemporaryDirectory() as tmp:
             project_root = Path(tmp) / "project"
@@ -124,6 +168,14 @@ class RuntimeVisibilityTests(unittest.TestCase):
             )
             self.assertEqual(state_summary["schema"], "jikuo.runtime_state_summary.v0")
             self.assertEqual(history_state_summary, state_summary)
+            self.assertEqual(
+                state_summary["semantic_intent_coverage"]["schema"],
+                "jikuo.semantic_intent_coverage.v0",
+            )
+            self.assertIn(
+                state_summary["semantic_intent_coverage"]["coverage_status"],
+                {"complete", "missing", "fallback_only", "degraded"},
+            )
             self.assertEqual(
                 display_links["links"]["history_state_summary"]["ref"],
                 runtime_report["history_state_summary_ref"],

@@ -21,6 +21,7 @@ else:
 
 RUNTIME_VISIBILITY_REPORT_SCHEMA = "jikuo.runtime_visibility_report.v0"
 RUNTIME_STATE_SUMMARY_SCHEMA = "jikuo.runtime_state_summary.v0"
+SEMANTIC_INTENT_COVERAGE_SCHEMA = "jikuo.semantic_intent_coverage.v0"
 CLIENT_DISPLAY_LINKS_SCHEMA = "jikuo.client_display_links.v0"
 TASK_SESSION_INDEX_STATUS_SCHEMA = "jikuo.task_session_index_status.v0"
 OBSERVED_LIFECYCLE_SCHEMA = "jikuo.observed_lifecycle.v0"
@@ -126,6 +127,85 @@ def find_policy_runtime_status(proposal: dict[str, Any]) -> dict[str, Any] | Non
     return None
 
 
+def string_items(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item) for item in value if str(item)]
+
+
+def semantic_intent_coverage_for(proposal: dict[str, Any]) -> dict[str, Any]:
+    work_profile = proposal.get("work_profile")
+    if not isinstance(work_profile, dict):
+        work_profile = (proposal.get("policy_context") or {}).get("work_profile")
+    if not isinstance(work_profile, dict):
+        work_profile = {}
+    evidence = proposal.get("semantic_intent_evidence")
+    if not isinstance(evidence, dict):
+        evidence = work_profile.get("semantic_intent_evidence")
+    if not isinstance(evidence, dict):
+        evidence = {}
+    basis = work_profile.get("basis") if isinstance(work_profile, dict) else {}
+    if not isinstance(basis, dict):
+        basis = {}
+    host_intent = basis.get("host_semantic_intent")
+    if not isinstance(host_intent, dict):
+        host_intent = {}
+
+    semantic_status = str(
+        evidence.get("semantic_intent_status")
+        or host_intent.get("status")
+        or "unavailable"
+    )
+    evidence_status = str(evidence.get("status") or "unknown")
+    provider = str(evidence.get("provider") or host_intent.get("provider") or "unavailable")
+    required = bool(evidence.get("required"))
+    fallback_expanded = bool(work_profile.get("fallback_expanded"))
+    policy_scopes = string_items(
+        work_profile.get("policy_scopes") or host_intent.get("policy_scopes")
+    )
+
+    if semantic_status == "provided" and evidence_status == "ok":
+        coverage_status = "complete"
+        gap_reason = None
+    elif semantic_status in {"heuristic_fallback", "fallback"} or fallback_expanded:
+        coverage_status = "fallback_only"
+        gap_reason = "deterministic_fallback_without_host_semantic_intent"
+    elif semantic_status in {"unavailable", "missing"} and required:
+        coverage_status = "missing"
+        gap_reason = "host_ai_did_not_return_intent"
+    elif semantic_status in {"unavailable", "missing"}:
+        coverage_status = "degraded"
+        gap_reason = "host_semantic_intent_unavailable_for_this_turn"
+    else:
+        coverage_status = "degraded"
+        gap_reason = "semantic_intent_evidence_not_complete"
+
+    return {
+        "schema": SEMANTIC_INTENT_COVERAGE_SCHEMA,
+        "coverage_status": coverage_status,
+        "semantic_intent_status": semantic_status,
+        "evidence_status": evidence_status,
+        "provider": provider,
+        "required": required,
+        "policy_scopes": policy_scopes,
+        "fallback_expanded": fallback_expanded,
+        "gap_reason": gap_reason,
+        "risk_summary": (
+            "host semantic intent was provided and policy routing has explicit "
+            "host evidence"
+            if coverage_status == "complete"
+            else "policy routing may be degraded because host semantic intent "
+            "was not provided as explicit evidence"
+        ),
+        "non_effects": [
+            "does_not_call_llm_provider",
+            "does_not_infer_hidden_model_intent",
+            "does_not_change_policy_evaluator_results",
+            "does_not_prove_strict_gui_semantic_gate",
+        ],
+    }
+
+
 def build_state_summary(
     *,
     project_root: Path,
@@ -162,6 +242,7 @@ def build_state_summary(
         "lifecycle_card_links": runtime_report.get("lifecycle_card_links", []),
         "observed_lifecycle": observed_lifecycle,
         "policy_runtime_status": policy_runtime_status,
+        "semantic_intent_coverage": semantic_intent_coverage_for(proposal),
         "counts": {
             "card_count": len(proposal.get("cards", [])),
             "triggered_policy_count": len(proposal.get("triggered_policies", [])),
@@ -737,6 +818,23 @@ def format_state_summary(summary: dict[str, Any]) -> str:
             lines.append(f"- Status: `{display_links.get('status', 'unavailable')}`")
             if display_links.get("reason"):
                 lines.append(f"- Reason: {display_links['reason']}")
+    semantic = summary.get("semantic_intent_coverage") or {}
+    if semantic:
+        lines.extend(
+            [
+                "",
+                "## Semantic Intent Coverage",
+                "",
+                f"- Coverage status: `{semantic.get('coverage_status')}`",
+                f"- Semantic intent status: `{semantic.get('semantic_intent_status')}`",
+                f"- Evidence status: `{semantic.get('evidence_status')}`",
+                f"- Provider: `{semantic.get('provider')}`",
+                f"- Required: `{str(semantic.get('required', False)).lower()}`",
+                f"- Policy scopes: `{', '.join(semantic.get('policy_scopes') or []) or 'none'}`",
+            ]
+        )
+        if semantic.get("gap_reason"):
+            lines.append(f"- Gap reason: `{semantic.get('gap_reason')}`")
     artifact = summary.get("artifact_assurance") or {}
     if artifact:
         read = artifact.get("read_assurance") or {}

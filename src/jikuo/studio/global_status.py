@@ -481,6 +481,7 @@ def round_trace_from_parts(
     status: str | None,
     proposal_id: str | None,
     artifact_report: dict[str, Any],
+    semantic_coverage: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     has_trace = bool(artifact_report.get("schema"))
     counts = count_artifacts(artifact_report) if has_trace else empty_artifact_counts()
@@ -507,6 +508,7 @@ def round_trace_from_parts(
         "document_change_label": round_document_change_label(change_status),
         "trace_label": "Document trace available" if has_trace else "No document trace",
         "counts": counts,
+        "semantic_intent_coverage": semantic_coverage or {},
         "artifact_assurance": artifact_report if has_trace else {},
         "non_effects": [
             "does_not_read_files_by_itself",
@@ -530,6 +532,7 @@ def round_trace_from_state(
     runtime = state.get("runtime_visibility") or {}
     history_ref = runtime.get("history_ref")
     artifact_report = state.get("artifact_assurance") or {}
+    semantic_coverage = state.get("semantic_intent_coverage") or {}
     return round_trace_from_parts(
         project_root=project_root,
         history_ref=str(history_ref) if history_ref else None,
@@ -541,6 +544,9 @@ def round_trace_from_state(
         status=source.get("status"),
         proposal_id=source.get("proposal_id"),
         artifact_report=artifact_report if isinstance(artifact_report, dict) else {},
+        semantic_coverage=semantic_coverage
+        if isinstance(semantic_coverage, dict)
+        else {},
     )
 
 
@@ -693,6 +699,25 @@ def runtime_summary(project_root: Path, diagnostics: list[dict[str, Any]]) -> di
     display_links = state.get("client_display_links") or {}
     links = display_links.get("links") or {}
     counts = state.get("counts") or {}
+    semantic_coverage = state.get("semantic_intent_coverage") or {}
+    semantic_status = str(semantic_coverage.get("coverage_status") or "")
+    if semantic_status in {"missing", "fallback_only", "degraded"}:
+        diagnostics.append(
+            diagnostic(
+                "runtime_semantic_intent_coverage_degraded",
+                severity="warning",
+                message=(
+                    "Semantic intent coverage is "
+                    f"{semantic_status}: "
+                    f"{semantic_coverage.get('gap_reason') or 'host semantic evidence is incomplete'}"
+                ),
+                source_ref=runtime_visibility.STATE_SUMMARY_REF,
+                next_action=(
+                    "provide compact host_semantic_intent before governed action "
+                    "or final response"
+                ),
+            )
+        )
     round_traces = round_document_traces(project_root, state)
     return {
         "status": status,
@@ -706,6 +731,7 @@ def runtime_summary(project_root: Path, diagnostics: list[dict[str, Any]]) -> di
             "required_action_count": counts.get("required_action_count", 0),
         },
         "observed_lifecycle": state.get("observed_lifecycle") or {},
+        "semantic_intent_coverage": semantic_coverage,
         "artifact_assurance": state.get("artifact_assurance") or {},
         "round_document_traces": round_traces,
         "lifecycle_card_count": len(state.get("lifecycle_card_links") or []),

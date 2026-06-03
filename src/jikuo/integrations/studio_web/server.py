@@ -1204,6 +1204,7 @@ INDEX_HTML = """<!doctype html>
       const latestRuntimeRound = rounds.find((round) => round.round_id === traceList.latest_runtime_round_id) || (rounds[0] || null);
       const latestReceiptRound = rounds.find((round) => round.round_id === traceList.latest_completion_receipt_round_id) || null;
       const selectedCounts = (selectedRound || {}).counts || {};
+      const selectedSemantic = (selectedRound || {}).semantic_intent_coverage || {};
       const activeTrace = (selectedRound || {}).artifact_assurance || {};
       const latestAvailable = Boolean(selectedRound && selectedRound.has_document_trace && activeTrace.schema);
       const active = latestAvailable ? activeTrace : {};
@@ -1283,6 +1284,9 @@ INDEX_HTML = """<!doctype html>
         traceChip("Selected round", selectedRound ? (selectedRound.label || selectedRound.round_id) : "no runtime round"),
         traceChip("Trace source", selectedRound ? `${selectedRound.source_kind || "runtime"} / ${selectedRound.trace_label || ""}` : "no runtime evidence"),
         traceChip("Document changes", selectedRound ? selectedRound.document_change_label : "No document trace"),
+        traceChip("Semantic intent", selectedRound
+          ? `${selectedSemantic.coverage_status || "unknown"} / ${selectedSemantic.provider || "provider unavailable"}`
+          : "No semantic evidence"),
         traceChip("Expected reads", detailCount(requiredReadCount, "documents")),
         traceChip("Observed reads", detailCount(readEvidenceCount, "evidence items")),
         traceChip("Writes", `${requiredCompanionWriteCount} required / ${declaredWriteCount} declared / ${actualWriteCount} actual`),
@@ -1376,7 +1380,10 @@ INDEX_HTML = """<!doctype html>
         compactItem("2. Expected documents", `${requiredReadCount} reads / ${completionCandidateCount} completion candidates`),
         compactItem("3. Observed evidence", `${readEvidenceCount} reads / ${requiredCompanionWriteCount} required writes / ${declaredWriteCount} declared writes / ${actualWriteCount} actual writes`),
         compactItem("4. Review result", statusState.label),
-        compactItem("5. Guarantee", active.guarantee || "evidence_comparison_only")
+        compactItem("5. Semantic coverage", selectedSemantic.coverage_status
+          ? `${selectedSemantic.coverage_status} / ${selectedSemantic.gap_reason || selectedSemantic.semantic_intent_status || "no gap"}`
+          : "No semantic coverage projection for this round."),
+        compactItem("6. Guarantee", active.guarantee || "evidence_comparison_only")
       );
     };
     const render = (data) => {
@@ -1385,6 +1392,7 @@ INDEX_HTML = """<!doctype html>
       global.textContent = `${data.status} · no-write`;
       const summaries = data.summaries || {};
       const runtime = summaries.runtime || {};
+      const semanticCoverage = runtime.semantic_intent_coverage || {};
       const policy = summaries.policy_management || {};
       const policyCounts = policy.summary_counts || {};
       const integrations = summaries.integrations || {};
@@ -1392,6 +1400,7 @@ INDEX_HTML = """<!doctype html>
       const overview = document.getElementById("overview");
       overview.replaceChildren(
         metric(runtime.status || "unknown", "Runtime"),
+        metric(semanticCoverage.coverage_status || "unknown", "Semantic intent"),
         metric((summaries.document_mounts || {}).checked_document_count || 0, "Completion docs"),
         metric(policyCounts.active_policy_count || 0, "Active policies"),
         metric(policyCounts.package_template_count || 0, "Package templates"),

@@ -473,13 +473,14 @@ def render_additional_context(
         *_semantic_intent_precondition_lines(proposal),
         (
             "Host semantic intent follow-up contract: after reading and "
-            "understanding this turn, and before calling JIKUO router or proposal "
-            "tools for task_start, policy work, or progress summaries, classify "
-            "the request and pass compact host_semantic_intent; use "
+            "understanding this turn, and before governed action, tool use, "
+            "workspace writes, or final response, call the appropriate JIKUO "
+            "router or proposal surface with compact host_semantic_intent; use "
             "status=provided, provider=host_ai, policy_scopes limited to "
             "discussion/editing/progress_summary, requested_outcome, "
             "execution_boundary, response_contract, and short user_expression. "
-            "Do not include the raw prompt or transcript."
+            "If this cannot be done, report semantic intent coverage as "
+            "degraded or missing. Do not include the raw prompt or transcript."
         ),
         f"Project root: {project_root}.",
         f"Session id: {hook_input.session_id or 'unavailable'}.",

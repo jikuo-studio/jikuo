@@ -34,10 +34,12 @@ transport path:
   projection.
 - If no semantic object is supplied, `additionalContext` instructs the host AI
   to classify the turn after it has read and understood the user request, then
-  pass compact `host_semantic_intent` before later JIKUO router or proposal
-  tool calls such as task start, policy work, or progress summaries. This is a
-  cooperative post-start follow-up contract, not a pre-turn classifier inside
-  the hook.
+  call the appropriate JIKUO router or proposal surface with compact
+  `host_semantic_intent` before governed action, tool use, workspace writes, or
+  final response. If that cannot happen, the host AI should report semantic
+  intent coverage as degraded or missing. This is a cooperative post-start
+  follow-up contract, not a pre-turn classifier inside the hook and not a strict
+  GUI semantic gate.
 - If no compact semantic intent is supplied, `semantic_intent_status` is
   reported as `unavailable`.
 - If the host AI performs workspace writes during the turn, `additionalContext`

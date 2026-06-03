@@ -102,6 +102,7 @@ entries:
       - path: "docs/governance/jikuo_document_evidence_chain_design.md"
       - path: "docs/insights/INSIGHT-2026-06-03-runtime-history-card-itemized-document-evidence-gap.md"
       - path: "docs/insights/INSIGHT-2026-06-03-completion-check-applicability-evidence-gap.md"
+      - path: "docs/insights/INSIGHT-2026-06-03-gui-subscription-semantic-intent-return-gap.md"
       - path: "docs/insights/INSIGHT-2026-05-19-completion-review-evidence-bridge-gap.md"
       - path: "docs/insights/INSIGHT-2026-05-21-lifecycle-sequencing-owner-gap.md"
       - path: "docs/insights/INSIGHT-2026-05-21-from-lifecycle-to-action-grammar.md"

@@ -380,6 +380,41 @@ Acceptance:
   automatic lifecycle runner;
 - docs state that full lifecycle automation is deferred.
 
+### `MVP-RECEIPT-06`: Semantic Intent Coverage Visibility
+
+Expose the GUI subscription semantic-intent return gap without changing the
+thin-shell architecture.
+
+MVP reality:
+
+- the pre-turn hook can mount JIKUO before the model answers;
+- the hook cannot force true host-AI semantic classification after model
+  understanding and before action;
+- any scope can therefore slip through unless the host AI cooperatively returns
+  compact `host_semantic_intent`.
+
+Capability:
+
+- `CAP-SEMANTIC-INTENT-COVERAGE-RUNTIME-01`
+
+Deliverables:
+
+- INS:
+  `docs/insights/INSIGHT-2026-06-03-gui-subscription-semantic-intent-return-gap.md`;
+- runtime `state_summary.semantic_intent_coverage` projection;
+- Studio Overview semantic coverage card;
+- selected Round Document Trace semantic coverage label;
+- diagnostics when semantic coverage is `missing`, `fallback_only`, or
+  `degraded`.
+
+Acceptance:
+
+- host-provided semantic intent is shown as `complete`;
+- missing required semantic evidence is shown as `missing`;
+- deterministic fallback is shown as `fallback_only`;
+- Studio does not claim strict GUI semantic gating;
+- policy evaluator inputs and scope taxonomy are unchanged.
+
 ### `MVP-CONFIG-01`: Document Rules CRUD Frontend Completion
 
 Complete the thin frontend for Document Rules over the existing plan/apply
@@ -511,12 +546,13 @@ Defer these until the MVP receipt and configuration loop is usable:
 4. `MVP-RECEIPT-03`
 5. `MVP-RECEIPT-04`
 6. `MVP-RECEIPT-05`
-7. `MVP-CONFIG-01`
-8. `MVP-CONFIG-02`
-9. `MVP-CONFIG-03`
-10. `MVP-CONFIG-04`
-11. `MVP-CONFIG-05`
-12. `MVP-RELEASE-01`
+7. `MVP-RECEIPT-06`
+8. `MVP-CONFIG-01`
+9. `MVP-CONFIG-02`
+10. `MVP-CONFIG-03`
+11. `MVP-CONFIG-04`
+12. `MVP-CONFIG-05`
+13. `MVP-RELEASE-01`
 
 `MVP-CONFIG-01` may start in parallel with `MVP-RECEIPT-01` if capacity allows,
 but receipt observation should be proven early because it carries the core MVP
@@ -530,6 +566,7 @@ Mount this work order with:
 - `docs/governance/jikuo_execution_mounts.md`;
 - `docs/governance/jikuo_document_evidence_chain_design.md`;
 - `docs/insights/INSIGHT-2026-06-03-runtime-history-card-itemized-document-evidence-gap.md`;
+- `docs/insights/INSIGHT-2026-06-03-gui-subscription-semantic-intent-return-gap.md`;
 - `docs/insights/INSIGHT-2026-05-19-completion-review-evidence-bridge-gap.md`;
 - `docs/insights/INSIGHT-2026-05-21-lifecycle-sequencing-owner-gap.md`;
 - `docs/insights/INSIGHT-2026-05-21-from-lifecycle-to-action-grammar.md`;

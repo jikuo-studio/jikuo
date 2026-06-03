@@ -78,6 +78,9 @@ class InstructionFilesTests(unittest.TestCase):
             self.assertIn(instruction_files.MANAGED_BEGIN, agents_text)
             self.assertIn(instruction_files.MANAGED_END, agents_text)
             self.assertIn("Show returned governance card Markdown verbatim", agents_text)
+            self.assertIn("before governed action, tool use, workspace writes, or final response", agents_text)
+            self.assertIn("host_semantic_intent", agents_text)
+            self.assertIn("semantic intent coverage as degraded or missing", agents_text)
             self.assertIn("--event completion_review", agents_text)
             self.assertIn("after verification and before the final response", agents_text)
             self.assertIn("completion receipt is missing or failed", agents_text)
@@ -106,6 +109,7 @@ class InstructionFilesTests(unittest.TestCase):
                 trigger_mode="mounted",
             )
             self.assertIn("Configured trigger mode for this client: `mounted`", block)
+            self.assertIn("host_semantic_intent", block)
             self.assertIn("--event completion_review", block)
             self.assertIn("not strictly enforceable until a pre-turn adapter is installed", block)
 

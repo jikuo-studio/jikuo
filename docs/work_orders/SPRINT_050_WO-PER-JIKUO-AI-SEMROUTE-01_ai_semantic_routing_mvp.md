@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-AI-SEMROUTE-01: AI Semantic Routing MVP
 
-> **Status**: Design accepted; first projection slice implemented for short `user_expression`, MVP scope filtering, ordered `intent_slices` card rendering, Codex hook wording, no-write smoke for `semantic_intent_status=provided`, raw `user_phrase` redaction in trigger/router projections, local policy-distribution proof that host semantic scopes select different scope-aware policies, explicit Codex-host-AI semantic-intent transport proof, MCP Sampling unavailable proof, report-only `semantic_intent_classification_evidence`, accepted cooperative Codex GUI MCP router proof that `host_semantic_intent` can be exposed and passed, no-write `semantic_intent_precondition` feedback for selected governed editing / write-capable MCP entry points, direct `host_semantic_intent` passthrough on those proposal tools, accepted external Codex GUI MCP proposal-tool smoke proving the host can re-call successfully, Codex hook additionalContext now states the cooperative post-start semantic follow-up contract, and progress-summary business-meaning policy applicability has been corrected to scope-first for `progress_summary` turns. Automatic hook-time semantic classification, MCP Sampling provider support, and any evaluator expansion remain pending.
+> **Status**: Design accepted; first projection slice implemented for short `user_expression`, MVP scope filtering, ordered `intent_slices` card rendering, Codex hook wording, no-write smoke for `semantic_intent_status=provided`, raw `user_phrase` redaction in trigger/router projections, local policy-distribution proof that host semantic scopes select different scope-aware policies, explicit Codex-host-AI semantic-intent transport proof, MCP Sampling unavailable proof, report-only `semantic_intent_classification_evidence`, accepted cooperative Codex GUI MCP router proof that `host_semantic_intent` can be exposed and passed, no-write `semantic_intent_precondition` feedback for selected governed editing / write-capable MCP entry points, direct `host_semantic_intent` passthrough on those proposal tools, accepted external Codex GUI MCP proposal-tool smoke proving the host can re-call successfully, Codex hook additionalContext now states the cooperative post-start semantic follow-up contract before governed action or final response, progress-summary business-meaning policy applicability has been corrected to scope-first for `progress_summary` turns, and runtime/Studio semantic coverage now exposes GUI subscription return gaps. Automatic hook-time semantic classification, MCP Sampling provider support, and any evaluator expansion remain pending.
 > **Date**: 2026-05-28
 > **JIKUO layer**: integration / policy distribution.
 > **Business meaning**: JIKUO should stay thin. The host AI understands the user's natural-language intent; JIKUO receives a compact semantic object, records it, explains policy routing, and keeps deterministic fallback honest.
@@ -459,6 +459,20 @@ scope-first for `policy_scopes=["progress_summary"]`. This means a host-AI
 follow-up route for "summarize progress / output todos" can trigger the
 business-meaning obligation from `conversation_turn`, `task_start`, or
 `completion_review` without expanding the scope taxonomy or evaluator inputs.
+
+A follow-up GUI-subscription risk slice records and exposes the broader
+`host_semantic_intent` return gap:
+
+- insight:
+  `docs/insights/INSIGHT-2026-06-03-gui-subscription-semantic-intent-return-gap.md`;
+- runtime projection:
+  `state_summary.semantic_intent_coverage`;
+- Studio projection:
+  runtime overview and selected Round Document Trace rows show whether coverage
+  is `complete`, `missing`, `fallback_only`, or `degraded`;
+- boundary:
+  this is risk visibility and instruction hardening, not proof of a strict
+  post-understanding / pre-action GUI gate.
 
 A follow-up real-policy distribution smoke found and fixed a narrower
 precondition gap: `jikuo.propose_policy_distribution_review` without

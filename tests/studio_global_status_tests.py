@@ -70,6 +70,17 @@ class StudioGlobalStatusTests(unittest.TestCase):
                     {
                         "schema": "jikuo.runtime_state_summary.v0",
                         "status": "available",
+                        "semantic_intent_coverage": {
+                            "schema": "jikuo.semantic_intent_coverage.v0",
+                            "coverage_status": "missing",
+                            "semantic_intent_status": "unavailable",
+                            "evidence_status": "missing",
+                            "provider": "unavailable",
+                            "required": True,
+                            "policy_scopes": ["editing"],
+                            "fallback_expanded": False,
+                            "gap_reason": "host_ai_did_not_return_intent",
+                        },
                         "artifact_assurance": {
                             "schema": "jikuo.studio.artifact_assurance.v0",
                             "status": "review",
@@ -86,6 +97,12 @@ class StudioGlobalStatusTests(unittest.TestCase):
 
             runtime = report["summaries"]["runtime"]
             self.assertEqual(runtime["artifact_assurance"]["status"], "review")
+            self.assertEqual(
+                runtime["semantic_intent_coverage"]["coverage_status"],
+                "missing",
+            )
+            diagnostic_codes = {item["code"] for item in report["diagnostics"]}
+            self.assertIn("runtime_semantic_intent_coverage_degraded", diagnostic_codes)
             self.assertEqual(
                 runtime["artifact_assurance"]["write_assurance"]["planned_write_count"],
                 1,
@@ -283,6 +300,15 @@ class StudioGlobalStatusTests(unittest.TestCase):
                             "event": "completion_review",
                         },
                         "runtime_visibility": {"history_ref": receipt_ref},
+                        "semantic_intent_coverage": {
+                            "schema": "jikuo.semantic_intent_coverage.v0",
+                            "coverage_status": "complete",
+                            "semantic_intent_status": "provided",
+                            "evidence_status": "ok",
+                            "provider": "host_ai",
+                            "required": True,
+                            "policy_scopes": ["editing"],
+                        },
                         "artifact_assurance": {
                             "schema": "jikuo.studio.artifact_assurance.v0",
                             "status": "ok",
@@ -344,6 +370,10 @@ class StudioGlobalStatusTests(unittest.TestCase):
             )
             self.assertEqual(receipt["source_kind"], "runtime_history_state_summary")
             self.assertEqual(receipt["trace_label"], "Structured document receipt")
+            self.assertEqual(
+                receipt["semantic_intent_coverage"]["coverage_status"],
+                "complete",
+            )
             write = receipt["artifact_assurance"]["write_assurance"]
             self.assertEqual(
                 write["required_companion_write_set"][0]["path"],
