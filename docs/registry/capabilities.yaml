@@ -1658,6 +1658,22 @@ entries:
       - "does_not_prove_model_understanding"
     referenced_by_transitional_cache:
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-MVP-01_work_receipt_and_configuration_mvp.md"
+  - id: "CAP-CODEX-HOOK-COMPLETION-RECEIPT-INSTRUCTION-01"
+    title: "Codex hook completion receipt instruction"
+    status: "implemented instruction-level host-AI completion-review obligation by MVP-RECEIPT-05"
+    metadata_status: "complete"
+    entry_point: ".codex/hooks/jikuo_user_prompt_submit.py render_additional_context"
+    write_effect: "none by the hook; host AI is instructed to call no-write completion_review after workspace writes"
+    approval: "instruction-level obligation only; does not prove a mounted post-turn hook or automatically run completion_review"
+    non_effects:
+      - "does_not_create_task_sessions"
+      - "does_not_create_policies"
+      - "does_not_commit_changes"
+      - "does_not_write_evidence_by_the_hook"
+      - "does_not_prove_post_turn_mounted_lifecycle"
+      - "does_not_replace_future_host_adapter_runner"
+    referenced_by_transitional_cache:
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-MVP-01_work_receipt_and_configuration_mvp.md"
   - id: "CAP-STUDIO-ARTIFACT-ASSURANCE-COMPLETION-CHECK-SEMANTICS-01"
     title: "Artifact assurance completion-check candidate semantics"
     status: "implemented completion-check candidate/applicability semantics by JIKUO-STUDIO-01D12"

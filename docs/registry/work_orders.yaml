@@ -529,6 +529,7 @@ entries:
     implements_capabilities:
       - "CAP-RUNTIME-WRITE-OBSERVATION-01"
       - "CAP-RUNTIME-WRITE-OBSERVATION-COMPLETION-REVIEW-01"
+      - "CAP-CODEX-HOOK-COMPLETION-RECEIPT-INSTRUCTION-01"
     capability_extraction_status: "extracted_from_work_order_body"
     required_mount_sets:
       - "MOUNT-DOCREG-01A"

@@ -217,10 +217,19 @@ MVP reality:
 
 - pre-turn host hooks run before AI reads or writes;
 - no full completion-review runner exists;
-- host AI or the user must call completion review at the end.
+- host AI must call completion review at the end when it performed workspace
+  writes; Studio/manual invocation remains a fallback, not the primary product
+  loop.
+
+Capability:
+
+- `CAP-CODEX-HOOK-COMPLETION-RECEIPT-INSTRUCTION-01`
 
 Deliverables:
 
+- Codex hook `additionalContext` instruction that tells the host AI to run
+  `completion_review` after file creation, edits, deletion, generated outputs,
+  git staging, commits, or guarded project writes;
 - CLI command example;
 - MCP/tool instruction wording for host AI;
 - optional Studio action descriptor for "Run completion review" if a no-write
@@ -229,6 +238,13 @@ Deliverables:
 
 Acceptance:
 
+- a host AI receives an explicit completion receipt obligation before it starts
+  substantive work;
+- if the host AI performs workspace writes, it is instructed to run
+  `python -B -m jikuo.agent_flow propose --event completion_review --project-root
+  <project-root> --format json` before final response;
+- if completion review cannot run, the host AI must report the missing or failed
+  receipt instead of implying a receipt exists;
 - a tester can produce a receipt after an AI task without relying on a hidden
   automatic lifecycle runner;
 - docs state that full lifecycle automation is deferred.

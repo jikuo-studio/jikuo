@@ -37,6 +37,10 @@ transport path:
   `host_semantic_intent` with no raw prompt or transcript.
 - If no compact semantic intent is supplied, `semantic_intent_status` is
   reported as `unavailable`.
+- If the host AI performs workspace writes during the turn, `additionalContext`
+  instructs the host AI to run `completion_review` after verification and before
+  the final response so JIKUO can produce a completion receipt. This is an
+  instruction-level host-AI obligation, not proof of a mounted post-turn hook.
 
 Do not claim Codex GUI AI-semantic routing from this hook. The current code can
 transport and label semantic intent, but it does not generate host-time AI

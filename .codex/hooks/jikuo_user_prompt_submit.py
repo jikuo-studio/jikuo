@@ -487,6 +487,16 @@ def render_additional_context(
         f"Missing evidence report count: {missing_count}.",
         f"Latest card: {latest or 'unavailable'}.",
         f"History card: {history or 'unavailable'}.",
+        (
+            "Completion receipt contract: if the host AI performs workspace writes "
+            "in this turn, including file creation, edits, deletion, generated "
+            "outputs, git staging, commits, or guarded project writes, it must run "
+            "`python -B -m jikuo.agent_flow propose --event completion_review "
+            f"--project-root \"{project_root}\" --format json` after verification and "
+            "before the final response. Do not ask the user to run this routine "
+            "completion receipt. If it cannot be run or fails, report that the "
+            "completion receipt is missing or failed."
+        ),
         "Required follow-up tools: " + (", ".join(followups) if followups else "none reported."),
         "Durable writes remain guarded; this hook must not create task sessions, policies, commits, or evidence writes by itself.",
         "Privacy boundary: the hook passes the prompt to JIKUO in memory by default, or over stdin in subprocess diagnostic mode, and does not persist the raw prompt or transcript in hook-owned files.",

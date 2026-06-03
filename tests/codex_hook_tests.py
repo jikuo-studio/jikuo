@@ -118,6 +118,12 @@ class CodexHookProofTests(unittest.TestCase):
         self.assertIn("short user_expression", context)
         self.assertIn("Triggered policy count: 1.", context)
         self.assertIn("Missing evidence report count: 1.", context)
+        self.assertIn("Completion receipt contract:", context)
+        self.assertIn("if the host AI performs workspace writes", context)
+        self.assertIn("--event completion_review", context)
+        self.assertIn(f'--project-root "{ROOT}"', context)
+        self.assertIn("before the final response", context)
+        self.assertIn("completion receipt is missing or failed", context)
         self.assertIn("jikuo.propose_task_start", context)
         self.assertIn("Durable writes remain guarded", context)
 
@@ -400,6 +406,8 @@ class CodexHookProofTests(unittest.TestCase):
         self.assertIn("Semantic intent status: provided.", additional_context)
         self.assertIn("Host adapter contract:", additional_context)
         self.assertIn("JIKUO remains the final work-profile", additional_context)
+        self.assertIn("Completion receipt contract:", additional_context)
+        self.assertIn("--event completion_review", additional_context)
         self.assertIn("Latest card: .jikuo/runtime/last_card.md", additional_context)
         self.assertNotIn(payload["prompt"], additional_context)
 
