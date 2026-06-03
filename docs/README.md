@@ -45,6 +45,7 @@ The following remain outside this repository's active documentation mount unless
   lives in `docs/registry/`
 - `docs/governance/jikuo_policy_governance_authority.md`
 - `docs/governance/jikuo_scenario_chain_and_atom_registration_guide.md`
+- `docs/governance/jikuo_document_evidence_chain_design.md`
 - `docs/governance/jikuo_trust_privacy_provenance_baseline.md`
 - `docs/governance/jikuo_skeleton_kernel_boundary_and_backlog.md`
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-FLOW-02_desktop_app_primary_operating_loop.md`

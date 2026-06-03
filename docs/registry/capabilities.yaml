@@ -1658,10 +1658,10 @@ entries:
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md"
   - id: "CAP-STUDIO-ROUND-DOCUMENT-TRACE-SELECTOR-01"
     title: "Studio round document trace selector"
-    status: "implemented selectable runtime round list with trace/change labels by JIKUO-STUDIO-01D14"
+    status: "implemented selectable runtime round list with trace/change labels by JIKUO-STUDIO-01D14; extended with selected-card/detail consistency and count-only history-card rendering by JIKUO-STUDIO-01D15"
     metadata_status: "complete"
     entry_point: "src/jikuo/studio/global_status.py summaries.runtime.round_document_traces; src/jikuo/integrations/studio_web/server.py Round Document Trace selector"
-    write_effect: "none; reads existing state_summary and runtime history cards to label selectable rounds without creating new runtime evidence"
+    write_effect: "none; reads existing state_summary and runtime history cards to label selectable rounds and render selected-round details without creating new runtime evidence"
     approval: "no guarded approval required because this is a read-only Studio view-model and frontend rendering extension"
     non_effects:
       - "does_not_create_data01_event_ledger_entries"
@@ -1669,6 +1669,7 @@ entries:
       - "does_not_inspect_git_diff"
       - "does_not_change_policy_evaluator_behavior"
       - "does_not_infer_document_changes_outside_runtime_evidence"
+      - "does_not_fall_back_from_selected_round_to_global_projection"
       - "does_not_bypass_guarded_apply"
     referenced_by_transitional_cache:
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md"

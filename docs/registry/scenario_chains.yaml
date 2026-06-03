@@ -30,3 +30,51 @@ entries:
     capability_refs:
       - "CAP-DOCUMENT-REGISTRY-TRANSITION-01"
       - "CAP-MAIN-DOC-MOUNT-MAINTENANCE-01"
+  - id: "SCENARIO-STUDIO-ROUND-DOCUMENT-TRACE"
+    title: "Studio round document trace inspection"
+    status: "implemented"
+    user_outcome: "A Studio user can choose a runtime round and see document expectations, observed evidence, writes, gaps, and action-chain status for that same round."
+    corresponding_document_refs:
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md"
+    mount_coverage:
+      status: "verified"
+      refs:
+        - "MOUNT-STUDIO-01"
+        - "MOUNT-SCENARIO-CHAIN-ATOM-REGISTRATION"
+    steps:
+      - step_id: "STUDIO-ROUND-TRACE-01"
+        user_action: "Open Studio Round Document Trace."
+        visible_result: "The latest runtime round is selected by default."
+        operation_chain: "Studio reads summaries.runtime.round_document_traces and binds selectedRoundTraceId to default_round_id when no user selection exists."
+        atom_refs:
+          - "CAP-STUDIO-ROUND-DOCUMENT-TRACE-SELECTOR-01"
+        approval_boundary: "read_only"
+        evidence_outputs:
+          - "selected round card"
+          - "round trace summary chips"
+      - step_id: "STUDIO-ROUND-TRACE-02"
+        user_action: "Click a runtime round card."
+        visible_result: "Expected, Observed, Gaps, and Action chain panels update to the clicked round."
+        operation_chain: "Studio renders detail panels from the selected round artifact_assurance payload and selected-round count fields only."
+        atom_refs:
+          - "CAP-STUDIO-ROUND-DOCUMENT-TRACE-01"
+          - "CAP-STUDIO-ROUND-DOCUMENT-TRACE-SELECTOR-01"
+        approval_boundary: "read_only"
+        evidence_outputs:
+          - "selected round detail panels"
+      - step_id: "STUDIO-ROUND-TRACE-03"
+        user_action: "Inspect a round whose history card has counts but no itemized document paths."
+        visible_result: "Studio shows the counted items and explains that detailed paths are unavailable in that history card."
+        operation_chain: "Studio prefers explicit selected-round counts before array lengths and avoids falling back to global configured projection for selected no-trace rounds."
+        atom_refs:
+          - "CAP-STUDIO-ARTIFACT-ASSURANCE-RUNTIME-CARD-01"
+          - "CAP-STUDIO-ROUND-DOCUMENT-TRACE-SELECTOR-01"
+        approval_boundary: "read_only"
+        evidence_outputs:
+          - "count-only detail rows"
+          - "no-trace selected-round state"
+    capability_refs:
+      - "CAP-STUDIO-ARTIFACT-ASSURANCE-PROJECTION-01"
+      - "CAP-STUDIO-ARTIFACT-ASSURANCE-RUNTIME-CARD-01"
+      - "CAP-STUDIO-ROUND-DOCUMENT-TRACE-01"
+      - "CAP-STUDIO-ROUND-DOCUMENT-TRACE-SELECTOR-01"

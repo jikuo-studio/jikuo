@@ -958,24 +958,59 @@ INDEX_HTML = """<!doctype html>
       const record = item || {};
       return text(record.reason || record.applicability_reason || record.role || record.source_ref || fallback || "");
     };
-    const artifactRows = (items, fallback, detailFallback) => {
+    const artifactRows = (items, fallback, detailFallback, counted, noun) => {
       const records = items || [];
       const rows = records.slice(0, 5).map((item) =>
         compactItem(artifactPath(item), artifactDetail(item, detailFallback))
       );
       const extra = overflowNote(records.length, rows.length, "trace items");
-      return rows.length ? [...rows, ...(extra ? [extra] : [])] : [compactItem("None captured", fallback)];
+      if (rows.length) {
+        return [...rows, ...(extra ? [extra] : [])];
+      }
+      const total = numberValue(counted);
+      if (total > 0) {
+        return [compactItem(`${total} ${noun || "items"} counted`, "Detailed item paths are not available in this history card.")];
+      }
+      return [compactItem("None captured", fallback)];
     };
-    const traceGapRows = (items, fallback) => {
+    const traceGapRows = (items, fallback, counted) => {
       const records = items || [];
       const rows = records.slice(0, 6).map((item) =>
         compactItem(item.gap_type || "gap", artifactPath(item))
       );
       const extra = overflowNote(records.length, rows.length, "gaps");
-      return rows.length ? [...rows, ...(extra ? [extra] : [])] : [compactItem("No gaps reported", fallback)];
+      if (rows.length) {
+        return [...rows, ...(extra ? [extra] : [])];
+      }
+      const total = numberValue(counted);
+      if (total > 0) {
+        return [compactItem(`${total} gaps counted`, "Detailed gap paths are not available in this history card.")];
+      }
+      return [compactItem("No gaps reported", fallback)];
     };
     const artifactList = (items) => Array.isArray(items) ? items : [];
-    const artifactCount = (items, count) => Array.isArray(items) ? items.length : numberValue(count);
+    const firstArtifactList = (...sources) => {
+      for (const source of sources) {
+        if (Array.isArray(source) && source.length) {
+          return source;
+        }
+      }
+      for (const source of sources) {
+        if (Array.isArray(source)) {
+          return source;
+        }
+      }
+      return [];
+    };
+    const hasCountValue = (value) => value !== null && value !== undefined && value !== "";
+    const artifactCount = (items, ...counts) => {
+      for (const count of counts) {
+        if (hasCountValue(count)) {
+          return numberValue(count);
+        }
+      }
+      return Array.isArray(items) ? items.length : 0;
+    };
     const traceState = (round, active, gapReport) => {
       if (!round || !round.has_document_trace) {
         return {key: "no_trace", label: "No trace captured"};
@@ -998,7 +1033,7 @@ INDEX_HTML = """<!doctype html>
       button.innerHTML = `<strong></strong><span></span><div class="trace-badges"></div>`;
       button.querySelector("strong").textContent = round.label || round.round_id || "runtime round";
       const counts = round.counts || {};
-      button.querySelector("span").textContent = `${round.lifecycle_event || "unknown event"} / ${counts.planned_write_count || 0} planned / ${counts.actual_write_count || 0} actual`;
+      button.querySelector("span").textContent = `${round.lifecycle_event || "unknown event"} / ${numberValue(counts.planned_write_count)} planned / ${numberValue(counts.actual_write_count)} actual`;
       const badges = button.querySelector(".trace-badges");
       const traceBadge = document.createElement("span");
       traceBadge.className = `trace-badge ${round.has_document_trace ? "trace-yes" : "trace-no"}`;
@@ -1015,7 +1050,6 @@ INDEX_HTML = """<!doctype html>
     };
     const renderRoundDocumentTrace = (data) => {
       const summaries = data.summaries || {};
-      const configured = summaries.artifact_assurance || {};
       const traceList = (summaries.runtime || {}).round_document_traces || {};
       const rounds = traceList.rounds || [];
       const defaultRoundId = traceList.default_round_id || (rounds[0] || {}).round_id;
@@ -1023,11 +1057,10 @@ INDEX_HTML = """<!doctype html>
         selectedRoundTraceId = defaultRoundId || null;
       }
       const selectedRound = rounds.find((round) => round.round_id === selectedRoundTraceId) || null;
+      const selectedCounts = (selectedRound || {}).counts || {};
       const activeTrace = (selectedRound || {}).artifact_assurance || {};
       const latestAvailable = Boolean(selectedRound && selectedRound.has_document_trace && activeTrace.schema);
-      const active = latestAvailable ? activeTrace : configured;
-      const configuredRead = configured.read_assurance || {};
-      const configuredWrite = configured.write_assurance || {};
+      const active = latestAvailable ? activeTrace : {};
       const activeRead = (active || {}).read_assurance || {};
       const activeWrite = (active || {}).write_assurance || {};
       const activeGap = (active || {}).gap_report || {};
@@ -1043,30 +1076,41 @@ INDEX_HTML = """<!doctype html>
           : [compactItem("No runtime rounds", "Run a card-producing JIKUO proposal to capture runtime rounds.")])
       );
 
-      const expectedReads = artifactList(activeRead.required_read_set || configuredRead.required_read_set);
+      const expectedReads = artifactList(activeRead.required_read_set);
       const readEvidence = artifactList(activeRead.read_evidence_set);
-      const expectedWrites = artifactList(activeWrite.required_write_set || configuredWrite.required_write_set);
-      const completionCandidates = artifactList(activeWrite.completion_check_candidates || activeWrite.write_candidate_set || configuredWrite.completion_check_candidates);
+      const expectedWrites = artifactList(activeWrite.required_write_set);
+      const completionCandidates = firstArtifactList(activeWrite.completion_check_candidates, activeWrite.write_candidate_set);
       const plannedWrites = artifactList(activeWrite.planned_write_set);
       const actualWrites = artifactList(activeWrite.actual_write_set);
-      const readGaps = artifactList(activeGap.read_gaps || activeRead.required_not_read);
-      const writeGaps = activeGap.write_gaps || [
+      const readGaps = firstArtifactList(activeGap.read_gaps, activeRead.required_not_read);
+      const writeGapFallbacks = [
         ...(activeWrite.required_not_planned || []),
         ...(activeWrite.required_not_written || []),
         ...(activeWrite.planned_not_written || []),
         ...(activeWrite.unplanned_written || []),
       ];
+      const writeGaps = firstArtifactList(activeGap.write_gaps, writeGapFallbacks);
       const completionNotEvaluated = artifactList(activeWrite.completion_check_not_evaluated);
-      const requiredReadCount = artifactCount(activeRead.required_read_set, activeRead.required_read_count || configuredRead.required_read_count);
-      const readEvidenceCount = artifactCount(activeRead.read_evidence_set, activeRead.read_evidence_count);
-      const expectedWriteCount = artifactCount(activeWrite.required_write_set, activeWrite.required_write_count || configuredWrite.required_write_count);
+      const requiredReadCount = artifactCount(activeRead.required_read_set, activeRead.required_read_count, selectedCounts.required_read_count);
+      const readEvidenceCount = artifactCount(activeRead.read_evidence_set, activeRead.read_evidence_count, selectedCounts.read_evidence_count);
+      const expectedWriteCount = artifactCount(activeWrite.required_write_set, activeWrite.required_write_count, selectedCounts.required_write_count);
       const completionCandidateCount = artifactCount(
         activeWrite.completion_check_candidates || activeWrite.write_candidate_set,
-        activeWrite.completion_check_candidate_count || configuredWrite.completion_check_candidate_count
+        activeWrite.completion_check_candidate_count,
+        selectedCounts.completion_check_candidate_count
       );
-      const plannedWriteCount = artifactCount(activeWrite.planned_write_set, activeWrite.planned_write_count);
-      const actualWriteCount = artifactCount(activeWrite.actual_write_set, activeWrite.actual_write_count);
-      const completionNotEvaluatedCount = artifactCount(activeWrite.completion_check_not_evaluated, activeGap.completion_check_not_evaluated_count || activeWrite.completion_check_not_evaluated_count);
+      const plannedWriteCount = artifactCount(activeWrite.planned_write_set, activeWrite.planned_write_count, selectedCounts.planned_write_count);
+      const actualWriteCount = artifactCount(activeWrite.actual_write_set, activeWrite.actual_write_count, selectedCounts.actual_write_count);
+      const readGapCount = artifactCount(activeGap.read_gaps || activeRead.required_not_read, activeGap.read_gap_count, activeRead.required_reads_without_evidence_count);
+      const writeGapCount = artifactCount(activeGap.write_gaps, activeGap.write_gap_count);
+      const gapCount = artifactCount(null, activeGap.gap_count, selectedCounts.gap_count);
+      const uncategorizedGapCount = Math.max(0, gapCount - readGapCount - writeGapCount);
+      const completionNotEvaluatedCount = artifactCount(
+        activeWrite.completion_check_not_evaluated,
+        activeGap.completion_check_not_evaluated_count,
+        activeWrite.completion_check_not_evaluated_count,
+        selectedCounts.completion_check_not_evaluated_count
+      );
 
       document.getElementById("round-trace-summary").replaceChildren(
         traceChip("Round", selectedRound ? (selectedRound.label || selectedRound.round_id) : "no runtime round"),
@@ -1075,16 +1119,16 @@ INDEX_HTML = """<!doctype html>
         traceChip("Expected reads", detailCount(requiredReadCount, "documents")),
         traceChip("Observed reads", detailCount(readEvidenceCount, "evidence items")),
         traceChip("Writes", `${plannedWriteCount} planned / ${actualWriteCount} actual`),
-        traceChip("Gaps", detailCount(numberValue(activeGap.gap_count) + completionNotEvaluatedCount, "items"))
+        traceChip("Gaps", detailCount(gapCount + completionNotEvaluatedCount, "items"))
       );
 
       document.getElementById("round-trace-expected").replaceChildren(
         compactItem("Required reads", detailCount(requiredReadCount, "documents")),
-        ...artifactRows(expectedReads, "No required reads are configured for this projection.", "configured context document"),
+        ...artifactRows(expectedReads, "No required reads are configured for this selected round.", "configured context document", requiredReadCount, "documents"),
         compactItem("Applicable required writes", detailCount(expectedWriteCount, "documents")),
-        ...artifactRows(expectedWrites, "No applicable required writes are known for this round.", "required write"),
+        ...artifactRows(expectedWrites, "No applicable required writes are known for this selected round.", "required write", expectedWriteCount, "documents"),
         compactItem("Completion checks", detailCount(completionCandidateCount, "candidates")),
-        ...artifactRows(completionCandidates, "No completion-check candidates are configured.", "completion check candidate")
+        ...artifactRows(completionCandidates, "No completion-check candidates are configured for this selected round.", "completion check candidate", completionCandidateCount, "candidates")
       );
 
       const observedRows = latestAvailable
@@ -1092,11 +1136,11 @@ INDEX_HTML = """<!doctype html>
             compactItem("Runtime projection", `${runtimeProjection.event || selectedRound.lifecycle_event || "latest task"} / ${runtimeProjection.persistence || selectedRound.source_kind || "runtime summary"}`),
             compactItem("History card", selectedRound.history_ref || "history ref not supplied"),
             compactItem("Read evidence", detailCount(readEvidenceCount, "items")),
-            ...artifactRows(readEvidence, "No read evidence was supplied for this round.", "read evidence"),
+            ...artifactRows(readEvidence, "No read evidence was supplied for this round.", "read evidence", readEvidenceCount, "read evidence items"),
             compactItem("Planned writes", detailCount(plannedWriteCount, "documents")),
-            ...artifactRows(plannedWrites, "No planned write evidence was supplied for this round.", "planned write"),
+            ...artifactRows(plannedWrites, "No planned write evidence was supplied for this round.", "planned write", plannedWriteCount, "planned writes"),
             compactItem("Actual writes", detailCount(actualWriteCount, "documents")),
-            ...artifactRows(actualWrites, "No actual write evidence was supplied for this round.", "actual write"),
+            ...artifactRows(actualWrites, "No actual write evidence was supplied for this round.", "actual write", actualWriteCount, "actual writes"),
           ]
         : [
             compactItem("Runtime projection", selectedRound ? `${selectedRound.lifecycle_event || "runtime round"} has no comparable document trace.` : "No comparable trace was captured."),
@@ -1106,16 +1150,19 @@ INDEX_HTML = """<!doctype html>
 
       const gapRowsForTrace = latestAvailable
         ? [
-            ...traceGapRows(readGaps, "No required-read gaps are currently reported."),
-            ...traceGapRows(writeGaps, "No write gaps are currently reported."),
+            ...traceGapRows(readGaps, "No required-read gaps are currently reported.", readGapCount),
+            ...traceGapRows(writeGaps, "No write gaps are currently reported.", writeGapCount),
+            ...(uncategorizedGapCount
+              ? [compactItem(`${uncategorizedGapCount} total gaps counted`, "Detailed gap categories are not available in this history card.")]
+              : []),
           ]
-        : [compactItem("No comparable trace", "Configured obligations are visible, but this selected round has no runtime evidence to compare.")];
+        : [compactItem("No comparable trace", "This selected round has no runtime document evidence to compare.")];
       document.getElementById("round-trace-gaps").replaceChildren(
         ...gapRowsForTrace,
         ...(completionNotEvaluatedCount
           ? [
               compactItem("Completion checks not evaluated", detailCount(completionNotEvaluatedCount, "documents")),
-              ...artifactRows(completionNotEvaluated, "", "needs applicability evidence"),
+              ...artifactRows(completionNotEvaluated, "", "needs applicability evidence", completionNotEvaluatedCount, "documents"),
             ]
           : [compactItem("Completion checks", "No unevaluated completion checks are reported.")])
       );
