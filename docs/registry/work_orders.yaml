@@ -1228,7 +1228,7 @@ entries:
     title: "SPRINT_050_WO-PER-JIKUO-STUDIO-01: Global Console And Configuration Shell"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md"
     sprint: "SPRINT_050"
-    status: "JIKUO-STUDIO-01A implemented no-write global status read model and CLI; JIKUO-STUDIO-01B implemented no-write panel/action registries; JIKUO-STUDIO-01C implemented local read-only console; JIKUO-STUDIO-01D0 recorded customer configuration action inventory and document-mount configuration boundary; JIKUO-STUDIO-01D1 implemented document-mount read model; JIKUO-STUDIO-01D2 implemented visible document-mount frontend section; JIKUO-STUDIO-01D3 implemented configuration vocabulary mapping; JIKUO-STUDIO-01D4 documented Document Rules plan/apply contract; JIKUO-STUDIO-01D5 implemented Document Rules no-write plan backend; JIKUO-STUDIO-01D6 implemented local web no-write plan preview; JIKUO-STUDIO-01D7 implemented source semantics split for editable configuration vs governance guidance; JIKUO-STUDIO-01D8 implemented minimal guarded apply for .jikuo/project_context.yaml Document Rules changes; JIKUO-STUDIO-01D9 implemented natural Approve and apply confirmation UX while preserving backend guarded apply evidence; JIKUO-STUDIO-01D10 implemented no-write artifact assurance projection for required/planned/actual read-write comparison; JIKUO-STUDIO-01D11 implemented runtime card/state_summary artifact assurance projection; JIKUO-STUDIO-01D12 corrected completion-check document semantics from unconditional required writes to candidates plus applicability; JIKUO-STUDIO-01D13 implemented trace-oriented latest-round document view; JIKUO-STUDIO-01D14 implemented selectable round trace list with document-trace/change labels; JIKUO-STUDIO-01D15 implemented selected-round detail consistency and count-only history-card rendering; JIKUO-STUDIO-01D16 implemented per-history structured receipt snapshots so selected completion receipts keep itemized details after latest state_summary changes; JIKUO-STUDIO-01D17 implemented semantic-intent coverage risk labels; JIKUO-STUDIO-01E1/01E2 implemented project-file inventory and local web batch selection for Document Rules"
+    status: "JIKUO-STUDIO-01A implemented no-write global status read model and CLI; JIKUO-STUDIO-01B implemented no-write panel/action registries; JIKUO-STUDIO-01C implemented local read-only console; JIKUO-STUDIO-01D0 recorded customer configuration action inventory and document-mount configuration boundary; JIKUO-STUDIO-01D1 implemented document-mount read model; JIKUO-STUDIO-01D2 implemented visible document-mount frontend section; JIKUO-STUDIO-01D3 implemented configuration vocabulary mapping; JIKUO-STUDIO-01D4 documented Document Rules plan/apply contract; JIKUO-STUDIO-01D5 implemented Document Rules no-write plan backend; JIKUO-STUDIO-01D6 implemented local web no-write plan preview; JIKUO-STUDIO-01D7 implemented source semantics split for editable configuration vs governance guidance; JIKUO-STUDIO-01D8 implemented minimal guarded apply for .jikuo/project_context.yaml Document Rules changes; JIKUO-STUDIO-01D9 implemented natural Approve and apply confirmation UX while preserving backend guarded apply evidence; JIKUO-STUDIO-01D10 implemented no-write artifact assurance projection for required/planned/actual read-write comparison; JIKUO-STUDIO-01D11 implemented runtime card/state_summary artifact assurance projection; JIKUO-STUDIO-01D12 corrected completion-check document semantics from unconditional required writes to candidates plus applicability; JIKUO-STUDIO-01D13 implemented trace-oriented latest-round document view; JIKUO-STUDIO-01D14 implemented selectable round trace list with document-trace/change labels; JIKUO-STUDIO-01D15 implemented selected-round detail consistency and count-only history-card rendering; JIKUO-STUDIO-01D16 implemented per-history structured receipt snapshots so selected completion receipts keep itemized details after latest state_summary changes; JIKUO-STUDIO-01D17 implemented semantic-intent coverage risk labels; JIKUO-STUDIO-01E1/01E2 implemented project-file inventory and local web batch selection for Document Rules; JIKUO-STUDIO-01E3 implemented the first read-only Policies And Templates surface for active policies, proposal refs, templates, starter packs, scope-first trigger posture, and guarded operation descriptors; JIKUO-STUDIO-01E4 implemented Studio no-write policy evolution plan preview"
     impact_tags:
       - "studio"
       - "frontend"
@@ -1258,6 +1258,9 @@ entries:
       - "CAP-SEMANTIC-INTENT-COVERAGE-RUNTIME-01"
       - "CAP-STUDIO-PROJECT-FILE-INVENTORY-01"
       - "CAP-STUDIO-DOCUMENT-RULES-BATCH-SELECTION-01"
+      - "CAP-STUDIO-POLICY-CONFIGURATION-READ-UI-01"
+      - "CAP-STUDIO-POLICY-GUARDED-ACTION-REGISTRY-01"
+      - "CAP-STUDIO-POLICY-EVOLUTION-PLAN-PREVIEW-01"
     capability_extraction_status: "extracted_from_work_order_body"
     required_mount_sets:
       - "MOUNT-STUDIO-01"
@@ -1265,7 +1268,7 @@ entries:
     title: "SPRINT_050_WO-PER-JIKUO-MVP-01: Work Receipt And Configuration MVP"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-MVP-01_work_receipt_and_configuration_mvp.md"
     sprint: "SPRINT_050"
-    status: "MVP work-order sequence active; git actual-write observation, completion-review wiring, latest receipt default selection, first companion-write obligation projection/view, trigger/ignored-write receipt hints, Gaps vs Unchecked applicability wording, grouped receipt detail subpanels, expandable overflow detail rows, universal instruction completion-receipt wording, and semantic-intent coverage risk visibility implemented"
+    status: "MVP work-order sequence active; git actual-write observation, completion-review wiring, latest receipt default selection, first companion-write obligation projection/view, trigger/ignored-write receipt hints, Gaps vs Unchecked applicability wording, grouped receipt detail subpanels, expandable overflow detail rows, universal instruction completion-receipt wording, semantic-intent coverage risk visibility, policy configuration read-only surface with selected-policy detail, and policy evolution no-write preview with controlled scope-first trigger profile fields implemented"
     impact_tags:
       - "mvp"
       - "studio"
@@ -1281,6 +1284,9 @@ entries:
       - "CAP-SEMANTIC-INTENT-COVERAGE-RUNTIME-01"
       - "CAP-STUDIO-LATEST-COMPLETION-RECEIPT-01"
       - "CAP-STUDIO-COMPANION-WRITE-RECEIPT-VIEW-01"
+      - "CAP-STUDIO-POLICY-CONFIGURATION-READ-UI-01"
+      - "CAP-STUDIO-POLICY-GUARDED-ACTION-REGISTRY-01"
+      - "CAP-STUDIO-POLICY-EVOLUTION-PLAN-PREVIEW-01"
     capability_extraction_status: "extracted_from_work_order_body"
     required_mount_sets:
       - "MOUNT-MVP-WORK-RECEIPT-CONFIGURATION"

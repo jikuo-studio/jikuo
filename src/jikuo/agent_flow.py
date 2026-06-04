@@ -3392,6 +3392,8 @@ def build_policy_evolution_plan_cards(
     replacement_policy_ref: str | None,
     replacement_title: str | None,
     replacement_trigger_event: str,
+    replacement_work_profile_lifecycle_events: list[str] | None,
+    replacement_work_profile_policy_scopes: list[str] | None,
     replacement_task_type: str | None,
     replacement_jikuo_layer: str | None,
     replacement_changed_path_pattern: str | None,
@@ -3409,6 +3411,8 @@ def build_policy_evolution_plan_cards(
         replacement_policy_id=replacement_policy_ref,
         replacement_title=replacement_title,
         replacement_trigger_event=replacement_trigger_event,
+        replacement_work_profile_lifecycle_events=replacement_work_profile_lifecycle_events,
+        replacement_work_profile_policy_scopes=replacement_work_profile_policy_scopes,
         replacement_task_type=replacement_task_type,
         replacement_jikuo_layer=replacement_jikuo_layer,
         replacement_changed_path_pattern=replacement_changed_path_pattern,
@@ -3445,6 +3449,8 @@ def build_policy_evolution_plan_cards(
             f"replacement_policy_ref: {replacement_policy_ref}",
             f"replacement_title: {replacement_title}",
             f"replacement_trigger_event: {replacement_trigger_event}",
+            f"replacement_work_profile_lifecycle_events: {', '.join(replacement_work_profile_lifecycle_events or [])}",
+            f"replacement_work_profile_policy_scopes: {', '.join(replacement_work_profile_policy_scopes or [])}",
         ],
         shown_outputs=outputs,
         refusal_reasons=plan["refusal_reasons"],
@@ -3483,6 +3489,16 @@ def build_policy_evolution_plan_cards(
                 command_parts.extend([
                     "--replacement-trigger-event",
                     command_arg(replacement_trigger_event),
+                ])
+            for lifecycle_event in replacement_work_profile_lifecycle_events or []:
+                command_parts.extend([
+                    "--replacement-work-profile-lifecycle-event",
+                    command_arg(lifecycle_event),
+                ])
+            for policy_scope in replacement_work_profile_policy_scopes or []:
+                command_parts.extend([
+                    "--replacement-work-profile-policy-scope",
+                    command_arg(policy_scope),
                 ])
             if replacement_task_type:
                 command_parts.extend(["--replacement-task-type", command_arg(replacement_task_type)])
@@ -4285,6 +4301,8 @@ def build_proposal(
     replacement_policy_ref: str | None = None,
     replacement_title: str | None = None,
     replacement_trigger_event: str = "task_start",
+    replacement_work_profile_lifecycle_events: list[str] | None = None,
+    replacement_work_profile_policy_scopes: list[str] | None = None,
     replacement_task_type: str | None = None,
     replacement_jikuo_layer: str | None = None,
     replacement_changed_path_pattern: str | None = None,
@@ -4405,6 +4423,8 @@ def build_proposal(
             replacement_policy_ref=replacement_policy_ref,
             replacement_title=replacement_title,
             replacement_trigger_event=replacement_trigger_event,
+            replacement_work_profile_lifecycle_events=replacement_work_profile_lifecycle_events,
+            replacement_work_profile_policy_scopes=replacement_work_profile_policy_scopes,
             replacement_task_type=replacement_task_type,
             replacement_jikuo_layer=replacement_jikuo_layer,
             replacement_changed_path_pattern=replacement_changed_path_pattern,
@@ -4827,6 +4847,8 @@ def build_apply_result(
     replacement_policy_ref: str | None = None,
     replacement_title: str | None = None,
     replacement_trigger_event: str = "task_start",
+    replacement_work_profile_lifecycle_events: list[str] | None = None,
+    replacement_work_profile_policy_scopes: list[str] | None = None,
     replacement_task_type: str | None = None,
     replacement_jikuo_layer: str | None = None,
     replacement_changed_path_pattern: str | None = None,
@@ -5172,6 +5194,8 @@ def build_apply_result(
             replacement_policy_id=replacement_policy_ref,
             replacement_title=replacement_title,
             replacement_trigger_event=replacement_trigger_event,
+            replacement_work_profile_lifecycle_events=replacement_work_profile_lifecycle_events,
+            replacement_work_profile_policy_scopes=replacement_work_profile_policy_scopes,
             replacement_task_type=replacement_task_type,
             replacement_jikuo_layer=replacement_jikuo_layer,
             replacement_changed_path_pattern=replacement_changed_path_pattern,
@@ -5231,6 +5255,8 @@ def build_apply_result(
                 replacement_policy_id=replacement_policy_ref,
                 replacement_title=replacement_title,
                 replacement_trigger_event=replacement_trigger_event,
+                replacement_work_profile_lifecycle_events=replacement_work_profile_lifecycle_events,
+                replacement_work_profile_policy_scopes=replacement_work_profile_policy_scopes,
                 replacement_task_type=replacement_task_type,
                 replacement_jikuo_layer=replacement_jikuo_layer,
                 replacement_changed_path_pattern=replacement_changed_path_pattern,
@@ -6016,6 +6042,16 @@ def build_parser() -> argparse.ArgumentParser:
     propose.add_argument("--replacement-policy-ref", default=None)
     propose.add_argument("--replacement-title", default=None)
     propose.add_argument("--replacement-trigger-event", default="task_start")
+    propose.add_argument(
+        "--replacement-work-profile-lifecycle-event",
+        action="append",
+        default=[],
+    )
+    propose.add_argument(
+        "--replacement-work-profile-policy-scope",
+        action="append",
+        default=[],
+    )
     propose.add_argument("--replacement-task-type", default=None)
     propose.add_argument("--replacement-jikuo-layer", default=None)
     propose.add_argument("--replacement-changed-path-pattern", default=None)
@@ -6099,6 +6135,16 @@ def build_parser() -> argparse.ArgumentParser:
     apply.add_argument("--replacement-policy-ref", default=None)
     apply.add_argument("--replacement-title", default=None)
     apply.add_argument("--replacement-trigger-event", default="task_start")
+    apply.add_argument(
+        "--replacement-work-profile-lifecycle-event",
+        action="append",
+        default=[],
+    )
+    apply.add_argument(
+        "--replacement-work-profile-policy-scope",
+        action="append",
+        default=[],
+    )
     apply.add_argument("--replacement-task-type", default=None)
     apply.add_argument("--replacement-jikuo-layer", default=None)
     apply.add_argument("--replacement-changed-path-pattern", default=None)
@@ -6150,6 +6196,8 @@ def main(argv: list[str] | None = None) -> int:
             replacement_policy_ref=args.replacement_policy_ref,
             replacement_title=args.replacement_title,
             replacement_trigger_event=args.replacement_trigger_event,
+            replacement_work_profile_lifecycle_events=args.replacement_work_profile_lifecycle_event,
+            replacement_work_profile_policy_scopes=args.replacement_work_profile_policy_scope,
             replacement_task_type=args.replacement_task_type,
             replacement_jikuo_layer=args.replacement_jikuo_layer,
             replacement_changed_path_pattern=args.replacement_changed_path_pattern,
@@ -6263,6 +6311,8 @@ def main(argv: list[str] | None = None) -> int:
         replacement_policy_ref=args.replacement_policy_ref,
         replacement_title=args.replacement_title,
         replacement_trigger_event=args.replacement_trigger_event,
+        replacement_work_profile_lifecycle_events=args.replacement_work_profile_lifecycle_event,
+        replacement_work_profile_policy_scopes=args.replacement_work_profile_policy_scope,
         replacement_task_type=args.replacement_task_type,
         replacement_jikuo_layer=args.replacement_jikuo_layer,
         replacement_changed_path_pattern=args.replacement_changed_path_pattern,

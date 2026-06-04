@@ -44,6 +44,7 @@ class StudioGlobalStatusTests(unittest.TestCase):
         self.assertIn("studio.document_mounts.review", action_ids)
         self.assertIn("studio.document_mounts.plan_update", action_ids)
         self.assertIn("studio.policy_management.status", action_ids)
+        self.assertIn("studio.policy_evolution.plan", action_ids)
         self.assertIn("studio.runtime.open_latest_card", action_ids)
 
     def test_runtime_summary_exposes_latest_task_artifact_assurance(self):

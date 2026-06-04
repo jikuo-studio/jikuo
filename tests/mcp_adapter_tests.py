@@ -240,6 +240,15 @@ class MCPStageAAdapterTests(unittest.TestCase):
             policy_write_fields["policy_work_profile_policy_scopes"],
             schemas.RETURN,
         )
+        policy_evolution_fields = by_name["jikuo.propose_policy_evolution_plan"]["input_fields"]
+        self.assertEqual(
+            policy_evolution_fields["replacement_work_profile_lifecycle_events"],
+            schemas.RETURN,
+        )
+        self.assertEqual(
+            policy_evolution_fields["replacement_work_profile_policy_scopes"],
+            schemas.RETURN,
+        )
         for name in schemas.STAGE_A_TOOL_NAMES:
             self.assertEqual(by_name[name]["stage"], "A")
             self.assertEqual(by_name[name]["write_mode"], "no-write")

@@ -200,6 +200,23 @@ def registered_action_descriptors(
             non_effects=["does_not_publish_package_templates"],
         ),
         action_descriptor(
+            action_id="studio.policy_evolution.plan",
+            domain="policy_management",
+            title="Plan active policy evolution",
+            write_mode="no-write-plan",
+            plan_surface="jikuo.propose_policy_evolution_plan",
+            apply_surface="jikuo.apply_policy_evolution_write",
+            write_effect="deprecate or supersede an active project policy only after guarded apply",
+            approval_required=True,
+            source_ref="src/jikuo/policy_store.py",
+            status="disabled" if policy_disabled else "available",
+            disabled_reason=policy_disabled,
+            non_effects=[
+                "does_not_deactivate_without_guarded_approval",
+                "does_not_change_policy_triggers_without_replacement_review",
+            ],
+        ),
+        action_descriptor(
             action_id="studio.policy_template.plan_publication",
             domain="policy_management",
             title="Plan package template publication",

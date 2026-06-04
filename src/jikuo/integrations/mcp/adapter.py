@@ -736,6 +736,12 @@ def _apply_policy_evolution_write_response(
         replacement_trigger_event=str(
             arguments.get("replacement_trigger_event") or "task_start"
         ),
+        replacement_work_profile_lifecycle_events=_string_list_arg(
+            arguments.get("replacement_work_profile_lifecycle_events")
+        ),
+        replacement_work_profile_policy_scopes=_string_list_arg(
+            arguments.get("replacement_work_profile_policy_scopes")
+        ),
         replacement_task_type=arguments.get("replacement_task_type"),
         replacement_jikuo_layer=arguments.get("replacement_jikuo_layer"),
         replacement_changed_path_pattern=arguments.get(
@@ -1183,6 +1189,12 @@ def call_tool(
             replacement_title=args.get("replacement_title"),
             replacement_trigger_event=str(
                 args.get("replacement_trigger_event") or "task_start"
+            ),
+            replacement_work_profile_lifecycle_events=_string_list_arg(
+                args.get("replacement_work_profile_lifecycle_events")
+            ),
+            replacement_work_profile_policy_scopes=_string_list_arg(
+                args.get("replacement_work_profile_policy_scopes")
             ),
             replacement_task_type=args.get("replacement_task_type"),
             replacement_jikuo_layer=args.get("replacement_jikuo_layer"),

@@ -458,6 +458,35 @@ Acceptance:
 - no policy generation or AI recommendation is included;
 - source category and write effect are visible.
 
+Implementation status:
+
+- first read-only Studio slice implemented with
+  `/api/policy-management/status`;
+- Studio lists active policies, proposal refs, package templates, starter
+  packs, template coverage, policy-without-template counts, read-model
+  limitations, and guarded operation descriptors;
+- selected active-policy current configuration is visible through trigger
+  profile, policy scopes, lifecycle events, condition filters, required
+  actions, and required evidence;
+- scope-first policy posture is visible through `policy_scopes`,
+  lifecycle-event tags, `scope-first` labels when no lifecycle event is
+  declared, and policy-management option sets for controlled UI fields;
+- `studio.policy_evolution.plan` is registered as a guarded action descriptor
+  for later deactivation, supersession, and trigger-condition planning;
+- no-write policy evolution preview is implemented through
+  `/api/policy-management/evolution/plan`, allowing Studio users to select an
+  active policy and preview deprecation, refinement, or supersession write
+  sets before any guarded apply;
+- policy evolution preview now uses controlled trigger-profile fields for
+  `policy_scopes`, `lifecycle_events`, and trigger mode; the same
+  replacement work-profile fields are accepted by Studio, `agent_flow`, CLI,
+  and MCP proposal/apply plumbing while preserving existing no-write and
+  guarded boundaries;
+- remaining work: build the actual guarded plan/apply interaction surfaces for
+  activation, deactivation/supersession apply, template import, template
+  publication, starter-manifest publication, and approved trigger-mode or
+  trigger-condition writes beyond policy evolution preview.
+
 ### `MVP-CONFIG-03`: Configuration Review Panel Closeout
 
 Turn configuration review into a practical tester-facing checklist.

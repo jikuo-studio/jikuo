@@ -234,6 +234,8 @@ def register_stage_a_tools(
         replacement_policy_ref: str | None = None,
         replacement_title: str | None = None,
         replacement_trigger_event: str | None = None,
+        replacement_work_profile_lifecycle_events: list[str] | None = None,
+        replacement_work_profile_policy_scopes: list[str] | None = None,
         replacement_task_type: str | None = None,
         replacement_jikuo_layer: str | None = None,
         replacement_changed_path_pattern: str | None = None,
@@ -254,6 +256,12 @@ def register_stage_a_tools(
                 "replacement_policy_ref": replacement_policy_ref,
                 "replacement_title": replacement_title,
                 "replacement_trigger_event": replacement_trigger_event,
+                "replacement_work_profile_lifecycle_events": (
+                    replacement_work_profile_lifecycle_events or []
+                ),
+                "replacement_work_profile_policy_scopes": (
+                    replacement_work_profile_policy_scopes or []
+                ),
                 "replacement_task_type": replacement_task_type,
                 "replacement_jikuo_layer": replacement_jikuo_layer,
                 "replacement_changed_path_pattern": replacement_changed_path_pattern,
@@ -757,6 +765,8 @@ def register_stage_b2_tools(
         replacement_policy_ref: str | None = None,
         replacement_title: str | None = None,
         replacement_trigger_event: str | None = None,
+        replacement_work_profile_lifecycle_events: list[str] | None = None,
+        replacement_work_profile_policy_scopes: list[str] | None = None,
         replacement_task_type: str | None = None,
         replacement_jikuo_layer: str | None = None,
         replacement_changed_path_pattern: str | None = None,
@@ -780,6 +790,12 @@ def register_stage_b2_tools(
                 "replacement_policy_ref": replacement_policy_ref,
                 "replacement_title": replacement_title,
                 "replacement_trigger_event": replacement_trigger_event,
+                "replacement_work_profile_lifecycle_events": (
+                    replacement_work_profile_lifecycle_events or []
+                ),
+                "replacement_work_profile_policy_scopes": (
+                    replacement_work_profile_policy_scopes or []
+                ),
                 "replacement_task_type": replacement_task_type,
                 "replacement_jikuo_layer": replacement_jikuo_layer,
                 "replacement_changed_path_pattern": replacement_changed_path_pattern,

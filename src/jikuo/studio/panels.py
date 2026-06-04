@@ -98,6 +98,7 @@ PANEL_DEFINITIONS: tuple[dict[str, Any], ...] = (
         "action_refs": [
             "studio.policy_management.status",
             "studio.policy_distribution.review",
+            "studio.policy_evolution.plan",
             "studio.policy_template.plan_publication",
             "studio.policy_template.activate",
             "studio.starter_manifest.plan_publication",

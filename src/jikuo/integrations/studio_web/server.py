@@ -12,9 +12,11 @@ from typing import Any
 from urllib.parse import urlparse
 
 if __package__:
+    from ... import policy_management_status, policy_store
     from ...studio import document_rules, global_status, project_files
 else:  # pragma: no cover - direct module execution fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+    from jikuo import policy_management_status, policy_store
     from jikuo.studio import document_rules, global_status, project_files
 
 
@@ -199,6 +201,7 @@ INDEX_HTML = """<!doctype html>
     }
     input, select {
       width: 100%;
+      min-width: 0;
       min-height: 36px;
       border: 1px solid var(--line);
       border-radius: 6px;
@@ -369,6 +372,158 @@ INDEX_HTML = """<!doctype html>
     .trace-timeline h3 {
       margin: 0 0 8px;
       font-size: 14px;
+    }
+    .policy-metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+      margin: 10px 0 14px;
+    }
+    .policy-columns {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin: 12px 0;
+    }
+    .policy-column {
+      min-width: 0;
+    }
+    .policy-column h3 {
+      margin: 0 0 4px;
+      font-size: 14px;
+    }
+    .policy-detail-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+      gap: 12px;
+      margin: 12px 0;
+      align-items: start;
+    }
+    .policy-detail-panel {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--panel);
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+    }
+    .policy-detail-panel h3 {
+      margin: 0;
+      font-size: 15px;
+      line-height: 1.35;
+    }
+    .policy-editor-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px;
+      align-items: end;
+    }
+    .policy-editor-grid label,
+    .policy-editor-grid .subhead {
+      min-width: 0;
+    }
+    .policy-editor-note {
+      margin: 0;
+      align-self: center;
+    }
+    .policy-detail-header {
+      display: grid;
+      gap: 6px;
+    }
+    .policy-detail-header strong {
+      font-size: 14px;
+      overflow-wrap: anywhere;
+    }
+    .policy-detail-header span {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+      overflow-wrap: anywhere;
+    }
+    .policy-record {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--panel);
+      padding: 10px;
+      display: grid;
+      gap: 7px;
+    }
+    .policy-record strong {
+      display: block;
+      overflow-wrap: anywhere;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+    .policy-record p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+      overflow-wrap: anywhere;
+    }
+    .tag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      color: var(--muted);
+      padding: 2px 7px;
+      font-size: 12px;
+      line-height: 1.2;
+      overflow-wrap: anywhere;
+    }
+    .tag.active, .tag.available, .tag.scope {
+      border-color: #8db8ac;
+      color: #176555;
+      background: #eef8f4;
+    }
+    .tag.guarded, .tag.review {
+      color: var(--warn);
+      background: #fff8ec;
+    }
+    .option-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-content: start;
+      min-width: 0;
+      min-height: 36px;
+    }
+    .option-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 30px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      padding: 4px 9px;
+      color: var(--ink);
+      font-size: 12px;
+      line-height: 1.2;
+      cursor: pointer;
+      max-width: 100%;
+      overflow-wrap: anywhere;
+    }
+    .option-pill input {
+      width: auto;
+      min-height: auto;
+      margin: 0;
+      padding: 0;
+    }
+    .option-pill:has(input:checked) {
+      border-color: #8db8ac;
+      color: #176555;
+      background: #eef8f4;
     }
     .rules-groups {
       display: grid;
@@ -583,8 +738,13 @@ INDEX_HTML = """<!doctype html>
       .row { grid-template-columns: 1fr; }
       .split { grid-template-columns: 1fr; }
       .trace-layout { grid-template-columns: 1fr; }
+      .policy-columns { grid-template-columns: 1fr; }
+      .policy-detail-grid { grid-template-columns: 1fr; }
       .rules-groups { grid-template-columns: 1fr; }
       .form-grid, .plan-rule-row, .file-toolbar { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 1180px) {
+      .policy-detail-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -707,6 +867,112 @@ INDEX_HTML = """<!doctype html>
       </div>
     </section>
     <section>
+      <div class="section-title">
+        <h2>Policies And Templates</h2>
+        <span id="policy-management-status" class="status">Loading</span>
+      </div>
+      <p class="subhead">No-write view of project policies, candidate proposals, package templates, starter packs, and guarded operation boundaries.</p>
+      <div class="policy-metrics" id="policy-management-metrics"></div>
+      <div class="plan-tool">
+        <h3>Policy evolution preview</h3>
+        <p class="subhead">Select an active policy, inspect its current configuration, then preview controlled scope-first changes before any guarded apply.</p>
+        <div class="policy-detail-grid">
+          <div class="policy-detail-panel">
+            <h3>Selected policy</h3>
+            <label>Target policy
+              <select id="policy-evolution-policy"></select>
+            </label>
+            <div class="policy-detail-header" id="policy-selected-summary"></div>
+            <div class="tag-list" id="policy-selected-trigger-tags"></div>
+            <div class="compact-list" id="policy-selected-config"></div>
+          </div>
+          <div class="policy-detail-panel">
+            <h3>Proposed change</h3>
+            <div class="policy-editor-grid">
+              <label>Operation
+                <select id="policy-evolution-operation">
+                  <option value="deprecate_policy">Deprecate policy</option>
+                  <option value="refine_policy">Refine trigger conditions</option>
+                  <option value="supersede_policy">Supersede policy</option>
+                </select>
+              </label>
+              <label>Feedback
+                <select id="policy-evolution-feedback">
+                  <option value="">No feedback label</option>
+                  <option value="defer">Defer</option>
+                  <option value="not_applicable">Not applicable</option>
+                  <option value="needs_scope_narrowing">Needs scope narrowing</option>
+                </select>
+              </label>
+              <label>Trigger mode
+                <select id="policy-evolution-trigger-mode">
+                  <option value="scope_first">Scope-first</option>
+                  <option value="event_anchored">Scope + lifecycle event</option>
+                  <option value="legacy_event_only">Legacy event only</option>
+                </select>
+              </label>
+            </div>
+            <div class="policy-editor-grid">
+              <label>Policy scopes
+                <span class="option-group" id="policy-evolution-scope-options"></span>
+              </label>
+              <label>Lifecycle events
+                <span class="option-group" id="policy-evolution-lifecycle-options"></span>
+              </label>
+              <label>Changed path pattern
+                <input id="policy-evolution-changed-path" placeholder="Optional scope pattern">
+              </label>
+            </div>
+            <div class="policy-editor-grid">
+              <label>Replacement title
+                <input id="policy-evolution-replacement-title" placeholder="Required for supersession">
+              </label>
+              <label>Replacement policy ref
+                <input id="policy-evolution-replacement-ref" placeholder="POLICY-new-policy-id">
+              </label>
+              <span class="subhead policy-editor-note">Scope and lifecycle values are selected from the project policy option set.</span>
+            </div>
+          </div>
+        </div>
+        <div class="plan-apply-row">
+          <button type="button" id="policy-evolution-preview-button">Preview plan</button>
+          <span id="policy-evolution-preview-note" class="subhead">Preview only; no policy store write is performed.</span>
+        </div>
+        <div class="list" id="policy-evolution-plan-result"></div>
+      </div>
+      <div class="policy-columns">
+        <div class="policy-column">
+          <h3>Active policies</h3>
+          <p class="subhead">Project-approved policies currently listed in the policy-store manifest.</p>
+          <div class="compact-list" id="policy-active-list"></div>
+        </div>
+        <div class="policy-column">
+          <h3>Candidate proposals</h3>
+          <p class="subhead">Policy proposal refs recorded by the manifest before guarded activation.</p>
+          <div class="compact-list" id="policy-candidate-list"></div>
+        </div>
+        <div class="policy-column">
+          <h3>Available templates</h3>
+          <p class="subhead">Reusable package policy templates and starter-pack inclusion status.</p>
+          <div class="compact-list" id="policy-template-list"></div>
+        </div>
+      </div>
+      <div class="policy-columns">
+        <div class="policy-column">
+          <h3>Starter packs</h3>
+          <div class="compact-list" id="policy-starter-pack-list"></div>
+        </div>
+        <div class="policy-column">
+          <h3>Guarded operations</h3>
+          <div class="compact-list" id="policy-operation-list"></div>
+        </div>
+        <div class="policy-column">
+          <h3>Read-model limitations</h3>
+          <div class="compact-list" id="policy-limitation-list"></div>
+        </div>
+      </div>
+    </section>
+    <section>
       <h2>Panels</h2>
       <div class="list" id="panels"></div>
     </section>
@@ -759,6 +1025,29 @@ INDEX_HTML = """<!doctype html>
       group.querySelector(".compact-list").replaceChildren(...(rows || []));
       return group;
     };
+    const tag = (label, state) => {
+      const item = document.createElement("span");
+      item.className = `tag ${state || ""}`;
+      item.textContent = label;
+      return item;
+    };
+    const policyRecord = (title, detail, status, tags, rows) => {
+      const item = document.createElement("div");
+      item.className = "policy-record";
+      const heading = document.createElement("strong");
+      heading.textContent = title || "unnamed policy item";
+      const body = document.createElement("p");
+      body.textContent = detail || "";
+      const badges = document.createElement("div");
+      badges.className = "tag-list";
+      badges.replaceChildren(...(tags || []));
+      const extras = document.createElement("div");
+      extras.className = "compact-list";
+      extras.replaceChildren(...(rows || []));
+      const statusBadge = tag(status || "available", status || "available");
+      item.append(heading, body, badges, extras, statusBadge);
+      return item;
+    };
     const overflowNote = (count, shown, label, hiddenRows) => {
       const hidden = Math.max(0, count - shown);
       if (!hidden) {
@@ -809,6 +1098,7 @@ INDEX_HTML = """<!doctype html>
     const termDescription = (terms, id, fallback) => (terms[id] && terms[id].user_description) || fallback;
     const DOCUMENT_RULES_APPROVAL_PHRASE = "Approve Document Rules update";
     let currentDocumentRulesPlan = null;
+    let policyManagementReport = null;
     let projectFileItems = [];
     let selectedRoundTraceId = null;
     const selectedFileRecords = new Map();
@@ -1019,6 +1309,386 @@ INDEX_HTML = """<!doctype html>
         payload.remove_governance_references.push(...paths);
       }
       return payload;
+    };
+    const policyProfileTags = (profile) => {
+      if (!profile || typeof profile !== "object") {
+        return [tag("work profile not declared", "review")];
+      }
+      const scopes = profile.policy_scopes || [];
+      const events = profile.lifecycle_events || [];
+      return [
+        ...(scopes.length ? scopes.map((item) => tag(`scope:${item}`, "scope")) : [tag("no policy scopes", "review")]),
+        ...(events.length ? events.map((item) => tag(`event:${item}`, "available")) : [tag("scope-first", "available")]),
+      ];
+    };
+    const policyStatusTag = (status) => tag(status || "unknown", (status || "").includes("active") ? "active" : "review");
+    const templateStarterTags = (packs) => {
+      const records = packs || [];
+      return records.length
+        ? records.map((item) => tag(`starter:${item.pack_id || "pack"}`, "available"))
+        : [tag("not in starter pack", "review")];
+    };
+    const stringValues = (items) => (items || []).map((item) => String(item)).filter((item) => item);
+    const listSummary = (items, fallback) => {
+      const values = stringValues(items);
+      return values.length ? values.join(", ") : fallback;
+    };
+    const distributionByPolicyId = (report) => {
+      const entries = (report.active_policy_distribution || []).map((item) => [item.policy_id, item]);
+      return Object.fromEntries(entries.filter(([key]) => key));
+    };
+    const activePolicyDetails = (report) => ((report.policy_store || {}).active_policy_details || []);
+    const activePolicyDetailById = (report) => Object.fromEntries(
+      activePolicyDetails(report).map((item) => [item.policy_id, item]).filter(([key]) => key)
+    );
+    const selectedPolicyDetail = (report) => {
+      const policyRef = document.getElementById("policy-evolution-policy").value;
+      return activePolicyDetailById(report || policyManagementReport || {})[policyRef] || null;
+    };
+    const optionSetValues = (report, key, fallback) => {
+      const values = (((report || {}).option_sets || {})[key] || []).map((item) => String(item)).filter((item) => item);
+      return values.length ? values : fallback;
+    };
+    const renderOptionGroup = (containerId, name, options, selected) => {
+      const container = document.getElementById(containerId);
+      const selectedSet = new Set(stringValues(selected));
+      const fields = options.map((option) => {
+        const label = document.createElement("label");
+        label.className = "option-pill";
+        const input = document.createElement("input");
+        input.type = "checkbox";
+        input.name = name;
+        input.value = option;
+        input.checked = selectedSet.has(option);
+        const textNode = document.createTextNode(option);
+        label.append(input, textNode);
+        return label;
+      });
+      container.replaceChildren(...(fields.length ? fields : [tag("no options", "review")]));
+    };
+    const selectedOptionValues = (name) => Array.from(document.querySelectorAll(`input[name="${name}"]:checked`)).map((item) => item.value);
+    const triggerModeFromProfile = (profile) => {
+      if (!profile || typeof profile !== "object") {
+        return "scope_first";
+      }
+      if (profile.trigger_mode) {
+        return profile.trigger_mode;
+      }
+      const scopes = stringValues(profile.policy_scopes || ((profile.work_profile || {}).policy_scopes));
+      const events = stringValues(profile.lifecycle_events || ((profile.work_profile || {}).lifecycle_events));
+      const declared = stringValues(profile.declared_trigger_events || (profile.declared_trigger_event ? [profile.declared_trigger_event] : []));
+      if (scopes.length && !events.length) {
+        return "scope_first";
+      }
+      if (scopes.length && events.length) {
+        return "event_anchored";
+      }
+      return declared.length ? "legacy_event_only" : "scope_first";
+    };
+    const triggerProfileDetailText = (profile) => {
+      if (!profile || typeof profile !== "object") {
+        return "Trigger profile not declared.";
+      }
+      const workProfile = profile.work_profile || profile.work_profile_applicability || profile;
+      const scopes = stringValues(profile.policy_scopes || workProfile.policy_scopes);
+      const events = stringValues(profile.lifecycle_events || workProfile.lifecycle_events);
+      const declared = stringValues(profile.declared_trigger_events || (profile.declared_trigger_event ? [profile.declared_trigger_event] : []));
+      return [
+        `mode: ${triggerModeFromProfile(profile)}`,
+        `scopes: ${listSummary(scopes, "none")}`,
+        `events: ${listSummary(events, "none")}`,
+        `declared: ${listSummary(declared, "none")}`,
+      ].join(" / ");
+    };
+    const populatePolicyTriggerOptions = (report, detail) => {
+      const profile = (detail || {}).trigger_profile || {};
+      const scopes = stringValues(profile.policy_scopes);
+      const events = stringValues(profile.lifecycle_events);
+      const mode = triggerModeFromProfile(profile);
+      const triggerMode = document.getElementById("policy-evolution-trigger-mode");
+      triggerMode.value = optionSetValues(report, "trigger_modes", ["scope_first", "event_anchored", "legacy_event_only"]).includes(mode)
+        ? mode
+        : "scope_first";
+      renderOptionGroup(
+        "policy-evolution-scope-options",
+        "policy_evolution_scope",
+        optionSetValues(report, "policy_scopes", ["discussion", "editing", "progress_summary"]),
+        scopes
+      );
+      renderOptionGroup(
+        "policy-evolution-lifecycle-options",
+        "policy_evolution_lifecycle",
+        optionSetValues(report, "lifecycle_events", ["conversation_turn", "task_start", "completion_review"]),
+        events
+      );
+    };
+    const renderSelectedPolicyDetail = (report) => {
+      const detail = selectedPolicyDetail(report);
+      const summary = document.getElementById("policy-selected-summary");
+      const triggerTags = document.getElementById("policy-selected-trigger-tags");
+      const config = document.getElementById("policy-selected-config");
+      if (!detail) {
+        summary.replaceChildren(compactItem("No policy selected", "Select an active policy to inspect its current configuration."));
+        triggerTags.replaceChildren(tag("no selection", "review"));
+        config.replaceChildren(compactItem("No current configuration", "Policy detail is unavailable in the read model."));
+        populatePolicyTriggerOptions(report, null);
+        return;
+      }
+      const header = document.createElement("div");
+      header.innerHTML = `<strong></strong><span></span>`;
+      header.querySelector("strong").textContent = detail.title || detail.policy_id || "Untitled policy";
+      header.querySelector("span").textContent = `${detail.policy_id || "policy id missing"} / ${detail.status || "status unknown"} / ${detail.path || "path not supplied"}`;
+      summary.replaceChildren(header);
+      const profile = detail.trigger_profile || {};
+      triggerTags.replaceChildren(...policyProfileTags(profile));
+      const filters = detail.condition_filters || {};
+      const actions = detail.required_actions || [];
+      const evidence = detail.required_evidence || [];
+      config.replaceChildren(
+        compactItem("Trigger profile", triggerProfileDetailText(profile)),
+        compactItem("Task types", listSummary(filters.task_types, "No task-type filter")),
+        compactItem("JIKUO layers", listSummary(filters.jikuo_layers, "No layer filter")),
+        compactItem("Path filters", [
+          `changed: ${listSummary(filters.changed_path_patterns, "none")}`,
+          `added: ${listSummary(filters.added_path_patterns, "none")}`,
+        ].join(" / ")),
+        compactItem("Required actions", actions.length ? actions.map((item) => item.type || item.action_id || "action").join(", ") : "No required actions declared"),
+        compactItem("Required evidence", evidence.length ? evidence.map((item) => item.type || item.evidence_id || "evidence").join(", ") : "No required evidence declared")
+      );
+      populatePolicyTriggerOptions(report, detail);
+    };
+    const populatePolicyEvolutionTargets = (report) => {
+      const select = document.getElementById("policy-evolution-policy");
+      const active = (report.policy_store || {}).active_policies || [];
+      const previousValue = select.value;
+      const options = active.map((item) => {
+        const option = document.createElement("option");
+        option.value = item.policy_id || "";
+        option.textContent = `${item.policy_id || "policy"}${item.title ? ` / ${item.title}` : ""}`;
+        return option;
+      }).filter((option) => option.value);
+      select.replaceChildren(...options);
+      if (!options.length) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "No active policies";
+        select.replaceChildren(option);
+      }
+      if (previousValue && options.some((option) => option.value === previousValue)) {
+        select.value = previousValue;
+      }
+      renderSelectedPolicyDetail(report);
+    };
+    const policyEvolutionRequest = () => {
+      const operation = document.getElementById("policy-evolution-operation").value;
+      const policyRef = document.getElementById("policy-evolution-policy").value;
+      const feedbackType = document.getElementById("policy-evolution-feedback").value;
+      const replacementTitle = document.getElementById("policy-evolution-replacement-title").value.trim();
+      const replacementRef = document.getElementById("policy-evolution-replacement-ref").value.trim();
+      const triggerMode = document.getElementById("policy-evolution-trigger-mode").value;
+      const selectedScopes = selectedOptionValues("policy_evolution_scope");
+      const selectedEvents = selectedOptionValues("policy_evolution_lifecycle");
+      const replacementScopes = triggerMode === "legacy_event_only" ? [] : selectedScopes;
+      const replacementEvents = triggerMode === "scope_first" ? [] : selectedEvents;
+      const replacementTrigger = (replacementEvents[0] || selectedEvents[0] || "task_start").trim();
+      const changedPath = document.getElementById("policy-evolution-changed-path").value.trim();
+      return {
+        policy_ref: policyRef,
+        policy_evolution_operation: operation,
+        feedback_type: feedbackType || null,
+        summary: "Studio policy evolution preview",
+        replacement_policy_ref: replacementRef || null,
+        replacement_title: replacementTitle || null,
+        replacement_trigger_event: replacementTrigger || "task_start",
+        replacement_work_profile_policy_scopes: replacementScopes,
+        replacement_work_profile_lifecycle_events: replacementEvents,
+        replacement_changed_path_pattern: changedPath || null,
+      };
+    };
+    const renderPolicyEvolutionPlan = (plan) => {
+      const container = document.getElementById("policy-evolution-plan-result");
+      const status = plan.status || "unknown";
+      const summaryStatus = status === "review" ? "degraded" : (status === "refused" ? "unavailable" : "available");
+      const writeSet = (plan.write_set || []).map((item) =>
+        compactItem(item.operation || "write", `${item.path || "path not supplied"} / ${item.effect || "effect not supplied"}`)
+      );
+      const refusals = (plan.refusal_reasons || []).map((item) =>
+        compactItem("Refusal", item)
+      );
+      const nonEffects = (plan.non_effects || []).slice(0, 4).map((item) =>
+        compactItem("Non-effect", item)
+      );
+      const recommendations = (plan.recommended_changes || []).slice(0, 4).map((item) =>
+        compactItem("Next", item)
+      );
+      const targetProfile = plan.target_trigger_profile
+        ? [compactItem("Current trigger profile", triggerProfileDetailText(plan.target_trigger_profile))]
+        : [];
+      const proposedProfile = plan.proposed_trigger_profile
+        ? [compactItem("Proposed trigger profile", triggerProfileDetailText(plan.proposed_trigger_profile))]
+        : [];
+      container.replaceChildren(
+        row(`Plan ${status}`, `${plan.operation || "operation"} / writes performed: ${String(Boolean(plan.writes_performed))}`, summaryStatus),
+        compactItem("Target policy", plan.target_policy_ref || "policy ref not supplied"),
+        compactItem("Proposal ref", plan.proposal_ref || "proposal ref not supplied"),
+        compactItem("Guarded writer", (plan.future_write_boundary || {}).writer_implemented ? "available after approval" : "not available for this operation"),
+        ...targetProfile,
+        ...proposedProfile,
+        ...(writeSet.length ? writeSet : [compactItem("Write set", "No future writes projected.")]),
+        ...(refusals.length ? refusals : []),
+        ...(recommendations.length ? recommendations : []),
+        ...(nonEffects.length ? nonEffects : [])
+      );
+    };
+    const previewPolicyEvolutionPlan = () => {
+      const button = document.getElementById("policy-evolution-preview-button");
+      const container = document.getElementById("policy-evolution-plan-result");
+      button.disabled = true;
+      button.textContent = "Previewing";
+      container.replaceChildren(row("Previewing plan", "Building no-write policy evolution plan.", "degraded"));
+      fetch("/api/policy-management/evolution/plan", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(policyEvolutionRequest()),
+      })
+        .then((response) => response.json())
+        .then(renderPolicyEvolutionPlan)
+        .catch((error) => container.replaceChildren(row("Preview failed", error.message, "unavailable")))
+        .finally(() => {
+          button.disabled = false;
+          button.textContent = "Preview plan";
+        });
+    };
+    const renderPolicyManagementFallback = (title, detail, status) => {
+      policyManagementReport = null;
+      populatePolicyEvolutionTargets({policy_store: {active_policies: []}});
+      document.getElementById("policy-management-status").className = statusClass(status || "unavailable");
+      document.getElementById("policy-management-status").textContent = status || "unavailable";
+      document.getElementById("policy-management-metrics").replaceChildren(metric(title, detail));
+      ["policy-active-list", "policy-candidate-list", "policy-template-list", "policy-starter-pack-list", "policy-operation-list", "policy-limitation-list", "policy-selected-config"].forEach((id) => {
+        document.getElementById(id).replaceChildren(compactItem(title, detail));
+      });
+      document.getElementById("policy-selected-summary").replaceChildren(compactItem(title, detail));
+      document.getElementById("policy-selected-trigger-tags").replaceChildren(tag(status || "unavailable", status || "unavailable"));
+    };
+    const renderPolicyManagement = (report, studioData) => {
+      policyManagementReport = report;
+      populatePolicyEvolutionTargets(report);
+      const status = report.status || "unavailable";
+      const statusBadge = document.getElementById("policy-management-status");
+      statusBadge.className = statusClass(status);
+      statusBadge.textContent = status;
+      const counts = report.summary_counts || {};
+      document.getElementById("policy-management-metrics").replaceChildren(
+        metric(counts.active_policy_count || 0, "Active policies"),
+        metric((report.policy_store || {}).proposal_ref_count || 0, "Candidate proposals"),
+        metric(counts.package_template_count || 0, "Package templates"),
+        metric(counts.starter_template_ref_count || 0, "Starter refs"),
+        metric(counts.active_policy_with_package_template_count || 0, "Policies with templates"),
+        metric(counts.active_policy_without_package_template_count || 0, "Policies without templates")
+      );
+
+      const distribution = distributionByPolicyId(report);
+      const detailsByPolicy = activePolicyDetailById(report);
+      const activePolicies = ((report.policy_store || {}).active_policies || []).map((item) => {
+        const dist = distribution[item.policy_id] || {};
+        const detail = detailsByPolicy[item.policy_id] || {};
+        return policyRecord(
+          item.title || item.policy_id,
+          `${item.policy_id || "policy id missing"} / ${item.path || "path not supplied"}`,
+          item.status || "active",
+          [
+            policyStatusTag(item.status),
+            tag(dist.distribution_state || "distribution unknown", dist.distribution_state === "active_project_policy_only" ? "review" : "available"),
+            ...policyProfileTags(detail.trigger_profile || item.applies_to_work_profile),
+          ],
+          [
+            compactItem("Trigger profile", triggerProfileDetailText(detail.trigger_profile || item.applies_to_work_profile)),
+            compactItem("Template refs", (dist.package_template_refs || []).join(", ") || "No package template ref"),
+            compactItem("Starter packs", (dist.starter_pack_refs || []).map((pack) => pack.pack_id).join(", ") || "No starter pack ref"),
+          ]
+        );
+      });
+      const candidateRefs = ((report.policy_store || {}).proposal_refs || []).map((item) =>
+        policyRecord(
+          item.policy_id || item.proposal_id || "candidate policy proposal",
+          item.path || "proposal path not supplied",
+          item.status || "candidate",
+          [
+            tag(item.proposal_id || "proposal", "review"),
+            tag(item.status || "proposal_ref", "review"),
+          ],
+          []
+        )
+      );
+      const templates = ((report.package_templates || {}).templates || []).map((item) =>
+        policyRecord(
+          item.title || item.template_policy_title || item.template_id,
+          `${item.template_policy_id || "policy id missing"} / ${item.template_ref || "template ref not supplied"}`,
+          item.portability_status || "template",
+          [
+            tag(item.namespace || "namespace", "available"),
+            tag(`v${item.version || "?"}`, "available"),
+            tag(`${item.required_binding_count || 0} bindings`, item.required_binding_count ? "review" : "available"),
+            ...templateStarterTags(item.included_in_starter_packs),
+          ],
+          []
+        )
+      );
+      const starterPacks = ((report.starter_packs || {}).packs || []).map((pack) =>
+        policyRecord(
+          pack.title || pack.pack_id,
+          `${pack.pack_id || "pack id missing"} / ${pack.manifest_ref || "manifest ref not supplied"}`,
+          pack.status || "available",
+          [
+            tag(`${pack.template_count || 0} templates`, "available"),
+            tag(pack.status || "available", pack.status || "available"),
+          ],
+          (pack.policy_templates || []).slice(0, 4).map((item) =>
+            compactItem(item.title || item.policy_id || "starter template", item.template_ref || "")
+          )
+        )
+      );
+      const reportOperations = (report.available_operations || []).map((item) =>
+        policyRecord(
+          item.operation || "operation",
+          item.surface || "surface not supplied",
+          item.write_mode || "no-write",
+          [tag(item.write_mode || "no-write", item.write_mode === "guarded-write" ? "guarded" : "available")],
+          []
+        )
+      );
+      const studioOperations = ((studioData || {}).available_actions || [])
+        .filter((item) => item.domain === "policy_management")
+        .map((item) =>
+          policyRecord(
+            item.title || item.action_id,
+            `${item.plan_surface || "plan surface not supplied"}${item.apply_surface ? ` / ${item.apply_surface}` : ""}`,
+            item.status || "available",
+            [
+              tag(item.write_mode || "no-write", item.approval_required ? "guarded" : "available"),
+              tag(item.approval_required ? "approval required" : "no approval", item.approval_required ? "guarded" : "available"),
+            ],
+            []
+          )
+        );
+      const limitations = [
+        ...(report.read_model_limitations || []),
+        ...(report.non_effects || []),
+      ].map((item) => compactItem(item, "Policy management read model boundary"));
+
+      document.getElementById("policy-active-list").replaceChildren(...(activePolicies.length ? activePolicies : [compactItem("No active policies", "Policy store has no active policy refs.")]));
+      document.getElementById("policy-candidate-list").replaceChildren(...(candidateRefs.length ? candidateRefs : [compactItem("No candidate proposals", "Policy store manifest has no proposal refs.")]));
+      document.getElementById("policy-template-list").replaceChildren(...(templates.length ? templates : [compactItem("No package templates", "No package policy templates are available.")]));
+      document.getElementById("policy-starter-pack-list").replaceChildren(...(starterPacks.length ? starterPacks : [compactItem("No starter packs", "No starter policy-pack manifest is available.")]));
+      document.getElementById("policy-operation-list").replaceChildren(...(studioOperations.length ? studioOperations : reportOperations));
+      document.getElementById("policy-limitation-list").replaceChildren(...(limitations.length ? limitations : [compactItem("No limitations reported", "Read model reported no limitations.")]));
+    };
+    const loadPolicyManagement = (studioData) => {
+      fetch("/api/policy-management/status", {cache: "no-store"})
+        .then((response) => response.json())
+        .then((report) => renderPolicyManagement(report, studioData))
+        .catch((error) => renderPolicyManagementFallback("Policy management unavailable", error.message, "unavailable"));
     };
     const renderDocumentMounts = (data) => {
       const summaries = data.summaries || {};
@@ -1415,6 +2085,7 @@ INDEX_HTML = """<!doctype html>
       );
       renderDocumentMounts(data);
       renderRoundDocumentTrace(data);
+      loadPolicyManagement(data);
       const panels = document.getElementById("panels");
       panels.replaceChildren(...(data.panels || []).map((panel) =>
         row(panel.title || panel.panel_id, `${panel.provider_ref || ""} · ${panel.privacy_level || ""}`, panel.status)
@@ -1501,6 +2172,8 @@ INDEX_HTML = """<!doctype html>
           updateApplyButton();
         });
     });
+    document.getElementById("policy-evolution-preview-button").addEventListener("click", previewPolicyEvolutionPlan);
+    document.getElementById("policy-evolution-policy").addEventListener("change", () => renderSelectedPolicyDetail(policyManagementReport || {}));
   </script>
 </body>
 </html>
@@ -1519,6 +2192,19 @@ def string_list(value: Any) -> list[str]:
     if isinstance(value, str) and value.strip():
         return [value.strip()]
     return []
+
+
+def optional_string(value: Any) -> str | None:
+    if value is None:
+        return None
+    text_value = str(value).strip()
+    return text_value or None
+
+
+def optional_string_list(value: Any) -> list[str] | None:
+    if value is None:
+        return None
+    return string_list(value)
 
 
 def api_document_rules_plan_payload(
@@ -1591,6 +2277,69 @@ def api_document_rules_apply_payload(
     return HTTPStatus.OK, result
 
 
+def api_policy_evolution_plan_payload(
+    request_payload: Any,
+    *,
+    project_root: Path | None = None,
+) -> tuple[int, dict[str, Any]]:
+    if not isinstance(request_payload, dict):
+        return HTTPStatus.BAD_REQUEST, {
+            "schema": STUDIO_WEB_SCHEMA,
+            "status": "invalid_request",
+            "message": "policy evolution plan requests must be JSON objects",
+            "writes_performed": False,
+            "write_allowed_by_command": False,
+        }
+    replacement_trigger_event = (
+        optional_string(request_payload.get("replacement_trigger_event")) or "task_start"
+    )
+    plan = policy_store.build_policy_evolution_plan(
+        project_root=project_root,
+        policy_id=optional_string(request_payload.get("policy_ref")),
+        operation=optional_string(request_payload.get("policy_evolution_operation"))
+        or "deprecate_policy",
+        feedback_type=optional_string(request_payload.get("feedback_type")),
+        summary=optional_string(request_payload.get("summary")),
+        source_ref="studio_policy_evolution_plan_preview",
+        replacement_policy_id=optional_string(
+            request_payload.get("replacement_policy_ref")
+        ),
+        replacement_title=optional_string(request_payload.get("replacement_title")),
+        replacement_trigger_event=replacement_trigger_event,
+        replacement_work_profile_lifecycle_events=optional_string_list(
+            request_payload.get("replacement_work_profile_lifecycle_events")
+        ),
+        replacement_work_profile_policy_scopes=optional_string_list(
+            request_payload.get("replacement_work_profile_policy_scopes")
+        ),
+        replacement_task_type=optional_string(request_payload.get("replacement_task_type")),
+        replacement_jikuo_layer=optional_string(request_payload.get("replacement_jikuo_layer")),
+        replacement_changed_path_pattern=optional_string(
+            request_payload.get("replacement_changed_path_pattern")
+        ),
+        replacement_added_path_pattern=optional_string(
+            request_payload.get("replacement_added_path_pattern")
+        ),
+        replacement_action_type=optional_string(
+            request_payload.get("replacement_action_type")
+        )
+        or "render_pre_task_review",
+        replacement_evidence_type=optional_string(
+            request_payload.get("replacement_evidence_type")
+        )
+        or "card_rendered",
+    )
+    plan["studio_web"] = {
+        "schema": STUDIO_WEB_SCHEMA,
+        "route": "/api/policy-management/evolution/plan",
+        "method": "POST",
+        "write_mode": "no-write-plan",
+        "writes_performed": False,
+        "write_allowed_by_command": False,
+    }
+    return HTTPStatus.OK, plan
+
+
 def api_payload_for_path(path: str, *, project_root: Path | None = None) -> tuple[int, dict[str, Any]]:
     parsed = urlparse(path)
     route = parsed.path.rstrip("/") or "/"
@@ -1604,6 +2353,10 @@ def api_payload_for_path(path: str, *, project_root: Path | None = None) -> tupl
         return HTTPStatus.OK, status.get("action_registry") or {}
     if route == "/api/project-files":
         return HTTPStatus.OK, project_files.build_project_file_inventory(
+            project_root=project_root
+        )
+    if route == "/api/policy-management/status":
+        return HTTPStatus.OK, policy_management_status.build_policy_management_status(
             project_root=project_root
         )
     if route == "/api/health":
@@ -1670,7 +2423,11 @@ def make_handler(project_root: Path | None = None) -> type[BaseHTTPRequestHandle
 
         def do_POST(self) -> None:  # noqa: N802 - stdlib handler API
             route = (urlparse(self.path).path.rstrip("/") or "/")
-            if route not in {"/api/document-rules/plan", "/api/document-rules/apply"}:
+            if route not in {
+                "/api/document-rules/plan",
+                "/api/document-rules/apply",
+                "/api/policy-management/evolution/plan",
+            }:
                 status, payload = api_payload_for_path(self.path, project_root=project_root)
                 self._send(
                     status=status,
@@ -1720,8 +2477,13 @@ def make_handler(project_root: Path | None = None) -> type[BaseHTTPRequestHandle
                     request_payload,
                     project_root=project_root,
                 )
-            else:
+            elif route == "/api/document-rules/apply":
                 status, payload = api_document_rules_apply_payload(
+                    request_payload,
+                    project_root=project_root,
+                )
+            else:
+                status, payload = api_policy_evolution_plan_payload(
                     request_payload,
                     project_root=project_root,
                 )

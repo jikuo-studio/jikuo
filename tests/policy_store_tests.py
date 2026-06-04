@@ -1180,6 +1180,8 @@ class PolicyStoreStatusTests(unittest.TestCase):
                 "Triggered for a task that should not require this review.",
                 "--source-ref",
                 "<exact user phrase as spoken>",
+                "--replacement-work-profile-policy-scope",
+                "editing",
                 "--format",
                 "json",
             ],
@@ -1202,6 +1204,12 @@ class PolicyStoreStatusTests(unittest.TestCase):
             report["feedback"]["feedback_type"],
             "needs_scope_narrowing",
         )
+        self.assertEqual(report["proposed_trigger_profile"]["trigger_mode"], "scope_first")
+        self.assertEqual(
+            report["proposed_trigger_profile"]["policy_scopes"],
+            ["editing"],
+        )
+        self.assertEqual(report["proposed_trigger_profile"]["lifecycle_events"], [])
         self.assertTrue(report["future_write_boundary"]["requires_guarded_writer"])
         self.assertFalse(report["future_write_boundary"]["writer_implemented"])
         self.assertIn(

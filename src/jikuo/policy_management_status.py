@@ -27,6 +27,9 @@ else:
 POLICY_MANAGEMENT_STATUS_SCHEMA = "jikuo.policy_management_status.v0"
 DEFAULT_TEMPLATE_DIR = Path("policy_templates") / "engineering_governance"
 DEFAULT_STARTER_PACK_ID = starter_policies.DEFAULT_PACK_ID
+POLICY_SCOPE_OPTIONS = ["discussion", "editing", "progress_summary"]
+LIFECYCLE_EVENT_OPTIONS = ["conversation_turn", "task_start", "completion_review"]
+TRIGGER_MODE_OPTIONS = ["scope_first", "event_anchored", "legacy_event_only"]
 SOURCE_REFS = [
     "pkg://jikuo/governance/jikuo_policy_governance_authority.md",
     "pkg://jikuo/work_orders/SPRINT_050_WO-PER-JIKUO-POLICY-MGMT-01_policy_management_mvp.md",
@@ -222,6 +225,184 @@ def active_policy_distribution_summary(
     }
 
 
+def string_values(values: Any) -> list[str]:
+    if not isinstance(values, list):
+        return []
+    return [str(item) for item in values if item is not None]
+
+
+def policy_trigger_profile(record: dict[str, Any]) -> dict[str, Any]:
+    applicability = policy_store.normalize_work_profile_applicability(
+        record.get("applies_to_work_profile")
+    )
+    if applicability is None:
+        applicability = {
+            "schema": policy_store.WORK_PROFILE_APPLICABILITY_SCHEMA,
+            "status": "not_declared",
+            "lifecycle_events": [],
+            "policy_scopes": [],
+            "intent_classes": [],
+            "operation_classes": [],
+            "output_classes": [],
+            "evaluator_effect": "not_applicable",
+            "warnings": [],
+        }
+    lifecycle_events = string_values(applicability.get("lifecycle_events"))
+    policy_scopes = string_values(applicability.get("policy_scopes"))
+    triggers = record.get("triggers") if isinstance(record.get("triggers"), list) else []
+    trigger_events = [
+        str(item.get("event"))
+        for item in triggers
+        if isinstance(item, dict) and item.get("event") is not None
+    ]
+    if policy_scopes and not lifecycle_events:
+        trigger_mode = "scope_first"
+    elif policy_scopes and lifecycle_events:
+        trigger_mode = "event_anchored"
+    elif trigger_events:
+        trigger_mode = "legacy_event_only"
+    else:
+        trigger_mode = "unconfigured"
+    return {
+        "trigger_mode": trigger_mode,
+        "policy_scopes": policy_scopes,
+        "lifecycle_events": lifecycle_events,
+        "intent_classes": string_values(applicability.get("intent_classes")),
+        "operation_classes": string_values(applicability.get("operation_classes")),
+        "output_classes": string_values(applicability.get("output_classes")),
+        "declared_trigger_events": trigger_events,
+        "work_profile_applicability": applicability,
+    }
+
+
+def condition_filter_summary(conditions: Any) -> dict[str, Any]:
+    raw_conditions = conditions if isinstance(conditions, list) else []
+    def values_for(condition_type: str, field: str) -> list[str]:
+        return [
+            str(item.get(field))
+            for item in raw_conditions
+            if isinstance(item, dict)
+            and item.get("type") == condition_type
+            and item.get(field) is not None
+        ]
+
+    return {
+        "condition_count": len(raw_conditions),
+        "task_types": values_for("task_type_is", "value"),
+        "jikuo_layers": values_for("jikuo_layer_is", "value"),
+        "changed_path_patterns": values_for("changed_path_matches", "pattern"),
+        "added_path_patterns": values_for("added_path_matches", "pattern"),
+        "raw_conditions": raw_conditions,
+    }
+
+
+def policy_detail_summary(
+    *,
+    active_policy: dict[str, Any],
+    record: dict[str, Any],
+    distribution: dict[str, Any] | None,
+) -> dict[str, Any]:
+    return {
+        "policy_id": record.get("policy_id") or active_policy.get("policy_id"),
+        "title": record.get("title") or active_policy.get("title"),
+        "version": record.get("version") or active_policy.get("version"),
+        "status": record.get("status") or active_policy.get("status"),
+        "path": active_policy.get("path"),
+        "schema_version": record.get("schema_version") or record.get("schema"),
+        "scenario_package": record.get("scenario_package"),
+        "trigger_profile": policy_trigger_profile(record),
+        "condition_filters": condition_filter_summary(record.get("conditions")),
+        "triggers": record.get("triggers") if isinstance(record.get("triggers"), list) else [],
+        "required_actions": (
+            record.get("required_actions")
+            if isinstance(record.get("required_actions"), list)
+            else []
+        ),
+        "required_evidence": (
+            record.get("required_evidence")
+            if isinstance(record.get("required_evidence"), list)
+            else []
+        ),
+        "source_refs": record.get("source_refs")
+        if isinstance(record.get("source_refs"), list)
+        else [],
+        "enforcement": record.get("enforcement")
+        if isinstance(record.get("enforcement"), dict)
+        else {},
+        "distribution": distribution or {},
+    }
+
+
+def load_active_policy_details(
+    *,
+    resolved_root: Path,
+    policy_report: dict[str, Any],
+    active_policy_distribution: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[str]]:
+    store_root = Path(str(policy_report.get("policy_store_root") or ""))
+    distribution_by_policy = {
+        str(item.get("policy_id")): item
+        for item in active_policy_distribution
+        if item.get("policy_id") is not None
+    }
+    details: list[dict[str, Any]] = []
+    warnings: list[str] = []
+    for active_policy in policy_report.get("active_policy_refs") or []:
+        if not isinstance(active_policy, dict):
+            continue
+        policy_path, path_error = policy_store.policy_file_path_from_ref(
+            project_root=resolved_root,
+            store_root=store_root,
+            policy_ref=active_policy,
+        )
+        if path_error:
+            warnings.append(path_error)
+            continue
+        assert policy_path is not None
+        record, record_warnings = policy_store.read_policy_record(policy_path)
+        warnings.extend(record_warnings)
+        if record is None:
+            continue
+        policy_id = str(record.get("policy_id") or active_policy.get("policy_id") or "")
+        details.append(
+            policy_detail_summary(
+                active_policy=active_policy,
+                record=record,
+                distribution=distribution_by_policy.get(policy_id),
+            )
+        )
+    return details, warnings
+
+
+def option_sets_from_policy_details(details: list[dict[str, Any]]) -> dict[str, Any]:
+    task_types: set[str] = set()
+    jikuo_layers: set[str] = set()
+    action_types: set[str] = set()
+    evidence_types: set[str] = set()
+    for detail in details:
+        filters = detail.get("condition_filters") or {}
+        task_types.update(str(item) for item in filters.get("task_types") or [])
+        jikuo_layers.update(str(item) for item in filters.get("jikuo_layers") or [])
+        for action in detail.get("required_actions") or []:
+            if isinstance(action, dict) and action.get("type") is not None:
+                action_types.add(str(action.get("type")))
+        for evidence in detail.get("required_evidence") or []:
+            if isinstance(evidence, dict) and evidence.get("type") is not None:
+                evidence_types.add(str(evidence.get("type")))
+    return {
+        "policy_scopes": POLICY_SCOPE_OPTIONS,
+        "lifecycle_events": LIFECYCLE_EVENT_OPTIONS,
+        "trigger_modes": TRIGGER_MODE_OPTIONS,
+        "task_types": sorted(task_types | {"code_change", "jikuo_development"}),
+        "jikuo_layers": sorted(
+            jikuo_layers
+            | {"implementation_governance", "policy_governance", "process_governance"}
+        ),
+        "action_types": sorted(action_types),
+        "evidence_types": sorted(evidence_types),
+    }
+
+
 def build_policy_management_status(
     *,
     project_root: Path | None = None,
@@ -263,11 +444,17 @@ def build_policy_management_status(
         for item in active_policy_distribution
         if item["distribution_state"] == "active_project_policy_only"
     ]
+    active_policy_details, detail_warnings = load_active_policy_details(
+        resolved_root=resolved_root,
+        policy_report=policy_report,
+        active_policy_distribution=active_policy_distribution,
+    )
 
     warnings = [
         *(policy_report.get("warnings") or []),
         *template_warnings,
         *starter_warnings,
+        *detail_warnings,
     ]
     status = "review" if warnings else "available"
     return {
@@ -290,6 +477,10 @@ def build_policy_management_status(
                 policy_report.get("superseded_policy_refs") or []
             ),
             "active_policies": policy_report.get("active_policy_refs") or [],
+            "active_policy_details": active_policy_details,
+            "proposal_refs": policy_report.get("proposal_refs") or [],
+            "deprecated_policy_refs": policy_report.get("deprecated_policy_refs") or [],
+            "superseded_policy_refs": policy_report.get("superseded_policy_refs") or [],
         },
         "package_templates": {
             "template_dir": str(template_dir_path(template_dir)),
@@ -302,6 +493,7 @@ def build_policy_management_status(
             "packs": starter_packs,
         },
         "active_policy_distribution": active_policy_distribution,
+        "option_sets": option_sets_from_policy_details(active_policy_details),
         "summary_counts": {
             "active_policy_count": len(policy_report.get("active_policy_refs") or []),
             "package_template_count": len(templates),
@@ -317,6 +509,26 @@ def build_policy_management_status(
                 "operation": "distribution_review",
                 "surface": "jikuo.propose_policy_distribution_review",
                 "write_mode": "no-write",
+            },
+            {
+                "operation": "policy_evolution_plan",
+                "surface": "jikuo.propose_policy_evolution_plan",
+                "write_mode": "no-write",
+            },
+            {
+                "operation": "policy_evolution_write",
+                "surface": "jikuo.apply_policy_evolution_write",
+                "write_mode": "guarded-write",
+            },
+            {
+                "operation": "policy_template_import_plan",
+                "surface": "jikuo.propose_policy_template_import_plan",
+                "write_mode": "no-write",
+            },
+            {
+                "operation": "policy_template_activation",
+                "surface": "jikuo.apply_policy_template_activation",
+                "write_mode": "guarded-write",
             },
             {
                 "operation": "policy_template_publication_plan",

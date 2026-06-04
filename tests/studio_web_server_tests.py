@@ -55,12 +55,17 @@ class StudioWebServerTests(unittest.TestCase):
         panels_code, panels = server.api_payload_for_path("/api/panels", project_root=ROOT)
         actions_code, actions = server.api_payload_for_path("/api/actions", project_root=ROOT)
         files_code, files = server.api_payload_for_path("/api/project-files", project_root=ROOT)
+        policy_code, policy_status = server.api_payload_for_path(
+            "/api/policy-management/status",
+            project_root=ROOT,
+        )
         health_code, health = server.api_payload_for_path("/api/health", project_root=ROOT)
 
         self.assertEqual(status_code, 200)
         self.assertEqual(panels_code, 200)
         self.assertEqual(actions_code, 200)
         self.assertEqual(files_code, 200)
+        self.assertEqual(policy_code, 200)
         self.assertEqual(health_code, 200)
         self.assertEqual(status["schema"], "jikuo.studio.global_status.v0")
         self.assertIn("artifact_assurance", status["summaries"])
@@ -68,11 +73,22 @@ class StudioWebServerTests(unittest.TestCase):
         self.assertEqual(panels["schema"], "jikuo.studio.panel_registry.v0")
         self.assertEqual(actions["schema"], "jikuo.studio.action_registry.v0")
         self.assertEqual(files["schema"], "jikuo.studio.project_file_inventory.v0")
+        self.assertEqual(policy_status["schema"], "jikuo.policy_management_status.v0")
+        self.assertIn("active_policies", policy_status["policy_store"])
+        self.assertIn("active_policy_details", policy_status["policy_store"])
+        self.assertIn("proposal_refs", policy_status["policy_store"])
+        self.assertIn("option_sets", policy_status)
+        self.assertIn("policy_scopes", policy_status["option_sets"])
+        self.assertIn("editing", policy_status["option_sets"]["policy_scopes"])
+        self.assertIn("lifecycle_events", policy_status["option_sets"])
+        self.assertIn("completion_review", policy_status["option_sets"]["lifecycle_events"])
+        self.assertIn("available_operations", policy_status)
         self.assertEqual(health["schema"], server.STUDIO_WEB_SCHEMA)
         self.assertFalse(status["writes_performed"])
         self.assertFalse(panels["writes_performed"])
         self.assertFalse(actions["writes_performed"])
         self.assertFalse(files["writes_performed"])
+        self.assertFalse(policy_status["writes_performed"])
         self.assertFalse(health["writes_performed"])
 
     def test_document_rules_plan_api_returns_no_write_plan(self):
@@ -129,6 +145,45 @@ class StudioWebServerTests(unittest.TestCase):
                 {item["code"] for item in plan["validation"]["errors"]},
             )
 
+    def test_policy_evolution_plan_api_returns_no_write_plan(self):
+        status_code, plan = server.api_policy_evolution_plan_payload(
+            {
+                "policy_ref": "POLICY-jikuo-data-model-drift-alarm",
+                "policy_evolution_operation": "deprecate_policy",
+                "feedback_type": "needs_scope_narrowing",
+                "summary": "Studio preview test",
+                "replacement_work_profile_policy_scopes": ["editing"],
+                "replacement_work_profile_lifecycle_events": [],
+            },
+            project_root=ROOT,
+        )
+
+        self.assertEqual(status_code, 200)
+        self.assertEqual(plan["schema"], "jikuo.policy_evolution_plan.v0")
+        self.assertEqual(plan["status"], "review")
+        self.assertEqual(plan["operation"], "deprecate_policy")
+        self.assertEqual(plan["target_policy_ref"], "POLICY-jikuo-data-model-drift-alarm")
+        self.assertFalse(plan["writes_performed"])
+        self.assertFalse(plan["write_allowed_by_command"])
+        self.assertEqual(plan["proposed_trigger_profile"]["trigger_mode"], "scope_first")
+        self.assertEqual(plan["proposed_trigger_profile"]["policy_scopes"], ["editing"])
+        self.assertEqual(plan["proposed_trigger_profile"]["lifecycle_events"], [])
+        self.assertEqual(
+            plan["studio_web"]["route"],
+            "/api/policy-management/evolution/plan",
+        )
+        self.assertEqual(plan["studio_web"]["write_mode"], "no-write-plan")
+
+    def test_policy_evolution_plan_api_rejects_non_object_requests(self):
+        status_code, plan = server.api_policy_evolution_plan_payload(
+            ["not", "an", "object"],
+            project_root=ROOT,
+        )
+
+        self.assertEqual(status_code, 400)
+        self.assertEqual(plan["status"], "invalid_request")
+        self.assertFalse(plan["writes_performed"])
+
     def test_index_html_is_no_write_control_shell_with_document_rules_preview(self):
         html = server.render_index_html()
 
@@ -140,6 +195,39 @@ class StudioWebServerTests(unittest.TestCase):
         self.assertIn("/api/document-rules/apply", html)
         self.assertIn("Document Rules", html)
         self.assertIn("Round Document Trace", html)
+        self.assertIn("Policies And Templates", html)
+        self.assertIn("/api/policy-management/status", html)
+        self.assertIn("/api/policy-management/evolution/plan", html)
+        self.assertIn("policy-management-status", html)
+        self.assertIn("policy-management-metrics", html)
+        self.assertIn("policy-evolution-operation", html)
+        self.assertIn("policy-evolution-policy", html)
+        self.assertIn("policy-selected-summary", html)
+        self.assertIn("policy-selected-config", html)
+        self.assertIn("policy-selected-trigger-tags", html)
+        self.assertIn("policy-evolution-trigger-mode", html)
+        self.assertIn("policy-evolution-scope-options", html)
+        self.assertIn("policy-evolution-lifecycle-options", html)
+        self.assertIn("policy-evolution-replacement-ref", html)
+        self.assertIn("policy-evolution-preview-button", html)
+        self.assertIn("policy-evolution-plan-result", html)
+        self.assertIn("policy-editor-grid", html)
+        self.assertIn("policy-editor-note", html)
+        self.assertIn("@media (max-width: 1180px)", html)
+        self.assertNotIn("policy-evolution-replacement-trigger", html)
+        self.assertIn("policy-active-list", html)
+        self.assertIn("policy-candidate-list", html)
+        self.assertIn("policy-template-list", html)
+        self.assertIn("policy-starter-pack-list", html)
+        self.assertIn("policy-operation-list", html)
+        self.assertIn("policy-limitation-list", html)
+        self.assertIn("scope-first", html)
+        self.assertIn("Policy proposal refs recorded", html)
+        self.assertIn("Reusable package policy templates", html)
+        self.assertIn("renderPolicyManagement", html)
+        self.assertIn("previewPolicyEvolutionPlan", html)
+        self.assertIn("renderPolicyEvolutionPlan", html)
+        self.assertIn("loadPolicyManagement", html)
         self.assertIn("Select a runtime round to inspect expected documents", html)
         self.assertIn("round-trace-rounds", html)
         self.assertIn("No document changes", html)
@@ -246,9 +334,15 @@ class StudioWebServerTests(unittest.TestCase):
                 actions = json.loads(response.read().decode("utf-8"))
             with urlopen(f"{base_url}/api/project-files", timeout=10) as response:
                 files = json.loads(response.read().decode("utf-8"))
+            with urlopen(
+                f"{base_url}/api/policy-management/status",
+                timeout=10,
+            ) as response:
+                policy_status = json.loads(response.read().decode("utf-8"))
 
             self.assertIn("JIKUO Studio", html)
             self.assertIn("Document Rules", html)
+            self.assertIn("Policies And Templates", html)
             self.assertEqual(status["schema"], "jikuo.studio.global_status.v0")
             self.assertIn("document_mounts", status["summaries"])
             self.assertIn("artifact_assurance", status["summaries"])
@@ -269,7 +363,10 @@ class StudioWebServerTests(unittest.TestCase):
             self.assertEqual(panels["schema"], "jikuo.studio.panel_registry.v0")
             self.assertEqual(actions["schema"], "jikuo.studio.action_registry.v0")
             self.assertEqual(files["schema"], "jikuo.studio.project_file_inventory.v0")
+            self.assertEqual(policy_status["schema"], "jikuo.policy_management_status.v0")
+            self.assertIn("package_templates", policy_status)
             self.assertFalse(files["writes_performed"])
+            self.assertFalse(policy_status["writes_performed"])
         finally:
             httpd.shutdown()
             httpd.server_close()
@@ -303,8 +400,41 @@ class StudioWebServerTests(unittest.TestCase):
                 self.assertFalse(plan["writes_performed"])
             finally:
                 httpd.shutdown()
-                httpd.server_close()
-                thread.join(timeout=10)
+            httpd.server_close()
+            thread.join(timeout=10)
+
+    def test_http_server_accepts_policy_evolution_plan_post(self):
+        httpd = server.create_server(host="127.0.0.1", port=0, project_root=ROOT)
+        thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+        thread.start()
+        try:
+            host, port = httpd.server_address
+            payload = json.dumps(
+                {
+                    "policy_ref": "POLICY-jikuo-data-model-drift-alarm",
+                    "policy_evolution_operation": "deprecate_policy",
+                }
+            ).encode("utf-8")
+            request = Request(
+                f"http://{host}:{port}/api/policy-management/evolution/plan",
+                data=payload,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urlopen(request, timeout=10) as response:
+                plan = json.loads(response.read().decode("utf-8"))
+
+            self.assertEqual(plan["schema"], "jikuo.policy_evolution_plan.v0")
+            self.assertEqual(plan["status"], "review")
+            self.assertFalse(plan["writes_performed"])
+            self.assertEqual(
+                plan["studio_web"]["route"],
+                "/api/policy-management/evolution/plan",
+            )
+        finally:
+            httpd.shutdown()
+            httpd.server_close()
+            thread.join(timeout=10)
 
     def test_document_rules_apply_api_refuses_then_applies_reviewed_plan(self):
         with tempfile.TemporaryDirectory() as tmp:

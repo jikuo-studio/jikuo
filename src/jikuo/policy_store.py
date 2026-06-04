@@ -1018,6 +1018,8 @@ def build_policy_evolution_plan(
     replacement_policy_id: str | None = None,
     replacement_title: str | None = None,
     replacement_trigger_event: str = "task_start",
+    replacement_work_profile_lifecycle_events: list[str] | None = None,
+    replacement_work_profile_policy_scopes: list[str] | None = None,
     replacement_task_type: str | None = None,
     replacement_jikuo_layer: str | None = None,
     replacement_changed_path_pattern: str | None = None,
@@ -1125,6 +1127,57 @@ def build_policy_evolution_plan(
         if policy_record is not None
         else target_ref.get("version") if target_ref else None
     )
+    target_trigger_profile: dict[str, Any] | None = None
+    if policy_record is not None:
+        target_work_profile = normalize_work_profile_applicability(
+            policy_record.get("applies_to_work_profile")
+        )
+        target_trigger_profile = {
+            "work_profile": target_work_profile,
+            "declared_trigger_events": [
+                str(trigger.get("event"))
+                for trigger in policy_record.get("triggers", [])
+                if isinstance(trigger, dict) and trigger.get("event") is not None
+            ]
+            if isinstance(policy_record.get("triggers"), list)
+            else [],
+            "conditions": policy_record.get("conditions")
+            if isinstance(policy_record.get("conditions"), list)
+            else [],
+        }
+    resolved_replacement_lifecycle_events = ordered_nonempty_strings(
+        replacement_work_profile_lifecycle_events
+    )
+    resolved_replacement_policy_scopes = ordered_nonempty_strings(
+        replacement_work_profile_policy_scopes
+    )
+    replacement_work_profile_entries = build_work_profile_applicability_entries(
+        lifecycle_events=resolved_replacement_lifecycle_events,
+        policy_scopes=resolved_replacement_policy_scopes,
+    )
+    proposed_trigger_profile = {
+        "trigger_mode": (
+            "scope_first"
+            if resolved_replacement_policy_scopes
+            and not resolved_replacement_lifecycle_events
+            else "event_anchored"
+            if resolved_replacement_policy_scopes
+            and resolved_replacement_lifecycle_events
+            else "legacy_event_only"
+            if replacement_trigger_event
+            else "unconfigured"
+        ),
+        "policy_scopes": resolved_replacement_policy_scopes,
+        "lifecycle_events": resolved_replacement_lifecycle_events,
+        "declared_trigger_event": replacement_trigger_event,
+        "conditions": build_policy_conditions(
+            policy_id=resolved_replacement_policy_id or "POLICY-replacement-unresolved",
+            task_type=replacement_task_type,
+            jikuo_layer=replacement_jikuo_layer,
+            changed_path_pattern=replacement_changed_path_pattern,
+            added_path_pattern=replacement_added_path_pattern,
+        ),
+    }
     replacement_policy: dict[str, Any] | None = None
     if operation == "supersede_policy" and resolved_replacement_policy_id:
         action_id = f"ACT-{slug_token(replacement_action_type)}"
@@ -1185,6 +1238,8 @@ def build_policy_evolution_plan(
                 "superseded_by": None,
             },
         }
+        if replacement_work_profile_entries:
+            replacement_policy["applies_to_work_profile"] = replacement_work_profile_entries
     write_set = [
         {
             "path": proposal_ref,
@@ -1230,6 +1285,8 @@ def build_policy_evolution_plan(
             "title": policy_record.get("title") if policy_record else None,
             "status": policy_record.get("status") if policy_record else None,
         },
+        "target_trigger_profile": target_trigger_profile,
+        "proposed_trigger_profile": proposed_trigger_profile,
         "replacement_policy_ref": resolved_replacement_policy_id,
         "replacement_policy_path": replacement_policy_path_ref,
         "replacement_policy": replacement_policy,
@@ -1874,6 +1931,8 @@ def write_policy_evolution_from_plan(
     replacement_policy_id: str | None = None,
     replacement_title: str | None = None,
     replacement_trigger_event: str = "task_start",
+    replacement_work_profile_lifecycle_events: list[str] | None = None,
+    replacement_work_profile_policy_scopes: list[str] | None = None,
     replacement_task_type: str | None = None,
     replacement_jikuo_layer: str | None = None,
     replacement_changed_path_pattern: str | None = None,
@@ -1893,6 +1952,8 @@ def write_policy_evolution_from_plan(
         replacement_policy_id=replacement_policy_id,
         replacement_title=replacement_title,
         replacement_trigger_event=replacement_trigger_event,
+        replacement_work_profile_lifecycle_events=replacement_work_profile_lifecycle_events,
+        replacement_work_profile_policy_scopes=replacement_work_profile_policy_scopes,
         replacement_task_type=replacement_task_type,
         replacement_jikuo_layer=replacement_jikuo_layer,
         replacement_changed_path_pattern=replacement_changed_path_pattern,
@@ -3702,6 +3763,16 @@ def build_parser() -> argparse.ArgumentParser:
     plan_evolution.add_argument("--replacement-policy-id", default=None)
     plan_evolution.add_argument("--replacement-title", default=None)
     plan_evolution.add_argument("--replacement-trigger-event", default="task_start")
+    plan_evolution.add_argument(
+        "--replacement-work-profile-lifecycle-event",
+        action="append",
+        default=[],
+    )
+    plan_evolution.add_argument(
+        "--replacement-work-profile-policy-scope",
+        action="append",
+        default=[],
+    )
     plan_evolution.add_argument("--replacement-task-type", default=None)
     plan_evolution.add_argument("--replacement-jikuo-layer", default=None)
     plan_evolution.add_argument("--replacement-changed-path-pattern", default=None)
@@ -3728,6 +3799,16 @@ def build_parser() -> argparse.ArgumentParser:
     write_evolution.add_argument("--replacement-policy-id", default=None)
     write_evolution.add_argument("--replacement-title", default=None)
     write_evolution.add_argument("--replacement-trigger-event", default="task_start")
+    write_evolution.add_argument(
+        "--replacement-work-profile-lifecycle-event",
+        action="append",
+        default=[],
+    )
+    write_evolution.add_argument(
+        "--replacement-work-profile-policy-scope",
+        action="append",
+        default=[],
+    )
     write_evolution.add_argument("--replacement-task-type", default=None)
     write_evolution.add_argument("--replacement-jikuo-layer", default=None)
     write_evolution.add_argument("--replacement-changed-path-pattern", default=None)
@@ -3823,6 +3904,8 @@ def main(argv: list[str] | None = None) -> int:
             replacement_policy_id=args.replacement_policy_id,
             replacement_title=args.replacement_title,
             replacement_trigger_event=args.replacement_trigger_event,
+            replacement_work_profile_lifecycle_events=args.replacement_work_profile_lifecycle_event,
+            replacement_work_profile_policy_scopes=args.replacement_work_profile_policy_scope,
             replacement_task_type=args.replacement_task_type,
             replacement_jikuo_layer=args.replacement_jikuo_layer,
             replacement_changed_path_pattern=args.replacement_changed_path_pattern,
@@ -3841,6 +3924,8 @@ def main(argv: list[str] | None = None) -> int:
             replacement_policy_id=args.replacement_policy_id,
             replacement_title=args.replacement_title,
             replacement_trigger_event=args.replacement_trigger_event,
+            replacement_work_profile_lifecycle_events=args.replacement_work_profile_lifecycle_event,
+            replacement_work_profile_policy_scopes=args.replacement_work_profile_policy_scope,
             replacement_task_type=args.replacement_task_type,
             replacement_jikuo_layer=args.replacement_jikuo_layer,
             replacement_changed_path_pattern=args.replacement_changed_path_pattern,
