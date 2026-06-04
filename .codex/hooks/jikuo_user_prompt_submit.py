@@ -249,6 +249,18 @@ def build_agent_flow_command(
                 ),
             ]
         )
+    turn_anchor = host_adapter_input.get("turn_anchor")
+    if isinstance(turn_anchor, dict):
+        command.extend(
+            [
+                "--turn-anchor-json",
+                json.dumps(
+                    turn_anchor,
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                ),
+            ]
+        )
     return command
 
 
@@ -285,6 +297,7 @@ def run_agent_flow_in_process(
                 hook_input,
                 host_adapter_input,
             ),
+            turn_anchor=host_adapter_input.get("turn_anchor"),
         )
         output = formatter(proposal, project_root=project_root)
     except HookExecutionError:
@@ -458,11 +471,20 @@ def render_additional_context(
         trigger_mode=trigger_mode,
         status="ok",
     )
+    turn_anchor = host_adapter_input.get("turn_anchor") or {}
 
     lines = [
         "JIKUO mounted pre-turn ran before substantive model work.",
         f"Trigger mode: {trigger_mode}.",
         f"Semantic intent status: {semantic_intent_status}.",
+        (
+            "Turn anchor: "
+            f"status={turn_anchor.get('status', 'missing')}; "
+            f"anchor_id={turn_anchor.get('anchor_id') or 'unavailable'}; "
+            f"session_id={turn_anchor.get('session_id') or 'unavailable'}; "
+            f"turn_id={turn_anchor.get('turn_id') or 'unavailable'}; "
+            f"prompt_digest={turn_anchor.get('prompt_digest_status') or 'not_available'}."
+        ),
         (
             "Host adapter contract: "
             f"input_schema={host_adapter_input.get('schema')}; "
@@ -481,6 +503,12 @@ def render_additional_context(
             "execution_boundary, response_contract, and short user_expression. "
             "If this cannot be done, report semantic intent coverage as "
             "degraded or missing. Do not include the raw prompt or transcript."
+        ),
+        (
+            "Turn anchor follow-up contract: carry the current turn_anchor "
+            "inside host_semantic_intent.turn_anchor on later JIKUO calls in "
+            "this same user turn, so task_start and completion_review can be "
+            "associated without asking the AI to invent a session id."
         ),
         f"Project root: {project_root}.",
         f"Session id: {hook_input.session_id or 'unavailable'}.",

@@ -11,7 +11,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from jikuo import work_profile
+from jikuo import turn_anchor, work_profile
 
 
 HOST_ADAPTER_TURN_INPUT_SCHEMA = "jikuo.host_adapter.turn_input.v0"
@@ -120,10 +120,35 @@ def normalize_turn_input(raw: dict[str, Any] | None) -> dict[str, Any]:
         user_turn_summary = None
         user_turn_summary_status = "not_provided"
 
-    semantic_intent = work_profile.normalize_host_semantic_intent(
+    raw_semantic_intent = (
         _dict_or_none(raw.get("host_semantic_intent"))
         or _dict_or_none(raw.get("hostSemanticIntent"))
     )
+    anchor = turn_anchor.build_turn_anchor(
+        client_id=raw.get("client_id") or raw.get("clientId"),
+        client_event=raw.get("client_event") or raw.get("clientEvent"),
+        session_id=raw.get("session_id") or raw.get("sessionId"),
+        turn_id=raw.get("turn_id") or raw.get("turnId"),
+        raw_prompt=raw_turn,
+        user_turn_summary=user_turn_summary,
+        user_turn_summary_status=user_turn_summary_status,
+    )
+    if raw_semantic_intent:
+        raw_semantic_intent = dict(raw_semantic_intent)
+        raw_semantic_intent.setdefault("turn_anchor", anchor)
+    else:
+        raw_semantic_intent = {
+            "schema": work_profile.HOST_SEMANTIC_INTENT_SCHEMA,
+            "status": "unavailable",
+            "provider": "unavailable",
+            "confidence": "unavailable",
+            "policy_scopes": [],
+            "constraints": [],
+            "intent_slices": [],
+            "policy_contract": {},
+            "turn_anchor": anchor,
+        }
+    semantic_intent = work_profile.normalize_host_semantic_intent(raw_semantic_intent)
 
     return {
         "schema": HOST_ADAPTER_TURN_INPUT_SCHEMA,
@@ -143,17 +168,8 @@ def normalize_turn_input(raw: dict[str, Any] | None) -> dict[str, Any]:
         "user_turn_summary": user_turn_summary,
         "user_turn_summary_status": user_turn_summary_status,
         "raw_turn_present": bool(raw_turn),
-        "host_semantic_intent": semantic_intent
-        or {
-            "schema": work_profile.HOST_SEMANTIC_INTENT_SCHEMA,
-            "status": "unavailable",
-            "provider": "unavailable",
-            "confidence": "unavailable",
-            "policy_scopes": [],
-            "constraints": [],
-            "intent_slices": [],
-            "policy_contract": {},
-        },
+        "turn_anchor": anchor,
+        "host_semantic_intent": semantic_intent,
         "privacy": {
             "raw_prompt_persisted": False,
             "raw_transcript_persisted": False,

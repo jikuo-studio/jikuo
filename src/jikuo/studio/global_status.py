@@ -26,6 +26,7 @@ if __package__:
         policy_templates,
         project_state,
         runtime_visibility,
+        turn_anchor,
     )
     from ..integrations.mcp import adapter as mcp_adapter
 else:
@@ -40,6 +41,7 @@ else:
         policy_templates,
         project_state,
         runtime_visibility,
+        turn_anchor,
     )
     from jikuo.integrations.mcp import adapter as mcp_adapter
 
@@ -483,6 +485,7 @@ def round_trace_from_parts(
     proposal_id: str | None,
     artifact_report: dict[str, Any],
     semantic_coverage: dict[str, Any] | None = None,
+    turn_anchor_projection: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     has_trace = bool(artifact_report.get("schema"))
     counts = count_artifacts(artifact_report) if has_trace else empty_artifact_counts()
@@ -510,6 +513,7 @@ def round_trace_from_parts(
         "trace_label": "Document trace available" if has_trace else "No document trace",
         "counts": counts,
         "semantic_intent_coverage": semantic_coverage or {},
+        "turn_anchor": turn_anchor_projection or turn_anchor.missing_turn_anchor(),
         "artifact_assurance": artifact_report if has_trace else {},
         "non_effects": [
             "does_not_read_files_by_itself",
@@ -551,6 +555,7 @@ def round_trace_from_state(
                 semantic_coverage = candidate
             if candidate.get("coverage_status") == "complete":
                 break
+    turn_anchor_projection = turn_anchor.normalize_turn_anchor(state.get("turn_anchor"))
     return round_trace_from_parts(
         project_root=project_root,
         history_ref=str(history_ref) if history_ref else None,
@@ -565,6 +570,7 @@ def round_trace_from_state(
         semantic_coverage=semantic_coverage
         if isinstance(semantic_coverage, dict)
         else {},
+        turn_anchor_projection=turn_anchor_projection,
     )
 
 
@@ -606,6 +612,9 @@ def round_trace_from_history_card(project_root: Path, path: Path) -> dict[str, A
         status=markdown_backtick_value(text, "Status"),
         proposal_id=markdown_backtick_value(text, "Proposal id"),
         artifact_report=artifact_report,
+        turn_anchor_projection=turn_anchor.missing_turn_anchor(
+            reason="history_card_has_no_structured_turn_anchor"
+        ),
     )
 
 
@@ -682,6 +691,7 @@ def round_document_traces(project_root: Path, state: dict[str, Any]) -> dict[str
             "default selected trace prefers the latest completion_review receipt when available",
             "older round labels are derived from runtime history cards and may expose counts without full artifact path sets",
             "this read model does not inspect git diff or infer edits outside JIKUO runtime evidence",
+            "raw prompt text is not stored in round traces; turn anchors expose only host ids and prompt digest status when available",
         ],
         "writes_performed": False,
         "write_allowed_by_command": False,
@@ -714,6 +724,26 @@ def semantic_imperfection(
     }
 
 
+def latest_available_turn_anchor_from_rounds(
+    rounds: list[dict[str, Any]],
+) -> dict[str, Any]:
+    for item in rounds:
+        if not isinstance(item, dict):
+            continue
+        candidate = turn_anchor.normalize_turn_anchor(item.get("turn_anchor"))
+        if candidate.get("status") != "available":
+            continue
+        enriched = dict(candidate)
+        enriched["evidence_round_id"] = item.get("round_id")
+        enriched["evidence_round_label"] = item.get("label")
+        enriched["evidence_source_kind"] = item.get("source_kind")
+        enriched["evidence_history_ref"] = item.get("history_ref")
+        return enriched
+    return turn_anchor.missing_turn_anchor(
+        reason="no_retained_round_with_available_turn_anchor"
+    )
+
+
 def semantic_intent_evidence_overview(
     *,
     runtime: dict[str, Any],
@@ -736,6 +766,18 @@ def semantic_intent_evidence_overview(
     ) or runtime.get("semantic_intent_coverage") or {}
     if not isinstance(coverage, dict):
         coverage = {}
+    latest_runtime_anchor = (
+        latest_runtime.get("turn_anchor")
+        if isinstance(latest_runtime, dict)
+        else None
+    ) or runtime.get("turn_anchor") or turn_anchor.missing_turn_anchor()
+    latest_runtime_anchor = turn_anchor.normalize_turn_anchor(latest_runtime_anchor)
+    retained_available_anchor = latest_available_turn_anchor_from_rounds(rounds)
+    anchor = (
+        latest_runtime_anchor
+        if latest_runtime_anchor.get("status") == "available"
+        else retained_available_anchor
+    )
 
     semantic_status = str(coverage.get("semantic_intent_status") or "unavailable")
     evidence_status = str(coverage.get("evidence_status") or "unknown")
@@ -812,6 +854,33 @@ def semantic_intent_evidence_overview(
                 ),
             )
         )
+    if latest_runtime_anchor.get("status") != "available":
+        imperfections.append(
+            semantic_imperfection(
+                title="Latest runtime turn anchor missing",
+                detail=(
+                    "Latest round has no non-AI turn anchor; later task_start "
+                    "or completion_review receipts cannot be linked to this user "
+                    "turn by latest runtime evidence alone."
+                ),
+                source_ref=(
+                    latest_runtime.get("history_ref")
+                    if isinstance(latest_runtime, dict)
+                    else runtime_visibility.STATE_SUMMARY_REF
+                ),
+            )
+        )
+    if anchor.get("status") != "available":
+        imperfections.append(
+            semantic_imperfection(
+                title="No retained turn anchor",
+                detail=(
+                    "No retained runtime round currently exposes an available "
+                    "non-AI turn anchor."
+                ),
+                source_ref=runtime_visibility.HISTORY_DIR_REF,
+            )
+        )
     if ai_classified and strict_mount not in {"available", "strict", "configured"}:
         imperfections.append(
             semantic_imperfection(
@@ -859,12 +928,16 @@ def semantic_intent_evidence_overview(
             "provider": provider,
             "fallback_expanded": bool(coverage.get("fallback_expanded")),
         },
+        "turn_anchor": anchor,
+        "latest_runtime_turn_anchor": latest_runtime_anchor,
         "imperfection_count": len(imperfections),
         "imperfections": imperfections,
         "read_model_limitations": [
-            "this card reports the latest retained runtime round only",
+            "semantic classification reports the latest retained runtime round",
+            "turn_anchor reports the latest retained available anchor when the latest runtime round lacks one",
             "it does not infer hidden model intent beyond stored semantic evidence",
             "host AI classification evidence does not prove strict pre-action GUI gating",
+            "raw prompt text is not stored here; prompt identity is represented by digest status only",
         ],
         "non_effects": [
             "does_not_call_llm_provider",
@@ -905,6 +978,7 @@ def runtime_summary(project_root: Path, diagnostics: list[dict[str, Any]]) -> di
     links = display_links.get("links") or {}
     counts = state.get("counts") or {}
     semantic_coverage = state.get("semantic_intent_coverage") or {}
+    turn_anchor_projection = turn_anchor.normalize_turn_anchor(state.get("turn_anchor"))
     semantic_status = str(semantic_coverage.get("coverage_status") or "")
     if semantic_status in {"missing", "fallback_only", "degraded"}:
         diagnostics.append(
@@ -937,6 +1011,7 @@ def runtime_summary(project_root: Path, diagnostics: list[dict[str, Any]]) -> di
         },
         "observed_lifecycle": state.get("observed_lifecycle") or {},
         "semantic_intent_coverage": semantic_coverage,
+        "turn_anchor": turn_anchor_projection,
         "artifact_assurance": state.get("artifact_assurance") or {},
         "round_document_traces": round_traces,
         "lifecycle_card_count": len(state.get("lifecycle_card_links") or []),

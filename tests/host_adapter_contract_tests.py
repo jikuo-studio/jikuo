@@ -40,6 +40,18 @@ class HostAdapterContractTests(unittest.TestCase):
         self.assertEqual(normalized["user_turn_summary_status"], "provided_redacted")
         self.assertEqual(normalized["host_semantic_intent"]["status"], "provided")
         self.assertEqual(normalized["host_semantic_intent"]["policy_scopes"], ["editing"])
+        self.assertEqual(normalized["turn_anchor"]["status"], "available")
+        self.assertEqual(normalized["turn_anchor"]["session_id"], "session-1")
+        self.assertEqual(normalized["turn_anchor"]["turn_id"], "turn-1")
+        self.assertEqual(
+            normalized["turn_anchor"]["prompt_digest_status"],
+            "hash_only",
+        )
+        self.assertIn("prompt_sha256", normalized["turn_anchor"])
+        self.assertEqual(
+            normalized["host_semantic_intent"]["turn_anchor"]["anchor_id"],
+            normalized["turn_anchor"]["anchor_id"],
+        )
         self.assertNotIn(raw_prompt, serialized)
 
     def test_turn_input_accepts_compact_summary_without_raw_prompt(self):
@@ -59,6 +71,11 @@ class HostAdapterContractTests(unittest.TestCase):
             "update hook docs and explain business meaning",
         )
         self.assertEqual(normalized["host_semantic_intent"]["status"], "unavailable")
+        self.assertEqual(normalized["turn_anchor"]["status"], "missing")
+        self.assertEqual(
+            normalized["turn_anchor"]["gap_reason"],
+            "host_turn_identity_fields_missing",
+        )
 
     def test_turn_result_redacts_prompt_echo_from_failure_summary(self):
         raw_prompt = "SECRET_HOST_ADAPTER_PROMPT: configure the adapter"

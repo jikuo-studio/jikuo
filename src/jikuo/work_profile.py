@@ -12,6 +12,11 @@ from pathlib import Path
 import re
 from typing import Any
 
+try:
+    from . import turn_anchor
+except ImportError:  # pragma: no cover - direct script compatibility
+    import turn_anchor
+
 
 WORK_PROFILE_SCHEMA = "jikuo.work_profile.v0"
 HOST_SEMANTIC_INTENT_SCHEMA = "jikuo.host_semantic_intent.v0"
@@ -533,6 +538,9 @@ def normalize_host_semantic_intent(raw: dict[str, Any] | None) -> dict[str, Any]
         "intent_slices": intent_slices,
         "work_profile": work_profile,
         "policy_contract": policy_contract,
+        "turn_anchor": turn_anchor.normalize_turn_anchor(
+            raw.get("turn_anchor") or raw.get("turnAnchor")
+        ),
         "rationale_summary": _string_value(raw.get("rationale_summary")),
     }
 

@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from jikuo import runtime_visibility
+from jikuo import runtime_visibility, turn_anchor
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -64,6 +64,18 @@ class RuntimeVisibilityTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             project_root = Path(tmp) / "project"
             shutil.copytree(READY_PROJECT, project_root)
+            anchor = turn_anchor.build_turn_anchor(
+                client_id="codex",
+                client_event="UserPromptSubmit",
+                session_id="runtime-session-1",
+                turn_id="runtime-turn-1",
+                received_at_utc="2026-06-05T00:00:00Z",
+                raw_prompt="SECRET_RUNTIME_VISIBILITY_PROMPT",
+                user_turn_summary=(
+                    "prove turn anchor transport without storing raw prompt"
+                ),
+                user_turn_summary_status="provided_compact",
+            )
 
             completed = subprocess.run(
                 [
@@ -77,6 +89,8 @@ class RuntimeVisibilityTests(unittest.TestCase):
                     "Runtime Visibility Probe",
                     "--project-root",
                     str(project_root),
+                    "--turn-anchor-json",
+                    json.dumps(anchor, separators=(",", ":")),
                     "--format",
                     "json",
                 ],
@@ -121,6 +135,16 @@ class RuntimeVisibilityTests(unittest.TestCase):
                 runtime_report["history_ref"],
             )
             self.assertIn("## JIKUO Runtime Links", proposal["chat_ready_markdown"])
+            self.assertIn("## Turn Anchor", proposal["chat_ready_markdown"])
+            self.assertEqual(proposal["turn_anchor"]["status"], "available")
+            self.assertEqual(
+                proposal["turn_anchor"]["anchor_id"],
+                anchor["anchor_id"],
+            )
+            self.assertNotIn(
+                "SECRET_RUNTIME_VISIBILITY_PROMPT",
+                json.dumps(proposal, ensure_ascii=False),
+            )
             self.assertIn("### Observed Lifecycle", proposal["chat_ready_markdown"])
             self.assertIn("`task_start`", proposal["chat_ready_markdown"])
             self.assertNotIn("### Lifecycle Card Links", proposal["chat_ready_markdown"])
@@ -171,6 +195,18 @@ class RuntimeVisibilityTests(unittest.TestCase):
             self.assertEqual(
                 state_summary["semantic_intent_coverage"]["schema"],
                 "jikuo.semantic_intent_coverage.v0",
+            )
+            self.assertEqual(
+                state_summary["turn_anchor"]["anchor_id"],
+                anchor["anchor_id"],
+            )
+            self.assertEqual(
+                state_summary["turn_anchor"]["prompt_digest_status"],
+                "hash_only",
+            )
+            self.assertNotIn(
+                "SECRET_RUNTIME_VISIBILITY_PROMPT",
+                state_summary_path.read_text(encoding="utf-8"),
             )
             self.assertIn(
                 state_summary["semantic_intent_coverage"]["coverage_status"],
@@ -229,6 +265,10 @@ class RuntimeVisibilityTests(unittest.TestCase):
             self.assertEqual(
                 show_report["client_display_links"]["links"]["last_card"]["markdown"],
                 display_links["links"]["last_card"]["markdown"],
+            )
+            self.assertEqual(
+                show_report["turn_anchor"]["anchor_id"],
+                anchor["anchor_id"],
             )
 
             show_card = subprocess.run(

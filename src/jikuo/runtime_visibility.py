@@ -11,12 +11,13 @@ from pathlib import Path
 from typing import Any
 
 if __package__:
-    from . import activation_settings, project_state, task_session
+    from . import activation_settings, project_state, task_session, turn_anchor
 else:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     import activation_settings
     import project_state
     import task_session
+    import turn_anchor
 
 
 RUNTIME_VISIBILITY_REPORT_SCHEMA = "jikuo.runtime_visibility_report.v0"
@@ -243,6 +244,7 @@ def build_state_summary(
         "observed_lifecycle": observed_lifecycle,
         "policy_runtime_status": policy_runtime_status,
         "semantic_intent_coverage": semantic_intent_coverage_for(proposal),
+        "turn_anchor": turn_anchor.turn_anchor_for_proposal(proposal),
         "counts": {
             "card_count": len(proposal.get("cards", [])),
             "triggered_policy_count": len(proposal.get("triggered_policies", [])),
@@ -835,6 +837,22 @@ def format_state_summary(summary: dict[str, Any]) -> str:
         )
         if semantic.get("gap_reason"):
             lines.append(f"- Gap reason: `{semantic.get('gap_reason')}`")
+    anchor = summary.get("turn_anchor") or {}
+    if anchor:
+        lines.extend(
+            [
+                "",
+                "## Turn Anchor",
+                "",
+                f"- Status: `{anchor.get('status')}`",
+                f"- Anchor id: `{anchor.get('anchor_id') or 'unavailable'}`",
+                f"- Label: `{turn_anchor.display_label(anchor)}`",
+                f"- Identity strength: `{anchor.get('identity_strength')}`",
+                f"- Prompt digest: `{anchor.get('prompt_digest_status')}`",
+            ]
+        )
+        if anchor.get("gap_reason"):
+            lines.append(f"- Gap reason: `{anchor.get('gap_reason')}`")
     artifact = summary.get("artifact_assurance") or {}
     if artifact:
         read = artifact.get("read_assurance") or {}

@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-STUDIO-01: Global Console And Configuration Shell
 
-> **Status**: `JIKUO-STUDIO-01A` global status read model, `JIKUO-STUDIO-01B` panel/action registries, `JIKUO-STUDIO-01C` local read-only console, `JIKUO-STUDIO-01D1` document-mount read model, `JIKUO-STUDIO-01D2` visible document-mount frontend section, and `JIKUO-STUDIO-01D3` configuration vocabulary mapping implemented as no-write Python/CLI/backend surfaces. `JIKUO-STUDIO-01D4` records the detailed Document Rules plan/apply design contract; `JIKUO-STUDIO-01D5` implements the first Document Rules no-write plan backend; `JIKUO-STUDIO-01D6` connects that plan to the local Studio page as a no-write preview; `JIKUO-STUDIO-01D7` separates editable configuration from governance guidance in the read model and UI; `JIKUO-STUDIO-01D8` implements minimal guarded apply for `.jikuo/project_context.yaml` Document Rules changes; `JIKUO-STUDIO-01D9` maps that guarded apply to a natural frontend approval confirmation instead of asking users to type the backend approval phrase; `JIKUO-STUDIO-01D10` implements the first no-write document/artifact assurance projection for required, planned, and actual read/write comparison; `JIKUO-STUDIO-01D11` projects that assurance into runtime task cards, history cards, and `state_summary.json`; `JIKUO-STUDIO-01D12` corrects completion-check document semantics so configured completion-check scope is rendered as write candidates/checklist items unless applicability evidence makes a document required for the current slice; `JIKUO-STUDIO-01D13` renders the same data as latest-round document trace instead of metric-first assurance cards; `JIKUO-STUDIO-01D14` adds selectable runtime rounds with document trace/change labels; `JIKUO-STUDIO-01D15` keeps selected round cards and detail panels bound to the same round and count source; `JIKUO-STUDIO-01D18` adds a Latest Semantic Classification summary for the latest retained runtime round, including whether host AI supplied semantic intent and which evidence limits remain; `JIKUO-STUDIO-01E1/01E2` implement a no-write project-file inventory and reusable local web batch selector for Document Rules; `JIKUO-STUDIO-01E3/01E4/01E5/01E6/01E7/01E8/01E9/01E10` implement policy configuration read UI, no-write active-policy configuration change preview, guarded active-policy configuration change apply for supported core writer operations including trigger-profile refinement, guarded package-template activation as a project policy with deduped resolved-policy source provenance, guarded active-policy reusable-template publication, manifest-listed proposal detail projection, guarded activation for manifest-listed existing proposal snapshots, and a simplified active/activatable policy primary view.
+> **Status**: `JIKUO-STUDIO-01A` global status read model, `JIKUO-STUDIO-01B` panel/action registries, `JIKUO-STUDIO-01C` local read-only console, `JIKUO-STUDIO-01D1` document-mount read model, `JIKUO-STUDIO-01D2` visible document-mount frontend section, and `JIKUO-STUDIO-01D3` configuration vocabulary mapping implemented as no-write Python/CLI/backend surfaces. `JIKUO-STUDIO-01D4` records the detailed Document Rules plan/apply design contract; `JIKUO-STUDIO-01D5` implements the first Document Rules no-write plan backend; `JIKUO-STUDIO-01D6` connects that plan to the local Studio page as a no-write preview; `JIKUO-STUDIO-01D7` separates editable configuration from governance guidance in the read model and UI; `JIKUO-STUDIO-01D8` implements minimal guarded apply for `.jikuo/project_context.yaml` Document Rules changes; `JIKUO-STUDIO-01D9` maps that guarded apply to a natural frontend approval confirmation instead of asking users to type the backend approval phrase; `JIKUO-STUDIO-01D10` implements the first no-write document/artifact assurance projection for required, planned, and actual read/write comparison; `JIKUO-STUDIO-01D11` projects that assurance into runtime task cards, history cards, and `state_summary.json`; `JIKUO-STUDIO-01D12` corrects completion-check document semantics so configured completion-check scope is rendered as write candidates/checklist items unless applicability evidence makes a document required for the current slice; `JIKUO-STUDIO-01D13` renders the same data as latest-round document trace instead of metric-first assurance cards; `JIKUO-STUDIO-01D14` adds selectable runtime rounds with document trace/change labels; `JIKUO-STUDIO-01D15` keeps selected round cards and detail panels bound to the same round and count source; `JIKUO-STUDIO-01D18` adds a Latest Semantic Classification summary for the latest retained runtime round, including whether host AI supplied semantic intent and which evidence limits remain; `JIKUO-STUDIO-01D19` adds prompt-free turn-anchor projection for linking a single user turn across runtime cards and Studio evidence; `JIKUO-STUDIO-01E1/01E2` implement a no-write project-file inventory and reusable local web batch selector for Document Rules; `JIKUO-STUDIO-01E3/01E4/01E5/01E6/01E7/01E8/01E9/01E10` implement policy configuration read UI, no-write active-policy configuration change preview, guarded active-policy configuration change apply for supported core writer operations including trigger-profile refinement, guarded package-template activation as a project policy with deduped resolved-policy source provenance, guarded active-policy reusable-template publication, manifest-listed proposal detail projection, guarded activation for manifest-listed existing proposal snapshots, and a simplified active/activatable policy primary view.
 > **Date**: 2026-05-31
 > **JIKUO layer**: product surface / view-model projection / guarded configuration control.
 > **Business meaning**: Users should not need to reconstruct JIKUO's global state from chat alone. A thin JIKUO console should make activation, runtime, policy, template, integration, diagnostics, and guarded configuration status visible in one place while preserving the existing kernel and guarded-write boundaries.
@@ -1261,6 +1261,60 @@ Acceptance:
   what intent/scopes were recorded, and any evidence imperfection;
 - this view does not call an LLM provider, infer hidden model intent, change
   policy evaluator results, or claim strict GUI semantic gating.
+
+### `JIKUO-STUDIO-01D19`: Prompt-Free Turn Anchor Projection
+
+Expose whether the latest retained runtime round has a stable, non-AI turn
+anchor that can be carried through later `task_start` and `completion_review`
+evidence without asking the AI to invent a session id.
+
+Implementation status (2026-06-05): implemented in
+`src/jikuo/turn_anchor.py`, `src/jikuo/integrations/host_adapter_contract.py`,
+`.codex/hooks/jikuo_user_prompt_submit.py`, `src/jikuo/agent_flow.py`,
+`src/jikuo/runtime_visibility.py`, `src/jikuo/studio/global_status.py`, and
+`src/jikuo/integrations/studio_web/server.py`.
+
+Business meaning:
+
+- users want to know whether intent classification happened in a specific
+  turn, and whether the original user-turn identity can flow through a single
+  delivery instead of being overwritten by later receipts;
+- the safer MVP identity is generated by host/client runtime facts:
+  client id, client event, host session id, host turn id, received timestamp,
+  and optional prompt digest;
+- raw prompt and raw transcript are not persisted in this slice, so later
+  search-by-original-text remains a deferred design question rather than an
+  accidental privacy leak.
+
+Model:
+
+```text
+host_adapter.turn_input.turn_anchor
+  -> agent_flow.proposal.turn_anchor
+  -> runtime state_summary.turn_anchor
+  -> Studio runtime.round_document_traces.rounds[].turn_anchor
+  -> Studio retained available turn anchor summary
+  -> Studio Latest Semantic Classification / Turn anchor row
+```
+
+Acceptance:
+
+- host adapter input with session id, turn id, and raw prompt builds an
+  `available` anchor with `prompt_digest_status=hash_only`;
+- normalized host semantic intent carries the same anchor when supplied by the
+  adapter;
+- agent_flow accepts `--turn-anchor-json`, renders `## Turn Anchor`, and writes
+  the projection into `state_summary.json`;
+- Studio Overview shows the retained `Turn anchor` identity id when available,
+  and the Latest Semantic Classification detail list shows the anchor
+  status/id/session/turn/digest status plus the source round when available;
+- if the latest runtime round lacks a turn anchor but a retained history round
+  has one, Studio shows the retained available anchor and separately reports
+  `Latest runtime turn anchor missing` as an evidence imperfection;
+- tests prove raw prompt text is absent from normalized host adapter output,
+  proposal JSON, and runtime state summary;
+- this projection does not call an LLM provider, store raw prompt/transcript,
+  generate an AI session identity, or prove strict GUI semantic gating.
 
 ### `JIKUO-STUDIO-01E`: File Selection, Batch Changes, And Time Anchors
 

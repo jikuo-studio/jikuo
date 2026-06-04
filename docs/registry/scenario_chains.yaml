@@ -30,6 +30,7 @@ entries:
     user_outcome: "A user who asks for progress, todos, policy work, or edits gets JIKUO routing based on host-provided semantic evidence after the host AI has read the turn, without JIKUO pretending to classify the prompt itself."
     corresponding_document_refs:
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-AI-SEMROUTE-01_ai_semantic_routing_mvp.md"
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md"
       - ".codex/hooks/README.md"
     mount_coverage:
       status: "verified"
@@ -88,6 +89,20 @@ entries:
           - "Studio latest semantic classification overview metric"
           - "Studio latest semantic classification detail list"
           - "selected round semantic coverage label"
+      - step_id: "HOST-SEMANTIC-FOLLOW-UP-05"
+        user_action: "Inspect whether the latest retained GUI/subscription turn has a stable non-AI identity anchor that can be carried into later task_start or completion_review receipts."
+        visible_result: "Studio shows the latest turn anchor status, anchor id when available, host session/turn fields when available, and prompt digest status without exposing the raw prompt."
+        operation_chain: "The host adapter builds `turn_anchor` from client id, client event, host session id, host turn id, received timestamp, and optional prompt hash; Codex hook passes it to agent_flow and asks the host AI to carry the same `host_semantic_intent.turn_anchor` in later JIKUO calls; runtime state_summary and Studio project the same anchor for audit."
+        atom_refs:
+          - "CAP-RUNTIME-TURN-ANCHOR-PROJECTION-01"
+          - "CAP-HOST-ADAPTER-CONTRACT-01"
+          - "CAP-CODEX-PLUGIN-HARNESS-REVIEW-01"
+        approval_boundary: "runtime_projection_and_read_only_studio_view"
+        evidence_outputs:
+          - "proposal.turn_anchor"
+          - "state_summary.turn_anchor"
+          - "Studio latest turn anchor overview metric"
+          - "Studio latest semantic classification Turn anchor row"
     capability_refs:
       - "CAP-CODEX-PLUGIN-HARNESS-REVIEW-01"
       - "CAP-HOST-ADAPTER-CONTRACT-01"
@@ -95,6 +110,7 @@ entries:
       - "CAP-AI-SEMANTIC-ROUTING-MVP-01"
       - "CAP-SEMANTIC-INTENT-CLASSIFICATION-EVIDENCE-01"
       - "CAP-SEMANTIC-INTENT-COVERAGE-RUNTIME-01"
+      - "CAP-RUNTIME-TURN-ANCHOR-PROJECTION-01"
       - "CAP-PROGRESS-SUMMARY-BUSINESS-MEANING-POLICY-01"
   - id: "SCENARIO-INSTRUCTION-COMPLETION-RECEIPT"
     title: "Instruction-guided completion receipt"

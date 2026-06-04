@@ -3092,6 +3092,7 @@ INDEX_HTML = """<!doctype html>
     const renderSemanticEvidence = (runtime) => {
       const evidence = (runtime || {}).semantic_intent_evidence || {};
       const classification = evidence.classification || {};
+      const anchor = evidence.turn_anchor || (runtime || {}).turn_anchor || {};
       const latestRound = evidence.latest_round || {};
       const imperfections = evidence.imperfections || [];
       const policyScopes = Array.isArray(classification.policy_scopes)
@@ -3119,6 +3120,13 @@ INDEX_HTML = """<!doctype html>
           `${latestRound.label || latestRound.round_id || "no retained round"} / ${latestRound.lifecycle_event || "event unknown"} / ${latestRound.source_kind || "source unknown"}`,
           latestRound.round_id ? "available" : "unavailable"
         ),
+        row(
+          "Turn anchor",
+          anchor.status === "available"
+            ? `${anchor.anchor_id || "available"} / session=${anchor.session_id || "unavailable"} / turn=${anchor.turn_id || "unavailable"} / prompt=${anchor.prompt_digest_status || "not_available"} / source=${anchor.evidence_source_kind || anchor.source_kind || "runtime"}`
+            : `missing: ${anchor.gap_reason || "turn_anchor_not_supplied_by_host_adapter"}`,
+          anchor.status === "available" ? "available" : "degraded"
+        ),
         ...(imperfections.length
           ? imperfections.map((item) => row(
               item.title || "Evidence imperfection",
@@ -3141,10 +3149,15 @@ INDEX_HTML = """<!doctype html>
       const integrations = summaries.integrations || {};
       const mcp = integrations.mcp || {};
       const semanticClassification = semanticEvidence.classification || {};
+      const semanticAnchor = semanticEvidence.turn_anchor || runtime.turn_anchor || {};
+      const semanticAnchorOverviewValue = semanticAnchor.status === "available"
+        ? (semanticAnchor.anchor_id || "available")
+        : (semanticAnchor.status || "missing");
       const overview = document.getElementById("overview");
       overview.replaceChildren(
         metric(runtime.status || "unknown", "Runtime"),
         metric(semanticClassification.ai_classified ? "AI" : (semanticClassification.classification_source || semanticEvidence.status || semanticCoverage.coverage_status || "unknown"), "Latest semantic classification"),
+        metric(semanticAnchorOverviewValue, "Turn anchor"),
         metric((summaries.document_mounts || {}).checked_document_count || 0, "Completion docs"),
         metric(policyCounts.active_policy_count || 0, "Active policies"),
         metric(policyCounts.package_template_count || 0, "Package templates"),

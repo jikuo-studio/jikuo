@@ -27,6 +27,7 @@ if __package__:
         starter_policies,
         task_session,
         task_session_cards,
+        turn_anchor as turn_anchor_model,
         work_profile,
     )
     from .studio import artifact_assurance as studio_artifact_assurance
@@ -47,6 +48,7 @@ else:
     from jikuo.studio import document_rules as studio_document_rules
     import task_session
     import task_session_cards
+    import turn_anchor as turn_anchor_model
     import work_profile
 
 
@@ -245,6 +247,7 @@ NO_WRITE_ATOMS = {
     "CAP-HOST-SEMANTIC-INTENT-WORK-PROFILE-01",
     "CAP-SEMANTIC-INTENT-CLASSIFICATION-EVIDENCE-01",
     "CAP-SEMANTIC-INTENT-PRECONDITION-01",
+    "CAP-RUNTIME-TURN-ANCHOR-PROJECTION-01",
     "CAP-STUDIO-ARTIFACT-ASSURANCE-RUNTIME-CARD-01",
 }
 
@@ -4328,6 +4331,7 @@ def build_proposal(
     trigger_mode: str | None = None,
     governance_path: str | None = None,
     host_semantic_intent: dict[str, Any] | None = None,
+    turn_anchor: dict[str, Any] | None = None,
     produced_evidence: list[dict[str, Any]] | None = None,
     enforce_semantic_intent_precondition: bool = False,
     work_routing_category: str | None = None,
@@ -4530,6 +4534,23 @@ def build_proposal(
     ) or {}
     semantic_intent_evidence = (
         work_profile_projection.get("semantic_intent_evidence") or {}
+    )
+    turn_anchor_projection = (
+        turn_anchor_model.normalize_turn_anchor(turn_anchor)
+        if turn_anchor is not None
+        else turn_anchor_model.turn_anchor_from_work_profile(work_profile_projection)
+    )
+    traces.append(
+        atom_trace(
+            loop_step_id="DPL-06",
+            atom_id="CAP-RUNTIME-TURN-ANCHOR-PROJECTION-01",
+            mode="runtime-projection",
+            status=str(turn_anchor_projection.get("status") or "missing"),
+            summary=(
+                "projected non-AI host turn anchor availability for runtime "
+                "and Studio delivery-flow inspection"
+            ),
+        )
     )
     if enforce_semantic_intent_precondition:
         semantic_intent_evidence = semantic_intent_evidence_with_precondition_required(
@@ -4780,6 +4801,7 @@ def build_proposal(
         "conversation_router": conversation_router,
         "work_profile": work_profile_projection,
         "semantic_intent_evidence": semantic_intent_evidence,
+        "turn_anchor": turn_anchor_projection,
         "work_routing": work_routing,
         "artifact_assurance": artifact_assurance_report,
         "atom_trace": traces,
@@ -5689,6 +5711,46 @@ def render_work_profile(work_profile_projection: dict[str, Any]) -> list[str]:
     return lines
 
 
+def render_turn_anchor(turn_anchor_projection: dict[str, Any]) -> list[str]:
+    if not turn_anchor_projection:
+        return []
+    lines = [
+        "## Turn Anchor",
+        "",
+        f"- Status: `{turn_anchor_projection.get('status')}`",
+    ]
+    if turn_anchor_projection.get("anchor_id"):
+        lines.append(f"- Anchor id: `{turn_anchor_projection.get('anchor_id')}`")
+    if turn_anchor_projection.get("client_id"):
+        lines.append(f"- Client: `{turn_anchor_projection.get('client_id')}`")
+    if turn_anchor_projection.get("client_event"):
+        lines.append(f"- Client event: `{turn_anchor_projection.get('client_event')}`")
+    if turn_anchor_projection.get("session_id"):
+        lines.append(f"- Session id: `{turn_anchor_projection.get('session_id')}`")
+    if turn_anchor_projection.get("turn_id"):
+        lines.append(f"- Turn id: `{turn_anchor_projection.get('turn_id')}`")
+    if turn_anchor_projection.get("received_at_utc"):
+        lines.append(f"- Received at: `{turn_anchor_projection.get('received_at_utc')}`")
+    if turn_anchor_projection.get("prompt_digest_status"):
+        lines.append(
+            f"- Prompt digest: `{turn_anchor_projection.get('prompt_digest_status')}`"
+        )
+    if turn_anchor_projection.get("prompt_sha256"):
+        digest = str(turn_anchor_projection.get("prompt_sha256"))
+        lines.append(f"- Prompt sha256: `{digest}`")
+    if turn_anchor_projection.get("identity_strength"):
+        lines.append(
+            f"- Identity strength: `{turn_anchor_projection.get('identity_strength')}`"
+        )
+    if turn_anchor_projection.get("gap_reason"):
+        lines.append(f"- Gap reason: `{turn_anchor_projection.get('gap_reason')}`")
+    lines.append(
+        "- Privacy: `raw prompt is not included; raw transcript is not persisted`"
+    )
+    lines.append("")
+    return lines
+
+
 def render_artifact_gap_lines(
     *,
     label: str,
@@ -5842,6 +5904,9 @@ def render_markdown(proposal: dict[str, Any]) -> str:
     work_profile_projection = proposal.get("work_profile")
     if work_profile_projection:
         lines.extend(render_work_profile(work_profile_projection))
+    turn_anchor_projection = proposal.get("turn_anchor")
+    if turn_anchor_projection:
+        lines.extend(render_turn_anchor(turn_anchor_projection))
     artifact_report = proposal.get("artifact_assurance")
     if artifact_report:
         lines.extend(render_artifact_assurance(artifact_report))
@@ -6102,6 +6167,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Compact host/classifier semantic intent JSON object; must not contain raw transcripts.",
     )
+    propose.add_argument(
+        "--turn-anchor-json",
+        default=None,
+        help="Non-AI host turn anchor JSON object; must not contain raw prompt text.",
+    )
     propose.add_argument("--trigger-mode", choices=sorted(TRIGGER_MODES), default=None)
     propose.add_argument(
         "--governance-path",
@@ -6279,6 +6349,16 @@ def main(argv: list[str] | None = None) -> int:
             parser.error("--host-semantic-intent-json must decode to an object")
         host_semantic_intent = decoded_semantic_intent
 
+    turn_anchor_input: dict[str, Any] | None = None
+    if args.turn_anchor_json:
+        try:
+            decoded_turn_anchor = json.loads(args.turn_anchor_json)
+        except json.JSONDecodeError as exc:
+            parser.error(f"--turn-anchor-json must be valid JSON: {exc}")
+        if not isinstance(decoded_turn_anchor, dict):
+            parser.error("--turn-anchor-json must decode to an object")
+        turn_anchor_input = decoded_turn_anchor
+
     proposal = build_proposal(
         raw_event=args.event,
         task_title=args.task_title,
@@ -6338,6 +6418,7 @@ def main(argv: list[str] | None = None) -> int:
         trigger_mode=args.trigger_mode,
         governance_path=args.governance_path,
         host_semantic_intent=host_semantic_intent,
+        turn_anchor=turn_anchor_input,
         produced_evidence=produced_evidence,
         work_routing_category=args.work_routing_category,
         work_routing_summary=args.work_routing_summary,

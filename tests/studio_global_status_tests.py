@@ -82,6 +82,27 @@ class StudioGlobalStatusTests(unittest.TestCase):
                             "fallback_expanded": False,
                             "gap_reason": "host_ai_did_not_return_intent",
                         },
+                        "turn_anchor": {
+                            "schema": "jikuo.turn_anchor.v0",
+                            "status": "available",
+                            "anchor_id": "turn_status_fixture",
+                            "source_kind": "host_adapter",
+                            "client_id": "codex",
+                            "client_event": "UserPromptSubmit",
+                            "session_id": "session-status",
+                            "turn_id": "turn-status",
+                            "received_at_utc": "2026-06-05T00:00:00Z",
+                            "prompt_sha256": "0" * 64,
+                            "prompt_digest_status": "hash_only",
+                            "natural_key_basis": [
+                                "received_at_utc",
+                                "client_id",
+                                "session_id",
+                                "turn_id",
+                                "prompt_sha256",
+                            ],
+                            "identity_strength": "host_turn_id_plus_prompt_hash",
+                        },
                         "artifact_assurance": {
                             "schema": "jikuo.studio.artifact_assurance.v0",
                             "status": "review",
@@ -102,6 +123,8 @@ class StudioGlobalStatusTests(unittest.TestCase):
                 runtime["semantic_intent_coverage"]["coverage_status"],
                 "missing",
             )
+            self.assertEqual(runtime["turn_anchor"]["status"], "available")
+            self.assertEqual(runtime["turn_anchor"]["anchor_id"], "turn_status_fixture")
             semantic_evidence = runtime["semantic_intent_evidence"]
             self.assertEqual(
                 semantic_evidence["schema"],
@@ -117,11 +140,122 @@ class StudioGlobalStatusTests(unittest.TestCase):
                 "latest_runtime_state",
             )
             self.assertGreaterEqual(semantic_evidence["imperfection_count"], 1)
+            self.assertEqual(
+                semantic_evidence["turn_anchor"]["anchor_id"],
+                "turn_status_fixture",
+            )
             diagnostic_codes = {item["code"] for item in report["diagnostics"]}
             self.assertIn("runtime_semantic_intent_coverage_degraded", diagnostic_codes)
             self.assertEqual(
                 runtime["artifact_assurance"]["write_assurance"]["planned_write_count"],
                 1,
+            )
+
+    def test_semantic_evidence_uses_retained_available_turn_anchor(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            runtime_root = project_root / ".jikuo" / "runtime"
+            history_root = runtime_root / "history"
+            history_root.mkdir(parents=True)
+            (project_root / ".jikuo" / "project_context.yaml").write_text(
+                "\n".join(
+                    [
+                        'schema_version: "jikuo.project_context.v0"',
+                        "document_roles: {}",
+                        "main_document_mounts:",
+                        '  canonical_path_root: "."',
+                        "  active_mount_authority: []",
+                        "  checked_before_slice_completion: []",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            latest_ref = ".jikuo/runtime/history/20260605T010000Z_latest.md"
+            anchored_ref = ".jikuo/runtime/history/20260605T000000Z_anchored.md"
+            (project_root / latest_ref).write_text("# Latest\n", encoding="utf-8")
+            (project_root / anchored_ref).write_text("# Anchored\n", encoding="utf-8")
+            (runtime_root / "state_summary.json").write_text(
+                json.dumps(
+                    {
+                        "schema": "jikuo.runtime_state_summary.v0",
+                        "status": "available",
+                        "updated_at_utc": "2026-06-05T01:00:00Z",
+                        "source": {
+                            "proposal_id": "proposal_latest",
+                            "status": "review",
+                            "event": "conversation_turn",
+                        },
+                        "runtime_visibility": {"history_ref": latest_ref},
+                        "semantic_intent_coverage": {
+                            "schema": "jikuo.semantic_intent_coverage.v0",
+                            "coverage_status": "complete",
+                            "semantic_intent_status": "provided",
+                            "evidence_status": "ok",
+                            "provider": "host_ai",
+                            "required": True,
+                            "policy_scopes": ["discussion"],
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (project_root / anchored_ref).with_suffix(".json").write_text(
+                json.dumps(
+                    {
+                        "schema": "jikuo.runtime_state_summary.v0",
+                        "status": "available",
+                        "updated_at_utc": "2026-06-05T00:00:00Z",
+                        "source": {
+                            "proposal_id": "proposal_anchored",
+                            "status": "review",
+                            "event": "conversation_turn",
+                        },
+                        "runtime_visibility": {"history_ref": anchored_ref},
+                        "turn_anchor": {
+                            "schema": "jikuo.turn_anchor.v0",
+                            "status": "available",
+                            "anchor_id": "turn_retained_fixture",
+                            "source_kind": "host_adapter",
+                            "client_id": "codex",
+                            "client_event": "UserPromptSubmit",
+                            "session_id": "session-retained",
+                            "turn_id": "turn-retained",
+                            "received_at_utc": "2026-06-05T00:00:00Z",
+                            "prompt_digest_status": "hash_only",
+                            "prompt_sha256": "1" * 64,
+                            "natural_key_basis": [
+                                "received_at_utc",
+                                "client_id",
+                                "session_id",
+                                "turn_id",
+                                "prompt_sha256",
+                            ],
+                            "identity_strength": "host_turn_id_plus_prompt_hash",
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            report = global_status.build_global_status(project_root=project_root)
+
+            semantic_evidence = report["summaries"]["runtime"]["semantic_intent_evidence"]
+            self.assertEqual(
+                semantic_evidence["latest_runtime_turn_anchor"]["status"],
+                "missing",
+            )
+            self.assertEqual(
+                semantic_evidence["turn_anchor"]["anchor_id"],
+                "turn_retained_fixture",
+            )
+            self.assertEqual(
+                semantic_evidence["turn_anchor"]["evidence_round_id"],
+                Path(anchored_ref).stem,
+            )
+            self.assertIn(
+                "Latest runtime turn anchor missing",
+                {item["title"] for item in semantic_evidence["imperfections"]},
             )
 
     def test_round_trace_derives_semantic_coverage_from_work_profile(self):
@@ -141,6 +275,25 @@ class StudioGlobalStatusTests(unittest.TestCase):
                         "event": "conversation_turn",
                     },
                     "runtime_visibility": {},
+                    "turn_anchor": {
+                        "schema": "jikuo.turn_anchor.v0",
+                        "status": "available",
+                        "anchor_id": "turn_trace_fixture",
+                        "source_kind": "host_adapter",
+                        "client_id": "codex",
+                        "client_event": "UserPromptSubmit",
+                        "session_id": "session-trace",
+                        "turn_id": "turn-trace",
+                        "received_at_utc": "2026-06-05T00:00:00Z",
+                        "prompt_digest_status": "not_available",
+                        "natural_key_basis": [
+                            "received_at_utc",
+                            "client_id",
+                            "session_id",
+                            "turn_id",
+                        ],
+                        "identity_strength": "host_turn_id",
+                    },
                     "policy_runtime_status": {
                         "work_profile": {
                             "intent_class": "implementation",
@@ -176,6 +329,7 @@ class StudioGlobalStatusTests(unittest.TestCase):
             )
             self.assertEqual(trace["intent_class"], "implementation")
             self.assertEqual(trace["operation_class"], "workspace_edit")
+            self.assertEqual(trace["turn_anchor"]["anchor_id"], "turn_trace_fixture")
 
     def test_runtime_summary_exposes_selectable_round_document_traces(self):
         with tempfile.TemporaryDirectory() as tmp:
