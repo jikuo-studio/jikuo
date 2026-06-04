@@ -130,9 +130,22 @@ def build_project_file_inventory(
     files = iter_project_document_files(resolved_root)
     truncated = len(files) > max_items
     items: list[dict[str, Any]] = []
+    skipped_during_scan = 0
     for path in files[:max_items]:
         path_ref = path.relative_to(resolved_root).as_posix()
-        stat = path.stat()
+        try:
+            stat = path.stat()
+        except OSError as exc:
+            skipped_during_scan += 1
+            warnings.append(
+                {
+                    "code": "project_file_disappeared_during_scan",
+                    "path": path_ref,
+                    "message": f"Skipped file because it changed during inventory scan: {exc}",
+                    "severity": "warning",
+                }
+            )
+            continue
         items.append(
             {
                 "path": path_ref,
@@ -145,10 +158,11 @@ def build_project_file_inventory(
         )
     return {
         "schema": PROJECT_FILE_INVENTORY_SCHEMA,
-        "status": "degraded" if context_errors else "available",
+        "status": "degraded" if context_errors or skipped_during_scan else "available",
         "project_root": str(resolved_root),
         "item_count": len(items),
         "total_candidate_count": len(files),
+        "skipped_during_scan_count": skipped_during_scan,
         "truncated": truncated,
         "max_items": max_items,
         "items": items,

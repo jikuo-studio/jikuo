@@ -12,11 +12,11 @@ from typing import Any
 from urllib.parse import urlparse
 
 if __package__:
-    from ... import policy_management_status, policy_store, policy_templates
+    from ... import policy_management_status, policy_store, policy_templates, project_state
     from ...studio import document_rules, global_status, project_files
 else:  # pragma: no cover - direct module execution fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from jikuo import policy_management_status, policy_store, policy_templates
+    from jikuo import policy_management_status, policy_store, policy_templates, project_state
     from jikuo.studio import document_rules, global_status, project_files
 
 
@@ -960,6 +960,52 @@ INDEX_HTML = """<!doctype html>
         <div class="list" id="policy-evolution-plan-result"></div>
       </div>
       <div class="plan-tool">
+        <h3>Template publication preview</h3>
+        <p class="subhead">Select an active project policy, inspect the reusable-template target, then publish it through the guarded writer.</p>
+        <div class="policy-detail-grid">
+          <div class="policy-detail-panel">
+            <h3>Source policy</h3>
+            <label>Project policy
+              <select id="policy-template-publication-policy"></select>
+            </label>
+            <div class="policy-detail-header" id="policy-template-publication-selected-summary"></div>
+            <div class="tag-list" id="policy-template-publication-selected-tags"></div>
+            <div class="compact-list" id="policy-template-publication-selected-config"></div>
+          </div>
+          <div class="policy-detail-panel">
+            <h3>Publication boundary</h3>
+            <label>Distribution decision
+              <select id="policy-template-publication-decision">
+                <option value="optional_template">Optional package template</option>
+                <option value="official_starter">Official starter candidate</option>
+              </select>
+            </label>
+            <div class="compact-list">
+              <div class="compact-item">
+                <strong>Writes after approval</strong>
+                <span>one reviewed package policy template file</span>
+              </div>
+              <div class="compact-item">
+                <strong>Non-effect</strong>
+                <span>Does not activate project policies or update starter-pack manifests.</span>
+              </div>
+              <div class="compact-item">
+                <strong>Follow-up</strong>
+                <span>Official starter inclusion remains a separate guarded manifest publication.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="plan-apply-row">
+          <div class="policy-action-buttons">
+            <button type="button" id="policy-template-publication-preview-button">Preview publication</button>
+            <button type="button" id="policy-template-publication-apply-button" disabled>Publish guarded template</button>
+          </div>
+          <span id="policy-template-publication-apply-note" class="subhead">Preview a template publication plan to enable guarded apply.</span>
+        </div>
+        <div class="list" id="policy-template-publication-plan-result"></div>
+      </div>
+      <div class="plan-tool">
         <h3>Template activation preview</h3>
         <p class="subhead">Select a package policy template, inspect the resolved project bindings, then activate it as a project policy through the guarded writer.</p>
         <div class="policy-detail-grid">
@@ -1157,10 +1203,13 @@ INDEX_HTML = """<!doctype html>
     const termDescription = (terms, id, fallback) => (terms[id] && terms[id].user_description) || fallback;
     const DOCUMENT_RULES_APPROVAL_PHRASE = "Approve Document Rules update";
     const POLICY_EVOLUTION_APPROVAL_PHRASE = "Approve Policy Evolution write";
+    const POLICY_TEMPLATE_PUBLICATION_APPROVAL_PHRASE = "Approve Policy Template publication";
     const POLICY_TEMPLATE_ACTIVATION_APPROVAL_PHRASE = "Approve Policy Template activation";
     let currentDocumentRulesPlan = null;
     let currentPolicyEvolutionPlan = null;
     let currentPolicyEvolutionRequest = null;
+    let currentPolicyTemplatePublicationPlan = null;
+    let currentPolicyTemplatePublicationRequest = null;
     let currentPolicyTemplateActivationPlan = null;
     let currentPolicyTemplateActivationRequest = null;
     let policyManagementReport = null;
@@ -1406,10 +1455,12 @@ INDEX_HTML = """<!doctype html>
     const activePolicyDetailById = (report) => Object.fromEntries(
       activePolicyDetails(report).map((item) => [item.policy_id, item]).filter(([key]) => key)
     );
-    const selectedPolicyDetail = (report) => {
-      const policyRef = document.getElementById("policy-evolution-policy").value;
+    const selectedActivePolicyDetail = (report, selectId) => {
+      const policyRef = document.getElementById(selectId).value;
       return activePolicyDetailById(report || policyManagementReport || {})[policyRef] || null;
     };
+    const selectedPolicyDetail = (report) => selectedActivePolicyDetail(report, "policy-evolution-policy");
+    const selectedPublicationPolicyDetail = (report) => selectedActivePolicyDetail(report, "policy-template-publication-policy");
     const optionSetValues = (report, key, fallback) => {
       const values = (((report || {}).option_sets || {})[key] || []).map((item) => String(item)).filter((item) => item);
       return values.length ? values : fallback;
@@ -1607,6 +1658,226 @@ INDEX_HTML = """<!doctype html>
         select.value = previousValue;
       }
       renderSelectedPolicyDetail(report);
+    };
+    const renderSelectedPublicationPolicyDetail = (report) => {
+      const detail = selectedPublicationPolicyDetail(report);
+      const summary = document.getElementById("policy-template-publication-selected-summary");
+      const triggerTags = document.getElementById("policy-template-publication-selected-tags");
+      const config = document.getElementById("policy-template-publication-selected-config");
+      const distribution = distributionByPolicyId(report || policyManagementReport || {});
+      if (!detail) {
+        summary.replaceChildren(compactItem("No policy selected", "Select an active policy to publish as a package template."));
+        triggerTags.replaceChildren(tag("no selection", "review"));
+        config.replaceChildren(compactItem("No current configuration", "Policy detail is unavailable in the read model."));
+        return;
+      }
+      const dist = distribution[detail.policy_id] || {};
+      const header = document.createElement("div");
+      header.innerHTML = `<strong></strong><span></span>`;
+      header.querySelector("strong").textContent = detail.title || detail.policy_id || "Untitled policy";
+      header.querySelector("span").textContent = `${detail.policy_id || "policy id missing"} / ${detail.status || "status unknown"} / ${detail.path || "path not supplied"}`;
+      summary.replaceChildren(header);
+      triggerTags.replaceChildren(
+        tag(dist.distribution_state || "distribution unknown", dist.distribution_state === "active_project_policy_only" ? "review" : "available"),
+        ...policyProfileTags(detail.trigger_profile)
+      );
+      const filters = detail.condition_filters || {};
+      const actions = detail.required_actions || [];
+      const evidence = detail.required_evidence || [];
+      config.replaceChildren(
+        compactItem("Trigger profile", triggerProfileDetailText(detail.trigger_profile)),
+        compactItem("Template refs", (dist.package_template_refs || []).join(", ") || "No package template ref"),
+        compactItem("Path filters", [
+          `changed: ${listSummary(filters.changed_path_patterns, "none")}`,
+          `added: ${listSummary(filters.added_path_patterns, "none")}`,
+        ].join(" / ")),
+        compactItem("Required actions", actions.length ? actions.map((item) => item.type || item.action_id || "action").join(", ") : "No required actions declared"),
+        compactItem("Required evidence", evidence.length ? evidence.map((item) => item.type || item.evidence_id || "evidence").join(", ") : "No required evidence declared")
+      );
+    };
+    const populatePolicyTemplatePublicationTargets = (report) => {
+      const select = document.getElementById("policy-template-publication-policy");
+      const active = (report.policy_store || {}).active_policies || [];
+      const previousValue = select.value;
+      const options = active.map((item) => {
+        const option = document.createElement("option");
+        option.value = item.policy_id || "";
+        option.textContent = `${item.policy_id || "policy"}${item.title ? ` / ${item.title}` : ""}`;
+        return option;
+      }).filter((option) => option.value);
+      select.replaceChildren(...options);
+      if (!options.length) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "No active policies";
+        select.replaceChildren(option);
+      }
+      if (previousValue && options.some((option) => option.value === previousValue)) {
+        select.value = previousValue;
+      }
+      renderSelectedPublicationPolicyDetail(report);
+    };
+    const policyTemplatePublicationRequest = () => {
+      const detail = selectedPublicationPolicyDetail(policyManagementReport || {});
+      const decision = document.getElementById("policy-template-publication-decision").value;
+      return {
+        policy_ref: (detail || {}).policy_id || document.getElementById("policy-template-publication-policy").value || null,
+        source_policy_path: (detail || {}).path || null,
+        distribution_decision: decision || "optional_template",
+        namespace: "local",
+        rationale: "Studio policy template publication preview",
+      };
+    };
+    const policyTemplatePublicationApplyReady = (plan) => {
+      const candidate = plan || currentPolicyTemplatePublicationPlan || {};
+      return Boolean(
+        candidate.status === "review"
+        && (candidate.write_set || []).length
+        && !(candidate.refusal_reasons || []).length
+      );
+    };
+    const updatePolicyTemplatePublicationApplyButton = () => {
+      const button = document.getElementById("policy-template-publication-apply-button");
+      const note = document.getElementById("policy-template-publication-apply-note");
+      const plan = currentPolicyTemplatePublicationPlan || {};
+      const ready = policyTemplatePublicationApplyReady(plan);
+      button.disabled = !ready;
+      button.textContent = "Publish guarded template";
+      if (ready) {
+        note.textContent = `Confirmation required before writing ${numberValue((plan.write_set || []).length)} package-template file(s).`;
+      } else if (currentPolicyTemplatePublicationPlan && (plan.status || "") !== "review") {
+        note.textContent = "Resolve publication refusal reasons before guarded apply.";
+      } else {
+        note.textContent = "Preview a template publication plan to enable guarded apply.";
+      }
+    };
+    const invalidatePolicyTemplatePublicationPlan = () => {
+      currentPolicyTemplatePublicationPlan = null;
+      currentPolicyTemplatePublicationRequest = null;
+      const container = document.getElementById("policy-template-publication-plan-result");
+      if (container.childElementCount) {
+        container.replaceChildren(row("Preview required", "Publication fields changed after the last preview.", "degraded"));
+      }
+      updatePolicyTemplatePublicationApplyButton();
+    };
+    const renderPolicyTemplatePublicationPlan = (plan) => {
+      const container = document.getElementById("policy-template-publication-plan-result");
+      const status = plan.status || "unknown";
+      const summaryStatus = status === "review" ? "degraded" : (status === "refused" ? "unavailable" : "available");
+      const writeSet = (plan.write_set || []).map((item) =>
+        compactItem(item.effect || "write", item.path || "path not supplied")
+      );
+      const refusals = (plan.refusal_reasons || []).map((item) => compactItem("Refusal", item));
+      const warnings = (plan.warnings || []).map((item) => compactItem("Warning", item));
+      const nonEffects = (plan.non_effects || []).slice(0, 4).map((item) => compactItem("Non-effect", item));
+      const nextActions = (plan.next_actions || []).map((item) => compactItem("Next", item));
+      container.replaceChildren(
+        row(`Plan ${status}`, `template publication / writes performed: ${String(Boolean(plan.writes_performed))}`, summaryStatus),
+        compactItem("Source policy", `${plan.policy_id || "policy id missing"} / ${plan.title || "title not supplied"}`),
+        compactItem("Distribution decision", plan.distribution_decision || "decision not supplied"),
+        compactItem("Target template", plan.target_template_ref || "template ref not supplied"),
+        compactItem("Target path", plan.target_template_path || "target path not supplied"),
+        compactItem("Starter manifest", `${plan.starter_pack_manifest_change_required ? "follow-up required" : "not required"} / ${plan.starter_pack_manifest_change_status || "unknown"}`),
+        ...(writeSet.length ? writeSet : [compactItem("Write set", "No future package-template writes projected.")]),
+        ...(refusals.length ? refusals : []),
+        ...(warnings.length ? warnings : []),
+        ...(nextActions.length ? nextActions : []),
+        ...(nonEffects.length ? nonEffects : [])
+      );
+      updatePolicyTemplatePublicationApplyButton();
+    };
+    const renderPolicyTemplatePublicationApplyResult = (result) => {
+      const container = document.getElementById("policy-template-publication-plan-result");
+      const status = result.status || "unknown";
+      const summaryStatus = status === "written" ? "available" : "unavailable";
+      const writtenPaths = (result.written_paths || []).map((item) => compactItem("Written path", item));
+      const createdPaths = (result.created_paths || []).map((item) => compactItem("Created path", item));
+      const refusals = (result.refusal_reasons || []).map((item) => compactItem("Refusal", item));
+      const warnings = (result.warnings || []).map((item) => compactItem("Warning", item));
+      const nextActions = (result.next_actions || []).map((item) => compactItem("Next", item));
+      container.replaceChildren(
+        row(`Apply ${status}`, `template publication / write performed: ${String(Boolean(result.write_performed))}`, summaryStatus),
+        compactItem("Template ref", result.template_ref || "template ref not supplied"),
+        compactItem("Target path", result.target_template_path || "target path not supplied"),
+        compactItem("Source policy", result.source_policy_path || "source policy not supplied"),
+        compactItem("Starter manifest", `${result.starter_pack_manifest_change_required ? "follow-up required" : "not required"} / ${result.starter_pack_manifest_change_status || "unknown"}`),
+        ...(writtenPaths.length ? writtenPaths : [compactItem("Written paths", "No package-template writes were reported.")]),
+        ...(createdPaths.length ? createdPaths : []),
+        ...(refusals.length ? refusals : []),
+        ...(warnings.length ? warnings : []),
+        ...(nextActions.length ? nextActions : [])
+      );
+      if (status === "written") {
+        currentPolicyTemplatePublicationPlan = null;
+        currentPolicyTemplatePublicationRequest = null;
+        updatePolicyTemplatePublicationApplyButton();
+        fetch("/api/status", {cache: "no-store"}).then((response) => response.json()).then(render);
+      }
+    };
+    const previewPolicyTemplatePublicationPlan = () => {
+      const button = document.getElementById("policy-template-publication-preview-button");
+      const container = document.getElementById("policy-template-publication-plan-result");
+      const requestPayload = policyTemplatePublicationRequest();
+      currentPolicyTemplatePublicationPlan = null;
+      currentPolicyTemplatePublicationRequest = null;
+      updatePolicyTemplatePublicationApplyButton();
+      button.disabled = true;
+      button.textContent = "Previewing";
+      container.replaceChildren(row("Previewing publication", "Building no-write package-template publication plan.", "degraded"));
+      fetch("/api/policy-management/template-publication/plan", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(requestPayload),
+      })
+        .then((response) => response.json())
+        .then((plan) => {
+          currentPolicyTemplatePublicationPlan = plan;
+          currentPolicyTemplatePublicationRequest = requestPayload;
+          renderPolicyTemplatePublicationPlan(plan);
+        })
+        .catch((error) => container.replaceChildren(row("Preview failed", error.message, "unavailable")))
+        .finally(() => {
+          button.disabled = false;
+          button.textContent = "Preview publication";
+          updatePolicyTemplatePublicationApplyButton();
+        });
+    };
+    const applyPolicyTemplatePublicationPlan = () => {
+      const button = document.getElementById("policy-template-publication-apply-button");
+      const container = document.getElementById("policy-template-publication-plan-result");
+      if (!currentPolicyTemplatePublicationPlan || !currentPolicyTemplatePublicationRequest || !policyTemplatePublicationApplyReady(currentPolicyTemplatePublicationPlan)) {
+        container.replaceChildren(row("Plan required", "Preview and review a package-template publication plan before applying.", "unavailable"));
+        updatePolicyTemplatePublicationApplyButton();
+        return;
+      }
+      const writeCount = (currentPolicyTemplatePublicationPlan.write_set || []).length;
+      const confirmed = window.confirm(
+        `Publish this project policy as a package template?\n\nPolicy: ${currentPolicyTemplatePublicationPlan.policy_id || "policy"}\nDecision: ${currentPolicyTemplatePublicationPlan.distribution_decision || "decision"}\nPackage-template files to write: ${writeCount}\n\nThis writes a reviewed package policy template through the guarded writer. It does not activate project policies or update starter-pack manifests.`
+      );
+      if (!confirmed) {
+        return;
+      }
+      button.disabled = true;
+      button.textContent = "Publishing";
+      fetch("/api/policy-management/template-publication/apply", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          ...currentPolicyTemplatePublicationRequest,
+          reviewed_source_policy_sha256: currentPolicyTemplatePublicationPlan.source_policy_sha256 || null,
+          reviewed_target_template_path: currentPolicyTemplatePublicationPlan.target_template_path || null,
+          confirm_apply: true,
+          approval_phrase: POLICY_TEMPLATE_PUBLICATION_APPROVAL_PHRASE,
+          approval_source: "studio_confirmation_dialog",
+        }),
+      })
+        .then((response) => response.json())
+        .then(renderPolicyTemplatePublicationApplyResult)
+        .catch((error) => container.replaceChildren(row("Apply failed", error.message, "unavailable")))
+        .finally(() => {
+          button.textContent = "Publish guarded template";
+          updatePolicyTemplatePublicationApplyButton();
+        });
     };
     const packageTemplates = (report) => ((report.package_templates || {}).templates || []);
     const selectedTemplateRecord = (report) => {
@@ -1809,7 +2080,7 @@ INDEX_HTML = """<!doctype html>
       const resolved = currentPolicyTemplateActivationPlan.resolved_policy_preview || {};
       const writeCount = (currentPolicyTemplateActivationPlan.write_set || []).length;
       const confirmed = window.confirm(
-        `Activate this policy template?\n\nPolicy: ${resolved.policy_id || "policy"}\nTemplate: ${currentPolicyTemplateActivationPlan.template_ref || "template"}\nProjected writes: ${writeCount}\n\nThis writes a proposal snapshot, approved policy, decision record, and manifest ref through the guarded writer.`
+        `Activate this policy template?\n\nPolicy: ${resolved.policy_id || "policy"}\nTemplate: ${currentPolicyTemplateActivationPlan.template_ref || "template"}\nPolicy-store records/files to write: ${writeCount}\n\nThis persists a proposal snapshot, approved policy, decision record, and manifest ref through the guarded writer. It does not execute policy actions.`
       );
       if (!confirmed) {
         return;
@@ -1994,7 +2265,7 @@ INDEX_HTML = """<!doctype html>
       }
       const writeCount = (currentPolicyEvolutionPlan.write_set || []).length;
       const confirmed = window.confirm(
-        `Apply this policy evolution write?\n\nTarget: ${currentPolicyEvolutionPlan.target_policy_ref || "policy"}\nOperation: ${currentPolicyEvolutionPlan.operation || "operation"}\nProjected writes: ${writeCount}\n\nThis writes policy-store proposal, decision, and manifest records through the guarded writer.`
+        `Apply this policy evolution write?\n\nTarget: ${currentPolicyEvolutionPlan.target_policy_ref || "policy"}\nOperation: ${currentPolicyEvolutionPlan.operation || "operation"}\nPolicy-store records/files to write: ${writeCount}\n\nThis persists policy-store proposal, decision, manifest, and target/replacement policy records through the guarded writer. It does not execute policy actions.`
           + `${currentPolicyEvolutionPlan.operation === "refine_policy" ? "\\nFor refinement, the target policy trigger profile is updated and reread for verification." : ""}`
       );
       if (!confirmed) {
@@ -2024,21 +2295,25 @@ INDEX_HTML = """<!doctype html>
     const renderPolicyManagementFallback = (title, detail, status) => {
       policyManagementReport = null;
       populatePolicyEvolutionTargets({policy_store: {active_policies: []}});
+      populatePolicyTemplatePublicationTargets({policy_store: {active_policies: []}});
       populatePolicyTemplateActivationTargets({package_templates: {templates: []}});
       document.getElementById("policy-management-status").className = statusClass(status || "unavailable");
       document.getElementById("policy-management-status").textContent = status || "unavailable";
       document.getElementById("policy-management-metrics").replaceChildren(metric(title, detail));
-      ["policy-active-list", "policy-candidate-list", "policy-template-list", "policy-starter-pack-list", "policy-operation-list", "policy-limitation-list", "policy-selected-config", "policy-template-selected-config"].forEach((id) => {
+      ["policy-active-list", "policy-candidate-list", "policy-template-list", "policy-starter-pack-list", "policy-operation-list", "policy-limitation-list", "policy-selected-config", "policy-template-publication-selected-config", "policy-template-selected-config"].forEach((id) => {
         document.getElementById(id).replaceChildren(compactItem(title, detail));
       });
       document.getElementById("policy-selected-summary").replaceChildren(compactItem(title, detail));
       document.getElementById("policy-selected-trigger-tags").replaceChildren(tag(status || "unavailable", status || "unavailable"));
+      document.getElementById("policy-template-publication-selected-summary").replaceChildren(compactItem(title, detail));
+      document.getElementById("policy-template-publication-selected-tags").replaceChildren(tag(status || "unavailable", status || "unavailable"));
       document.getElementById("policy-template-selected-summary").replaceChildren(compactItem(title, detail));
       document.getElementById("policy-template-selected-tags").replaceChildren(tag(status || "unavailable", status || "unavailable"));
     };
     const renderPolicyManagement = (report, studioData) => {
       policyManagementReport = report;
       populatePolicyEvolutionTargets(report);
+      populatePolicyTemplatePublicationTargets(report);
       populatePolicyTemplateActivationTargets(report);
       const status = report.status || "unavailable";
       const statusBadge = document.getElementById("policy-management-status");
@@ -2663,6 +2938,14 @@ INDEX_HTML = """<!doctype html>
       invalidatePolicyTemplateActivationPlan();
       renderSelectedTemplateDetail(policyManagementReport || {});
     });
+    document.getElementById("policy-template-publication-preview-button").addEventListener("click", previewPolicyTemplatePublicationPlan);
+    document.getElementById("policy-template-publication-apply-button").addEventListener("click", applyPolicyTemplatePublicationPlan);
+    document.getElementById("policy-template-publication-policy").addEventListener("change", () => {
+      invalidatePolicyTemplatePublicationPlan();
+      renderSelectedPublicationPolicyDetail(policyManagementReport || {});
+    });
+    document.getElementById("policy-template-publication-decision").addEventListener("change", invalidatePolicyTemplatePublicationPlan);
+    updatePolicyTemplatePublicationApplyButton();
     updatePolicyTemplateActivationApplyButton();
   </script>
 </body>
@@ -2739,6 +3022,69 @@ def policy_evolution_args_from_payload(request_payload: dict[str, Any]) -> dict[
     }
 
 
+def studio_active_policy_path_from_payload(
+    request_payload: dict[str, Any],
+    *,
+    project_root: Path | None = None,
+) -> tuple[Path | None, str | None]:
+    resolved_root = project_state.discover_project_root(project_root=project_root)
+    allowed_root = (resolved_root / ".jikuo" / "policies" / "approved").resolve()
+    raw_path = optional_string(request_payload.get("source_policy_path")) or optional_string(
+        request_payload.get("policy_path")
+    )
+    raw_ref = optional_string(request_payload.get("policy_ref"))
+
+    if raw_path:
+        candidate = Path(raw_path).expanduser()
+        if not candidate.is_absolute():
+            candidate = resolved_root / candidate
+        policy_path = candidate.resolve()
+    elif raw_ref:
+        if "/" in raw_ref or "\\" in raw_ref:
+            return None, f"policy_ref_must_not_include_path_separators:{raw_ref}"
+        filename = raw_ref if raw_ref.endswith(".yaml") else f"{raw_ref}.yaml"
+        policy_path = (allowed_root / filename).resolve()
+    else:
+        return None, "policy_ref_or_source_policy_path_required"
+
+    try:
+        policy_path.relative_to(allowed_root)
+    except ValueError:
+        return None, f"source_policy_path_outside_approved_policy_store:{policy_path}"
+    if not policy_path.is_file():
+        return None, f"source_policy_file_missing:{policy_path}"
+    return policy_path, None
+
+
+def policy_template_publication_args_from_payload(
+    request_payload: dict[str, Any],
+    *,
+    project_root: Path | None = None,
+) -> tuple[dict[str, Any] | None, str | None]:
+    source_policy_path, refusal = studio_active_policy_path_from_payload(
+        request_payload,
+        project_root=project_root,
+    )
+    if refusal or source_policy_path is None:
+        return None, refusal or "source_policy_required"
+    return (
+        {
+            "source_policy_path": source_policy_path,
+            "decision": optional_string(request_payload.get("distribution_decision"))
+            or "optional_template",
+            "namespace": optional_string(request_payload.get("namespace"))
+            or policy_templates.DEFAULT_NAMESPACE,
+            "source_project_ref": optional_string(
+                request_payload.get("source_project_ref")
+            ),
+            "starter_pack_id": optional_string(request_payload.get("starter_pack_id"))
+            or "engineering_governance",
+            "rationale": optional_string(request_payload.get("rationale")),
+        },
+        None,
+    )
+
+
 def package_policy_templates_root() -> Path:
     return (policy_management_status.package_root() / "policy_templates").resolve()
 
@@ -2793,6 +3139,45 @@ def template_activation_refusal_payload(
             "route": "policy_template_activation",
             "method": "POST",
             "write_mode": "guarded" if schema == policy_templates.POLICY_TEMPLATE_ACTIVATION_RESULT_SCHEMA else "no-write-plan",
+            "writes_performed": False,
+            "write_allowed_by_command": False,
+        },
+    }
+
+
+def template_publication_refusal_payload(
+    *,
+    request_payload: dict[str, Any],
+    refusal_reason: str,
+    schema: str,
+) -> dict[str, Any]:
+    return {
+        "schema": schema,
+        "schema_version": schema,
+        "status": "refused",
+        "report_only": schema == policy_templates.POLICY_TEMPLATE_PUBLICATION_PLAN_SCHEMA,
+        "write_performed": False,
+        "writes_performed": False,
+        "write_allowed_by_command": False,
+        "policy_ref": optional_string(request_payload.get("policy_ref")),
+        "source_policy_path": optional_string(request_payload.get("source_policy_path")),
+        "distribution_decision": optional_string(
+            request_payload.get("distribution_decision")
+        ),
+        "target_template_path": None,
+        "target_template_ref": None,
+        "template_ref": None,
+        "refusal_reasons": [refusal_reason],
+        "warnings": [],
+        "written_paths": [],
+        "created_paths": [],
+        "studio_web": {
+            "schema": STUDIO_WEB_SCHEMA,
+            "route": "policy_template_publication",
+            "method": "POST",
+            "write_mode": "guarded"
+            if schema == policy_templates.POLICY_TEMPLATE_PUBLICATION_RESULT_SCHEMA
+            else "no-write-plan",
             "writes_performed": False,
             "write_allowed_by_command": False,
         },
@@ -2953,6 +3338,120 @@ def api_policy_evolution_apply_payload(
         "write_allowed_by_command": bool(result.get("write_performed")),
         "approval_source": optional_string(request_payload.get("approval_source")),
         "reviewed_proposal_ref": reviewed_proposal_ref,
+    }
+    return HTTPStatus.OK, result
+
+
+def api_policy_template_publication_plan_payload(
+    request_payload: Any,
+    *,
+    project_root: Path | None = None,
+) -> tuple[int, dict[str, Any]]:
+    if not isinstance(request_payload, dict):
+        return HTTPStatus.BAD_REQUEST, {
+            "schema": STUDIO_WEB_SCHEMA,
+            "status": "invalid_request",
+            "message": "policy template publication plan requests must be JSON objects",
+            "writes_performed": False,
+            "write_allowed_by_command": False,
+        }
+    publication_args, refusal = policy_template_publication_args_from_payload(
+        request_payload,
+        project_root=project_root,
+    )
+    if refusal or publication_args is None:
+        payload = template_publication_refusal_payload(
+            request_payload=request_payload,
+            refusal_reason=refusal or "source_policy_required",
+            schema=policy_templates.POLICY_TEMPLATE_PUBLICATION_PLAN_SCHEMA,
+        )
+        payload["studio_web"]["route"] = "/api/policy-management/template-publication/plan"
+        return HTTPStatus.OK, payload
+    plan = policy_templates.build_template_publication_plan(**publication_args)
+    plan["studio_web"] = {
+        "schema": STUDIO_WEB_SCHEMA,
+        "route": "/api/policy-management/template-publication/plan",
+        "method": "POST",
+        "write_mode": "no-write-plan",
+        "writes_performed": False,
+        "write_allowed_by_command": False,
+    }
+    return HTTPStatus.OK, plan
+
+
+def api_policy_template_publication_apply_payload(
+    request_payload: Any,
+    *,
+    project_root: Path | None = None,
+) -> tuple[int, dict[str, Any]]:
+    if not isinstance(request_payload, dict):
+        return HTTPStatus.BAD_REQUEST, {
+            "schema": STUDIO_WEB_SCHEMA,
+            "status": "invalid_request",
+            "message": "policy template publication apply requests must be JSON objects",
+            "writes_performed": False,
+            "write_allowed_by_command": False,
+        }
+    publication_args, refusal = policy_template_publication_args_from_payload(
+        request_payload,
+        project_root=project_root,
+    )
+    if refusal or publication_args is None:
+        payload = template_publication_refusal_payload(
+            request_payload=request_payload,
+            refusal_reason=refusal or "source_policy_required",
+            schema=policy_templates.POLICY_TEMPLATE_PUBLICATION_RESULT_SCHEMA,
+        )
+        payload["studio_web"]["route"] = "/api/policy-management/template-publication/apply"
+        return HTTPStatus.OK, payload
+
+    reviewed_source_sha = optional_string(
+        request_payload.get("reviewed_source_policy_sha256")
+    )
+    reviewed_target_path = optional_string(
+        request_payload.get("reviewed_target_template_path")
+    )
+    if reviewed_source_sha or reviewed_target_path:
+        preview_plan = policy_templates.build_template_publication_plan(
+            **publication_args
+        )
+        mismatches: list[str] = []
+        if reviewed_source_sha and preview_plan.get("source_policy_sha256") != reviewed_source_sha:
+            mismatches.append("reviewed_source_policy_sha256_does_not_match_current_source")
+        if reviewed_target_path and preview_plan.get("target_template_path") != reviewed_target_path:
+            mismatches.append("reviewed_target_template_path_does_not_match_current_request")
+        if mismatches:
+            payload = template_publication_refusal_payload(
+                request_payload=request_payload,
+                refusal_reason=";".join(mismatches),
+                schema=policy_templates.POLICY_TEMPLATE_PUBLICATION_RESULT_SCHEMA,
+            )
+            payload["studio_web"]["route"] = "/api/policy-management/template-publication/apply"
+            payload["reviewed_source_policy_sha256"] = reviewed_source_sha
+            payload["current_source_policy_sha256"] = preview_plan.get(
+                "source_policy_sha256"
+            )
+            payload["reviewed_target_template_path"] = reviewed_target_path
+            payload["current_target_template_path"] = preview_plan.get(
+                "target_template_path"
+            )
+            return HTTPStatus.OK, payload
+
+    result, _exit_code = policy_templates.publish_template_from_distribution(
+        **publication_args,
+        confirmed=bool(request_payload.get("confirm_apply")),
+        approval_phrase=optional_string(request_payload.get("approval_phrase")),
+    )
+    result["studio_web"] = {
+        "schema": STUDIO_WEB_SCHEMA,
+        "route": "/api/policy-management/template-publication/apply",
+        "method": "POST",
+        "write_mode": "guarded",
+        "writes_performed": bool(result.get("write_performed")),
+        "write_allowed_by_command": bool(result.get("write_performed")),
+        "approval_source": optional_string(request_payload.get("approval_source")),
+        "reviewed_source_policy_sha256": reviewed_source_sha,
+        "reviewed_target_template_path": reviewed_target_path,
     }
     return HTTPStatus.OK, result
 
@@ -3141,6 +3640,8 @@ def make_handler(project_root: Path | None = None) -> type[BaseHTTPRequestHandle
                 "/api/document-rules/apply",
                 "/api/policy-management/evolution/plan",
                 "/api/policy-management/evolution/apply",
+                "/api/policy-management/template-publication/plan",
+                "/api/policy-management/template-publication/apply",
                 "/api/policy-management/template-activation/plan",
                 "/api/policy-management/template-activation/apply",
             }:
@@ -3205,6 +3706,16 @@ def make_handler(project_root: Path | None = None) -> type[BaseHTTPRequestHandle
                 )
             elif route == "/api/policy-management/evolution/apply":
                 status, payload = api_policy_evolution_apply_payload(
+                    request_payload,
+                    project_root=project_root,
+                )
+            elif route == "/api/policy-management/template-publication/plan":
+                status, payload = api_policy_template_publication_plan_payload(
+                    request_payload,
+                    project_root=project_root,
+                )
+            elif route == "/api/policy-management/template-publication/apply":
+                status, payload = api_policy_template_publication_apply_payload(
                     request_payload,
                     project_root=project_root,
                 )

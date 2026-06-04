@@ -6,6 +6,7 @@ import tempfile
 import threading
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
@@ -14,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from jikuo.integrations.studio_web import server  # noqa: E402
+from jikuo.studio import project_files  # noqa: E402
 
 
 def write_project_context(root: Path) -> None:
@@ -48,6 +50,44 @@ def touch(root: Path, rel: str) -> None:
     path = root / rel
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(f"# {path.name}\n", encoding="utf-8")
+
+
+def write_active_policy(root: Path, policy_id: str) -> Path:
+    path = root / ".jikuo" / "policies" / "approved" / f"{policy_id}.yaml"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        "\n".join(
+            [
+                'schema_version: "jikuo.configurable_rule_policy.v0"',
+                f'policy_id: "{policy_id}"',
+                "version: 1",
+                'status: "active_report_only"',
+                'title: "Studio template publication fixture"',
+                'scenario_package: "engineering_governance"',
+                "source_refs:",
+                '  - type: "test_fixture"',
+                f'    ref: "tests:{policy_id}"',
+                "triggers:",
+                '  - trigger_id: "TRG-conversation-turn"',
+                '    type: "task_lifecycle_event"',
+                '    event: "conversation_turn"',
+                "conditions: []",
+                "required_actions:",
+                '  - action_id: "ACT-review"',
+                '    type: "review"',
+                "required_evidence:",
+                '  - evidence_id: "EVD-review"',
+                '    type: "review_evidence"',
+                '    satisfies_action: "ACT-review"',
+                "enforcement:",
+                '  phase: "report_only"',
+                '  level: "review_required"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    return path
 
 
 class StudioWebServerTests(unittest.TestCase):
@@ -91,6 +131,32 @@ class StudioWebServerTests(unittest.TestCase):
         self.assertFalse(files["writes_performed"])
         self.assertFalse(policy_status["writes_performed"])
         self.assertFalse(health["writes_performed"])
+
+    def test_project_file_inventory_skips_files_that_disappear_during_scan(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            write_project_context(project_root)
+            vanished = project_root / "docs" / "vanished.md"
+
+            with patch.object(
+                project_files,
+                "iter_project_document_files",
+                return_value=[vanished],
+            ):
+                inventory = project_files.build_project_file_inventory(
+                    project_root=project_root,
+                )
+
+            self.assertEqual(inventory["status"], "degraded")
+            self.assertEqual(inventory["item_count"], 0)
+            self.assertEqual(inventory["total_candidate_count"], 1)
+            self.assertEqual(inventory["skipped_during_scan_count"], 1)
+            self.assertEqual(inventory["items"], [])
+            self.assertIn(
+                "project_file_disappeared_during_scan",
+                {item.get("code") for item in inventory["warnings"]},
+            )
 
     def test_document_rules_plan_api_returns_no_write_plan(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -282,6 +348,71 @@ class StudioWebServerTests(unittest.TestCase):
                 / "POLICY-jikuo-data-model-drift-alarm.yaml"
             ).read_text(encoding="utf-8")
             self.assertIn('pattern: "src/jikuo/**"', policy_text)
+
+    def test_policy_template_publication_plan_api_returns_no_write_plan(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            write_project_context(project_root)
+            policy_id = "POLICY-studio-template-publication-fixture"
+            write_active_policy(project_root, policy_id)
+
+            status_code, plan = server.api_policy_template_publication_plan_payload(
+                {
+                    "policy_ref": policy_id,
+                    "distribution_decision": "optional_template",
+                },
+                project_root=project_root,
+            )
+
+            self.assertEqual(status_code, 200)
+            self.assertEqual(plan["schema"], "jikuo.policy_template_publication_plan.v0")
+            self.assertEqual(plan["status"], "review")
+            self.assertEqual(plan["policy_id"], policy_id)
+            self.assertEqual(plan["distribution_decision"], "optional_template")
+            self.assertTrue(plan["target_template_path"])
+            self.assertEqual(len(plan["write_set"]), 1)
+            self.assertFalse(plan["writes_performed"])
+            self.assertFalse(plan["write_allowed_by_command"])
+            self.assertEqual(
+                plan["studio_web"]["route"],
+                "/api/policy-management/template-publication/plan",
+            )
+            self.assertEqual(plan["studio_web"]["write_mode"], "no-write-plan")
+
+    def test_policy_template_publication_apply_api_refuses_review_mismatch(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            write_project_context(project_root)
+            policy_id = "POLICY-studio-template-publication-mismatch"
+            write_active_policy(project_root, policy_id)
+
+            status_code, result = server.api_policy_template_publication_apply_payload(
+                {
+                    "policy_ref": policy_id,
+                    "distribution_decision": "optional_template",
+                    "reviewed_source_policy_sha256": "not-the-current-source",
+                    "confirm_apply": True,
+                    "approval_phrase": "Approve Policy Template publication",
+                    "approval_source": "studio_confirmation_dialog",
+                },
+                project_root=project_root,
+            )
+
+            self.assertEqual(status_code, 200)
+            self.assertEqual(result["schema"], "jikuo.policy_template_publication_result.v0")
+            self.assertEqual(result["status"], "refused")
+            self.assertFalse(result["write_performed"])
+            self.assertIn(
+                "reviewed_source_policy_sha256_does_not_match_current_source",
+                ";".join(result["refusal_reasons"]),
+            )
+            self.assertEqual(
+                result["studio_web"]["route"],
+                "/api/policy-management/template-publication/apply",
+            )
+            self.assertFalse(result["studio_web"]["writes_performed"])
 
     def test_policy_template_activation_plan_api_returns_no_write_plan(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -517,6 +648,18 @@ class StudioWebServerTests(unittest.TestCase):
         self.assertIn("policy-editor-grid", html)
         self.assertIn("policy-editor-note", html)
         self.assertIn("policy-action-buttons", html)
+        self.assertIn("Template publication preview", html)
+        self.assertIn("policy-template-publication-policy", html)
+        self.assertIn("policy-template-publication-decision", html)
+        self.assertIn("policy-template-publication-preview-button", html)
+        self.assertIn("policy-template-publication-apply-button", html)
+        self.assertIn("policy-template-publication-plan-result", html)
+        self.assertIn("POLICY_TEMPLATE_PUBLICATION_APPROVAL_PHRASE", html)
+        self.assertIn("previewPolicyTemplatePublicationPlan", html)
+        self.assertIn("applyPolicyTemplatePublicationPlan", html)
+        self.assertIn("/api/policy-management/template-publication/plan", html)
+        self.assertIn("/api/policy-management/template-publication/apply", html)
+        self.assertIn("Publish guarded template", html)
         self.assertIn("Template activation preview", html)
         self.assertIn("policy-template-activation-template", html)
         self.assertIn("policy-template-selected-summary", html)
@@ -531,6 +674,9 @@ class StudioWebServerTests(unittest.TestCase):
         self.assertIn("applyPolicyTemplateActivationPlan", html)
         self.assertIn("renderPolicyTemplateActivationPlan", html)
         self.assertIn("Apply guarded activation", html)
+        self.assertIn("Policy-store records/files to write", html)
+        self.assertIn("It does not execute policy actions", html)
+        self.assertNotIn("Projected writes", html)
         self.assertIn("@media (max-width: 1180px)", html)
         self.assertIn("Status reason", html)
         self.assertIn("Apply readiness", html)

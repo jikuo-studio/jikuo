@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-MVP-01: Work Receipt And Configuration MVP
 
-> **Status**: Planned MVP work-order sequence.
+> **Status**: Planned MVP work-order sequence; configuration surface now includes policy read UI, guarded policy evolution/refinement, guarded active-policy package-template publication, and guarded package-template activation slices.
 > **Date**: 2026-06-03
 > **JIKUO layer**: product slice / Studio surface / runtime evidence projection.
 > **Business meaning**: Ship a small usable JIKUO version where a test user can configure documents and policies, let the host AI work, and then inspect an independently checkable AI work receipt without trusting the AI's chat summary.
@@ -501,6 +501,9 @@ Implementation status:
   the four-item policy-store write set, disables apply if selection changes,
   checks the reviewed `plan_id`, and delegates to the existing guarded template
   activation writer after confirmation;
+- template activation now stable-dedupes resolved policy `source_refs` by
+  `(type, ref)`, preserving template, template-file, and project-context
+  provenance while preventing repeated source rows in approved policies;
 - remaining work: build the actual guarded interaction surfaces for active
   policy deactivation beyond deprecation/supersession, policy-to-template
   publication, starter-manifest publication, and broader policy editing beyond

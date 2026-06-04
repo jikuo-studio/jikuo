@@ -1134,6 +1134,29 @@ class PolicyTemplateTests(unittest.TestCase):
             approved_text = approved_path.read_text(encoding="utf-8")
             self.assertIn('template_ref: "POLICYTEMPLATE-local-policy-task-scope-control-before-packaging"', approved_text)
             self.assertIn("resolved_bindings:", approved_text)
+            approved_policy = policy_templates.read_yaml_subset(approved_path)
+            source_refs = approved_policy["source_refs"]
+            template_source_refs = [
+                item
+                for item in source_refs
+                if item.get("type") == "policy_template"
+                and item.get("ref")
+                == "POLICYTEMPLATE-local-policy-task-scope-control-before-packaging"
+            ]
+            self.assertEqual(len(template_source_refs), 1)
+            template_file_source_refs = [
+                item
+                for item in source_refs
+                if item.get("type") == "policy_template_file"
+                and str(item.get("ref", "")).endswith(
+                    "POLICYTEMPLATE-local-policy-task-scope-control-before-packaging.yaml"
+                )
+            ]
+            self.assertEqual(len(template_file_source_refs), 1)
+            self.assertIn(
+                {"type": "project_context", "ref": ".jikuo/project_context.yaml"},
+                source_refs,
+            )
             self.assertTrue((root / ".jikuo" / "policies" / "manifest.yaml").is_file())
 
 

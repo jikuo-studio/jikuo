@@ -11,8 +11,6 @@ source_refs:
     ref: "pkg://jikuo/policy_templates/engineering_governance/POLICYTEMPLATE-local-policy-desktop-workflow-acceptance-card-and-summary.yaml"
   - type: "project_context"
     ref: ".jikuo/project_context.yaml"
-  - type: "policy_template"
-    ref: "POLICYTEMPLATE-local-policy-desktop-workflow-acceptance-card-and-summary"
 applies_to_work_profile:
   - lifecycle_events: ["task_start"]
     policy_scopes: ["discussion", "progress_summary"]

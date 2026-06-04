@@ -1613,6 +1613,30 @@ def replace_exact_refs(value: Any, resolution_map: dict[str, str]) -> Any:
     return value
 
 
+def source_ref_dedupe_key(item: Any) -> tuple[str, str]:
+    if isinstance(item, dict):
+        source_type = item.get("type")
+        source_ref = item.get("ref")
+        if isinstance(source_type, str) and isinstance(source_ref, str):
+            return ("typed_ref", f"{source_type}\0{source_ref}")
+        return ("dict", json.dumps(item, sort_keys=True, default=str))
+    if isinstance(item, str):
+        return ("str", item)
+    return ("other", repr(item))
+
+
+def dedupe_source_refs(source_refs: list[Any]) -> list[Any]:
+    deduped: list[Any] = []
+    seen: set[tuple[str, str]] = set()
+    for item in source_refs:
+        key = source_ref_dedupe_key(item)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(item)
+    return deduped
+
+
 def build_resolved_policy_preview(
     *,
     template: dict[str, Any],
@@ -1635,21 +1659,23 @@ def build_resolved_policy_preview(
     if not isinstance(source_refs, list):
         source_refs = []
     template_ref = template.get("template_id")
-    policy["source_refs"] = [
-        {
-            "type": "policy_template",
-            "ref": template_ref,
-        },
-        {
-            "type": "policy_template_file",
-            "ref": template_file_ref(template_path, project_root),
-        },
-        {
-            "type": "project_context",
-            "ref": PROJECT_CONTEXT_REF,
-        },
-        *source_refs,
-    ]
+    policy["source_refs"] = dedupe_source_refs(
+        [
+            {
+                "type": "policy_template",
+                "ref": template_ref,
+            },
+            {
+                "type": "policy_template_file",
+                "ref": template_file_ref(template_path, project_root),
+            },
+            {
+                "type": "project_context",
+                "ref": PROJECT_CONTEXT_REF,
+            },
+            *source_refs,
+        ]
+    )
     policy["template_ref"] = template_ref
     policy["project_context_ref"] = PROJECT_CONTEXT_REF
     policy["resolved_bindings"] = [
