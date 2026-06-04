@@ -1,0 +1,8 @@
+schema_version: "jikuo.policy_template_import_plan.v0"
+plan_id: "POLICYTEMPLATEIMPORT-25d8682871"
+template_ref: "POLICYTEMPLATE-local-policy-desktop-workflow-acceptance-card-and-summary"
+policy_ref: "POLICY-desktop-workflow-acceptance-card-and-summary"
+project_context_ref: ".jikuo/project_context.yaml"
+status: "approved_for_template_activation"
+resolved_bindings: []
+non_effects: ["does not write .jikuo/policies/", "does not approve or activate the policy", "does not write .jikuo/project_context.yaml", "does not resolve missing role bindings in this MVP"]

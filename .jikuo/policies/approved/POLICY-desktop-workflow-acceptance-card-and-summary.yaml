@@ -1,0 +1,42 @@
+schema_version: "jikuo.configurable_rule_policy.v0"
+policy_id: "POLICY-desktop-workflow-acceptance-card-and-summary"
+version: 1
+status: "active_report_only"
+title: "Desktop workflow acceptance card and summary"
+scenario_package: "engineering_governance"
+source_refs:
+  - type: "policy_template"
+    ref: "POLICYTEMPLATE-local-policy-desktop-workflow-acceptance-card-and-summary"
+  - type: "policy_template_file"
+    ref: "pkg://jikuo/policy_templates/engineering_governance/POLICYTEMPLATE-local-policy-desktop-workflow-acceptance-card-and-summary.yaml"
+  - type: "project_context"
+    ref: ".jikuo/project_context.yaml"
+  - type: "policy_template"
+    ref: "POLICYTEMPLATE-local-policy-desktop-workflow-acceptance-card-and-summary"
+applies_to_work_profile:
+  - lifecycle_events: ["task_start"]
+    policy_scopes: ["discussion", "progress_summary"]
+triggers:
+  - trigger_id: "TRG-task-start"
+    type: "task_lifecycle_event"
+    event: "task_start"
+conditions:
+  - condition_id: "COND-policy-desktop-workflow-acceptance-card-and-summary-task-type"
+    type: "task_type_is"
+    value: "workflow_acceptance"
+  - condition_id: "COND-policy-desktop-workflow-acceptance-card-and-summary-jikuo-layer"
+    type: "jikuo_layer_is"
+    value: "desktop_agent_governance"
+required_actions:
+  - action_id: "ACT-render-original-proposal-card-and-summary"
+    type: "render_original_proposal_card_and_summary"
+required_evidence:
+  - evidence_id: "EVD-original-proposal-card-and-summary-evidence"
+    type: "original_proposal_card_and_summary_evidence"
+    satisfies_action: "ACT-render-original-proposal-card-and-summary"
+enforcement:
+  phase: "report_only"
+  level: "review_required"
+template_ref: "POLICYTEMPLATE-local-policy-desktop-workflow-acceptance-card-and-summary"
+project_context_ref: ".jikuo/project_context.yaml"
+resolved_bindings: []

@@ -1,0 +1,18 @@
+schema_version: "jikuo.policy_decision.v0"
+decision_id: "POLICYDECISION-2c3f8d5cae"
+proposal_ref: ".jikuo/policies/proposals/POLICYPROPOSAL-2c3f8d5cae.yaml"
+policy_ref: "POLICY-desktop-workflow-acceptance-card-and-summary"
+decision: "approve_policy_template_activation"
+target:
+  kind: "policy_template_activation"
+  template_ref: "POLICYTEMPLATE-local-policy-desktop-workflow-acceptance-card-and-summary"
+  ref: "POLICY-desktop-workflow-acceptance-card-and-summary"
+effect: "activate template POLICYTEMPLATE-local-policy-desktop-workflow-acceptance-card-and-summary as approved policy POLICY-desktop-workflow-acceptance-card-and-summary"
+non_effect: "does not execute policy actions, persist evidence, promote gates, or modify package templates"
+approval_phrase: "Approve Policy Template activation"
+created_at: "2026-06-04T09:54:53Z"
+source_plan_ref: "POLICYTEMPLATEIMPORT-25d8682871"
+source_plan_schema: "jikuo.policy_template_import_plan.v0"
+storage:
+  path: ".jikuo/policies/decisions/POLICYDECISION-2c3f8d5cae.yaml"
+  policy_store_ref: ".jikuo/policies"
