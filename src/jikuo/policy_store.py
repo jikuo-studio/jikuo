@@ -30,6 +30,7 @@ else:
 POLICY_STORE_STATUS_SCHEMA = "jikuo.policy_store_status.v0"
 POLICY_TRIGGER_EVAL_REPORT_SCHEMA = "jikuo.policy_trigger_eval_report.v0"
 POLICY_WRITE_PLAN_SCHEMA = "jikuo.policy_write_plan.v0"
+POLICY_PROPOSAL_ACTIVATION_PLAN_SCHEMA = "jikuo.policy_proposal_activation_plan.v0"
 POLICY_EVOLUTION_PLAN_SCHEMA = "jikuo.policy_evolution_plan.v0"
 POLICY_WRITE_RESULT_SCHEMA = "jikuo.policy_write_result.v0"
 POLICY_STORE_MANIFEST_SCHEMA = "jikuo.policy_store_manifest.v0"
@@ -260,6 +261,108 @@ def render_yaml_lines(value: Any, indent: int = 0) -> list[str]:
 
 def render_yaml_document(record: dict[str, Any]) -> str:
     return "\n".join(render_yaml_lines(record)) + "\n"
+
+
+def yaml_value_lines(path: Path) -> list[tuple[int, str]]:
+    lines: list[tuple[int, str]] = []
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        if not raw_line.strip() or raw_line.lstrip().startswith("#"):
+            continue
+        lines.append((len(raw_line) - len(raw_line.lstrip(" ")), raw_line.strip()))
+    return lines
+
+
+def parse_yaml_block(
+    lines: list[tuple[int, str]],
+    index: int,
+    indent: int,
+) -> tuple[Any, int]:
+    if index >= len(lines):
+        return {}, index
+    current_indent, text = lines[index]
+    if current_indent < indent:
+        return {}, index
+    if text.startswith("-"):
+        return parse_yaml_list(lines, index, current_indent)
+    return parse_yaml_mapping(lines, index, current_indent)
+
+
+def parse_yaml_mapping(
+    lines: list[tuple[int, str]],
+    index: int,
+    indent: int,
+) -> tuple[dict[str, Any], int]:
+    result: dict[str, Any] = {}
+    while index < len(lines):
+        current_indent, text = lines[index]
+        if current_indent < indent:
+            break
+        if current_indent > indent:
+            index += 1
+            continue
+        if text.startswith("-"):
+            break
+        if ":" not in text:
+            index += 1
+            continue
+        key, value = text.split(":", 1)
+        key = key.strip()
+        value = value.strip()
+        index += 1
+        if value:
+            result[key] = unquote_scalar(value)
+            continue
+        if index < len(lines) and lines[index][0] > current_indent:
+            child, index = parse_yaml_block(lines, index, lines[index][0])
+            result[key] = child
+        else:
+            result[key] = []
+    return result, index
+
+
+def parse_yaml_list(
+    lines: list[tuple[int, str]],
+    index: int,
+    indent: int,
+) -> tuple[list[Any], int]:
+    result: list[Any] = []
+    while index < len(lines):
+        current_indent, text = lines[index]
+        if current_indent < indent:
+            break
+        if current_indent > indent:
+            index += 1
+            continue
+        if not text.startswith("-"):
+            break
+        item_text = text[1:].strip()
+        index += 1
+        if not item_text:
+            if index < len(lines) and lines[index][0] > current_indent:
+                child, index = parse_yaml_block(lines, index, lines[index][0])
+                result.append(child)
+            else:
+                result.append(None)
+            continue
+        if ":" in item_text:
+            key, value = item_text.split(":", 1)
+            item: dict[str, Any] = {key.strip(): unquote_scalar(value.strip())}
+            if index < len(lines) and lines[index][0] > current_indent:
+                child, index = parse_yaml_mapping(lines, index, lines[index][0])
+                if isinstance(child, dict):
+                    item.update(child)
+            result.append(item)
+            continue
+        result.append(unquote_scalar(item_text))
+    return result, index
+
+
+def read_yaml_subset(path: Path) -> dict[str, Any]:
+    lines = yaml_value_lines(path)
+    if not lines:
+        return {}
+    parsed, _ = parse_yaml_block(lines, 0, lines[0][0])
+    return parsed if isinstance(parsed, dict) else {}
 
 
 def resolve_project_path(project_root: Path, raw_path: str) -> tuple[Path | None, str | None]:
@@ -2834,6 +2937,612 @@ def write_policy_from_plan(
             "post_write_verification": {
                 "reread_ok": status_after["policy_store_status"] == "active",
                 "proposal_snapshot_written": proposal_path.is_file(),
+                "decision_record_written": decision_path.is_file(),
+                "manifest_updated": manifest_ref in {
+                    status_after.get("manifest_ref"),
+                    manifest_ref,
+                },
+                "active_policy_resolvable": policy_found,
+            },
+            "next_actions": policy_store_write_next_actions(
+                "written" if policy_found else "refused"
+            ),
+        },
+        0 if policy_found else 2,
+    )
+
+
+def normalize_ref_path(value: str | None) -> str | None:
+    if not isinstance(value, str) or not value:
+        return None
+    return value.replace("\\", "/")
+
+
+def manifest_proposal_ref_matches(
+    *,
+    proposal_manifest_ref: dict[str, Any],
+    proposal_ref: str | None,
+    proposal_id: str | None,
+) -> bool:
+    manifest_path = normalize_ref_path(
+        proposal_manifest_ref.get("path")
+        if isinstance(proposal_manifest_ref.get("path"), str)
+        else None
+    )
+    manifest_id = (
+        str(proposal_manifest_ref.get("proposal_id"))
+        if proposal_manifest_ref.get("proposal_id") is not None
+        else None
+    )
+    requested_ref = normalize_ref_path(proposal_ref)
+    requested_id = proposal_id or (
+        Path(requested_ref).stem if requested_ref and requested_ref.endswith(".yaml") else None
+    )
+    return bool(
+        (requested_ref and manifest_path == requested_ref)
+        or (requested_id and manifest_id == requested_id)
+    )
+
+
+def find_manifest_proposal_ref(
+    *,
+    status_report: dict[str, Any],
+    proposal_ref: str | None,
+    proposal_id: str | None,
+) -> tuple[dict[str, Any] | None, str | None]:
+    if not proposal_ref and not proposal_id:
+        return None, "proposal_ref_or_id_required"
+    matches = [
+        ref
+        for ref in status_report.get("proposal_refs", [])
+        if isinstance(ref, dict)
+        and manifest_proposal_ref_matches(
+            proposal_manifest_ref=ref,
+            proposal_ref=proposal_ref,
+            proposal_id=proposal_id,
+        )
+    ]
+    if len(matches) > 1:
+        return None, "proposal_ref_matches_multiple_manifest_entries"
+    if not matches:
+        return None, "proposal_ref_not_listed_in_policy_store_manifest"
+    return matches[0], None
+
+
+def resolve_manifest_proposal_path(
+    *,
+    project_root: Path,
+    proposal_manifest_ref: dict[str, Any],
+) -> tuple[Path | None, str | None]:
+    raw_path = proposal_manifest_ref.get("path")
+    if not isinstance(raw_path, str) or not raw_path:
+        return None, "manifest_proposal_ref_path_missing"
+    proposal_path, path_error = resolve_project_path(project_root, raw_path)
+    if path_error or proposal_path is None:
+        return None, path_error or "manifest_proposal_ref_path_invalid"
+    proposals_root = (project_root / POLICY_STORE_ROOT / PROPOSALS_DIR_NAME).resolve()
+    try:
+        proposal_path.relative_to(proposals_root)
+    except ValueError:
+        return None, "manifest_proposal_ref_outside_proposals_store"
+    return proposal_path, None
+
+
+def first_write_set_path(
+    write_set: Any,
+    *,
+    contains: str,
+    fallback_index: int | None = None,
+) -> str | None:
+    if isinstance(write_set, list):
+        for item in write_set:
+            if not isinstance(item, dict):
+                continue
+            path = item.get("path")
+            if isinstance(path, str) and contains in path.replace("\\", "/"):
+                return path
+        if fallback_index is not None and len(write_set) > fallback_index:
+            item = write_set[fallback_index]
+            if isinstance(item, dict) and isinstance(item.get("path"), str):
+                return item["path"]
+    return None
+
+
+def policy_ids_from_refs(refs: Any) -> set[str]:
+    if not isinstance(refs, list):
+        return set()
+    return {
+        str(ref.get("policy_id"))
+        for ref in refs
+        if isinstance(ref, dict) and ref.get("policy_id") is not None
+    }
+
+
+def build_policy_proposal_activation_plan(
+    *,
+    project_root: Path | None = None,
+    cwd: Path | None = None,
+    proposal_ref: str | None = None,
+    proposal_id: str | None = None,
+) -> dict[str, Any]:
+    status_report = inspect_policy_store(project_root=project_root, cwd=cwd)
+    resolved_root = Path(status_report["project_root"])
+    warnings = list(status_report["warnings"])
+    refusals: list[str] = []
+
+    manifest_proposal, proposal_ref_error = find_manifest_proposal_ref(
+        status_report=status_report,
+        proposal_ref=proposal_ref,
+        proposal_id=proposal_id,
+    )
+    if proposal_ref_error:
+        refusals.append(proposal_ref_error)
+        manifest_proposal = None
+    proposal_path: Path | None = None
+    proposal_path_error: str | None = None
+    if manifest_proposal is not None:
+        proposal_path, proposal_path_error = resolve_manifest_proposal_path(
+            project_root=resolved_root,
+            proposal_manifest_ref=manifest_proposal,
+        )
+        if proposal_path_error:
+            refusals.append(proposal_path_error)
+    if proposal_path is not None and not proposal_path.is_file():
+        refusals.append("proposal_snapshot_file_missing")
+
+    snapshot: dict[str, Any] = {}
+    if proposal_path is not None and proposal_path.is_file():
+        try:
+            snapshot = read_yaml_subset(proposal_path)
+        except OSError as exc:
+            warnings.append(f"policy_proposal_snapshot_not_readable:{exc}")
+            refusals.append("proposal_snapshot_not_readable")
+
+    schema = schema_from_record(snapshot)
+    if snapshot and schema != POLICY_WRITE_PLAN_SCHEMA:
+        refusals.append("proposal_snapshot_schema_not_policy_write_plan")
+    operation = snapshot.get("operation")
+    if snapshot and operation not in {"append_policy", "create_policy"}:
+        refusals.append("proposal_snapshot_operation_not_activatable")
+    proposed_policy = snapshot.get("proposed_policy")
+    if not isinstance(proposed_policy, dict):
+        proposed_policy = {}
+        if snapshot:
+            refusals.append("proposed_policy_missing_from_snapshot")
+    policy_ref = (
+        snapshot.get("policy_ref")
+        or proposed_policy.get("policy_id")
+        or (manifest_proposal or {}).get("policy_id")
+        or "POLICY-unresolved"
+    )
+    if not isinstance(policy_ref, str) or not policy_ref:
+        policy_ref = "POLICY-unresolved"
+        refusals.append("proposal_policy_ref_missing")
+    manifest_policy_id = (manifest_proposal or {}).get("policy_id")
+    if manifest_policy_id and manifest_policy_id != policy_ref:
+        refusals.append("manifest_policy_id_does_not_match_proposal_snapshot")
+
+    write_set = snapshot.get("write_set") if snapshot else []
+    policy_path_ref = first_write_set_path(
+        write_set,
+        contains="/approved/",
+        fallback_index=0,
+    )
+    if not policy_path_ref:
+        policy_path_ref = f"{POLICY_STORE_ROOT}/approved/{policy_ref}.yaml"
+        if snapshot:
+            warnings.append("proposal_write_set_missing_policy_path; using conventional path")
+    decision_ref = first_write_set_path(
+        write_set,
+        contains=f"/{DECISIONS_DIR_NAME}/",
+        fallback_index=1,
+    )
+    if not decision_ref:
+        decision_ref = (
+            f"{POLICY_STORE_ROOT}/{DECISIONS_DIR_NAME}/"
+            f"{stable_id('POLICYDECISION', str(snapshot.get('plan_id') or policy_ref))}.yaml"
+        )
+        if snapshot:
+            warnings.append("proposal_write_set_missing_decision_path; using derived path")
+    manifest_ref = f"{POLICY_STORE_ROOT}/{MANIFEST_NAME}"
+    proposal_snapshot_ref = (
+        str(manifest_proposal.get("path"))
+        if manifest_proposal and manifest_proposal.get("path") is not None
+        else proposal_ref
+    )
+    if snapshot and normalize_ref_path(snapshot.get("proposal_ref")) != normalize_ref_path(
+        proposal_snapshot_ref
+    ):
+        refusals.append("proposal_snapshot_ref_does_not_match_manifest_ref")
+
+    policy_path, policy_path_error = resolve_project_path(resolved_root, policy_path_ref)
+    decision_path, decision_path_error = resolve_project_path(resolved_root, decision_ref)
+    manifest_path = resolved_root / manifest_ref
+    if policy_path_error or policy_path is None:
+        refusals.append("target_policy_path_invalid")
+    if decision_path_error or decision_path is None:
+        refusals.append("decision_record_path_invalid")
+    if policy_path is not None:
+        approved_root = (resolved_root / POLICY_STORE_ROOT / "approved").resolve()
+        try:
+            policy_path.relative_to(approved_root)
+        except ValueError:
+            refusals.append("target_policy_path_outside_approved_policy_store")
+    if decision_path is not None:
+        decisions_root = (
+            resolved_root / POLICY_STORE_ROOT / DECISIONS_DIR_NAME
+        ).resolve()
+        try:
+            decision_path.relative_to(decisions_root)
+        except ValueError:
+            refusals.append("decision_record_path_outside_policy_decisions_store")
+
+    active_policy_ids = policy_ids_from_refs(status_report.get("active_policy_refs"))
+    deprecated_policy_ids = policy_ids_from_refs(status_report.get("deprecated_policy_refs"))
+    superseded_policy_ids = policy_ids_from_refs(status_report.get("superseded_policy_refs"))
+    if policy_ref in active_policy_ids:
+        refusals.append("target_policy_already_active")
+    if policy_ref in deprecated_policy_ids or policy_ref in superseded_policy_ids:
+        refusals.append("target_policy_already_in_lifecycle_history")
+    if policy_path is not None and policy_path.exists():
+        refusals.append("target_policy_path_already_exists")
+    if decision_path is not None and decision_path.exists():
+        refusals.append("decision_record_already_exists")
+    if status_report["policy_store_status"] != "active":
+        refusals.append("active_policy_store_required_for_candidate_activation")
+    if not (resolved_root / ".jikuo" / "project_state.yaml").is_file():
+        refusals.append("project_state_not_initialized")
+    if not manifest_path.is_file():
+        refusals.append("policy_store_manifest_missing")
+
+    proposal_sha256 = (
+        hashlib.sha256(proposal_path.read_bytes()).hexdigest()
+        if proposal_path is not None and proposal_path.is_file()
+        else None
+    )
+    plan_id = stable_id(
+        "POLICYPROPOSALACTIVATIONPLAN",
+        "|".join(
+            [
+                str(policy_ref),
+                str(proposal_snapshot_ref or ""),
+                str(snapshot.get("plan_id") or ""),
+            ]
+        ),
+    )
+    status = "refused" if refusals else "review"
+    return {
+        "schema": POLICY_PROPOSAL_ACTIVATION_PLAN_SCHEMA,
+        "schema_version": POLICY_PROPOSAL_ACTIVATION_PLAN_SCHEMA,
+        "report_only": True,
+        "plan_id": plan_id,
+        "operation": "activate_existing_policy_proposal",
+        "status": status,
+        "proposal_ref": proposal_snapshot_ref,
+        "proposal_id": Path(str(proposal_snapshot_ref or proposal_id or "")).stem,
+        "proposal_sha256": proposal_sha256,
+        "source_plan_ref": snapshot.get("plan_id"),
+        "source_plan_schema": schema,
+        "policy_ref": policy_ref,
+        "project_root": str(resolved_root),
+        "policy_store_status": status_report["policy_store_status"],
+        "policy_store_root": status_report["policy_store_root"],
+        "manifest_status": (manifest_proposal or {}).get("status"),
+        "proposal_snapshot_status": "existing" if proposal_sha256 else "missing",
+        "write_set": [
+            {
+                "path": policy_path_ref,
+                "effect": "create approved policy file from existing proposal snapshot",
+                "operation": "create",
+            },
+            {
+                "path": decision_ref,
+                "effect": "create policy decision record for proposal activation",
+                "operation": "create",
+            },
+            {
+                "path": manifest_ref,
+                "effect": "append active_policy_refs without duplicating proposal_refs",
+                "operation": "update",
+            },
+        ],
+        "read_set": [
+            {
+                "path": proposal_snapshot_ref,
+                "effect": "read existing policy write proposal snapshot",
+                "operation": "read",
+            }
+        ]
+        if proposal_snapshot_ref
+        else [],
+        "non_effects": [
+            "does not rewrite the existing proposal snapshot",
+            "does not append a duplicate proposal_refs entry",
+            "does not execute policy actions",
+            "does not create task-session evidence",
+            "does not promote gates",
+        ],
+        "approval_required": True,
+        "write_allowed_by_command": False,
+        "writes_performed": False,
+        "guarded_apply_available": status == "review",
+        "proposed_policy": proposed_policy,
+        "refusal_reasons": sorted(set(refusals)),
+        "warnings": warnings,
+        "source_refs": CONTRACT_REFS,
+        "status_reason": (
+            "existing proposal snapshot can be activated through guarded apply"
+            if status == "review"
+            else "existing proposal snapshot cannot be activated until refusal reasons are resolved"
+        ),
+        "next_actions": (
+            [
+                "review the existing proposal snapshot and activation write targets",
+                "approve guarded activation only for candidate proposals that are not already active",
+            ]
+            if status == "review"
+            else ["resolve refusal reasons before candidate activation"]
+        ),
+    }
+
+
+def build_policy_proposal_activation_refusal_result(
+    *,
+    plan: dict[str, Any],
+    refusal_reasons: list[str],
+    approval_phrase: str | None,
+    error: str = "preflight rejected policy proposal activation",
+) -> dict[str, Any]:
+    return {
+        "schema": POLICY_WRITE_RESULT_SCHEMA,
+        "schema_version": POLICY_WRITE_RESULT_SCHEMA,
+        "status": "refused",
+        "write_performed": False,
+        "operation": plan.get("operation", "activate_existing_policy_proposal"),
+        "plan_ref": plan.get("plan_id"),
+        "policy_ref": plan.get("policy_ref"),
+        "project_root": plan.get("project_root"),
+        "policy_store_status_before": plan.get("policy_store_status"),
+        "policy_store_status_after": plan.get("policy_store_status"),
+        "written_paths": [],
+        "created_paths": [],
+        "proposal_ref": plan.get("proposal_ref"),
+        "decision_record_ref": (
+            plan.get("write_set", [{}, {}])[1].get("path")
+            if len(plan.get("write_set", [])) > 1
+            and isinstance(plan.get("write_set", [None, {}])[1], dict)
+            else None
+        ),
+        "refusal_reasons": sorted(set(refusal_reasons)),
+        "warnings": plan.get("warnings", []),
+        "approval_record": {
+            "phrase": approval_phrase,
+            "decision_target": "JIKUO existing policy proposal activation",
+            "decision_effect": f"activate existing proposal for {plan.get('policy_ref')}",
+            "decision_noneffect": "does not execute policy actions or promote gates",
+            "source_plan_schema": POLICY_PROPOSAL_ACTIVATION_PLAN_SCHEMA,
+            "source_plan_ref": plan.get("plan_id"),
+        }
+        if approval_phrase
+        else None,
+        "error": error,
+        "post_write_verification": {
+            "reread_ok": False,
+            "proposal_snapshot_existing": False,
+            "decision_record_written": False,
+            "manifest_updated": False,
+            "active_policy_resolvable": False,
+        },
+        "next_actions": policy_store_write_next_actions("refused"),
+    }
+
+
+def activate_policy_proposal_from_snapshot(
+    *,
+    project_root: Path | None = None,
+    proposal_ref: str | None = None,
+    proposal_id: str | None = None,
+    reviewed_proposal_sha256: str | None = None,
+    confirmed: bool = False,
+    approval_phrase: str | None = None,
+) -> tuple[dict[str, Any], int]:
+    plan = build_policy_proposal_activation_plan(
+        project_root=project_root,
+        proposal_ref=proposal_ref,
+        proposal_id=proposal_id,
+    )
+    refusal_reasons = list(plan["refusal_reasons"])
+    if not confirmed:
+        refusal_reasons.append("missing_confirmation_flag")
+    if not approval_phrase:
+        refusal_reasons.append("approval_evidence_missing")
+    if reviewed_proposal_sha256 and reviewed_proposal_sha256 != plan.get("proposal_sha256"):
+        refusal_reasons.append("reviewed_proposal_sha256_does_not_match_current_snapshot")
+    if refusal_reasons:
+        return (
+            build_policy_proposal_activation_refusal_result(
+                plan=plan,
+                refusal_reasons=refusal_reasons,
+                approval_phrase=approval_phrase,
+            ),
+            2,
+        )
+
+    project_root_path = Path(plan["project_root"])
+    policy_path_ref = plan["write_set"][0]["path"]
+    decision_ref = plan["write_set"][1]["path"]
+    manifest_ref = plan["write_set"][2]["path"]
+    proposal_ref_value = plan["proposal_ref"]
+    policy_path = project_root_path / policy_path_ref
+    decision_path = project_root_path / decision_ref
+    manifest_path = project_root_path / manifest_ref
+    proposal_path = project_root_path / proposal_ref_value
+    temp_policy_path = policy_path.with_suffix(policy_path.suffix + ".tmp")
+    temp_decision_path = decision_path.with_suffix(decision_path.suffix + ".tmp")
+    temp_manifest_path = manifest_path.with_suffix(manifest_path.suffix + ".tmp")
+    policy_created = False
+    decision_created = False
+    manifest_updated = False
+    written_paths: list[str] = []
+    created_paths: list[str] = []
+
+    try:
+        if not proposal_path.is_file():
+            return (
+                build_policy_proposal_activation_refusal_result(
+                    plan=plan,
+                    refusal_reasons=["proposal_snapshot_missing_at_write_time"],
+                    approval_phrase=approval_phrase,
+                ),
+                2,
+            )
+        current_sha = hashlib.sha256(proposal_path.read_bytes()).hexdigest()
+        if current_sha != plan.get("proposal_sha256"):
+            return (
+                build_policy_proposal_activation_refusal_result(
+                    plan=plan,
+                    refusal_reasons=["proposal_snapshot_changed_after_plan"],
+                    approval_phrase=approval_phrase,
+                ),
+                2,
+            )
+        if policy_path.exists():
+            return (
+                build_policy_proposal_activation_refusal_result(
+                    plan=plan,
+                    refusal_reasons=["target_policy_path_already_exists_at_write_time"],
+                    approval_phrase=approval_phrase,
+                ),
+                2,
+            )
+        if decision_path.exists():
+            return (
+                build_policy_proposal_activation_refusal_result(
+                    plan=plan,
+                    refusal_reasons=["decision_record_already_exists_at_write_time"],
+                    approval_phrase=approval_phrase,
+                ),
+                2,
+            )
+        if not manifest_path.is_file():
+            return (
+                build_policy_proposal_activation_refusal_result(
+                    plan=plan,
+                    refusal_reasons=["manifest_missing_at_write_time"],
+                    approval_phrase=approval_phrase,
+                ),
+                2,
+            )
+        policy_parent_missing = not policy_path.parent.exists()
+        decision_parent_missing = not decision_path.parent.exists()
+        policy_path.parent.mkdir(parents=True, exist_ok=True)
+        decision_path.parent.mkdir(parents=True, exist_ok=True)
+        if policy_parent_missing:
+            created_paths.append(str(Path(policy_path_ref).parent).replace("\\", "/") + "/")
+        if decision_parent_missing:
+            created_paths.append(str(Path(decision_ref).parent).replace("\\", "/") + "/")
+        manifest_text = append_active_policy_ref_to_manifest_text(
+            text=manifest_path.read_text(encoding="utf-8"),
+            policy_id=plan["policy_ref"],
+            policy_path_ref=policy_path_ref,
+        )
+        temp_policy_path.write_text(
+            render_yaml_document(plan["proposed_policy"]),
+            encoding="utf-8",
+            newline="\n",
+        )
+        temp_decision_path.write_text(
+            render_yaml_document(
+                build_policy_decision_record(
+                    plan=plan,
+                    decision_path_ref=decision_ref,
+                    approval_phrase=approval_phrase,
+                )
+            ),
+            encoding="utf-8",
+            newline="\n",
+        )
+        temp_manifest_path.write_text(
+            manifest_text,
+            encoding="utf-8",
+            newline="\n",
+        )
+        try:
+            fd = os.open(policy_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError:
+            raise RuntimeError("policy file already exists") from None
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(temp_policy_path.read_text(encoding="utf-8"))
+        policy_created = True
+        temp_policy_path.unlink(missing_ok=True)
+        written_paths.append(policy_path_ref)
+
+        try:
+            fd = os.open(decision_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError:
+            raise RuntimeError("policy decision record already exists") from None
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(temp_decision_path.read_text(encoding="utf-8"))
+        decision_created = True
+        temp_decision_path.unlink(missing_ok=True)
+        written_paths.append(decision_ref)
+
+        os.replace(temp_manifest_path, manifest_path)
+        manifest_updated = True
+        temp_manifest_path.unlink(missing_ok=True)
+        written_paths.append(manifest_ref)
+    except Exception as exc:
+        for temp_path in (temp_policy_path, temp_decision_path, temp_manifest_path):
+            temp_path.unlink(missing_ok=True)
+        if policy_created and not manifest_updated and policy_path.exists():
+            policy_path.unlink(missing_ok=True)
+        if decision_created and not manifest_updated and decision_path.exists():
+            decision_path.unlink(missing_ok=True)
+        return (
+            build_policy_proposal_activation_refusal_result(
+                plan=plan,
+                refusal_reasons=["policy_proposal_activation_failed"],
+                approval_phrase=approval_phrase,
+                error=str(exc),
+            ),
+            2,
+        )
+
+    status_after = inspect_policy_store(project_root=project_root_path)
+    policy_found = any(
+        ref.get("policy_id") == plan["policy_ref"]
+        for ref in status_after["active_policy_refs"]
+    )
+    return (
+        {
+            "schema": POLICY_WRITE_RESULT_SCHEMA,
+            "schema_version": POLICY_WRITE_RESULT_SCHEMA,
+            "status": "written" if policy_found else "failed",
+            "write_performed": True,
+            "operation": plan["operation"],
+            "plan_ref": plan["plan_id"],
+            "policy_ref": plan["policy_ref"],
+            "project_root": plan["project_root"],
+            "policy_store_status_before": plan["policy_store_status"],
+            "policy_store_status_after": status_after["policy_store_status"],
+            "written_paths": written_paths,
+            "created_paths": created_paths,
+            "proposal_ref": proposal_ref_value,
+            "decision_record_ref": decision_ref,
+            "refusal_reasons": [],
+            "warnings": plan["warnings"] + status_after["warnings"],
+            "approval_record": {
+                "phrase": approval_phrase,
+                "decision_target": "JIKUO existing policy proposal activation",
+                "decision_effect": f"activate existing proposal for {plan['policy_ref']}",
+                "decision_noneffect": "does not execute policy actions or promote gates",
+                "source_plan_schema": POLICY_PROPOSAL_ACTIVATION_PLAN_SCHEMA,
+                "source_plan_ref": plan["plan_id"],
+            },
+            "error": None if policy_found else "post-write active policy verification failed",
+            "post_write_verification": {
+                "reread_ok": status_after["policy_store_status"] == "active",
+                "proposal_snapshot_existing": proposal_path.is_file(),
                 "decision_record_written": decision_path.is_file(),
                 "manifest_updated": manifest_ref in {
                     status_after.get("manifest_ref"),

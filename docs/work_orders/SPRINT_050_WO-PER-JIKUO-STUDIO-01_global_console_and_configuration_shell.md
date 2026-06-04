@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-STUDIO-01: Global Console And Configuration Shell
 
-> **Status**: `JIKUO-STUDIO-01A` global status read model, `JIKUO-STUDIO-01B` panel/action registries, `JIKUO-STUDIO-01C` local read-only console, `JIKUO-STUDIO-01D1` document-mount read model, `JIKUO-STUDIO-01D2` visible document-mount frontend section, and `JIKUO-STUDIO-01D3` configuration vocabulary mapping implemented as no-write Python/CLI/backend surfaces. `JIKUO-STUDIO-01D4` records the detailed Document Rules plan/apply design contract; `JIKUO-STUDIO-01D5` implements the first Document Rules no-write plan backend; `JIKUO-STUDIO-01D6` connects that plan to the local Studio page as a no-write preview; `JIKUO-STUDIO-01D7` separates editable configuration from governance guidance in the read model and UI; `JIKUO-STUDIO-01D8` implements minimal guarded apply for `.jikuo/project_context.yaml` Document Rules changes; `JIKUO-STUDIO-01D9` maps that guarded apply to a natural frontend approval confirmation instead of asking users to type the backend approval phrase; `JIKUO-STUDIO-01D10` implements the first no-write document/artifact assurance projection for required, planned, and actual read/write comparison; `JIKUO-STUDIO-01D11` projects that assurance into runtime task cards, history cards, and `state_summary.json`; `JIKUO-STUDIO-01D12` corrects completion-check document semantics so configured completion-check scope is rendered as write candidates/checklist items unless applicability evidence makes a document required for the current slice; `JIKUO-STUDIO-01D13` renders the same data as latest-round document trace instead of metric-first assurance cards; `JIKUO-STUDIO-01D14` adds selectable runtime rounds with document trace/change labels; `JIKUO-STUDIO-01D15` keeps selected round cards and detail panels bound to the same round and count source; `JIKUO-STUDIO-01E1/01E2` implement a no-write project-file inventory and reusable local web batch selector for Document Rules; `JIKUO-STUDIO-01E3/01E4/01E5/01E6/01E7/01E8` implement policy configuration read UI, no-write policy evolution preview, guarded policy evolution apply for supported core writer operations including trigger-profile refinement, guarded package-template activation as a project policy with deduped resolved-policy source provenance, guarded active-policy package-template publication, and manifest-listed candidate proposal detail projection.
+> **Status**: `JIKUO-STUDIO-01A` global status read model, `JIKUO-STUDIO-01B` panel/action registries, `JIKUO-STUDIO-01C` local read-only console, `JIKUO-STUDIO-01D1` document-mount read model, `JIKUO-STUDIO-01D2` visible document-mount frontend section, and `JIKUO-STUDIO-01D3` configuration vocabulary mapping implemented as no-write Python/CLI/backend surfaces. `JIKUO-STUDIO-01D4` records the detailed Document Rules plan/apply design contract; `JIKUO-STUDIO-01D5` implements the first Document Rules no-write plan backend; `JIKUO-STUDIO-01D6` connects that plan to the local Studio page as a no-write preview; `JIKUO-STUDIO-01D7` separates editable configuration from governance guidance in the read model and UI; `JIKUO-STUDIO-01D8` implements minimal guarded apply for `.jikuo/project_context.yaml` Document Rules changes; `JIKUO-STUDIO-01D9` maps that guarded apply to a natural frontend approval confirmation instead of asking users to type the backend approval phrase; `JIKUO-STUDIO-01D10` implements the first no-write document/artifact assurance projection for required, planned, and actual read/write comparison; `JIKUO-STUDIO-01D11` projects that assurance into runtime task cards, history cards, and `state_summary.json`; `JIKUO-STUDIO-01D12` corrects completion-check document semantics so configured completion-check scope is rendered as write candidates/checklist items unless applicability evidence makes a document required for the current slice; `JIKUO-STUDIO-01D13` renders the same data as latest-round document trace instead of metric-first assurance cards; `JIKUO-STUDIO-01D14` adds selectable runtime rounds with document trace/change labels; `JIKUO-STUDIO-01D15` keeps selected round cards and detail panels bound to the same round and count source; `JIKUO-STUDIO-01D18` adds a Latest Semantic Classification summary for the latest retained runtime round, including whether host AI supplied semantic intent and which evidence limits remain; `JIKUO-STUDIO-01E1/01E2` implement a no-write project-file inventory and reusable local web batch selector for Document Rules; `JIKUO-STUDIO-01E3/01E4/01E5/01E6/01E7/01E8/01E9/01E10` implement policy configuration read UI, no-write active-policy configuration change preview, guarded active-policy configuration change apply for supported core writer operations including trigger-profile refinement, guarded package-template activation as a project policy with deduped resolved-policy source provenance, guarded active-policy reusable-template publication, manifest-listed proposal detail projection, guarded activation for manifest-listed existing proposal snapshots, and a simplified active/activatable policy primary view.
 > **Date**: 2026-05-31
 > **JIKUO layer**: product surface / view-model projection / guarded configuration control.
 > **Business meaning**: Users should not need to reconstruct JIKUO's global state from chat alone. A thin JIKUO console should make activation, runtime, policy, template, integration, diagnostics, and guarded configuration status visible in one place while preserving the existing kernel and guarded-write boundaries.
@@ -1219,6 +1219,48 @@ Acceptance:
 - selected no-trace rounds do not fall back to global configured projection;
 - the UI remains read-only and does not inspect git diff, create DATA-01 events,
   mutate policy evaluator behavior, or bypass guarded apply.
+
+### `JIKUO-STUDIO-01D18`: Latest Semantic Classification Summary
+
+Show the latest retained runtime round as a concise semantic-classification
+receipt: whether host AI supplied semantic intent, what intent/scopes were
+recorded, and what evidence remains imperfect.
+
+Implementation status (2026-06-04): implemented in
+`src/jikuo/studio/global_status.py` and
+`src/jikuo/integrations/studio_web/server.py`.
+
+Business meaning:
+
+- users need to know whether the most recent retained round was actually
+  AI-classified, not inspect several internal evidence surfaces;
+- `host_ai` classification means compact `host_semantic_intent` reached JIKUO
+  for the latest round, but does not prove strict pre-action GUI enforcement;
+- `fallback_only`, `missing`, or `incomplete` stays visible as imperfection
+  evidence rather than being smoothed over by older receipt data.
+
+Model:
+
+```text
+summaries.runtime.semantic_intent_evidence
+  -> status
+  -> latest_round
+  -> classification
+     -> ai_classified
+     -> classification_source
+     -> intent_class
+     -> policy_scopes
+  -> imperfections[]
+```
+
+Acceptance:
+
+- Studio Overview shows `Latest semantic classification`;
+- Studio Web contains a `Latest Semantic Classification` section;
+- the section explains whether the latest retained round was AI-classified,
+  what intent/scopes were recorded, and any evidence imperfection;
+- this view does not call an LLM provider, infer hidden model intent, change
+  policy evaluator results, or claim strict GUI semantic gating.
 
 ### `JIKUO-STUDIO-01E`: File Selection, Batch Changes, And Time Anchors
 

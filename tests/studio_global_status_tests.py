@@ -102,12 +102,80 @@ class StudioGlobalStatusTests(unittest.TestCase):
                 runtime["semantic_intent_coverage"]["coverage_status"],
                 "missing",
             )
+            semantic_evidence = runtime["semantic_intent_evidence"]
+            self.assertEqual(
+                semantic_evidence["schema"],
+                "jikuo.studio.semantic_intent_evidence.v0",
+            )
+            self.assertEqual(semantic_evidence["status"], "degraded")
+            classification = semantic_evidence["classification"]
+            self.assertFalse(classification["ai_classified"])
+            self.assertEqual(classification["classification_source"], "missing")
+            self.assertEqual(classification["intent_class"], "unknown")
+            self.assertEqual(
+                semantic_evidence["latest_round"]["source_kind"],
+                "latest_runtime_state",
+            )
+            self.assertGreaterEqual(semantic_evidence["imperfection_count"], 1)
             diagnostic_codes = {item["code"] for item in report["diagnostics"]}
             self.assertIn("runtime_semantic_intent_coverage_degraded", diagnostic_codes)
             self.assertEqual(
                 runtime["artifact_assurance"]["write_assurance"]["planned_write_count"],
                 1,
             )
+
+    def test_round_trace_derives_semantic_coverage_from_work_profile(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+
+            trace = global_status.round_trace_from_state(
+                project_root,
+                {
+                    "schema": "jikuo.runtime_state_summary.v0",
+                    "status": "available",
+                    "updated_at_utc": "2026-06-04T00:00:00Z",
+                    "source": {
+                        "proposal_id": "proposal_semantic",
+                        "status": "review",
+                        "event": "conversation_turn",
+                    },
+                    "runtime_visibility": {},
+                    "policy_runtime_status": {
+                        "work_profile": {
+                            "intent_class": "implementation",
+                            "operation_class": "workspace_edit",
+                            "policy_scopes": ["editing"],
+                            "fallback_expanded": False,
+                            "basis": {
+                                "host_semantic_intent": {
+                                    "status": "provided",
+                                    "provider": "host_ai",
+                                    "policy_scopes": ["editing"],
+                                }
+                            },
+                            "semantic_intent_evidence": {
+                                "required": True,
+                                "status": "ok",
+                                "provider": "host_ai",
+                                "semantic_intent_status": "provided",
+                            },
+                        },
+                    },
+                },
+            )
+
+            self.assertIsNotNone(trace)
+            self.assertEqual(
+                trace["semantic_intent_coverage"]["coverage_status"],
+                "complete",
+            )
+            self.assertEqual(
+                trace["semantic_intent_coverage"]["provider"],
+                "host_ai",
+            )
+            self.assertEqual(trace["intent_class"], "implementation")
+            self.assertEqual(trace["operation_class"], "workspace_edit")
 
     def test_runtime_summary_exposes_selectable_round_document_traces(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -374,6 +442,14 @@ class StudioGlobalStatusTests(unittest.TestCase):
             self.assertEqual(
                 receipt["semantic_intent_coverage"]["coverage_status"],
                 "complete",
+            )
+            semantic_evidence = report["summaries"]["runtime"]["semantic_intent_evidence"]
+            classification = semantic_evidence["classification"]
+            self.assertFalse(classification["ai_classified"])
+            self.assertEqual(classification["classification_source"], "missing")
+            self.assertEqual(
+                semantic_evidence["latest_round"]["round_id"],
+                Path(latest_ref).stem,
             )
             write = receipt["artifact_assurance"]["write_assurance"]
             self.assertEqual(

@@ -55,6 +55,7 @@ REGISTRY_REFS = {
 CONFIGURATION_LANGUAGE_SCHEMA = "jikuo.studio.configuration_language.v0"
 ROUND_DOCUMENT_TRACES_SCHEMA = "jikuo.studio.round_document_traces.v0"
 ROUND_DOCUMENT_TRACE_SCHEMA = "jikuo.studio.round_document_trace.v0"
+SEMANTIC_INTENT_EVIDENCE_SCHEMA = "jikuo.studio.semantic_intent_evidence.v0"
 ROUND_DOCUMENT_TRACE_HISTORY_LIMIT = 24
 
 
@@ -532,15 +533,32 @@ def round_trace_from_state(
     runtime = state.get("runtime_visibility") or {}
     history_ref = runtime.get("history_ref")
     artifact_report = state.get("artifact_assurance") or {}
+    policy_runtime = state.get("policy_runtime_status") or {}
+    work_profile = state.get("work_profile") or {}
+    if not isinstance(work_profile, dict):
+        work_profile = {}
+    if not work_profile and isinstance(policy_runtime, dict):
+        work_profile = policy_runtime.get("work_profile") or {}
+    if not isinstance(work_profile, dict):
+        work_profile = {}
     semantic_coverage = state.get("semantic_intent_coverage") or {}
+    if not semantic_coverage:
+        for coverage_source in (state, state.get("policy_runtime_status") or {}):
+            if not isinstance(coverage_source, dict):
+                continue
+            candidate = runtime_visibility.semantic_intent_coverage_for(coverage_source)
+            if not semantic_coverage or candidate.get("coverage_status") == "complete":
+                semantic_coverage = candidate
+            if candidate.get("coverage_status") == "complete":
+                break
     return round_trace_from_parts(
         project_root=project_root,
         history_ref=str(history_ref) if history_ref else None,
         source_kind=source_kind,
         updated_at_utc=state.get("updated_at_utc"),
-        lifecycle_event=source.get("event"),
-        intent_class=None,
-        operation_class=None,
+        lifecycle_event=source.get("event") or work_profile.get("lifecycle_event"),
+        intent_class=work_profile.get("intent_class"),
+        operation_class=work_profile.get("operation_class"),
         status=source.get("status"),
         proposal_id=source.get("proposal_id"),
         artifact_report=artifact_report if isinstance(artifact_report, dict) else {},
@@ -667,6 +685,193 @@ def round_document_traces(project_root: Path, state: dict[str, Any]) -> dict[str
         ],
         "writes_performed": False,
         "write_allowed_by_command": False,
+    }
+
+
+def semantic_intent_status_for_latest_round(coverage: dict[str, Any]) -> str:
+    coverage_status = str(coverage.get("coverage_status") or "")
+    semantic_status = str(coverage.get("semantic_intent_status") or "")
+    provider = str(coverage.get("provider") or "")
+    if semantic_status == "provided" and provider == "host_ai":
+        return "available" if coverage_status == "complete" else "degraded"
+    if coverage_status in {"missing", "fallback_only", "degraded"}:
+        return "degraded"
+    return "unavailable"
+
+
+def semantic_imperfection(
+    *,
+    title: str,
+    detail: str,
+    status: str = "degraded",
+    source_ref: str | None = None,
+) -> dict[str, Any]:
+    return {
+        "title": title,
+        "detail": detail,
+        "status": status,
+        "source_ref": source_ref,
+    }
+
+
+def semantic_intent_evidence_overview(
+    *,
+    runtime: dict[str, Any],
+    activation: dict[str, Any],
+) -> dict[str, Any]:
+    trace_list = runtime.get("round_document_traces") or {}
+    rounds = trace_list.get("rounds") or []
+    latest_runtime = next(
+        (
+            item
+            for item in rounds
+            if item.get("round_id") == trace_list.get("latest_runtime_round_id")
+        ),
+        rounds[0] if rounds else None,
+    )
+    coverage = (
+        latest_runtime.get("semantic_intent_coverage")
+        if isinstance(latest_runtime, dict)
+        else None
+    ) or runtime.get("semantic_intent_coverage") or {}
+    if not isinstance(coverage, dict):
+        coverage = {}
+
+    semantic_status = str(coverage.get("semantic_intent_status") or "unavailable")
+    evidence_status = str(coverage.get("evidence_status") or "unknown")
+    coverage_status = str(coverage.get("coverage_status") or "unknown")
+    provider = str(coverage.get("provider") or "unavailable")
+    policy_scopes = [
+        str(item)
+        for item in coverage.get("policy_scopes", [])
+        if str(item)
+    ] if isinstance(coverage.get("policy_scopes"), list) else []
+    intent_class = (
+        str(latest_runtime.get("intent_class") or "unknown")
+        if isinstance(latest_runtime, dict)
+        else "unknown"
+    )
+    operation_class = (
+        str(latest_runtime.get("operation_class") or "unknown")
+        if isinstance(latest_runtime, dict)
+        else "unknown"
+    )
+    ai_classified = semantic_status == "provided" and provider == "host_ai"
+    if ai_classified:
+        classification_source = "host_ai"
+    elif coverage_status == "fallback_only" or bool(coverage.get("fallback_expanded")):
+        classification_source = "fallback_only"
+    elif (
+        coverage_status in {"missing", "unavailable"}
+        or semantic_status in {"missing", "unavailable"}
+        or provider in {"missing", "unavailable", "unknown"}
+    ):
+        classification_source = "missing"
+    else:
+        classification_source = "incomplete"
+    strict_mount = str(activation.get("strict_mount_status") or "unknown")
+    adapter_status = str(activation.get("adapter_status") or "unknown")
+
+    imperfections: list[dict[str, Any]] = []
+    if not latest_runtime:
+        imperfections.append(
+            semantic_imperfection(
+                title="No latest runtime round",
+                detail="Studio has no retained runtime round to classify.",
+                status="unavailable",
+                source_ref=runtime_visibility.HISTORY_DIR_REF,
+            )
+        )
+    if not ai_classified:
+        imperfections.append(
+            semantic_imperfection(
+                title="AI classification not proven",
+                detail=(
+                    f"Latest round semantic status is {semantic_status}; "
+                    f"provider is {provider}."
+                ),
+                source_ref=(
+                    latest_runtime.get("history_ref")
+                    if isinstance(latest_runtime, dict)
+                    else runtime_visibility.STATE_SUMMARY_REF
+                ),
+            )
+        )
+    if coverage_status != "complete":
+        imperfections.append(
+            semantic_imperfection(
+                title="Classification evidence incomplete",
+                detail=str(
+                    coverage.get("gap_reason")
+                    or f"coverage_status={coverage_status}; evidence_status={evidence_status}"
+                ),
+                source_ref=(
+                    latest_runtime.get("history_ref")
+                    if isinstance(latest_runtime, dict)
+                    else runtime_visibility.STATE_SUMMARY_REF
+                ),
+            )
+        )
+    if ai_classified and strict_mount not in {"available", "strict", "configured"}:
+        imperfections.append(
+            semantic_imperfection(
+                title="Not strict pre-turn proof",
+                detail=(
+                    "The latest round shows host AI semantic intent reached JIKUO, "
+                    f"but strict_mount={strict_mount} and adapter={adapter_status}; "
+                    "this is not proof of enforced pre-action GUI gating."
+                ),
+                source_ref=activation_settings.SETTINGS_REF,
+            )
+        )
+
+    status = semantic_intent_status_for_latest_round(coverage)
+    if ai_classified:
+        headline = f"AI classified the latest round as {intent_class}."
+    else:
+        headline = "Latest round has no proven AI semantic classification."
+
+    return {
+        "schema": SEMANTIC_INTENT_EVIDENCE_SCHEMA,
+        "status": status,
+        "headline": headline,
+        "latest_round": (
+            {
+                "round_id": latest_runtime.get("round_id"),
+                "label": latest_runtime.get("label"),
+                "lifecycle_event": latest_runtime.get("lifecycle_event"),
+                "source_kind": latest_runtime.get("source_kind"),
+                "history_ref": latest_runtime.get("history_ref"),
+            }
+            if isinstance(latest_runtime, dict)
+            else {}
+        ),
+        "classification": {
+            "ai_classified": ai_classified,
+            "classification_source": classification_source,
+            "classifier": provider if ai_classified else "not_proven_ai",
+            "intent_class": intent_class,
+            "operation_class": operation_class,
+            "policy_scopes": policy_scopes,
+            "semantic_intent_status": semantic_status,
+            "evidence_status": evidence_status,
+            "coverage_status": coverage_status,
+            "provider": provider,
+            "fallback_expanded": bool(coverage.get("fallback_expanded")),
+        },
+        "imperfection_count": len(imperfections),
+        "imperfections": imperfections,
+        "read_model_limitations": [
+            "this card reports the latest retained runtime round only",
+            "it does not infer hidden model intent beyond stored semantic evidence",
+            "host AI classification evidence does not prove strict pre-action GUI gating",
+        ],
+        "non_effects": [
+            "does_not_call_llm_provider",
+            "does_not_infer_hidden_model_intent",
+            "does_not_change_policy_evaluator_results",
+            "does_not_prove_strict_gui_semantic_gate",
+        ],
     }
 
 
@@ -1234,12 +1439,18 @@ def build_global_status(*, project_root: Path | None = None) -> dict[str, Any]:
         lambda: document_mounts_summary(resolved_root, diagnostics),
         diagnostics=diagnostics,
     )
+    runtime = safe_section(
+        "runtime",
+        lambda: runtime_summary(resolved_root, diagnostics),
+        diagnostics=diagnostics,
+    )
+    if isinstance(runtime, dict):
+        runtime["semantic_intent_evidence"] = semantic_intent_evidence_overview(
+            runtime=runtime,
+            activation=activation if isinstance(activation, dict) else {},
+        )
     summaries = {
-        "runtime": safe_section(
-            "runtime",
-            lambda: runtime_summary(resolved_root, diagnostics),
-            diagnostics=diagnostics,
-        ),
+        "runtime": runtime,
         "activation": activation,
         "configuration": configuration,
         "document_mounts": document_mounts,

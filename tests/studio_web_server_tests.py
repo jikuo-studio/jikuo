@@ -46,6 +46,32 @@ def write_project_context(root: Path) -> None:
     )
 
 
+def write_project_state(root: Path) -> None:
+    jikuo = root / ".jikuo"
+    jikuo.mkdir(parents=True, exist_ok=True)
+    (jikuo / "project_state.yaml").write_text(
+        "\n".join(
+            [
+                'schema: "jikuo.project_local_state.v0"',
+                'project_id: "studio_web_fixture"',
+                f'project_root: "{root}"',
+                f'jikuo_state_root: "{jikuo}"',
+                "active_scenario_packages:",
+                '  - "engineering_governance"',
+                "accepted_contract_refs: []",
+                "latest_task_session_refs: []",
+                "latest_rule_proposal_refs: []",
+                "latest_handoff_ref: null",
+                "compatibility:",
+                '  unknown_fields: "preserve"',
+                '  writer: "test_fixture"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+
 def touch(root: Path, rel: str) -> None:
     path = root / rel
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -90,6 +116,115 @@ def write_active_policy(root: Path, policy_id: str) -> Path:
     return path
 
 
+def write_policy_store_with_candidate_proposal(
+    root: Path,
+    *,
+    active_policy_id: str = "POLICY-studio-active-fixture",
+    candidate_policy_id: str = "POLICY-studio-candidate-fixture",
+    proposal_id: str = "POLICYPROPOSAL-studio-candidate-fixture",
+) -> dict[str, str]:
+    write_project_state(root)
+    active_path = write_active_policy(root, active_policy_id)
+    store = root / ".jikuo" / "policies"
+    proposals = store / "proposals"
+    proposals.mkdir(parents=True, exist_ok=True)
+    proposal_ref = f".jikuo/policies/proposals/{proposal_id}.yaml"
+    decision_ref = ".jikuo/policies/decisions/POLICYDECISION-studio-candidate-fixture.yaml"
+    policy_ref = f".jikuo/policies/approved/{candidate_policy_id}.yaml"
+    (proposals / f"{proposal_id}.yaml").write_text(
+        "\n".join(
+            [
+                'schema: "jikuo.policy_write_plan.v0"',
+                'schema_version: "jikuo.policy_write_plan.v0"',
+                "report_only: true",
+                'plan_id: "POLICYWRITEPLAN-studio-candidate-fixture"',
+                'operation: "append_policy"',
+                'status: "review"',
+                f'proposal_ref: "{proposal_ref}"',
+                f'policy_ref: "{candidate_policy_id}"',
+                f'project_root: "{root}"',
+                'policy_store_status: "active"',
+                f'policy_store_root: "{store}"',
+                "write_set:",
+                f'  - path: "{policy_ref}"',
+                '    effect: "create approved policy file"',
+                '    operation: "create"',
+                f'  - path: "{decision_ref}"',
+                '    effect: "create policy decision record"',
+                '    operation: "create"',
+                '  - path: ".jikuo/policies/manifest.yaml"',
+                '    effect: "create or update policy-store manifest active_policy_refs"',
+                '    operation: "create_or_update"',
+                f'  - path: "{proposal_ref}"',
+                '    effect: "create policy write proposal snapshot"',
+                '    operation: "create"',
+                "proposed_policy:",
+                '  schema_version: "jikuo.configurable_rule_policy.v0"',
+                f'  policy_id: "{candidate_policy_id}"',
+                "  version: 1",
+                '  status: "active_report_only"',
+                '  title: "Studio candidate activation fixture"',
+                '  scenario_package: "engineering_governance"',
+                "  source_refs:",
+                '    - type: "test_fixture"',
+                '      ref: "tests:studio_candidate_activation"',
+                "  triggers:",
+                '    - trigger_id: "TRG-conversation-turn"',
+                '      type: "task_lifecycle_event"',
+                '      event: "conversation_turn"',
+                "  conditions: []",
+                "  required_actions:",
+                '    - action_id: "ACT-review"',
+                '      type: "review"',
+                "  required_evidence:",
+                '    - evidence_id: "EVD-review"',
+                '      type: "review_evidence"',
+                '      satisfies_action: "ACT-review"',
+                "  enforcement:",
+                '    phase: "report_only"',
+                '    level: "review_required"',
+                "refusal_reasons: []",
+                "warnings: []",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (store / "manifest.yaml").write_text(
+        "\n".join(
+            [
+                'schema_version: "jikuo.policy_store_manifest.v0"',
+                'project_id: "studio_web_fixture"',
+                'store_root: ".jikuo/policies"',
+                "active_policy_refs:",
+                f'  - policy_id: "{active_policy_id}"',
+                "    version: 1",
+                f'    path: "{active_path.relative_to(root).as_posix()}"',
+                "proposal_refs:",
+                f'  - proposal_id: "{proposal_id}"',
+                f'    policy_id: "{candidate_policy_id}"',
+                f'    path: "{proposal_ref}"',
+                '    status: "candidate"',
+                "deprecated_policy_refs: []",
+                "superseded_policy_refs: []",
+                'last_updated_at: "2026-06-04T00:00:00Z"',
+                "compatibility:",
+                '  unknown_fields: "preserve"',
+                '  writer: "test_fixture"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    return {
+        "proposal_id": proposal_id,
+        "proposal_ref": proposal_ref,
+        "policy_id": candidate_policy_id,
+        "policy_ref": policy_ref,
+        "decision_ref": decision_ref,
+    }
+
+
 class StudioWebServerTests(unittest.TestCase):
     def test_api_payloads_are_read_only_status_views(self):
         status_code, status = server.api_payload_for_path("/api/status", project_root=ROOT)
@@ -118,6 +253,7 @@ class StudioWebServerTests(unittest.TestCase):
         self.assertIn("active_policies", policy_status["policy_store"])
         self.assertIn("active_policy_details", policy_status["policy_store"])
         self.assertIn("proposal_refs", policy_status["policy_store"])
+        self.assertIn("activatable_policy_proposals", policy_status["policy_store"])
         self.assertIn("option_sets", policy_status)
         self.assertIn("policy_scopes", policy_status["option_sets"])
         self.assertIn("editing", policy_status["option_sets"]["policy_scopes"])
@@ -553,6 +689,97 @@ class StudioWebServerTests(unittest.TestCase):
             )
             self.assertTrue((project_root / result["decision_record_ref"]).is_file())
 
+    def test_policy_candidate_activation_plan_api_returns_existing_proposal_plan(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            fixture = write_policy_store_with_candidate_proposal(project_root)
+
+            status_code, plan = server.api_policy_candidate_activation_plan_payload(
+                {"proposal_id": fixture["proposal_id"]},
+                project_root=project_root,
+            )
+
+            self.assertEqual(status_code, 200)
+            self.assertEqual(
+                plan["schema"],
+                "jikuo.policy_proposal_activation_plan.v0",
+            )
+            self.assertEqual(plan["status"], "review")
+            self.assertEqual(plan["policy_ref"], fixture["policy_id"])
+            self.assertEqual(plan["proposal_ref"], fixture["proposal_ref"])
+            self.assertEqual(len(plan["read_set"]), 1)
+            self.assertEqual(len(plan["write_set"]), 3)
+            self.assertTrue(plan["guarded_apply_available"])
+            self.assertFalse(plan["writes_performed"])
+            self.assertFalse(plan["write_allowed_by_command"])
+            self.assertEqual(
+                plan["studio_web"]["route"],
+                "/api/policy-management/candidate-activation/plan",
+            )
+
+    def test_policy_candidate_activation_apply_api_writes_existing_proposal_after_approval(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            fixture = write_policy_store_with_candidate_proposal(project_root)
+            _plan_code, plan = server.api_policy_candidate_activation_plan_payload(
+                {"proposal_id": fixture["proposal_id"]},
+                project_root=project_root,
+            )
+
+            refused_code, refused = server.api_policy_candidate_activation_apply_payload(
+                {"proposal_id": fixture["proposal_id"]},
+                project_root=project_root,
+            )
+            status_code, result = server.api_policy_candidate_activation_apply_payload(
+                {
+                    "proposal_id": fixture["proposal_id"],
+                    "reviewed_proposal_sha256": plan["proposal_sha256"],
+                    "confirm_apply": True,
+                    "approval_phrase": "Approve Policy Candidate activation",
+                    "approval_source": "studio_confirmation_dialog",
+                },
+                project_root=project_root,
+            )
+
+            self.assertEqual(refused_code, 200)
+            self.assertEqual(refused["status"], "refused")
+            self.assertFalse(refused["write_performed"])
+            self.assertIn("missing_confirmation_flag", refused["refusal_reasons"])
+            self.assertEqual(status_code, 200)
+            self.assertEqual(result["schema"], "jikuo.policy_write_result.v0")
+            self.assertEqual(result["status"], "written")
+            self.assertTrue(result["write_performed"])
+            self.assertEqual(result["policy_ref"], fixture["policy_id"])
+            self.assertEqual(result["proposal_ref"], fixture["proposal_ref"])
+            self.assertEqual(result["studio_web"]["write_mode"], "guarded")
+            self.assertTrue(result["studio_web"]["writes_performed"])
+            self.assertEqual(
+                result["written_paths"],
+                [
+                    fixture["policy_ref"],
+                    fixture["decision_ref"],
+                    ".jikuo/policies/manifest.yaml",
+                ],
+            )
+            self.assertTrue((project_root / fixture["proposal_ref"]).is_file())
+            self.assertTrue((project_root / fixture["policy_ref"]).is_file())
+            self.assertTrue((project_root / fixture["decision_ref"]).is_file())
+            manifest_text = (
+                project_root / ".jikuo" / "policies" / "manifest.yaml"
+            ).read_text(encoding="utf-8")
+            self.assertIn(f'policy_id: "{fixture["policy_id"]}"', manifest_text)
+            self.assertTrue(result["post_write_verification"]["active_policy_resolvable"])
+            self.assertTrue(result["post_write_verification"]["proposal_snapshot_existing"])
+
+            _second_plan_code, second_plan = server.api_policy_candidate_activation_plan_payload(
+                {"proposal_id": fixture["proposal_id"]},
+                project_root=project_root,
+            )
+            self.assertEqual(second_plan["status"], "refused")
+            self.assertIn("target_policy_already_active", second_plan["refusal_reasons"])
+
     def test_policy_template_activation_apply_api_rejects_stale_plan_id(self):
         with tempfile.TemporaryDirectory() as tmp:
             project_root = Path(tmp) / "project"
@@ -624,6 +851,9 @@ class StudioWebServerTests(unittest.TestCase):
         self.assertIn("/api/policy-management/template-activation/apply", html)
         self.assertIn("policy-management-status", html)
         self.assertIn("policy-management-metrics", html)
+        self.assertIn("Change active policy configuration", html)
+        self.assertIn("Preview the configuration change plan", html)
+        self.assertNotIn("Policy evolution preview", html)
         self.assertIn("policy-evolution-operation", html)
         self.assertIn("policy-evolution-policy", html)
         self.assertIn("policy-selected-summary", html)
@@ -648,7 +878,7 @@ class StudioWebServerTests(unittest.TestCase):
         self.assertIn("policy-editor-grid", html)
         self.assertIn("policy-editor-note", html)
         self.assertIn("policy-action-buttons", html)
-        self.assertIn("Template publication preview", html)
+        self.assertIn("Make active policy reusable", html)
         self.assertIn("policy-template-publication-policy", html)
         self.assertIn("policy-template-publication-decision", html)
         self.assertIn("policy-template-publication-preview-button", html)
@@ -659,7 +889,7 @@ class StudioWebServerTests(unittest.TestCase):
         self.assertIn("applyPolicyTemplatePublicationPlan", html)
         self.assertIn("/api/policy-management/template-publication/plan", html)
         self.assertIn("/api/policy-management/template-publication/apply", html)
-        self.assertIn("Publish guarded template", html)
+        self.assertIn("Publish reusable template", html)
         self.assertIn("Template activation preview", html)
         self.assertIn("policy-template-activation-template", html)
         self.assertIn("policy-template-selected-summary", html)
@@ -676,6 +906,18 @@ class StudioWebServerTests(unittest.TestCase):
         self.assertIn("Apply guarded activation", html)
         self.assertIn("Policy-store records/files to write", html)
         self.assertIn("It does not execute policy actions", html)
+        self.assertIn("Activatable policy proposals", html)
+        self.assertIn("policy-candidate-activation-proposal", html)
+        self.assertIn("policy-candidate-activation-preview-button", html)
+        self.assertIn("policy-candidate-activation-apply-button", html)
+        self.assertIn("policy-candidate-activation-plan-result", html)
+        self.assertIn("Apply pending policy", html)
+        self.assertIn("POLICY_CANDIDATE_ACTIVATION_APPROVAL_PHRASE", html)
+        self.assertIn("previewPolicyCandidateActivationPlan", html)
+        self.assertIn("applyPolicyCandidateActivationPlan", html)
+        self.assertIn("/api/policy-management/candidate-activation/plan", html)
+        self.assertIn("/api/policy-management/candidate-activation/apply", html)
+        self.assertIn("It does not rewrite the proposal snapshot", html)
         self.assertNotIn("Projected writes", html)
         self.assertIn("@media (max-width: 1180px)", html)
         self.assertIn("Status reason", html)
@@ -690,13 +932,13 @@ class StudioWebServerTests(unittest.TestCase):
         self.assertIn("policy-operation-list", html)
         self.assertIn("policy-limitation-list", html)
         self.assertIn("scope-first", html)
-        self.assertIn("Policy proposal refs recorded", html)
-        self.assertIn("Reusable package policy templates", html)
+        self.assertIn("Current project constraints that can affect AI work", html)
+        self.assertIn("Pending constraints that are ready for user review", html)
         self.assertIn("renderPolicyManagement", html)
         self.assertIn("proposalDetailsById", html)
-        self.assertIn("proposal_details", html)
+        self.assertIn("activatable_policy_proposals", html)
         self.assertIn("Write set", html)
-        self.assertIn("Review this candidate before guarded activation", html)
+        self.assertIn("Review the pending constraint before guarded activation", html)
         self.assertIn("previewPolicyEvolutionPlan", html)
         self.assertIn("renderPolicyEvolutionPlan", html)
         self.assertIn("loadPolicyManagement", html)
@@ -728,6 +970,13 @@ class StudioWebServerTests(unittest.TestCase):
         self.assertIn("Latest completion receipt", html)
         self.assertIn("Selected round", html)
         self.assertIn("Semantic intent", html)
+        self.assertIn("Latest Semantic Classification", html)
+        self.assertIn("semantic-evidence-list", html)
+        self.assertIn("Classified by", html)
+        self.assertIn("Host AI supplied semantic intent", html)
+        self.assertIn("Evidence imperfections", html)
+        self.assertIn("Latest semantic classification", html)
+        self.assertIn("semantic_intent_evidence", html)
         self.assertIn("semantic_intent_coverage", html)
         self.assertIn("Semantic coverage", html)
         self.assertIn("latest_completion_receipt_round_id", html)

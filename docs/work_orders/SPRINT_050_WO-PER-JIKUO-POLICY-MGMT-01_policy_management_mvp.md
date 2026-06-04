@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-POLICY-MGMT-01: Policy Management MVP
 
-> **Status**: Two held candidates activated as `active_report_only`; Policy Management MVP closeout design, no-write distribution review with GUI/MCP natural-language source resolution, guarded package-template publication CLI plus agent-flow/MCP bridge, guarded starter-pack manifest publication CLI plus agent-flow/MCP bridge, no-write policy-management status read model with manifest-listed candidate proposal details, Studio package-template publication/activation guarded bridges, real-policy distribution smoke, and first real optional package-template publication for `POLICY-jikuo-data-model-drift-alarm` implemented. Follow-up semantic-precondition hardening fixed the missing-intent gap found by that smoke.
+> **Status**: Two held candidates activated as `active_report_only`; Policy Management MVP closeout design, no-write distribution review with GUI/MCP natural-language source resolution, guarded package-template publication CLI plus agent-flow/MCP bridge, guarded starter-pack manifest publication CLI plus agent-flow/MCP bridge, no-write policy-management status read model with active-policy constraints plus filtered activatable proposal constraints, Studio existing-proposal candidate activation preview/apply, Studio active-policy reusable-template publication and package-template activation guarded bridges, real-policy distribution smoke, and first real optional package-template publication for `POLICY-jikuo-data-model-drift-alarm` implemented. Follow-up semantic-precondition hardening fixed the missing-intent gap found by that smoke.
 > **Date**: 2026-05-18
 > **JIKUO layer**: policy governance / policy distribution.
 > **Business meaning**: JIKUO's first usable version needs the current user-authored candidate policies to enter active scope through the existing guarded flow, and it needs a clear official distribution boundary so useful policies can reach user projects without copying JIKUO dogfood policies or overwriting user-owned local policies.
@@ -461,6 +461,9 @@ Policy Management MVP closeout is accepted when:
   active report-only policies.
 - `docs/registry/work_orders.yaml`, `docs/registry/capabilities.yaml`, and
   `docs/registry/mount_sets.yaml` expose this task to future sessions.
+- Studio can now preview and guarded-apply manifest-listed existing policy
+  proposal snapshots as active project policies without rewriting proposal
+  snapshots, scanning unlisted proposal files, or executing policy actions.
 - `CAP-POLICY-DISTRIBUTION-MVP-01` and
   `CAP-POLICY-DISTRIBUTION-REVIEW-01` point future implementation to this
   design and the no-write distribution review surfaces instead of treating

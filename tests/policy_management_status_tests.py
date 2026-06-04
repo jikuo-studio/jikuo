@@ -27,6 +27,32 @@ def temp_project_dir():
         shutil.rmtree(path, ignore_errors=True)
 
 
+def write_project_state(root: Path) -> None:
+    jikuo = root / ".jikuo"
+    jikuo.mkdir(parents=True, exist_ok=True)
+    (jikuo / "project_state.yaml").write_text(
+        "\n".join(
+            [
+                'schema: "jikuo.project_local_state.v0"',
+                'project_id: "policy_management_status_fixture"',
+                f'project_root: "{root}"',
+                f'jikuo_state_root: "{jikuo}"',
+                "active_scenario_packages:",
+                '  - "engineering_governance"',
+                "accepted_contract_refs: []",
+                "latest_task_session_refs: []",
+                "latest_rule_proposal_refs: []",
+                "latest_handoff_ref: null",
+                "compatibility:",
+                '  unknown_fields: "preserve"',
+                '  writer: "test_fixture"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+
 def write_policy_store(root: Path, *, policy_id: str, title: str) -> None:
     store = root / ".jikuo" / "policies"
     approved = store / "approved"
@@ -229,6 +255,7 @@ class PolicyManagementStatusTests(unittest.TestCase):
 
     def test_status_read_model_loads_policy_proposal_details(self):
         with temp_project_dir() as project_root:
+            write_project_state(project_root)
             write_policy_store(
                 project_root,
                 policy_id="POLICY-active-fixture",
@@ -254,6 +281,43 @@ class PolicyManagementStatusTests(unittest.TestCase):
         self.assertEqual(detail["write_set_count"], 1)
         self.assertEqual(detail["trigger_profile"]["trigger_mode"], "scope_first")
         self.assertEqual(detail["trigger_profile"]["policy_scopes"], ["discussion"])
+        activatable = report["policy_store"]["activatable_policy_proposals"]
+        self.assertEqual(len(activatable), 1)
+        self.assertEqual(
+            report["summary_counts"]["activatable_policy_proposal_count"],
+            1,
+        )
+        self.assertEqual(activatable[0]["activation_status"], "ready_to_activate")
+        self.assertEqual(activatable[0]["policy_id"], "POLICY-candidate-fixture")
+        self.assertEqual(
+            activatable[0]["trigger_profile"]["policy_scopes"],
+            ["discussion"],
+        )
+
+    def test_status_read_model_excludes_already_active_proposal_from_activatable_list(self):
+        with temp_project_dir() as project_root:
+            write_project_state(project_root)
+            write_policy_store(
+                project_root,
+                policy_id="POLICY-active-fixture",
+                title="Active fixture policy",
+            )
+            add_policy_proposal(
+                project_root,
+                proposal_id="POLICYPROPOSAL-active-history",
+                policy_id="POLICY-active-fixture",
+            )
+
+            report = policy_management_status.build_policy_management_status(
+                project_root=project_root,
+            )
+
+        self.assertEqual(len(report["policy_store"]["proposal_details"]), 1)
+        self.assertEqual(report["policy_store"]["activatable_policy_proposals"], [])
+        self.assertEqual(
+            report["summary_counts"]["activatable_policy_proposal_count"],
+            0,
+        )
 
 
 if __name__ == "__main__":

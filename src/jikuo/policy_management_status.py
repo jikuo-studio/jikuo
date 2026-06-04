@@ -457,6 +457,103 @@ def proposal_detail_summary(
     }
 
 
+def activatable_policy_proposal_summary(
+    *,
+    proposal_detail: dict[str, Any],
+    activation_plan: dict[str, Any],
+) -> dict[str, Any]:
+    proposed_policy = activation_plan.get("proposed_policy")
+    if not isinstance(proposed_policy, dict):
+        proposed_policy = {}
+    trigger_profile = (
+        policy_trigger_profile(proposed_policy)
+        if proposed_policy
+        else proposal_detail.get("trigger_profile") or {}
+    )
+    if (
+        isinstance(proposal_detail.get("trigger_profile"), dict)
+        and not trigger_profile.get("policy_scopes")
+        and not trigger_profile.get("lifecycle_events")
+        and not trigger_profile.get("declared_trigger_events")
+    ):
+        trigger_profile = proposal_detail["trigger_profile"]
+    required_actions = (
+        proposed_policy.get("required_actions")
+        if isinstance(proposed_policy.get("required_actions"), list)
+        else []
+    )
+    required_evidence = (
+        proposed_policy.get("required_evidence")
+        if isinstance(proposed_policy.get("required_evidence"), list)
+        else []
+    )
+    return {
+        "proposal_id": proposal_detail.get("proposal_id")
+        or activation_plan.get("proposal_id"),
+        "proposal_ref": activation_plan.get("proposal_ref")
+        or proposal_detail.get("path"),
+        "path": proposal_detail.get("path") or activation_plan.get("proposal_ref"),
+        "policy_id": activation_plan.get("policy_ref")
+        or proposal_detail.get("policy_id")
+        or proposed_policy.get("policy_id"),
+        "title": proposed_policy.get("title") or proposal_detail.get("title"),
+        "activation_status": "ready_to_activate",
+        "status": activation_plan.get("status"),
+        "manifest_status": activation_plan.get("manifest_status")
+        or proposal_detail.get("manifest_status"),
+        "plan_id": activation_plan.get("plan_id"),
+        "source_plan_ref": activation_plan.get("source_plan_ref")
+        or proposal_detail.get("plan_id"),
+        "proposal_sha256": activation_plan.get("proposal_sha256"),
+        "trigger_profile": trigger_profile,
+        "condition_filters": condition_filter_summary(proposed_policy.get("conditions")),
+        "required_actions": required_actions,
+        "required_evidence": required_evidence,
+        "write_set": compact_write_set(activation_plan.get("write_set")),
+        "write_set_count": len(compact_write_set(activation_plan.get("write_set"))),
+        "approval_required": bool(activation_plan.get("approval_required")),
+        "guarded_apply_available": bool(
+            activation_plan.get("guarded_apply_available")
+        ),
+        "refusal_reasons": [],
+        "warnings": activation_plan.get("warnings")
+        if isinstance(activation_plan.get("warnings"), list)
+        else [],
+        "next_actions": activation_plan.get("next_actions")
+        if isinstance(activation_plan.get("next_actions"), list)
+        else [],
+    }
+
+
+def load_activatable_policy_proposals(
+    *,
+    resolved_root: Path,
+    proposal_details: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[str]]:
+    proposals: list[dict[str, Any]] = []
+    warnings: list[str] = []
+    for detail in proposal_details:
+        proposal_ref = detail.get("path")
+        proposal_id = detail.get("proposal_id")
+        if not proposal_ref and not proposal_id:
+            continue
+        plan = policy_store.build_policy_proposal_activation_plan(
+            project_root=resolved_root,
+            proposal_ref=str(proposal_ref) if proposal_ref else None,
+            proposal_id=str(proposal_id) if proposal_id else None,
+        )
+        if plan.get("status") != "review" or not plan.get("guarded_apply_available"):
+            continue
+        proposals.append(
+            activatable_policy_proposal_summary(
+                proposal_detail=detail,
+                activation_plan=plan,
+            )
+        )
+        warnings.extend(str(item) for item in plan.get("warnings") or [])
+    return proposals, warnings
+
+
 def load_active_policy_details(
     *,
     resolved_root: Path,
@@ -611,6 +708,12 @@ def build_policy_management_status(
         resolved_root=resolved_root,
         policy_report=policy_report,
     )
+    activatable_policy_proposals, activatable_warnings = (
+        load_activatable_policy_proposals(
+            resolved_root=resolved_root,
+            proposal_details=policy_proposal_details,
+        )
+    )
 
     warnings = [
         *(policy_report.get("warnings") or []),
@@ -618,6 +721,7 @@ def build_policy_management_status(
         *starter_warnings,
         *detail_warnings,
         *proposal_detail_warnings,
+        *activatable_warnings,
     ]
     status = "review" if warnings else "available"
     return {
@@ -643,6 +747,8 @@ def build_policy_management_status(
             "active_policy_details": active_policy_details,
             "proposal_refs": policy_report.get("proposal_refs") or [],
             "proposal_details": policy_proposal_details,
+            "activatable_policy_proposal_count": len(activatable_policy_proposals),
+            "activatable_policy_proposals": activatable_policy_proposals,
             "deprecated_policy_refs": policy_report.get("deprecated_policy_refs") or [],
             "superseded_policy_refs": policy_report.get("superseded_policy_refs") or [],
         },
@@ -660,6 +766,7 @@ def build_policy_management_status(
         "option_sets": option_sets_from_policy_details(active_policy_details),
         "summary_counts": {
             "active_policy_count": len(policy_report.get("active_policy_refs") or []),
+            "activatable_policy_proposal_count": len(activatable_policy_proposals),
             "package_template_count": len(templates),
             "starter_pack_count": len(starter_packs),
             "starter_template_ref_count": sum(
@@ -695,6 +802,16 @@ def build_policy_management_status(
                 "write_mode": "guarded-write",
             },
             {
+                "operation": "policy_candidate_activation_plan",
+                "surface": "/api/policy-management/candidate-activation/plan",
+                "write_mode": "no-write",
+            },
+            {
+                "operation": "policy_candidate_activation",
+                "surface": "/api/policy-management/candidate-activation/apply",
+                "write_mode": "guarded-write",
+            },
+            {
                 "operation": "policy_template_publication_plan",
                 "surface": "jikuo.propose_policy_template_publication_plan",
                 "write_mode": "no-write",
@@ -719,6 +836,7 @@ def build_policy_management_status(
             "distribution review decisions are report-only unless separately recorded",
             "package template availability is not user-project activation",
             "starter manifest inclusion is not user-project initialization",
+            "proposal_details is historical; activatable_policy_proposals filters out already-active or already-decided proposals",
             "natural-language policy selection still depends on host AI or deterministic candidate matching",
         ],
         "non_effects": [

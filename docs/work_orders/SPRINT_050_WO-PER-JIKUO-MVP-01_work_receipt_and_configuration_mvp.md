@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-MVP-01: Work Receipt And Configuration MVP
 
-> **Status**: Planned MVP work-order sequence; configuration surface now includes policy read UI, guarded policy evolution/refinement, guarded active-policy package-template publication, and guarded package-template activation slices.
+> **Status**: Planned MVP work-order sequence; configuration surface now includes policy read UI, guarded policy evolution/refinement, guarded active-policy reusable-template publication, and guarded package-template activation slices.
 > **Date**: 2026-06-03
 > **JIKUO layer**: product slice / Studio surface / runtime evidence projection.
 > **Business meaning**: Ship a small usable JIKUO version where a test user can configure documents and policies, let the host AI work, and then inspect an independently checkable AI work receipt without trusting the AI's chat summary.
@@ -405,7 +405,10 @@ Deliverables:
 - INS:
   `docs/insights/INSIGHT-2026-06-03-gui-subscription-semantic-intent-return-gap.md`;
 - runtime `state_summary.semantic_intent_coverage` projection;
-- Studio Overview semantic coverage card;
+- Studio Overview latest semantic classification metric;
+- Studio Latest Semantic Classification card for the latest retained runtime
+  round, showing whether host AI supplied semantic intent, the recorded
+  intent/scopes, and any evidence imperfection;
 - selected Round Document Trace semantic coverage label;
 - diagnostics when semantic coverage is `missing`, `fallback_only`, or
   `degraded`.
@@ -415,6 +418,8 @@ Acceptance:
 - host-provided semantic intent is shown as `complete`;
 - missing required semantic evidence is shown as `missing`;
 - deterministic fallback is shown as `fallback_only`;
+- Studio explains whether the latest retained round was AI-classified and what
+  imperfection remains;
 - Studio does not claim strict GUI semantic gating;
 - policy evaluator inputs and scope taxonomy are unchanged.
 
@@ -462,13 +467,20 @@ Implementation status:
 
 - first read-only Studio slice implemented with
   `/api/policy-management/status`;
-- Studio lists active policies, proposal refs, package templates, starter
-  packs, template coverage, policy-without-template counts, read-model
-  limitations, and guarded operation descriptors;
-- Studio candidate proposal cards now render manifest-listed proposal detail
-  from the policy-management read model, including operation, status,
-  trigger profile, write-set count, and next action, without scanning unlisted
-  proposal files or activating candidate policies;
+- Studio lists active policies as current constraints and filtered
+  activatable proposals as pending constraints; proposal history, package
+  templates, starter packs, read-model limitations, and guarded operation
+  descriptors remain backend/status data rather than the primary policy list;
+- Studio activatable proposal cards are derived from manifest-listed proposal
+  detail plus no-write activation preflight, so already-active, already-decided,
+  or stale proposal history is not displayed as a pending policy;
+- Studio existing-proposal candidate activation is implemented through
+  `/api/policy-management/candidate-activation/plan` and
+  `/api/policy-management/candidate-activation/apply`; the UI lets users select
+  a manifest-listed proposal snapshot, preview the proposal hash, read set, and
+  future policy-store writes, disables apply if selection changes, checks the
+  reviewed proposal hash, and writes only the approved policy file, decision
+  record, and manifest active ref after guarded confirmation;
 - selected active-policy current configuration is visible through trigger
   profile, policy scopes, lifecycle events, condition filters, required
   actions, and required evidence;
@@ -476,17 +488,18 @@ Implementation status:
   lifecycle-event tags, `scope-first` labels when no lifecycle event is
   declared, and policy-management option sets for controlled UI fields;
 - `studio.policy_evolution.plan` is registered as a guarded action descriptor
-  for later deactivation, supersession, and trigger-condition planning;
-- no-write policy evolution preview is implemented through
+  for controlled active-policy configuration changes, including deactivation,
+  supersession, and trigger-condition planning;
+- no-write active-policy configuration change preview is implemented through
   `/api/policy-management/evolution/plan`, allowing Studio users to select an
   active policy and preview deprecation, refinement, or supersession write
   sets before any guarded apply;
-- policy evolution preview now uses controlled trigger-profile fields for
+- active-policy configuration change preview now uses controlled trigger-profile fields for
   `policy_scopes`, `lifecycle_events`, and trigger mode; the same
   replacement work-profile fields are accepted by Studio, `agent_flow`, CLI,
   and MCP proposal/apply plumbing while preserving existing no-write and
   guarded boundaries;
-- Studio guarded policy evolution apply is implemented through
+- Studio guarded active-policy configuration change apply is implemented through
   `/api/policy-management/evolution/apply` for core-writer-supported
   deprecation, trigger-profile refinement, and supersession operations; the UI
   disables apply when fields change after preview, posts the reviewed proposal
@@ -509,10 +522,9 @@ Implementation status:
   `(type, ref)`, preserving template, template-file, and project-context
   provenance while preventing repeated source rows in approved policies;
 - remaining work: build the actual guarded interaction surfaces for active
-  policy deactivation beyond deprecation/supersession, candidate-to-active
-  activation from existing proposal detail, starter-manifest publication, and
-  broader policy editing beyond the currently supported policy evolution
-  operations.
+  policy deactivation beyond deprecation/supersession, starter-manifest
+  publication, and broader policy editing beyond the currently supported policy
+  evolution operations.
 
 ### `MVP-CONFIG-03`: Configuration Review Panel Closeout
 
