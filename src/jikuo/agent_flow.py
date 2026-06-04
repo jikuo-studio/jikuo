@@ -3457,7 +3457,10 @@ def build_policy_evolution_plan_cards(
         next_actions=plan["next_actions"],
     )
     card["policy_evolution_plan"] = plan
-    if operation in {"deprecate_policy", "supersede_policy"} and plan["status"] != "refused":
+    if (
+        operation in policy_store.POLICY_EVOLUTION_WRITE_SUPPORTED_OPERATIONS
+        and plan["status"] != "refused"
+    ):
         command_parts = [
             "python",
             "-B",
@@ -3480,11 +3483,7 @@ def build_policy_evolution_plan_cards(
             command_parts.extend(["--summary", command_arg(summary)])
         if source_ref:
             command_parts.extend(["--source-ref", command_arg(source_ref)])
-        if operation == "supersede_policy":
-            if replacement_policy_ref:
-                command_parts.extend(["--replacement-policy-id", command_arg(replacement_policy_ref)])
-            if replacement_title:
-                command_parts.extend(["--replacement-title", command_arg(replacement_title)])
+        if operation in {"refine_policy", "supersede_policy"}:
             if replacement_trigger_event:
                 command_parts.extend([
                     "--replacement-trigger-event",
@@ -3514,6 +3513,11 @@ def build_policy_evolution_plan_cards(
                     "--replacement-added-path-pattern",
                     command_arg(replacement_added_path_pattern),
                 ])
+        if operation == "supersede_policy":
+            if replacement_policy_ref:
+                command_parts.extend(["--replacement-policy-id", command_arg(replacement_policy_ref)])
+            if replacement_title:
+                command_parts.extend(["--replacement-title", command_arg(replacement_title)])
             command_parts.extend(["--replacement-action-type", command_arg(replacement_action_type)])
             command_parts.extend(["--replacement-evidence-type", command_arg(replacement_evidence_type)])
         card["command_proposal"] = {
@@ -5214,7 +5218,7 @@ def build_apply_result(
         binding_refusals: list[str] = []
         if policy_evolution_operation not in policy_store.POLICY_EVOLUTION_WRITE_SUPPORTED_OPERATIONS:
             binding_refusals.append(
-                "policy_evolution_writer_supports_deprecate_or_supersede_only"
+                "unsupported_policy_evolution_writer_operation"
             )
         if not confirmed:
             binding_refusals.append("missing_confirmation_flag")

@@ -1211,7 +1211,7 @@ class PolicyStoreStatusTests(unittest.TestCase):
         )
         self.assertEqual(report["proposed_trigger_profile"]["lifecycle_events"], [])
         self.assertTrue(report["future_write_boundary"]["requires_guarded_writer"])
-        self.assertFalse(report["future_write_boundary"]["writer_implemented"])
+        self.assertTrue(report["future_write_boundary"]["writer_implemented"])
         self.assertIn(
             "narrow task_type, jikuo_layer, changed_path, or added_path conditions",
             report["recommended_changes"],
@@ -1280,6 +1280,88 @@ class PolicyStoreStatusTests(unittest.TestCase):
             self.assertIn("missing_confirmation_flag", result["refusal_reasons"])
             self.assertIn("approval_evidence_missing", result["refusal_reasons"])
             self.assertEqual(manifest_path.read_text(encoding="utf-8"), before_text)
+
+    def test_write_evolution_refines_policy_trigger_profile_and_keeps_policy_active(self):
+        with temp_project_dir() as temp_root:
+            project_root = temp_root / "policy_store_active_project"
+            shutil.copytree(ACTIVE_PROJECT, project_root)
+            policy_file = (
+                project_root
+                / ".jikuo"
+                / "policies"
+                / "approved"
+                / "POLICY-three-phase-audit.yaml"
+            )
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "write-evolution",
+                    "--project-root",
+                    str(project_root),
+                    "--policy-id",
+                    "POLICY-three-phase-audit",
+                    "--operation",
+                    "refine_policy",
+                    "--feedback-type",
+                    "needs_scope_narrowing",
+                    "--summary",
+                    "Refine trigger profile in a temp project.",
+                    "--source-ref",
+                    "<exact user phrase as spoken>",
+                    "--replacement-trigger-event",
+                    "conversation_turn",
+                    "--replacement-work-profile-policy-scope",
+                    "editing",
+                    "--replacement-changed-path-pattern",
+                    "docs/**",
+                    "--confirm-write-evolution",
+                    "--approval-phrase",
+                    "<exact user phrase as spoken>",
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            result = json.loads(completed.stdout)
+            self.assertEqual(result["status"], "written")
+            self.assertTrue(result["write_performed"])
+            self.assertEqual(result["operation"], "refine_policy")
+            self.assertIn(result["proposal_ref"], result["written_paths"])
+            self.assertIn(result["decision_record_ref"], result["written_paths"])
+            self.assertIn(
+                ".jikuo/policies/approved/POLICY-three-phase-audit.yaml",
+                result["written_paths"],
+            )
+            self.assertTrue(result["post_write_verification"]["target_policy_active"])
+            self.assertTrue(result["post_write_verification"]["target_policy_refined"])
+            self.assertTrue(
+                result["post_write_verification"]["target_policy_version_updated"]
+            )
+
+            policy_text = policy_file.read_text(encoding="utf-8")
+            self.assertIn("version: 2", policy_text)
+            self.assertIn('event: "conversation_turn"', policy_text)
+            self.assertIn('policy_scopes: ["editing"]', policy_text)
+            self.assertIn('type: "changed_path_matches"', policy_text)
+            self.assertIn('pattern: "docs/**"', policy_text)
+
+            status = run_status(project_root)
+            self.assertEqual(status.returncode, 0, status.stderr)
+            status_report = json.loads(status.stdout)
+            self.assertEqual(status_report["policy_store_status"], "active")
+            self.assertEqual(
+                status_report["active_policy_refs"][0]["policy_id"],
+                "POLICY-three-phase-audit",
+            )
+            self.assertEqual(status_report["active_policy_refs"][0]["version"], 2)
 
     def test_write_evolution_deprecates_policy_and_evaluate_no_longer_triggers(self):
         with temp_project_dir() as temp_root:

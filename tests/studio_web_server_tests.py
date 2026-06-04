@@ -1,4 +1,5 @@
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -174,6 +175,285 @@ class StudioWebServerTests(unittest.TestCase):
         )
         self.assertEqual(plan["studio_web"]["write_mode"], "no-write-plan")
 
+    def test_policy_evolution_apply_api_refuses_without_approval(self):
+        status_code, result = server.api_policy_evolution_apply_payload(
+            {
+                "policy_ref": "POLICY-jikuo-data-model-drift-alarm",
+                "policy_evolution_operation": "deprecate_policy",
+                "feedback_type": "needs_scope_narrowing",
+                "summary": "Studio apply refusal test",
+            },
+            project_root=ROOT,
+        )
+
+        self.assertEqual(status_code, 200)
+        self.assertEqual(result["schema"], "jikuo.policy_write_result.v0")
+        self.assertEqual(result["status"], "refused")
+        self.assertFalse(result["write_performed"])
+        self.assertIn("missing_confirmation_flag", result["refusal_reasons"])
+        self.assertIn("approval_evidence_missing", result["refusal_reasons"])
+        self.assertEqual(
+            result["studio_web"]["route"],
+            "/api/policy-management/evolution/apply",
+        )
+        self.assertFalse(result["studio_web"]["writes_performed"])
+
+    def test_policy_evolution_apply_api_writes_temp_policy_store_after_approval(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            shutil.copytree(ROOT / ".jikuo" / "policies", project_root / ".jikuo" / "policies")
+            request_payload = {
+                "policy_ref": "POLICY-jikuo-data-model-drift-alarm",
+                "policy_evolution_operation": "deprecate_policy",
+                "feedback_type": "needs_scope_narrowing",
+                "summary": "Studio guarded apply temp policy-store test",
+            }
+            _plan_code, plan = server.api_policy_evolution_plan_payload(
+                request_payload,
+                project_root=project_root,
+            )
+
+            status_code, result = server.api_policy_evolution_apply_payload(
+                {
+                    **request_payload,
+                    "proposal_ref": plan["proposal_ref"],
+                    "confirm_apply": True,
+                    "approval_phrase": "Approve Policy Evolution write",
+                    "approval_source": "studio_confirmation_dialog",
+                },
+                project_root=project_root,
+            )
+
+            self.assertEqual(status_code, 200)
+            self.assertEqual(result["status"], "written")
+            self.assertTrue(result["write_performed"])
+            self.assertEqual(result["studio_web"]["write_mode"], "guarded")
+            self.assertTrue(result["studio_web"]["writes_performed"])
+            self.assertIn(".jikuo/policies/manifest.yaml", result["written_paths"])
+            self.assertTrue((project_root / result["proposal_ref"]).is_file())
+            self.assertTrue((project_root / result["decision_record_ref"]).is_file())
+
+    def test_policy_evolution_apply_api_refines_trigger_profile_after_approval(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            shutil.copytree(ROOT / ".jikuo" / "policies", project_root / ".jikuo" / "policies")
+            request_payload = {
+                "policy_ref": "POLICY-jikuo-data-model-drift-alarm",
+                "policy_evolution_operation": "refine_policy",
+                "feedback_type": "needs_scope_narrowing",
+                "summary": "Studio guarded refine temp policy-store test",
+                "replacement_trigger_event": "conversation_turn",
+                "replacement_work_profile_policy_scopes": ["editing"],
+                "replacement_work_profile_lifecycle_events": [],
+                "replacement_changed_path_pattern": "src/jikuo/**",
+            }
+            _plan_code, plan = server.api_policy_evolution_plan_payload(
+                request_payload,
+                project_root=project_root,
+            )
+
+            status_code, result = server.api_policy_evolution_apply_payload(
+                {
+                    **request_payload,
+                    "proposal_ref": plan["proposal_ref"],
+                    "confirm_apply": True,
+                    "approval_phrase": "Approve Policy Evolution write",
+                    "approval_source": "studio_confirmation_dialog",
+                },
+                project_root=project_root,
+            )
+
+            self.assertEqual(status_code, 200)
+            self.assertEqual(result["status"], "written")
+            self.assertTrue(result["write_performed"])
+            self.assertEqual(result["operation"], "refine_policy")
+            self.assertTrue(result["post_write_verification"]["target_policy_refined"])
+            self.assertIn(
+                ".jikuo/policies/approved/POLICY-jikuo-data-model-drift-alarm.yaml",
+                result["written_paths"],
+            )
+            policy_text = (
+                project_root
+                / ".jikuo"
+                / "policies"
+                / "approved"
+                / "POLICY-jikuo-data-model-drift-alarm.yaml"
+            ).read_text(encoding="utf-8")
+            self.assertIn('pattern: "src/jikuo/**"', policy_text)
+
+    def test_policy_template_activation_plan_api_returns_no_write_plan(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            write_project_context(project_root)
+            template_path = (
+                ROOT
+                / "src"
+                / "jikuo"
+                / "policy_templates"
+                / "engineering_governance"
+                / "POLICYTEMPLATE-local-policy-jikuo-data-model-drift-alarm.yaml"
+            )
+
+            status_code, plan = server.api_policy_template_activation_plan_payload(
+                {"template_path": str(template_path)},
+                project_root=project_root,
+            )
+
+            self.assertEqual(status_code, 200)
+            self.assertEqual(plan["schema"], "jikuo.policy_template_import_plan.v0")
+            self.assertEqual(plan["status"], "review")
+            self.assertFalse(plan["writes_performed"])
+            self.assertFalse(plan["write_allowed_by_command"])
+            self.assertEqual(
+                plan["resolved_policy_preview"]["policy_id"],
+                "POLICY-jikuo-data-model-drift-alarm",
+            )
+            self.assertEqual(len(plan["write_set"]), 4)
+            self.assertEqual(
+                plan["studio_web"]["route"],
+                "/api/policy-management/template-activation/plan",
+            )
+            self.assertEqual(plan["studio_web"]["write_mode"], "no-write-plan")
+
+    def test_policy_template_activation_plan_api_refuses_paths_outside_package_templates(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            write_project_context(project_root)
+            outside = project_root / "template.yaml"
+            outside.write_text("schema_version: nope\n", encoding="utf-8")
+
+            status_code, plan = server.api_policy_template_activation_plan_payload(
+                {"template_path": str(outside)},
+                project_root=project_root,
+            )
+
+            self.assertEqual(status_code, 200)
+            self.assertEqual(plan["schema"], "jikuo.policy_template_import_plan.v0")
+            self.assertEqual(plan["status"], "refused")
+            self.assertIn(
+                "template_path_outside_package_policy_templates",
+                plan["refusal_reasons"][0],
+            )
+            self.assertFalse(plan["writes_performed"])
+
+    def test_policy_template_activation_apply_api_refuses_without_approval(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            write_project_context(project_root)
+            template_path = (
+                ROOT
+                / "src"
+                / "jikuo"
+                / "policy_templates"
+                / "engineering_governance"
+                / "POLICYTEMPLATE-local-policy-jikuo-data-model-drift-alarm.yaml"
+            )
+
+            status_code, result = server.api_policy_template_activation_apply_payload(
+                {"template_path": str(template_path)},
+                project_root=project_root,
+            )
+
+            self.assertEqual(status_code, 200)
+            self.assertEqual(result["schema"], "jikuo.policy_template_activation_result.v0")
+            self.assertEqual(result["status"], "refused")
+            self.assertFalse(result["write_performed"])
+            self.assertIn("missing_confirmation_flag", result["refusal_reasons"])
+            self.assertIn("approval_evidence_missing", result["refusal_reasons"])
+            self.assertEqual(
+                result["studio_web"]["route"],
+                "/api/policy-management/template-activation/apply",
+            )
+
+    def test_policy_template_activation_apply_api_writes_temp_policy_after_approval(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            write_project_context(project_root)
+            template_path = (
+                ROOT
+                / "src"
+                / "jikuo"
+                / "policy_templates"
+                / "engineering_governance"
+                / "POLICYTEMPLATE-local-policy-jikuo-data-model-drift-alarm.yaml"
+            )
+            _plan_code, plan = server.api_policy_template_activation_plan_payload(
+                {"template_path": str(template_path)},
+                project_root=project_root,
+            )
+
+            status_code, result = server.api_policy_template_activation_apply_payload(
+                {
+                    "template_path": str(template_path),
+                    "plan_id": plan["plan_id"],
+                    "confirm_apply": True,
+                    "approval_phrase": "Approve Policy Template activation",
+                    "approval_source": "studio_confirmation_dialog",
+                },
+                project_root=project_root,
+            )
+
+            self.assertEqual(status_code, 200)
+            self.assertEqual(result["status"], "written")
+            self.assertTrue(result["write_performed"])
+            self.assertEqual(result["studio_web"]["write_mode"], "guarded")
+            self.assertTrue(result["studio_web"]["writes_performed"])
+            self.assertEqual(
+                result["policy_ref"],
+                "POLICY-jikuo-data-model-drift-alarm",
+            )
+            self.assertTrue(result["post_write_verification"]["policy_active"])
+            self.assertIn(".jikuo/policies/manifest.yaml", result["written_paths"])
+            self.assertTrue((project_root / result["proposal_ref"]).is_file())
+            self.assertTrue(
+                (
+                    project_root
+                    / ".jikuo"
+                    / "policies"
+                    / "approved"
+                    / "POLICY-jikuo-data-model-drift-alarm.yaml"
+                ).is_file()
+            )
+            self.assertTrue((project_root / result["decision_record_ref"]).is_file())
+
+    def test_policy_template_activation_apply_api_rejects_stale_plan_id(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            write_project_context(project_root)
+            template_path = (
+                ROOT
+                / "src"
+                / "jikuo"
+                / "policy_templates"
+                / "engineering_governance"
+                / "POLICYTEMPLATE-local-policy-jikuo-data-model-drift-alarm.yaml"
+            )
+
+            status_code, result = server.api_policy_template_activation_apply_payload(
+                {
+                    "template_path": str(template_path),
+                    "plan_id": "POLICYTEMPLATEIMPORT-stale",
+                    "confirm_apply": True,
+                    "approval_phrase": "Approve Policy Template activation",
+                },
+                project_root=project_root,
+            )
+
+            self.assertEqual(status_code, 200)
+            self.assertEqual(result["status"], "refused")
+            self.assertFalse(result["write_performed"])
+            self.assertIn(
+                "reviewed_plan_id_does_not_match_current_request",
+                result["refusal_reasons"],
+            )
+
     def test_policy_evolution_plan_api_rejects_non_object_requests(self):
         status_code, plan = server.api_policy_evolution_plan_payload(
             ["not", "an", "object"],
@@ -183,6 +463,16 @@ class StudioWebServerTests(unittest.TestCase):
         self.assertEqual(status_code, 400)
         self.assertEqual(plan["status"], "invalid_request")
         self.assertFalse(plan["writes_performed"])
+
+    def test_policy_evolution_apply_api_rejects_non_object_requests(self):
+        status_code, result = server.api_policy_evolution_apply_payload(
+            ["not", "an", "object"],
+            project_root=ROOT,
+        )
+
+        self.assertEqual(status_code, 400)
+        self.assertEqual(result["status"], "invalid_request")
+        self.assertFalse(result["writes_performed"])
 
     def test_index_html_is_no_write_control_shell_with_document_rules_preview(self):
         html = server.render_index_html()
@@ -198,6 +488,9 @@ class StudioWebServerTests(unittest.TestCase):
         self.assertIn("Policies And Templates", html)
         self.assertIn("/api/policy-management/status", html)
         self.assertIn("/api/policy-management/evolution/plan", html)
+        self.assertIn("/api/policy-management/evolution/apply", html)
+        self.assertIn("/api/policy-management/template-activation/plan", html)
+        self.assertIn("/api/policy-management/template-activation/apply", html)
         self.assertIn("policy-management-status", html)
         self.assertIn("policy-management-metrics", html)
         self.assertIn("policy-evolution-operation", html)
@@ -209,11 +502,40 @@ class StudioWebServerTests(unittest.TestCase):
         self.assertIn("policy-evolution-scope-options", html)
         self.assertIn("policy-evolution-lifecycle-options", html)
         self.assertIn("policy-evolution-replacement-ref", html)
+        self.assertIn("policy-trigger-mode-note", html)
+        self.assertIn("updatePolicyTriggerModeAffordance", html)
+        self.assertIn("selectedPolicyTriggerProfile", html)
+        self.assertIn("currentDeclared", html)
+        self.assertIn(".option-pill.ignored", html)
         self.assertIn("policy-evolution-preview-button", html)
+        self.assertIn("policy-evolution-apply-button", html)
+        self.assertIn("POLICY_EVOLUTION_APPROVAL_PHRASE", html)
+        self.assertIn("currentPolicyEvolutionPlan", html)
+        self.assertIn("currentPolicyEvolutionRequest", html)
+        self.assertIn("proposal_ref: currentPolicyEvolutionPlan.proposal_ref", html)
         self.assertIn("policy-evolution-plan-result", html)
         self.assertIn("policy-editor-grid", html)
         self.assertIn("policy-editor-note", html)
+        self.assertIn("policy-action-buttons", html)
+        self.assertIn("Template activation preview", html)
+        self.assertIn("policy-template-activation-template", html)
+        self.assertIn("policy-template-selected-summary", html)
+        self.assertIn("policy-template-selected-tags", html)
+        self.assertIn("policy-template-selected-config", html)
+        self.assertIn("policy-template-activation-preview-button", html)
+        self.assertIn("policy-template-activation-apply-button", html)
+        self.assertIn("policy-template-activation-plan-result", html)
+        self.assertIn("POLICY_TEMPLATE_ACTIVATION_APPROVAL_PHRASE", html)
+        self.assertIn("currentPolicyTemplateActivationPlan", html)
+        self.assertIn("previewPolicyTemplateActivationPlan", html)
+        self.assertIn("applyPolicyTemplateActivationPlan", html)
+        self.assertIn("renderPolicyTemplateActivationPlan", html)
+        self.assertIn("Apply guarded activation", html)
         self.assertIn("@media (max-width: 1180px)", html)
+        self.assertIn("Status reason", html)
+        self.assertIn("Apply readiness", html)
+        self.assertIn("Approval boundary", html)
+        self.assertIn("Apply next step", html)
         self.assertNotIn("policy-evolution-replacement-trigger", html)
         self.assertIn("policy-active-list", html)
         self.assertIn("policy-candidate-list", html)
@@ -435,6 +757,81 @@ class StudioWebServerTests(unittest.TestCase):
             httpd.shutdown()
             httpd.server_close()
             thread.join(timeout=10)
+
+    def test_http_server_accepts_policy_evolution_apply_post_refusal(self):
+        httpd = server.create_server(host="127.0.0.1", port=0, project_root=ROOT)
+        thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+        thread.start()
+        try:
+            host, port = httpd.server_address
+            payload = json.dumps(
+                {
+                    "policy_ref": "POLICY-jikuo-data-model-drift-alarm",
+                    "policy_evolution_operation": "deprecate_policy",
+                }
+            ).encode("utf-8")
+            request = Request(
+                f"http://{host}:{port}/api/policy-management/evolution/apply",
+                data=payload,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urlopen(request, timeout=10) as response:
+                result = json.loads(response.read().decode("utf-8"))
+
+            self.assertEqual(result["schema"], "jikuo.policy_write_result.v0")
+            self.assertEqual(result["status"], "refused")
+            self.assertFalse(result["write_performed"])
+            self.assertEqual(
+                result["studio_web"]["route"],
+                "/api/policy-management/evolution/apply",
+            )
+        finally:
+            httpd.shutdown()
+            httpd.server_close()
+            thread.join(timeout=10)
+
+    def test_http_server_accepts_policy_template_activation_plan_post(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            write_project_context(project_root)
+            template_path = (
+                ROOT
+                / "src"
+                / "jikuo"
+                / "policy_templates"
+                / "engineering_governance"
+                / "POLICYTEMPLATE-local-policy-jikuo-data-model-drift-alarm.yaml"
+            )
+            httpd = server.create_server(host="127.0.0.1", port=0, project_root=project_root)
+            thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+            thread.start()
+            try:
+                host, port = httpd.server_address
+                payload = json.dumps(
+                    {"template_path": str(template_path)}
+                ).encode("utf-8")
+                request = Request(
+                    f"http://{host}:{port}/api/policy-management/template-activation/plan",
+                    data=payload,
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                with urlopen(request, timeout=10) as response:
+                    plan = json.loads(response.read().decode("utf-8"))
+
+                self.assertEqual(plan["schema"], "jikuo.policy_template_import_plan.v0")
+                self.assertEqual(plan["status"], "review")
+                self.assertFalse(plan["writes_performed"])
+                self.assertEqual(
+                    plan["studio_web"]["route"],
+                    "/api/policy-management/template-activation/plan",
+                )
+            finally:
+                httpd.shutdown()
+                httpd.server_close()
+                thread.join(timeout=10)
 
     def test_document_rules_apply_api_refuses_then_applies_reviewed_plan(self):
         with tempfile.TemporaryDirectory() as tmp:

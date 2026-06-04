@@ -1,0 +1,17 @@
+schema_version: "jikuo.policy_decision.v0"
+decision_id: "POLICYDECISION-7e32f476ca"
+proposal_ref: ".jikuo/policies/proposals/POLICYEVOPROPOSAL-6d16e8fe6c.yaml"
+policy_ref: "POLICY-jikuo-self-bootstrap-workflow"
+decision: "refine_policy"
+target:
+  kind: "approved_policy"
+  ref: "POLICY-jikuo-self-bootstrap-workflow"
+effect: "refine trigger profile for POLICY-jikuo-self-bootstrap-workflow"
+non_effect: "does not execute policy actions, persist evidence, or promote gates"
+approval_phrase: "Approve Policy Evolution write"
+created_at: "2026-06-04T09:37:15Z"
+source_plan_ref: "POLICYEVO-962a316387"
+source_plan_schema: "jikuo.policy_evolution_plan.v0"
+storage:
+  path: ".jikuo/policies/decisions/POLICYDECISION-7e32f476ca.yaml"
+  policy_store_ref: ".jikuo/policies"

@@ -46,6 +46,7 @@ POLICY_CONDITION_EVAL_STATUS_NOT_EVALUATED = "not_evaluated"
 POLICY_CONDITION_EVAL_STATUS_CHECKED = "checked"
 WORK_PROFILE_APPLICABILITY_SCHEMA = "jikuo.policy_work_profile_applicability.v0"
 POLICY_EVOLUTION_WRITE_SUPPORTED_OPERATIONS = {
+    "refine_policy",
     "deprecate_policy",
     "supersede_policy",
 }
@@ -1257,6 +1258,15 @@ def build_policy_evolution_plan(
             "operation": "update",
         },
     ]
+    if operation == "refine_policy" and policy_path_ref:
+        write_set.insert(
+            1,
+            {
+                "path": policy_path_ref,
+                "effect": "update approved policy trigger profile",
+                "operation": "update",
+            },
+        )
     if operation == "supersede_policy" and replacement_policy_path_ref:
         write_set.insert(
             1,
@@ -1310,7 +1320,11 @@ def build_policy_evolution_plan(
             "writer_implemented": operation in POLICY_EVOLUTION_WRITE_SUPPORTED_OPERATIONS,
         },
         "non_effects": [
-            "does not write policy files",
+            (
+                "does not write policy action, evidence, title, or status fields"
+                if operation == "refine_policy"
+                else "does not write policy files"
+            ),
             "does not update manifest.yaml",
             "does not deprecate or supersede active policies",
             "does not execute policy actions",
@@ -1453,6 +1467,9 @@ def build_policy_evolution_decision_record(
             "ref": target_policy_ref,
             "replacement_ref": plan.get("replacement_policy_ref"),
         }
+    effect = f"{operation} {target_policy_ref} and update policy-store manifest lifecycle refs"
+    if operation == "refine_policy":
+        effect = f"refine trigger profile for {target_policy_ref}"
     return {
         "schema_version": POLICY_DECISION_SCHEMA,
         "decision_id": Path(plan["decision_record_ref"]).stem,
@@ -1460,7 +1477,7 @@ def build_policy_evolution_decision_record(
         "policy_ref": target_policy_ref,
         "decision": decision,
         "target": target,
-        "effect": f"{operation} {target_policy_ref} and update policy-store manifest lifecycle refs",
+        "effect": effect,
         "non_effect": "does not execute policy actions, persist evidence, or promote gates",
         "approval_phrase": approval_phrase,
         "created_at": utc_now_iso(),
@@ -1811,6 +1828,150 @@ def append_proposal_ref_to_manifest_text(
     return "\n".join(lines) + "\n"
 
 
+def next_policy_version(value: Any) -> int:
+    try:
+        return int(value) + 1
+    except (TypeError, ValueError):
+        return 1
+
+
+def replace_top_level_field_text(*, text: str, field_name: str, value: Any) -> str:
+    lines = text.splitlines()
+    rendered = render_yaml_lines({field_name: value})
+    field_index = top_level_field_index(lines, field_name)
+    if field_index is None:
+        lines.extend(rendered)
+    else:
+        section_end = top_level_section_end(lines, field_index)
+        lines[field_index:section_end] = rendered
+    return "\n".join(lines) + "\n"
+
+
+def update_active_policy_ref_version_in_manifest_text(
+    *,
+    text: str,
+    policy_id: str,
+    version: Any,
+) -> str:
+    lines = text.splitlines()
+    active_block = list_block_for_policy(
+        lines=lines,
+        field_name="active_policy_refs",
+        policy_id=policy_id,
+    )
+    if active_block is None:
+        raise RuntimeError("target active policy ref is missing")
+    block_start, block_end = active_block
+    version_line = None
+    for index in range(block_start + 1, block_end):
+        if lines[index].strip().startswith("version:"):
+            version_line = index
+            break
+    if version_line is None:
+        lines.insert(block_start + 1, f"    version: {quote_yaml(version)}")
+    else:
+        lines[version_line] = f"    version: {quote_yaml(version)}"
+
+    now = utc_now_iso()
+    for index, line in enumerate(lines):
+        if line.strip().startswith("last_updated_at:"):
+            lines[index] = f"last_updated_at: {quote_yaml(now)}"
+            break
+    else:
+        lines.append(f"last_updated_at: {quote_yaml(now)}")
+    return "\n".join(lines) + "\n"
+
+
+def build_refined_policy_text_from_plan(
+    *,
+    original_text: str,
+    plan: dict[str, Any],
+) -> tuple[str, int]:
+    proposed = plan.get("proposed_trigger_profile") or {}
+    target = plan.get("target_policy_snapshot") or {}
+    new_version = next_policy_version(target.get("version"))
+    trigger_event = str(proposed.get("declared_trigger_event") or "task_start")
+    policy_ref = str(plan.get("target_policy_ref") or "POLICY-refined")
+    triggers = [
+        {
+            "trigger_id": f"TRG-{slug_token(trigger_event)}",
+            "type": "task_lifecycle_event",
+            "event": trigger_event,
+        }
+    ]
+    work_profile_entries = build_work_profile_applicability_entries(
+        lifecycle_events=scalar_list(proposed.get("lifecycle_events")),
+        policy_scopes=scalar_list(proposed.get("policy_scopes")),
+    )
+    conditions = proposed.get("conditions")
+    if not isinstance(conditions, list):
+        conditions = build_policy_conditions(
+            policy_id=policy_ref,
+            task_type=None,
+            jikuo_layer=None,
+            changed_path_pattern=None,
+            added_path_pattern=None,
+        )
+
+    refined_text = original_text
+    refined_text = replace_top_level_field_text(
+        text=refined_text,
+        field_name="version",
+        value=new_version,
+    )
+    refined_text = replace_top_level_field_text(
+        text=refined_text,
+        field_name="triggers",
+        value=triggers,
+    )
+    refined_text = replace_top_level_field_text(
+        text=refined_text,
+        field_name="conditions",
+        value=conditions,
+    )
+    refined_text = replace_top_level_field_text(
+        text=refined_text,
+        field_name="applies_to_work_profile",
+        value=work_profile_entries,
+    )
+    return refined_text, new_version
+
+
+def policy_record_matches_refinement_plan(
+    *,
+    record: dict[str, Any] | None,
+    plan: dict[str, Any],
+) -> bool:
+    if not isinstance(record, dict):
+        return False
+    proposed = plan.get("proposed_trigger_profile") or {}
+    work_profile = normalize_work_profile_applicability(
+        record.get("applies_to_work_profile")
+    ) or {
+        "lifecycle_events": [],
+        "policy_scopes": [],
+    }
+    declared_events = [
+        str(trigger.get("event"))
+        for trigger in record.get("triggers", [])
+        if isinstance(trigger, dict) and trigger.get("event") is not None
+    ] if isinstance(record.get("triggers"), list) else []
+    conditions = record.get("conditions")
+    if not isinstance(conditions, list):
+        conditions = []
+    expected_conditions = proposed.get("conditions")
+    if not isinstance(expected_conditions, list):
+        expected_conditions = []
+    return (
+        scalar_list(work_profile.get("policy_scopes"))
+        == scalar_list(proposed.get("policy_scopes"))
+        and scalar_list(work_profile.get("lifecycle_events"))
+        == scalar_list(proposed.get("lifecycle_events"))
+        and declared_events == [str(proposed.get("declared_trigger_event") or "task_start")]
+        and conditions == expected_conditions
+    )
+
+
 def build_policy_write_refusal_result(
     *,
     plan: dict[str, Any],
@@ -1912,6 +2073,8 @@ def build_policy_evolution_write_refusal_result(
             "decision_record_written": False,
             "manifest_updated": False,
             "active_policy_resolvable": False,
+            "target_policy_refined": False,
+            "target_policy_version_updated": False,
             "target_policy_deprecated": False,
             "target_policy_superseded": False,
             "replacement_policy_active": False,
@@ -1963,7 +2126,7 @@ def write_policy_evolution_from_plan(
     )
     refusal_reasons = list(plan["refusal_reasons"])
     if operation not in POLICY_EVOLUTION_WRITE_SUPPORTED_OPERATIONS:
-        refusal_reasons.append("policy_evolution_writer_supports_deprecate_or_supersede_only")
+        refusal_reasons.append("unsupported_policy_evolution_writer_operation")
     if not confirmed:
         refusal_reasons.append("missing_confirmation_flag")
     if not approval_phrase:
@@ -1997,6 +2160,8 @@ def write_policy_evolution_from_plan(
         if isinstance(replacement_policy_path_ref, str)
         else None
     )
+    target_policy_path: Path | None = None
+    target_policy_path_ref: str | None = None
     temp_proposal_path = proposal_path.with_suffix(proposal_path.suffix + ".tmp")
     temp_decision_path = decision_path.with_suffix(decision_path.suffix + ".tmp")
     temp_manifest_path = manifest_path.with_suffix(manifest_path.suffix + ".tmp")
@@ -2005,12 +2170,16 @@ def write_policy_evolution_from_plan(
         if replacement_policy_path is not None
         else None
     )
+    temp_target_policy_path: Path | None = None
     created_paths: list[str] = []
     written_paths: list[str] = []
     proposal_created = False
     decision_created = False
     replacement_policy_created = False
+    target_policy_updated = False
     manifest_updated = False
+    original_target_policy_text: str | None = None
+    refined_policy_version: int | None = None
 
     try:
         if not manifest_path.exists():
@@ -2080,6 +2249,45 @@ def write_policy_evolution_from_plan(
                 ),
                 2,
             )
+        target_policy_path_ref = policy_path_ref
+        resolved_target_policy_path, target_path_error = resolve_project_path(
+            project_root_path,
+            policy_path_ref,
+        )
+        if target_path_error or resolved_target_policy_path is None:
+            return (
+                build_policy_evolution_write_refusal_result(
+                    plan=plan,
+                    refusal_reasons=["target_policy_path_invalid_at_write_time"],
+                    approval_phrase=approval_phrase,
+                    error=target_path_error or "target policy path invalid",
+                ),
+                2,
+            )
+        target_policy_path = resolved_target_policy_path
+        if operation == "refine_policy":
+            if not target_policy_path.is_file():
+                return (
+                    build_policy_evolution_write_refusal_result(
+                        plan=plan,
+                        refusal_reasons=["target_policy_file_missing_at_write_time"],
+                        approval_phrase=approval_phrase,
+                    ),
+                    2,
+                )
+            original_target_policy_text = target_policy_path.read_text(encoding="utf-8")
+            refined_policy_text, refined_policy_version = build_refined_policy_text_from_plan(
+                original_text=original_target_policy_text,
+                plan=plan,
+            )
+            temp_target_policy_path = target_policy_path.with_suffix(
+                target_policy_path.suffix + ".tmp"
+            )
+            temp_target_policy_path.write_text(
+                refined_policy_text,
+                encoding="utf-8",
+                newline="\n",
+            )
         if operation == "supersede_policy":
             replacement_policy_ref = plan.get("replacement_policy_ref")
             if not isinstance(replacement_policy_ref, str) or not replacement_policy_ref:
@@ -2108,6 +2316,12 @@ def write_policy_evolution_from_plan(
                 replacement_policy_id=replacement_policy_ref,
                 replacement_policy_path_ref=replacement_policy_path_ref,
                 decision_ref=decision_ref,
+            )
+        elif operation == "refine_policy":
+            manifest_text = update_active_policy_ref_version_in_manifest_text(
+                text=manifest_path.read_text(encoding="utf-8"),
+                policy_id=plan["target_policy_ref"],
+                version=refined_policy_version,
             )
         else:
             manifest_text = append_deprecated_policy_ref_to_manifest_text(
@@ -2187,6 +2401,13 @@ def write_policy_evolution_from_plan(
             temp_replacement_policy_path.unlink(missing_ok=True)
             written_paths.append(str(replacement_policy_path_ref))
 
+        if operation == "refine_policy":
+            if temp_target_policy_path is None or target_policy_path is None:
+                raise RuntimeError("refined policy temp path was not prepared")
+            os.replace(temp_target_policy_path, target_policy_path)
+            target_policy_updated = True
+            written_paths.append(str(target_policy_path_ref))
+
         try:
             fd = os.open(decision_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
         except FileExistsError:
@@ -2205,6 +2426,8 @@ def write_policy_evolution_from_plan(
         temp_paths = [temp_proposal_path, temp_decision_path, temp_manifest_path]
         if temp_replacement_policy_path is not None:
             temp_paths.append(temp_replacement_policy_path)
+        if temp_target_policy_path is not None:
+            temp_paths.append(temp_target_policy_path)
         for temp_path in temp_paths:
             if temp_path.exists():
                 temp_path.unlink(missing_ok=True)
@@ -2217,6 +2440,17 @@ def write_policy_evolution_from_plan(
             and replacement_policy_path.exists()
         ):
             replacement_policy_path.unlink(missing_ok=True)
+        if (
+            target_policy_updated
+            and not manifest_updated
+            and target_policy_path is not None
+            and original_target_policy_text is not None
+        ):
+            target_policy_path.write_text(
+                original_target_policy_text,
+                encoding="utf-8",
+                newline="\n",
+            )
         if decision_created and not manifest_updated and decision_path.exists():
             decision_path.unlink(missing_ok=True)
         return (
@@ -2251,11 +2485,27 @@ def write_policy_evolution_from_plan(
             for ref in status_after["active_policy_refs"]
         )
     )
-    ok = (
-        (target_deprecated and not target_active)
-        if operation == "deprecate_policy"
-        else (target_superseded and replacement_active and not target_active)
-    )
+    target_policy_refined = False
+    target_policy_version_updated = False
+    if operation == "refine_policy" and target_policy_path is not None:
+        refined_record, _record_warnings = read_policy_record(target_policy_path)
+        target_policy_refined = policy_record_matches_refinement_plan(
+            record=refined_record,
+            plan=plan,
+        )
+        if refined_record is not None:
+            target_policy_version_updated = (
+                refined_record.get("version")
+                == refined_policy_version
+                and refined_record.get("version")
+                != plan["target_policy_snapshot"].get("version")
+            )
+    if operation == "deprecate_policy":
+        ok = target_deprecated and not target_active
+    elif operation == "supersede_policy":
+        ok = target_superseded and replacement_active and not target_active
+    else:
+        ok = target_active and target_policy_refined and target_policy_version_updated
     return (
         {
             "schema": POLICY_WRITE_RESULT_SCHEMA,
@@ -2291,6 +2541,8 @@ def write_policy_evolution_from_plan(
                 "manifest_updated": manifest_ref in {status_after.get("manifest_ref"), manifest_ref},
                 "active_policy_resolvable": target_active,
                 "target_policy_active": target_active,
+                "target_policy_refined": target_policy_refined,
+                "target_policy_version_updated": target_policy_version_updated,
                 "target_policy_deprecated": target_deprecated,
                 "target_policy_superseded": target_superseded,
                 "replacement_policy_active": replacement_active,

@@ -4739,7 +4739,16 @@ class AgentFlowProposalTests(unittest.TestCase):
         self.assertEqual(plan["status"], "review")
         self.assertEqual(plan["target_policy_ref"], "POLICY-three-phase-audit")
         self.assertFalse(plan["writes_performed"])
-        self.assertFalse(plan["future_write_boundary"]["writer_implemented"])
+        self.assertTrue(plan["future_write_boundary"]["writer_implemented"])
+        command = proposal["cards"][0]["command_proposal"]
+        self.assertTrue(command["approval_required"])
+        self.assertIn("write-evolution", command["command_preview"])
+        self.assertIn("--operation \"refine_policy\"", command["command_preview"])
+        self.assertIn("--confirm-write-evolution", command["command_preview"])
+        self.assertIn(
+            ".jikuo/policies/approved/POLICY-three-phase-audit.yaml",
+            command["writes_if_approved"],
+        )
         atom_ids = {trace["atom_id"] for trace in proposal["atom_trace"]}
         self.assertIn("CAP-POLICY-EVOLUTION-PLAN-PROPOSE-01", atom_ids)
 

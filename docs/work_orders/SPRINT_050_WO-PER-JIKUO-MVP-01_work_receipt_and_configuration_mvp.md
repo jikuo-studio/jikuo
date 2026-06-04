@@ -482,10 +482,29 @@ Implementation status:
   replacement work-profile fields are accepted by Studio, `agent_flow`, CLI,
   and MCP proposal/apply plumbing while preserving existing no-write and
   guarded boundaries;
-- remaining work: build the actual guarded plan/apply interaction surfaces for
-  activation, deactivation/supersession apply, template import, template
-  publication, starter-manifest publication, and approved trigger-mode or
-  trigger-condition writes beyond policy evolution preview.
+- Studio guarded policy evolution apply is implemented through
+  `/api/policy-management/evolution/apply` for core-writer-supported
+  deprecation, trigger-profile refinement, and supersession operations; the UI
+  disables apply when fields change after preview, posts the reviewed proposal
+  ref with confirmation and approval evidence, and the backend verifies the
+  proposal ref still matches the current payload before calling the existing
+  guarded writer;
+- trigger-profile refinement uses a narrow guarded writer that updates only
+  `version`, `triggers`, `conditions`, and `applies_to_work_profile` on the
+  target approved policy, writes proposal/decision records, updates manifest
+  active version/proposal refs, and rereads the policy to verify the applied
+  profile;
+- Studio template activation is implemented through
+  `/api/policy-management/template-activation/plan` and
+  `/api/policy-management/template-activation/apply`; the UI lets users select
+  an available package template, preview resolved project-context bindings and
+  the four-item policy-store write set, disables apply if selection changes,
+  checks the reviewed `plan_id`, and delegates to the existing guarded template
+  activation writer after confirmation;
+- remaining work: build the actual guarded interaction surfaces for active
+  policy deactivation beyond deprecation/supersession, policy-to-template
+  publication, starter-manifest publication, and broader policy editing beyond
+  the currently supported policy evolution operations.
 
 ### `MVP-CONFIG-03`: Configuration Review Panel Closeout
 
