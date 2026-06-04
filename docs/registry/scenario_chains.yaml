@@ -264,8 +264,8 @@ entries:
       - "CAP-STUDIO-ARTIFACT-ASSURANCE-COMPLETION-CHECK-SEMANTICS-01"
   - id: "SCENARIO-STUDIO-POLICY-CONFIGURATION"
     title: "Studio policy configuration inspection"
-    status: "implemented_read_only_no_write_plan_guarded_trigger_refinement_template_publication_and_template_activation_slice"
-    user_outcome: "A Studio user can inspect active policies, candidate proposal refs, available package templates, starter packs, scope-first trigger posture, selected-policy configuration values, preview policy evolution plans, apply supported deprecation, trigger-profile refinement, or supersession changes, publish selected active policies as package templates, and activate selected package templates as project policies through guarded writers."
+    status: "implemented_read_only_candidate_detail_no_write_plan_guarded_trigger_refinement_template_publication_and_template_activation_slice"
+    user_outcome: "A Studio user can inspect active policies, candidate proposal details, available package templates, starter packs, scope-first trigger posture, selected-policy configuration values, preview policy evolution plans, apply supported deprecation, trigger-profile refinement, or supersession changes, publish selected active policies as package templates, and activate selected package templates as project policies through guarded writers."
     corresponding_document_refs:
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-MVP-01_work_receipt_and_configuration_mvp.md"
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md"
@@ -303,14 +303,15 @@ entries:
           - "distribution state"
       - step_id: "STUDIO-POLICY-CONFIG-03"
         user_action: "Inspect candidates, templates, and starter packs."
-        visible_result: "Studio shows manifest proposal refs, reusable package templates, required binding counts, and starter-pack inclusion."
-        operation_chain: "The policy-management read model exposes proposal_refs, package_templates.templates, and starter_packs.packs; the frontend renders them as separate columns so user-project activation is not confused with package-template availability."
+        visible_result: "Studio shows manifest proposal refs with candidate operation, status, trigger profile, write-set count, next action, reusable package templates, required binding counts, and starter-pack inclusion."
+        operation_chain: "The policy-management read model exposes proposal_refs, proposal_details, package_templates.templates, and starter_packs.packs; the frontend renders them as separate columns so candidate policy activation is not confused with package-template availability or active-policy status."
         atom_refs:
           - "CAP-STUDIO-POLICY-CONFIGURATION-READ-UI-01"
+          - "CAP-STUDIO-POLICY-CANDIDATE-DETAIL-READ-01"
           - "CAP-POLICY-MANAGEMENT-STATUS-READ-01"
         approval_boundary: "read_only"
         evidence_outputs:
-          - "candidate proposal cards"
+          - "candidate proposal detail cards"
           - "template cards"
           - "starter pack cards"
       - step_id: "STUDIO-POLICY-CONFIG-04"
@@ -391,6 +392,7 @@ entries:
           - "refusal reasons when apply is not allowed"
     capability_refs:
       - "CAP-STUDIO-POLICY-CONFIGURATION-READ-UI-01"
+      - "CAP-STUDIO-POLICY-CANDIDATE-DETAIL-READ-01"
       - "CAP-STUDIO-POLICY-GUARDED-ACTION-REGISTRY-01"
       - "CAP-STUDIO-POLICY-EVOLUTION-PLAN-PREVIEW-01"
       - "CAP-STUDIO-POLICY-EVOLUTION-GUARDED-APPLY-01"

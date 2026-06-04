@@ -1461,6 +1461,14 @@ INDEX_HTML = """<!doctype html>
     };
     const selectedPolicyDetail = (report) => selectedActivePolicyDetail(report, "policy-evolution-policy");
     const selectedPublicationPolicyDetail = (report) => selectedActivePolicyDetail(report, "policy-template-publication-policy");
+    const proposalDetailsById = (report) => {
+      const output = {};
+      (((report.policy_store || {}).proposal_details) || []).forEach((item) => {
+        if (item.proposal_id) output[item.proposal_id] = item;
+        if (item.path) output[item.path] = item;
+      });
+      return output;
+    };
     const optionSetValues = (report, key, fallback) => {
       const values = (((report || {}).option_sets || {})[key] || []).map((item) => String(item)).filter((item) => item);
       return values.length ? values : fallback;
@@ -2350,18 +2358,28 @@ INDEX_HTML = """<!doctype html>
           ]
         );
       });
-      const candidateRefs = ((report.policy_store || {}).proposal_refs || []).map((item) =>
-        policyRecord(
-          item.policy_id || item.proposal_id || "candidate policy proposal",
-          item.path || "proposal path not supplied",
-          item.status || "candidate",
+      const detailsByProposal = proposalDetailsById(report);
+      const candidateRefs = ((report.policy_store || {}).proposal_refs || []).map((item) => {
+        const detail = detailsByProposal[item.proposal_id] || detailsByProposal[item.path] || {};
+        const profile = detail.trigger_profile || {};
+        return policyRecord(
+          detail.title || item.policy_id || item.proposal_id || "candidate policy proposal",
+          `${detail.policy_id || item.policy_id || "policy id missing"} / ${item.path || "proposal path not supplied"}`,
+          detail.status || item.status || "candidate",
           [
             tag(item.proposal_id || "proposal", "review"),
-            tag(item.status || "proposal_ref", "review"),
+            tag(detail.operation || "proposal_ref", "review"),
+            tag(detail.manifest_status || item.status || "manifest status", "review"),
+            ...policyProfileTags(profile),
           ],
-          []
-        )
-      );
+          [
+            compactItem("Plan", `${detail.plan_id || "plan id missing"} / ${detail.schema_version || "schema not supplied"}`),
+            compactItem("Write set", `${detail.write_set_count || 0} records/files`),
+            compactItem("Trigger profile", triggerProfileDetailText(profile)),
+            compactItem("Next action", (detail.next_actions || [])[0] || "Review this candidate before guarded activation."),
+          ]
+        );
+      });
       const templates = ((report.package_templates || {}).templates || []).map((item) =>
         policyRecord(
           item.title || item.template_policy_title || item.template_id,

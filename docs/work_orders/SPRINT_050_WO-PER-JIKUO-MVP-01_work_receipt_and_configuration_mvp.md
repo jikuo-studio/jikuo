@@ -465,6 +465,10 @@ Implementation status:
 - Studio lists active policies, proposal refs, package templates, starter
   packs, template coverage, policy-without-template counts, read-model
   limitations, and guarded operation descriptors;
+- Studio candidate proposal cards now render manifest-listed proposal detail
+  from the policy-management read model, including operation, status,
+  trigger profile, write-set count, and next action, without scanning unlisted
+  proposal files or activating candidate policies;
 - selected active-policy current configuration is visible through trigger
   profile, policy scopes, lifecycle events, condition filters, required
   actions, and required evidence;
@@ -505,9 +509,10 @@ Implementation status:
   `(type, ref)`, preserving template, template-file, and project-context
   provenance while preventing repeated source rows in approved policies;
 - remaining work: build the actual guarded interaction surfaces for active
-  policy deactivation beyond deprecation/supersession, policy-to-template
-  publication, starter-manifest publication, and broader policy editing beyond
-  the currently supported policy evolution operations.
+  policy deactivation beyond deprecation/supersession, candidate-to-active
+  activation from existing proposal detail, starter-manifest publication, and
+  broader policy editing beyond the currently supported policy evolution
+  operations.
 
 ### `MVP-CONFIG-03`: Configuration Review Panel Closeout
 

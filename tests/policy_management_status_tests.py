@@ -87,6 +87,66 @@ def write_policy_store(root: Path, *, policy_id: str, title: str) -> None:
     )
 
 
+def add_policy_proposal(root: Path, *, proposal_id: str, policy_id: str) -> None:
+    store = root / ".jikuo" / "policies"
+    proposals = store / "proposals"
+    proposals.mkdir(parents=True, exist_ok=True)
+    proposal_ref = f".jikuo/policies/proposals/{proposal_id}.yaml"
+    (proposals / f"{proposal_id}.yaml").write_text(
+        "\n".join(
+            [
+                'schema: "jikuo.policy_write_plan.v0"',
+                'schema_version: "jikuo.policy_write_plan.v0"',
+                "report_only: true",
+                f'plan_id: "{proposal_id}-PLAN"',
+                'operation: "append_policy"',
+                'status: "review"',
+                f'proposal_ref: "{proposal_ref}"',
+                f'policy_ref: "{policy_id}"',
+                "write_set:",
+                f'  - path: ".jikuo/policies/approved/{policy_id}.yaml"',
+                '    operation: "create"',
+                '    effect: "create approved policy file"',
+                "proposed_trigger_profile:",
+                '  trigger_mode: "scope_first"',
+                '  policy_scopes: ["discussion"]',
+                "  lifecycle_events: []",
+                '  declared_trigger_event: "conversation_turn"',
+                "  conditions: []",
+                "proposed_policy:",
+                f'  policy_id: "{policy_id}"',
+                '  title: "Candidate discussion policy"',
+                '  status: "active_report_only"',
+                "  version: 1",
+                "refusal_reasons: []",
+                "warnings: []",
+                'status_reason: "policy write plan is ready for desktop review"',
+                "next_actions:",
+                '  - "review this candidate before guarded activation"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    manifest_path = store / "manifest.yaml"
+    manifest_text = manifest_path.read_text(encoding="utf-8")
+    manifest_path.write_text(
+        manifest_text.replace(
+            "proposal_refs: []",
+            "\n".join(
+                [
+                    "proposal_refs:",
+                    f'  - proposal_id: "{proposal_id}"',
+                    f'    policy_id: "{policy_id}"',
+                    f'    path: "{proposal_ref}"',
+                    '    status: "candidate"',
+                ]
+            ),
+        ),
+        encoding="utf-8",
+    )
+
+
 class PolicyManagementStatusTests(unittest.TestCase):
     def test_status_read_model_links_active_policy_to_package_template_and_starter_pack(self):
         with temp_project_dir() as project_root:
@@ -166,6 +226,34 @@ class PolicyManagementStatusTests(unittest.TestCase):
         self.assertEqual(markdown_completed.returncode, 0, markdown_completed.stderr)
         self.assertIn("# JIKUO Policy Management Status", markdown_completed.stdout)
         self.assertIn("starter_pack_available", markdown_completed.stdout)
+
+    def test_status_read_model_loads_policy_proposal_details(self):
+        with temp_project_dir() as project_root:
+            write_policy_store(
+                project_root,
+                policy_id="POLICY-active-fixture",
+                title="Active fixture policy",
+            )
+            add_policy_proposal(
+                project_root,
+                proposal_id="POLICYPROPOSAL-candidate-fixture",
+                policy_id="POLICY-candidate-fixture",
+            )
+
+            report = policy_management_status.build_policy_management_status(
+                project_root=project_root,
+            )
+
+        details = report["policy_store"]["proposal_details"]
+        self.assertEqual(len(details), 1)
+        detail = details[0]
+        self.assertEqual(detail["proposal_id"], "POLICYPROPOSAL-candidate-fixture")
+        self.assertEqual(detail["policy_id"], "POLICY-candidate-fixture")
+        self.assertEqual(detail["title"], "Candidate discussion policy")
+        self.assertEqual(detail["operation"], "append_policy")
+        self.assertEqual(detail["write_set_count"], 1)
+        self.assertEqual(detail["trigger_profile"]["trigger_mode"], "scope_first")
+        self.assertEqual(detail["trigger_profile"]["policy_scopes"], ["discussion"])
 
 
 if __name__ == "__main__":

@@ -333,6 +333,130 @@ def policy_detail_summary(
     }
 
 
+def proposal_file_path_from_ref(
+    *,
+    resolved_root: Path,
+    store_root: Path,
+    proposal_ref: dict[str, Any],
+) -> tuple[Path | None, str | None]:
+    raw_path = proposal_ref.get("path")
+    if not isinstance(raw_path, str) or not raw_path:
+        return None, f"proposal ref has no path: {proposal_ref.get('proposal_id')}"
+    proposal_path, path_error = policy_store.resolve_project_path(resolved_root, raw_path)
+    if path_error:
+        return None, path_error
+    assert proposal_path is not None
+    proposal_root = (store_root / "proposals").resolve()
+    try:
+        proposal_path.relative_to(proposal_root)
+    except ValueError:
+        return None, f"proposal ref is outside policy proposal store: {raw_path}"
+    return proposal_path, None
+
+
+def compact_write_set(write_set: Any) -> list[dict[str, Any]]:
+    if not isinstance(write_set, list):
+        return []
+    return [
+        {
+            "path": item.get("path"),
+            "operation": item.get("operation"),
+            "effect": item.get("effect"),
+        }
+        for item in write_set
+        if isinstance(item, dict)
+    ]
+
+
+def proposal_trigger_profile(record: dict[str, Any]) -> dict[str, Any]:
+    proposed_profile = record.get("proposed_trigger_profile")
+    if isinstance(proposed_profile, dict):
+        return {
+            "trigger_mode": proposed_profile.get("trigger_mode") or "unconfigured",
+            "policy_scopes": string_values(proposed_profile.get("policy_scopes")),
+            "lifecycle_events": string_values(proposed_profile.get("lifecycle_events")),
+            "declared_trigger_events": string_values(
+                [proposed_profile.get("declared_trigger_event")]
+                if proposed_profile.get("declared_trigger_event") is not None
+                else []
+            ),
+            "condition_count": len(proposed_profile.get("conditions") or [])
+            if isinstance(proposed_profile.get("conditions"), list)
+            else 0,
+        }
+    proposed_policy = record.get("proposed_policy")
+    if isinstance(proposed_policy, dict):
+        return policy_trigger_profile(proposed_policy)
+    return {
+        "trigger_mode": "unconfigured",
+        "policy_scopes": [],
+        "lifecycle_events": [],
+        "declared_trigger_events": [],
+    }
+
+
+def proposal_detail_summary(
+    *,
+    proposal_ref: dict[str, Any],
+    record: dict[str, Any],
+) -> dict[str, Any]:
+    proposed_policy = record.get("proposed_policy")
+    if not isinstance(proposed_policy, dict):
+        proposed_policy = {}
+    target_snapshot = record.get("target_policy_snapshot")
+    if not isinstance(target_snapshot, dict):
+        target_snapshot = {}
+    return {
+        "proposal_id": proposal_ref.get("proposal_id") or record.get("plan_id"),
+        "policy_id": (
+            record.get("policy_ref")
+            or record.get("target_policy_ref")
+            or proposed_policy.get("policy_id")
+            or proposal_ref.get("policy_id")
+        ),
+        "title": proposed_policy.get("title") or target_snapshot.get("title"),
+        "path": proposal_ref.get("path"),
+        "manifest_status": proposal_ref.get("status"),
+        "schema_version": record.get("schema_version") or record.get("schema"),
+        "plan_id": record.get("plan_id"),
+        "operation": record.get("operation"),
+        "status": record.get("status"),
+        "report_only": bool(record.get("report_only")),
+        "writes_performed": bool(record.get("writes_performed")),
+        "write_allowed_by_command": bool(record.get("write_allowed_by_command")),
+        "approval_required": bool(record.get("approval_required")),
+        "guarded_apply_available": bool(record.get("guarded_apply_available")),
+        "write_set": compact_write_set(record.get("write_set")),
+        "write_set_count": len(compact_write_set(record.get("write_set"))),
+        "trigger_profile": proposal_trigger_profile(record),
+        "proposed_policy": {
+            "policy_id": proposed_policy.get("policy_id"),
+            "title": proposed_policy.get("title"),
+            "status": proposed_policy.get("status"),
+            "version": proposed_policy.get("version"),
+            "scenario_package": proposed_policy.get("scenario_package"),
+        },
+        "target_policy_snapshot": {
+            "policy_id": target_snapshot.get("policy_id"),
+            "title": target_snapshot.get("title"),
+            "status": target_snapshot.get("status"),
+            "version": target_snapshot.get("version"),
+            "path": target_snapshot.get("path"),
+        },
+        "refusal_reasons": record.get("refusal_reasons")
+        if isinstance(record.get("refusal_reasons"), list)
+        else [],
+        "warnings": record.get("warnings") if isinstance(record.get("warnings"), list) else [],
+        "source_refs": record.get("source_refs")
+        if isinstance(record.get("source_refs"), list)
+        else [],
+        "status_reason": record.get("status_reason"),
+        "next_actions": record.get("next_actions")
+        if isinstance(record.get("next_actions"), list)
+        else [],
+    }
+
+
 def load_active_policy_details(
     *,
     resolved_root: Path,
@@ -369,6 +493,40 @@ def load_active_policy_details(
                 active_policy=active_policy,
                 record=record,
                 distribution=distribution_by_policy.get(policy_id),
+            )
+        )
+    return details, warnings
+
+
+def load_policy_proposal_details(
+    *,
+    resolved_root: Path,
+    policy_report: dict[str, Any],
+) -> tuple[list[dict[str, Any]], list[str]]:
+    store_root = Path(str(policy_report.get("policy_store_root") or ""))
+    details: list[dict[str, Any]] = []
+    warnings: list[str] = []
+    for proposal_ref in policy_report.get("proposal_refs") or []:
+        if not isinstance(proposal_ref, dict):
+            continue
+        proposal_path, path_error = proposal_file_path_from_ref(
+            resolved_root=resolved_root,
+            store_root=store_root,
+            proposal_ref=proposal_ref,
+        )
+        if path_error:
+            warnings.append(path_error)
+            continue
+        assert proposal_path is not None
+        try:
+            record = policy_templates.read_yaml_subset(proposal_path)
+        except OSError as exc:
+            warnings.append(f"policy_proposal_not_readable:{proposal_path}:{exc}")
+            continue
+        details.append(
+            proposal_detail_summary(
+                proposal_ref=proposal_ref,
+                record=record,
             )
         )
     return details, warnings
@@ -449,12 +607,17 @@ def build_policy_management_status(
         policy_report=policy_report,
         active_policy_distribution=active_policy_distribution,
     )
+    policy_proposal_details, proposal_detail_warnings = load_policy_proposal_details(
+        resolved_root=resolved_root,
+        policy_report=policy_report,
+    )
 
     warnings = [
         *(policy_report.get("warnings") or []),
         *template_warnings,
         *starter_warnings,
         *detail_warnings,
+        *proposal_detail_warnings,
     ]
     status = "review" if warnings else "available"
     return {
@@ -479,6 +642,7 @@ def build_policy_management_status(
             "active_policies": policy_report.get("active_policy_refs") or [],
             "active_policy_details": active_policy_details,
             "proposal_refs": policy_report.get("proposal_refs") or [],
+            "proposal_details": policy_proposal_details,
             "deprecated_policy_refs": policy_report.get("deprecated_policy_refs") or [],
             "superseded_policy_refs": policy_report.get("superseded_policy_refs") or [],
         },
