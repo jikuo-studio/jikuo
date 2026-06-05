@@ -38,14 +38,20 @@ def _string_list(value: Any) -> list[str]:
 def _digest_text(value: str | None) -> str | None:
     if not value:
         return None
-    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+    return hashlib.sha256(_stable_text_bytes(value)).hexdigest()
 
 
 def _anchor_id_for(parts: list[str]) -> str | None:
     material = "|".join(part for part in parts if part)
     if not material:
         return None
-    return "turn_" + hashlib.sha256(material.encode("utf-8")).hexdigest()[:16]
+    return "turn_" + hashlib.sha256(_stable_text_bytes(material)).hexdigest()[:16]
+
+
+def _stable_text_bytes(value: str) -> bytes:
+    """Encode host-supplied identity text for hashing without display effects."""
+
+    return value.encode("utf-8", errors="surrogatepass")
 
 
 def missing_turn_anchor(*, reason: str = MISSING_TURN_ANCHOR_REASON) -> dict[str, Any]:

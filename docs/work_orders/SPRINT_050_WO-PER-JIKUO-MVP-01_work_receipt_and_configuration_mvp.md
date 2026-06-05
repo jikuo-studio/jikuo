@@ -372,6 +372,9 @@ Acceptance:
 - a host AI receives an explicit completion receipt obligation before it starts
   substantive work, either from the Codex hook additionalContext or from the
   managed instruction file it has loaded;
+- the Codex hook additionalContext path remains visible even when host prompt
+  input contains isolated surrogate code units; such text is hashed or escaped
+  and raw prompt text is not persisted;
 - if the host AI performs workspace writes, it is instructed to run
   `python -B -m jikuo.agent_flow propose --event completion_review --project-root
   <project-root> --format json` before final response;

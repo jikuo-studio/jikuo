@@ -305,6 +305,58 @@ class CodexHookProofTests(unittest.TestCase):
         self.assertEqual(calls["formatter"]["project_root"], ROOT)
         self.assertEqual(result["runtime_visibility"]["last_card_ref"], ".jikuo/runtime/last_card.md")
 
+    def test_run_agent_flow_in_process_handles_lone_surrogate_prompt(self):
+        hook = load_hook_module()
+        raw_prompt = "bad \udcaf prompt"
+        hook_input = hook.HookInput(
+            hook_event_name="UserPromptSubmit",
+            prompt=raw_prompt,
+            cwd=ROOT,
+            session_id="session-in-process-surrogate",
+            turn_id="turn-in-process-surrogate",
+            permission_mode="default",
+            model=None,
+            host_semantic_intent={
+                "schema": "jikuo.host_semantic_intent.v0",
+                "provider": "host_ai",
+                "confidence": "high",
+                "work_profile": {"policy_scopes": ["editing"]},
+            },
+        )
+        calls = {}
+
+        def fake_builder(**kwargs):
+            calls["builder"] = kwargs
+            return {
+                "status": "review",
+                "work_profile": {
+                    "lifecycle_event": "conversation_turn",
+                    "policy_scopes": ["editing"],
+                },
+            }
+
+        def fake_formatter(proposal, *, project_root):
+            return {
+                **proposal,
+                "runtime_visibility": {"last_card_ref": ".jikuo/runtime/last_card.md"},
+                "client_display_links": {"links": {}},
+            }
+
+        result = hook.run_agent_flow_in_process(
+            hook_input,
+            ROOT,
+            "mounted",
+            builder=fake_builder,
+            formatter=fake_formatter,
+        )
+
+        self.assertEqual(calls["builder"]["user_phrase"], raw_prompt)
+        self.assertEqual(
+            calls["builder"]["turn_anchor"]["prompt_digest_status"],
+            "hash_only",
+        )
+        self.assertEqual(result["status"], "review")
+
     def test_run_agent_flow_subprocess_accepts_structured_refusal_output(self):
         hook = load_hook_module()
         raw_prompt = "SECRET_PROMPT_VALUE: update docs"
@@ -444,6 +496,81 @@ class CodexHookProofTests(unittest.TestCase):
         self.assertIn("JIKUO mounted pre-turn failed", additional_context)
         self.assertIn("simulated failure", additional_context)
         self.assertNotIn(payload["prompt"], additional_context)
+
+    def test_main_handles_lone_surrogate_prompt_without_degrading(self):
+        hook = load_hook_module()
+        payload = {
+            "hook_event_name": "UserPromptSubmit",
+            "prompt": "bad \udcaf prompt",
+            "cwd": str(ROOT),
+            "session_id": "session-surrogate",
+            "turn_id": "turn-surrogate",
+            "permission_mode": "default",
+        }
+
+        def fake_runner(hook_input, project_root, trigger_mode):
+            self.assertEqual(hook_input.prompt, payload["prompt"])
+            return {
+                "runtime_visibility": {
+                    "last_card_ref": ".jikuo/runtime/last_card.md",
+                },
+                "work_profile": {
+                    "lifecycle_event": "conversation_turn",
+                    "policy_scopes": ["editing"],
+                    "basis": {
+                        "host_semantic_intent": {
+                            "status": "provided",
+                            "provider": "host_ai",
+                        }
+                    },
+                },
+                "triggered_policies": [],
+                "missing_evidence_reports": [],
+            }
+
+        stdout = io.StringIO()
+        exit_code = hook.main(
+            stdin=io.StringIO(json.dumps(payload)),
+            stdout=stdout,
+            runner=fake_runner,
+            env={"JIKUO_HOOK_TRIGGER_MODE": "mounted"},
+        )
+
+        self.assertEqual(exit_code, 0)
+        output = json.loads(stdout.getvalue())
+        self.assertNotIn("systemMessage", output)
+        additional_context = output["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("JIKUO mounted pre-turn ran", additional_context)
+        self.assertIn("prompt_digest=hash_only", additional_context)
+        self.assertNotIn(payload["prompt"], additional_context)
+
+    def test_main_escapes_lone_surrogate_in_failure_context(self):
+        hook = load_hook_module()
+        payload = {
+            "hook_event_name": "UserPromptSubmit",
+            "prompt": "safe prompt",
+            "cwd": str(ROOT),
+            "session_id": "session-surrogate-failure",
+            "turn_id": "turn-surrogate-failure",
+            "permission_mode": "default",
+        }
+
+        def failing_runner(hook_input, project_root, trigger_mode):
+            raise hook.HookExecutionError("bad display \udcaf")
+
+        stdout = io.StringIO()
+        exit_code = hook.main(
+            stdin=io.StringIO(json.dumps(payload)),
+            stdout=stdout,
+            runner=failing_runner,
+            env={},
+        )
+
+        self.assertEqual(exit_code, 0)
+        output = json.loads(stdout.getvalue())
+        additional_context = output["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("bad display \\udcaf", additional_context)
+        self.assertNotIn("\udcaf", additional_context)
 
     def test_failure_context_redacts_prompt_echo_from_errors(self):
         hook = load_hook_module()

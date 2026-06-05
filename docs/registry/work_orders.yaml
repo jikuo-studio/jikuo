@@ -204,7 +204,7 @@ entries:
     title: "SPRINT_050_WO-PER-JIKUO-HOSTADAPT-01: Host Adapter Contract"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-HOSTADAPT-01_host_adapter_contract.md"
     sprint: "SPRINT_050"
-    status: "Contract scaffold implemented for cross-client Host Adapter Turn Input/Result normalization and raw prompt redaction; Codex project-local hook now consumes the contract and renders the result summary, with GUI additionalContext contract-line smoke accepted; selected governed editing / write-capable MCP entry points now return semantic_intent_precondition when host_semantic_intent is missing, accept host_semantic_intent directly on re-call, and have an accepted external Codex GUI proposal-tool passthrough smoke; host-specific wrappers/plugins remain future slices"
+    status: "Contract scaffold implemented for cross-client Host Adapter Turn Input/Result normalization and raw prompt redaction; Codex project-local hook now consumes the contract and renders the result summary, with GUI additionalContext contract-line smoke and 2026-06-05 surrogate-safe prompt/output smoke accepted; selected governed editing / write-capable MCP entry points now return semantic_intent_precondition when host_semantic_intent is missing, accept host_semantic_intent directly on re-call, and have an accepted external Codex GUI proposal-tool passthrough smoke; host-specific wrappers/plugins remain future slices"
     impact_tags:
       - "strict_mounted_harness"
       - "host_adapter"

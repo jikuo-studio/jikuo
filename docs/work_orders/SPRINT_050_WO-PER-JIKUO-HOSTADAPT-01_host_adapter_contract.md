@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-HOSTADAPT-01: Host Adapter Contract
 
-> **Status**: Contract scaffold implemented for cross-client input/result normalization, raw prompt redaction, Codex project-local hook consumption, and Codex GUI contract-line projection proof. Selected governed editing / write-capable MCP entry points now return no-write `semantic_intent_precondition` feedback when `host_semantic_intent` is missing, and an external Codex GUI MCP proposal-tool smoke accepted direct `host_semantic_intent` re-call passthrough. Host-specific wrappers/plugins remain future slices.
+> **Status**: Contract scaffold implemented for cross-client input/result normalization, raw prompt redaction, Codex project-local hook consumption, Codex GUI contract-line projection proof, and surrogate-safe Codex hook display/prompt-digest hardening. Selected governed editing / write-capable MCP entry points now return no-write `semantic_intent_precondition` feedback when `host_semantic_intent` is missing, and an external Codex GUI MCP proposal-tool smoke accepted direct `host_semantic_intent` re-call passthrough. Host-specific wrappers/plugins remain future slices.
 > **Date**: 2026-05-28
 > **JIKUO layer**: integration / strict mounted harness.
 > **Business meaning**: JIKUO should be portable across Codex, Claude, Cursor, VS Code, and future wrappers without baking one client's hook behavior into the core governance model.
@@ -164,6 +164,10 @@ Accepted status:
 - a 2026-05-28 Codex GUI smoke showed that contract summary line in model
   `additionalContext`, with history card
   `.jikuo/runtime/history/20260528T122001Z_proposal_264d3469ea.md`;
+- a 2026-06-05 local hook smoke accepted a prompt containing an isolated
+  Unicode surrogate: prompt hashing stayed `hash_only`, hook output escaped
+  display-unsafe text, and the hook returned mounted `additionalContext`
+  without degradation;
 - failures remain visible instead of silent.
 
 Not accepted:
@@ -230,6 +234,8 @@ hooks, but it should reuse the same contract fields.
 - Codex current path consumes the Host Adapter Turn Input/Result contract and
   remains represented as accepted pre-turn invocation with semantic provider
   still unavailable.
+- Codex hook output and turn-anchor prompt hashing tolerate display-unsafe
+  isolated surrogate code units without persisting raw prompt text.
 - Registry and mount-set docs identify this work order as the cross-client
   adapter contract anchor.
 - No evaluator, policy-store, or durable-write behavior changes in this slice.

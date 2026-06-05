@@ -44,6 +44,30 @@ def _dict_or_none(value: Any) -> dict[str, Any] | None:
     return None
 
 
+def display_safe_text(value: str) -> str:
+    """Make hook-visible text safe for UTF-8 clients and Codex rendering."""
+
+    return value.encode("utf-8", errors="backslashreplace").decode("utf-8")
+
+
+def display_safe_value(value: Any) -> Any:
+    if isinstance(value, str):
+        return display_safe_text(value)
+    if isinstance(value, list):
+        return [display_safe_value(item) for item in value]
+    if isinstance(value, dict):
+        return {
+            display_safe_text(str(key)): display_safe_value(item)
+            for key, item in value.items()
+        }
+    return value
+
+
+def write_hook_output(output: dict[str, Any], stdout: TextIO) -> None:
+    json.dump(display_safe_value(output), stdout)
+    stdout.write("\n")
+
+
 def extract_hook_input(payload: dict[str, Any], env: dict[str, str] | None = None) -> HookInput:
     env = env or os.environ
     cwd_value = _string_or_none(payload.get("cwd")) or env.get("PWD") or os.getcwd()
@@ -566,7 +590,7 @@ def redact_prompt_echo(text: str, prompt: str) -> str:
 
 
 def render_failure_context(error: Exception, hook_input: HookInput, project_root: Path) -> str:
-    failure_summary = redact_prompt_echo(str(error), hook_input.prompt)
+    failure_summary = display_safe_text(redact_prompt_echo(str(error), hook_input.prompt))
     trigger_mode = trigger_mode_from_env()
     try:
         host_adapter_input = build_host_adapter_turn_input(hook_input, project_root, trigger_mode)
@@ -649,8 +673,7 @@ def main(
             render_failure_context(exc, fallback_input, project_root),
             system_message="JIKUO hook could not parse Codex hook input.",
         )
-        json.dump(output, stdout)
-        stdout.write("\n")
+        write_hook_output(output, stdout)
         return 0
 
     project_root = find_project_root(hook_input.cwd, Path(__file__))
@@ -665,8 +688,7 @@ def main(
             ),
             system_message="JIKUO hook received an unexpected Codex hook event.",
         )
-        json.dump(output, stdout)
-        stdout.write("\n")
+        write_hook_output(output, stdout)
         return 0
 
     try:
@@ -686,8 +708,7 @@ def main(
             system_message="JIKUO pre-turn check failed; strict mounted status is not proven for this turn.",
         )
 
-    json.dump(output, stdout)
-    stdout.write("\n")
+    write_hook_output(output, stdout)
     return 0
 
 
