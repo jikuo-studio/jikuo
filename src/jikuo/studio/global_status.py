@@ -709,6 +709,26 @@ def semantic_intent_status_for_latest_round(coverage: dict[str, Any]) -> str:
     return "unavailable"
 
 
+def semantic_coverage_is_host_ai_classified(coverage: dict[str, Any] | None) -> bool:
+    if not isinstance(coverage, dict):
+        return False
+    return (
+        str(coverage.get("semantic_intent_status") or "") == "provided"
+        and str(coverage.get("provider") or "") == "host_ai"
+    )
+
+
+def latest_host_ai_semantic_round(
+    rounds: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    for item in rounds:
+        if not isinstance(item, dict):
+            continue
+        if semantic_coverage_is_host_ai_classified(item.get("semantic_intent_coverage")):
+            return item
+    return None
+
+
 def semantic_imperfection(
     *,
     title: str,
@@ -759,11 +779,17 @@ def semantic_intent_evidence_overview(
         ),
         rounds[0] if rounds else None,
     )
-    coverage = (
+    latest_runtime_coverage = (
         latest_runtime.get("semantic_intent_coverage")
         if isinstance(latest_runtime, dict)
         else None
-    ) or runtime.get("semantic_intent_coverage") or {}
+    )
+    classification_round = latest_host_ai_semantic_round(rounds) or latest_runtime
+    coverage = (
+        classification_round.get("semantic_intent_coverage")
+        if isinstance(classification_round, dict)
+        else None
+    ) or latest_runtime_coverage or runtime.get("semantic_intent_coverage") or {}
     if not isinstance(coverage, dict):
         coverage = {}
     latest_runtime_anchor = (
@@ -789,13 +815,13 @@ def semantic_intent_evidence_overview(
         if str(item)
     ] if isinstance(coverage.get("policy_scopes"), list) else []
     intent_class = (
-        str(latest_runtime.get("intent_class") or "unknown")
-        if isinstance(latest_runtime, dict)
+        str(classification_round.get("intent_class") or "unknown")
+        if isinstance(classification_round, dict)
         else "unknown"
     )
     operation_class = (
-        str(latest_runtime.get("operation_class") or "unknown")
-        if isinstance(latest_runtime, dict)
+        str(classification_round.get("operation_class") or "unknown")
+        if isinstance(classification_round, dict)
         else "unknown"
     )
     ai_classified = semantic_status == "provided" and provider == "host_ai"
@@ -833,8 +859,8 @@ def semantic_intent_evidence_overview(
                     f"provider is {provider}."
                 ),
                 source_ref=(
-                    latest_runtime.get("history_ref")
-                    if isinstance(latest_runtime, dict)
+                    classification_round.get("history_ref")
+                    if isinstance(classification_round, dict)
                     else runtime_visibility.STATE_SUMMARY_REF
                 ),
             )
@@ -848,10 +874,31 @@ def semantic_intent_evidence_overview(
                     or f"coverage_status={coverage_status}; evidence_status={evidence_status}"
                 ),
                 source_ref=(
-                    latest_runtime.get("history_ref")
-                    if isinstance(latest_runtime, dict)
+                    classification_round.get("history_ref")
+                    if isinstance(classification_round, dict)
                     else runtime_visibility.STATE_SUMMARY_REF
                 ),
+            )
+        )
+    if (
+        isinstance(latest_runtime, dict)
+        and isinstance(classification_round, dict)
+        and latest_runtime.get("round_id") != classification_round.get("round_id")
+    ):
+        latest_coverage = (
+            latest_runtime_coverage if isinstance(latest_runtime_coverage, dict) else {}
+        )
+        imperfections.append(
+            semantic_imperfection(
+                title="Latest runtime semantic evidence incomplete",
+                detail=(
+                    "Latest runtime round is "
+                    f"{latest_runtime.get('round_id')}; Studio is showing the "
+                    f"latest retained host AI classification from "
+                    f"{classification_round.get('round_id')} instead."
+                ),
+                status=semantic_intent_status_for_latest_round(latest_coverage),
+                source_ref=latest_runtime.get("history_ref"),
             )
         )
     if latest_runtime_anchor.get("status") != "available":
@@ -915,6 +962,17 @@ def semantic_intent_evidence_overview(
             if isinstance(latest_runtime, dict)
             else {}
         ),
+        "classification_round": (
+            {
+                "round_id": classification_round.get("round_id"),
+                "label": classification_round.get("label"),
+                "lifecycle_event": classification_round.get("lifecycle_event"),
+                "source_kind": classification_round.get("source_kind"),
+                "history_ref": classification_round.get("history_ref"),
+            }
+            if isinstance(classification_round, dict)
+            else {}
+        ),
         "classification": {
             "ai_classified": ai_classified,
             "classification_source": classification_source,
@@ -933,7 +991,8 @@ def semantic_intent_evidence_overview(
         "imperfection_count": len(imperfections),
         "imperfections": imperfections,
         "read_model_limitations": [
-            "semantic classification reports the latest retained runtime round",
+            "semantic classification reports the latest retained host AI semantic round when available",
+            "latest_round remains the latest retained runtime round and may have weaker semantic evidence",
             "turn_anchor reports the latest retained available anchor when the latest runtime round lacks one",
             "it does not infer hidden model intent beyond stored semantic evidence",
             "host AI classification evidence does not prove strict pre-action GUI gating",

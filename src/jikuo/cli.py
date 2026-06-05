@@ -11,6 +11,7 @@ if __package__:
         activation_settings,
         configuration_review,
         policy_management_status,
+        private_turn_input_index,
         runtime_visibility,
     )
     from .integrations import instruction_files
@@ -22,6 +23,7 @@ else:
         activation_settings,
         configuration_review,
         policy_management_status,
+        private_turn_input_index,
         runtime_visibility,
     )
     from jikuo.integrations import instruction_files
@@ -98,6 +100,35 @@ def build_parser() -> argparse.ArgumentParser:
     )
     policy_management.add_argument("--template-dir", type=Path, default=None)
     policy_management.add_argument(
+        "--format",
+        choices=("markdown", "json"),
+        default="markdown",
+    )
+    turn_input_index = subparsers.add_parser(
+        "turn-input-index",
+        help="Inspect or update the private local turn input index.",
+    )
+    turn_input_index.add_argument(
+        "turn_input_index_command",
+        choices=("status", "append", "search"),
+    )
+    turn_input_index.add_argument("--project-root", type=Path, default=None)
+    turn_input_index.add_argument("--raw-input", default=None)
+    turn_input_index.add_argument("--raw-input-stdin", action="store_true")
+    turn_input_index.add_argument("--turn-anchor-json", default=None)
+    turn_input_index.add_argument("--host-semantic-intent-json", default=None)
+    turn_input_index.add_argument("--source-client", default=None)
+    turn_input_index.add_argument("--source-event", default=None)
+    turn_input_index.add_argument("--runtime-ref", action="append", default=[])
+    turn_input_index.add_argument("--task-start-ref", action="append", default=[])
+    turn_input_index.add_argument("--completion-review-ref", action="append", default=[])
+    turn_input_index.add_argument("--receipt-ref", action="append", default=[])
+    turn_input_index.add_argument("--git-baseline-ref", default=None)
+    turn_input_index.add_argument("--git-final-ref", default=None)
+    turn_input_index.add_argument("--query", default=None)
+    turn_input_index.add_argument("--confirm-store-raw-input", action="store_true")
+    turn_input_index.add_argument("--approval-phrase", default=None)
+    turn_input_index.add_argument(
         "--format",
         choices=("markdown", "json"),
         default="markdown",
@@ -189,6 +220,47 @@ def main(argv: list[str] | None = None) -> int:
             status_args.extend(["--template-dir", str(args.template_dir)])
         status_args.extend(["--format", args.format])
         return policy_management_status.main(status_args)
+    if args.command == "turn-input-index":
+        index_args = [args.turn_input_index_command]
+        if args.project_root is not None:
+            index_args.extend(["--project-root", str(args.project_root)])
+        if args.turn_input_index_command == "append":
+            if args.raw_input:
+                index_args.extend(["--raw-input", args.raw_input])
+            if args.raw_input_stdin:
+                index_args.append("--raw-input-stdin")
+            if args.turn_anchor_json:
+                index_args.extend(["--turn-anchor-json", args.turn_anchor_json])
+            if args.host_semantic_intent_json:
+                index_args.extend(
+                    ["--host-semantic-intent-json", args.host_semantic_intent_json]
+                )
+            if args.source_client:
+                index_args.extend(["--source-client", args.source_client])
+            if args.source_event:
+                index_args.extend(["--source-event", args.source_event])
+            for ref in args.runtime_ref:
+                index_args.extend(["--runtime-ref", ref])
+            for ref in args.task_start_ref:
+                index_args.extend(["--task-start-ref", ref])
+            for ref in args.completion_review_ref:
+                index_args.extend(["--completion-review-ref", ref])
+            for ref in args.receipt_ref:
+                index_args.extend(["--receipt-ref", ref])
+            if args.git_baseline_ref:
+                index_args.extend(["--git-baseline-ref", args.git_baseline_ref])
+            if args.git_final_ref:
+                index_args.extend(["--git-final-ref", args.git_final_ref])
+            if args.confirm_store_raw_input:
+                index_args.append("--confirm-store-raw-input")
+            if args.approval_phrase:
+                index_args.extend(["--approval-phrase", args.approval_phrase])
+        if args.turn_input_index_command == "search":
+            if not args.query:
+                parser.error("turn-input-index search requires --query")
+            index_args.extend(["--query", args.query])
+        index_args.extend(["--format", args.format])
+        return private_turn_input_index.main(index_args)
     if args.command == "studio":
         if args.studio_command == "status":
             studio_args = [args.studio_command]

@@ -599,11 +599,20 @@ class StudioGlobalStatusTests(unittest.TestCase):
             )
             semantic_evidence = report["summaries"]["runtime"]["semantic_intent_evidence"]
             classification = semantic_evidence["classification"]
-            self.assertFalse(classification["ai_classified"])
-            self.assertEqual(classification["classification_source"], "missing")
+            self.assertTrue(classification["ai_classified"])
+            self.assertEqual(classification["classification_source"], "host_ai")
+            self.assertEqual(classification["provider"], "host_ai")
             self.assertEqual(
                 semantic_evidence["latest_round"]["round_id"],
                 Path(latest_ref).stem,
+            )
+            self.assertEqual(
+                semantic_evidence["classification_round"]["round_id"],
+                Path(receipt_ref).stem,
+            )
+            self.assertIn(
+                "Latest runtime semantic evidence incomplete",
+                {item["title"] for item in semantic_evidence["imperfections"]},
             )
             write = receipt["artifact_assurance"]["write_assurance"]
             self.assertEqual(

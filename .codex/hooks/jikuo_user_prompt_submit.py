@@ -285,6 +285,18 @@ def build_agent_flow_command(
                 ),
             ]
         )
+    private_turn_input_ref = host_adapter_input.get("private_turn_input_index")
+    if isinstance(private_turn_input_ref, dict):
+        command.extend(
+            [
+                "--private-turn-input-ref-json",
+                json.dumps(
+                    private_turn_input_ref,
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                ),
+            ]
+        )
     return command
 
 
@@ -322,6 +334,7 @@ def run_agent_flow_in_process(
                 host_adapter_input,
             ),
             turn_anchor=host_adapter_input.get("turn_anchor"),
+            private_turn_input_ref=host_adapter_input.get("private_turn_input_index"),
         )
         output = formatter(proposal, project_root=project_root)
     except HookExecutionError:

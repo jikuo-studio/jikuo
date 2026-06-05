@@ -52,6 +52,24 @@ class HostAdapterContractTests(unittest.TestCase):
             normalized["host_semantic_intent"]["turn_anchor"]["anchor_id"],
             normalized["turn_anchor"]["anchor_id"],
         )
+        self.assertEqual(
+            normalized["execution_envelope"]["schema"],
+            "jikuo.execution_envelope.v0",
+        )
+        self.assertEqual(
+            normalized["execution_envelope"]["privacy"]["raw_prompt_storage"],
+            "private_index",
+        )
+        self.assertFalse(
+            normalized["private_turn_input_index"]["write_performed"],
+        )
+        self.assertEqual(
+            normalized["private_turn_input_index"]["status"],
+            "available_for_private_storage",
+        )
+        self.assertFalse(
+            normalized["privacy"]["private_turn_input_index_write_performed"],
+        )
         self.assertNotIn(raw_prompt, serialized)
 
     def test_turn_input_accepts_compact_summary_without_raw_prompt(self):
@@ -75,6 +93,14 @@ class HostAdapterContractTests(unittest.TestCase):
         self.assertEqual(
             normalized["turn_anchor"]["gap_reason"],
             "host_turn_identity_fields_missing",
+        )
+        self.assertEqual(
+            normalized["execution_envelope"]["privacy"]["raw_prompt_storage"],
+            "none",
+        )
+        self.assertEqual(
+            normalized["private_turn_input_index"]["status"],
+            "no_raw_input_available",
         )
 
     def test_turn_result_redacts_prompt_echo_from_failure_summary(self):

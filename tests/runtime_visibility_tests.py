@@ -141,6 +141,19 @@ class RuntimeVisibilityTests(unittest.TestCase):
                 proposal["turn_anchor"]["anchor_id"],
                 anchor["anchor_id"],
             )
+            self.assertEqual(
+                proposal["execution_envelope"]["schema"],
+                "jikuo.execution_envelope.v0",
+            )
+            self.assertEqual(
+                proposal["execution_envelope"]["lifecycle"]["state"],
+                "task_started",
+            )
+            self.assertEqual(
+                proposal["execution_envelope"]["turn_anchor"]["anchor_id"],
+                anchor["anchor_id"],
+            )
+            self.assertIn("## Execution Envelope", proposal["chat_ready_markdown"])
             self.assertNotIn(
                 "SECRET_RUNTIME_VISIBILITY_PROMPT",
                 json.dumps(proposal, ensure_ascii=False),
@@ -203,6 +216,14 @@ class RuntimeVisibilityTests(unittest.TestCase):
             self.assertEqual(
                 state_summary["turn_anchor"]["prompt_digest_status"],
                 "hash_only",
+            )
+            self.assertEqual(
+                state_summary["execution_envelope"]["turn_anchor"]["anchor_id"],
+                anchor["anchor_id"],
+            )
+            self.assertEqual(
+                state_summary["execution_envelope"]["links"]["runtime_refs"]["history_ref"],
+                runtime_report["history_ref"],
             )
             self.assertNotIn(
                 "SECRET_RUNTIME_VISIBILITY_PROMPT",
@@ -268,6 +289,10 @@ class RuntimeVisibilityTests(unittest.TestCase):
             )
             self.assertEqual(
                 show_report["turn_anchor"]["anchor_id"],
+                anchor["anchor_id"],
+            )
+            self.assertEqual(
+                show_report["execution_envelope"]["turn_anchor"]["anchor_id"],
                 anchor["anchor_id"],
             )
 

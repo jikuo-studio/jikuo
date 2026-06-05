@@ -780,7 +780,7 @@ INDEX_HTML = """<!doctype html>
         <h2>Latest Semantic Classification</h2>
         <span id="semantic-evidence-status" class="status">Loading</span>
       </div>
-      <p class="subhead">Latest retained round only: whether AI supplied semantic intent, what intent was recorded, and which evidence limits remain.</p>
+      <p class="subhead">Latest retained host AI semantic intent when available, plus the latest runtime round and remaining evidence limits.</p>
       <div class="list" id="semantic-evidence-list"></div>
     </section>
     <section>
@@ -3094,6 +3094,7 @@ INDEX_HTML = """<!doctype html>
       const classification = evidence.classification || {};
       const anchor = evidence.turn_anchor || (runtime || {}).turn_anchor || {};
       const latestRound = evidence.latest_round || {};
+      const classificationRound = evidence.classification_round || latestRound;
       const imperfections = evidence.imperfections || [];
       const policyScopes = Array.isArray(classification.policy_scopes)
         ? classification.policy_scopes.join(", ")
@@ -3119,6 +3120,11 @@ INDEX_HTML = """<!doctype html>
           "Latest round",
           `${latestRound.label || latestRound.round_id || "no retained round"} / ${latestRound.lifecycle_event || "event unknown"} / ${latestRound.source_kind || "source unknown"}`,
           latestRound.round_id ? "available" : "unavailable"
+        ),
+        row(
+          "Classification round",
+          `${classificationRound.label || classificationRound.round_id || "no retained classification round"} / ${classificationRound.lifecycle_event || "event unknown"} / ${classificationRound.source_kind || "source unknown"}`,
+          classification.ai_classified ? "available" : (evidence.status || "degraded")
         ),
         row(
           "Turn anchor",

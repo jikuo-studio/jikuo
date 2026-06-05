@@ -19,6 +19,7 @@ if __package__:
         activation_settings,
         companion_write_obligations,
         configuration_review,
+        execution_envelope,
         policy_store,
         policy_templates,
         project_state,
@@ -38,6 +39,7 @@ else:
     import activation_settings
     import companion_write_obligations
     import configuration_review
+    import execution_envelope
     import policy_templates
     import project_state
     import policy_store
@@ -248,6 +250,7 @@ NO_WRITE_ATOMS = {
     "CAP-SEMANTIC-INTENT-CLASSIFICATION-EVIDENCE-01",
     "CAP-SEMANTIC-INTENT-PRECONDITION-01",
     "CAP-RUNTIME-TURN-ANCHOR-PROJECTION-01",
+    "CAP-EXECUTION-ENVELOPE-PROJECTION-01",
     "CAP-STUDIO-ARTIFACT-ASSURANCE-RUNTIME-CARD-01",
 }
 
@@ -4332,6 +4335,7 @@ def build_proposal(
     governance_path: str | None = None,
     host_semantic_intent: dict[str, Any] | None = None,
     turn_anchor: dict[str, Any] | None = None,
+    private_turn_input_ref: dict[str, Any] | None = None,
     produced_evidence: list[dict[str, Any]] | None = None,
     enforce_semantic_intent_precondition: bool = False,
     work_routing_category: str | None = None,
@@ -4540,6 +4544,14 @@ def build_proposal(
         if turn_anchor is not None
         else turn_anchor_model.turn_anchor_from_work_profile(work_profile_projection)
     )
+    execution_envelope_projection = execution_envelope.build_execution_envelope(
+        project_root=project_root,
+        turn_anchor=turn_anchor_projection,
+        host_semantic_intent=semantic_basis,
+        lifecycle_event=event,
+        lifecycle_state=execution_envelope.lifecycle_state_for_event(event),
+        private_turn_input_ref=private_turn_input_ref,
+    )
     traces.append(
         atom_trace(
             loop_step_id="DPL-06",
@@ -4549,6 +4561,18 @@ def build_proposal(
             summary=(
                 "projected non-AI host turn anchor availability for runtime "
                 "and Studio delivery-flow inspection"
+            ),
+        )
+    )
+    traces.append(
+        atom_trace(
+            loop_step_id="DPL-06",
+            atom_id="CAP-EXECUTION-ENVELOPE-PROJECTION-01",
+            mode="runtime-projection",
+            status=str(execution_envelope_projection["lifecycle"]["state"]),
+            summary=(
+                "projected shared execution envelope from turn_anchor, host "
+                "semantic intent evidence, and explicit lifecycle event"
             ),
         )
     )
@@ -4802,6 +4826,7 @@ def build_proposal(
         "work_profile": work_profile_projection,
         "semantic_intent_evidence": semantic_intent_evidence,
         "turn_anchor": turn_anchor_projection,
+        "execution_envelope": execution_envelope_projection,
         "work_routing": work_routing,
         "artifact_assurance": artifact_assurance_report,
         "atom_trace": traces,
@@ -5438,6 +5463,10 @@ def add_runtime_visibility_projection(
         )
     output["runtime_visibility"] = report
     output["client_display_links"] = runtime_visibility.build_client_display_links(report)
+    output["execution_envelope"] = execution_envelope.with_runtime_visibility_refs(
+        output.get("execution_envelope"),
+        runtime_report=report,
+    )
     output["write_effect"]["runtime_visibility_side_effect"] = {
         "write_performed": bool(report.get("write_performed")),
         "target": report.get("runtime_root_ref"),
@@ -5751,6 +5780,59 @@ def render_turn_anchor(turn_anchor_projection: dict[str, Any]) -> list[str]:
     return lines
 
 
+def render_execution_envelope(envelope: dict[str, Any]) -> list[str]:
+    if not envelope:
+        return []
+    lifecycle = envelope.get("lifecycle") or {}
+    privacy = envelope.get("privacy") or {}
+    links = envelope.get("links") or {}
+    private_ref = links.get("private_turn_input_ref") or {}
+    runtime_refs = links.get("runtime_refs") or {}
+    semantic = envelope.get("host_semantic_intent") or {}
+    lines = [
+        "## Execution Envelope",
+        "",
+        f"- Schema: `{envelope.get('schema')}`",
+        f"- Envelope id: `{envelope.get('envelope_id')}`",
+        f"- Lifecycle state: `{lifecycle.get('state')}`",
+    ]
+    if lifecycle.get("event"):
+        lines.append(f"- Lifecycle event: `{lifecycle.get('event')}`")
+    if envelope.get("session_id"):
+        lines.append(f"- Session id: `{envelope.get('session_id')}`")
+    if envelope.get("turn_id"):
+        lines.append(f"- Turn id: `{envelope.get('turn_id')}`")
+    lines.extend(
+        [
+            f"- Semantic intent status: `{semantic.get('status', 'unavailable')}`",
+            f"- Semantic provider: `{semantic.get('provider', 'unavailable')}`",
+            f"- Raw prompt storage: `{privacy.get('raw_prompt_storage', 'none')}`",
+            (
+                "- Raw prompt exposed in audit: "
+                f"`{str(privacy.get('raw_prompt_exposed_in_audit', False)).lower()}`"
+            ),
+        ]
+    )
+    if private_ref:
+        lines.append(
+            f"- Private input record id: `{private_ref.get('record_id') or 'pending'}`"
+        )
+        lines.append(f"- Private input index ref: `{private_ref.get('index_ref')}`")
+        lines.append(
+            "- Private input write performed: "
+            f"`{str(private_ref.get('write_performed', False)).lower()}`"
+        )
+    if runtime_refs:
+        if runtime_refs.get("history_ref"):
+            lines.append(f"- Runtime history ref: `{runtime_refs.get('history_ref')}`")
+        if runtime_refs.get("state_summary_ref"):
+            lines.append(
+                f"- Runtime state summary ref: `{runtime_refs.get('state_summary_ref')}`"
+            )
+    lines.append("")
+    return lines
+
+
 def render_artifact_gap_lines(
     *,
     label: str,
@@ -5907,6 +5989,9 @@ def render_markdown(proposal: dict[str, Any]) -> str:
     turn_anchor_projection = proposal.get("turn_anchor")
     if turn_anchor_projection:
         lines.extend(render_turn_anchor(turn_anchor_projection))
+    execution_envelope_projection = proposal.get("execution_envelope")
+    if execution_envelope_projection:
+        lines.extend(render_execution_envelope(execution_envelope_projection))
     artifact_report = proposal.get("artifact_assurance")
     if artifact_report:
         lines.extend(render_artifact_assurance(artifact_report))
@@ -6172,6 +6257,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Non-AI host turn anchor JSON object; must not contain raw prompt text.",
     )
+    propose.add_argument(
+        "--private-turn-input-ref-json",
+        default=None,
+        help="Redacted private turn input index ref; must not contain raw prompt text.",
+    )
     propose.add_argument("--trigger-mode", choices=sorted(TRIGGER_MODES), default=None)
     propose.add_argument(
         "--governance-path",
@@ -6359,6 +6449,16 @@ def main(argv: list[str] | None = None) -> int:
             parser.error("--turn-anchor-json must decode to an object")
         turn_anchor_input = decoded_turn_anchor
 
+    private_turn_input_ref: dict[str, Any] | None = None
+    if args.private_turn_input_ref_json:
+        try:
+            decoded_private_ref = json.loads(args.private_turn_input_ref_json)
+        except json.JSONDecodeError as exc:
+            parser.error(f"--private-turn-input-ref-json must be valid JSON: {exc}")
+        if not isinstance(decoded_private_ref, dict):
+            parser.error("--private-turn-input-ref-json must decode to an object")
+        private_turn_input_ref = decoded_private_ref
+
     proposal = build_proposal(
         raw_event=args.event,
         task_title=args.task_title,
@@ -6419,6 +6519,7 @@ def main(argv: list[str] | None = None) -> int:
         governance_path=args.governance_path,
         host_semantic_intent=host_semantic_intent,
         turn_anchor=turn_anchor_input,
+        private_turn_input_ref=private_turn_input_ref,
         produced_evidence=produced_evidence,
         work_routing_category=args.work_routing_category,
         work_routing_summary=args.work_routing_summary,

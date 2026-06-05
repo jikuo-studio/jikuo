@@ -1280,7 +1280,7 @@ entries:
     title: "SPRINT_050_WO-PER-JIKUO-MVP-01: Work Receipt And Configuration MVP"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-MVP-01_work_receipt_and_configuration_mvp.md"
     sprint: "SPRINT_050"
-    status: "MVP work-order sequence active; git actual-write observation, completion-review wiring, latest receipt default selection, first companion-write obligation projection/view, trigger/ignored-write receipt hints, Gaps vs Unchecked applicability wording, grouped receipt detail subpanels, expandable overflow detail rows, universal instruction completion-receipt wording, semantic-intent coverage risk visibility, policy configuration read-only surface with active current constraints and filtered activatable pending constraints, existing-proposal candidate activation preview/apply, active-policy configuration change preview with controlled scope-first trigger profile fields, guarded active-policy configuration change apply UX/API, trigger-profile refinement guarded writer, Studio active-policy reusable-template publication preview/apply, and Studio package-template activation preview/apply with deduped resolved-policy source provenance implemented"
+    status: "MVP work-order sequence active; git actual-write observation, completion-review wiring, latest receipt default selection, first companion-write obligation projection/view, trigger/ignored-write receipt hints, Gaps vs Unchecked applicability wording, grouped receipt detail subpanels, expandable overflow detail rows, universal instruction completion-receipt wording, semantic-intent coverage risk visibility, shared execution-envelope/private-input-index refs, policy configuration read-only surface with active current constraints and filtered activatable pending constraints, existing-proposal candidate activation preview/apply, active-policy configuration change preview with controlled scope-first trigger profile fields, guarded active-policy configuration change apply UX/API, trigger-profile refinement guarded writer, Studio active-policy reusable-template publication preview/apply, and Studio package-template activation preview/apply with deduped resolved-policy source provenance implemented"
     impact_tags:
       - "mvp"
       - "studio"
@@ -1294,6 +1294,7 @@ entries:
       - "CAP-CODEX-HOOK-COMPLETION-RECEIPT-INSTRUCTION-01"
       - "CAP-UNIVERSAL-INSTRUCTION-COMPLETION-RECEIPT-01"
       - "CAP-SEMANTIC-INTENT-COVERAGE-RUNTIME-01"
+      - "CAP-EXECUTION-ENVELOPE-PROJECTION-01"
       - "CAP-STUDIO-LATEST-COMPLETION-RECEIPT-01"
       - "CAP-STUDIO-COMPANION-WRITE-RECEIPT-VIEW-01"
       - "CAP-STUDIO-POLICY-CONFIGURATION-READ-UI-01"

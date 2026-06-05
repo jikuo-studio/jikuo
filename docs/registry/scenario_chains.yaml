@@ -103,6 +103,20 @@ entries:
           - "state_summary.turn_anchor"
           - "Studio latest turn anchor overview metric"
           - "Studio latest semantic classification Turn anchor row"
+      - step_id: "HOST-SEMANTIC-FOLLOW-UP-06"
+        user_action: "Inspect whether a governed turn has a shared execution envelope and private input index ref that can link raw private input to runtime evidence without exposing it in public cards."
+        visible_result: "Runtime cards and state_summary show `jikuo.execution_envelope.v0`, lifecycle state, turn anchor identity, host semantic evidence status, and private input index refs while keeping raw prompt storage private."
+        operation_chain: "The host adapter creates a received-state envelope and no-write private input index ref; Codex hook and agent_flow carry the ref into task_start/completion_review proposals; runtime visibility adds latest card/history/state refs to the envelope."
+        atom_refs:
+          - "CAP-EXECUTION-ENVELOPE-PROJECTION-01"
+          - "CAP-RUNTIME-TURN-ANCHOR-PROJECTION-01"
+          - "CAP-HOST-ADAPTER-CONTRACT-01"
+        approval_boundary: "runtime_projection_and_explicit_private_index_write_only"
+        evidence_outputs:
+          - "proposal.execution_envelope"
+          - "state_summary.execution_envelope"
+          - "execution_envelope.links.private_turn_input_ref"
+          - "execution_envelope.links.runtime_refs"
     capability_refs:
       - "CAP-CODEX-PLUGIN-HARNESS-REVIEW-01"
       - "CAP-HOST-ADAPTER-CONTRACT-01"
@@ -111,6 +125,7 @@ entries:
       - "CAP-SEMANTIC-INTENT-CLASSIFICATION-EVIDENCE-01"
       - "CAP-SEMANTIC-INTENT-COVERAGE-RUNTIME-01"
       - "CAP-RUNTIME-TURN-ANCHOR-PROJECTION-01"
+      - "CAP-EXECUTION-ENVELOPE-PROJECTION-01"
       - "CAP-PROGRESS-SUMMARY-BUSINESS-MEANING-POLICY-01"
   - id: "SCENARIO-INSTRUCTION-COMPLETION-RECEIPT"
     title: "Instruction-guided completion receipt"

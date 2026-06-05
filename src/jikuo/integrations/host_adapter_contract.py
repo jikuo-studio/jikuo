@@ -11,7 +11,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from jikuo import turn_anchor, work_profile
+from jikuo import execution_envelope, private_turn_input_index, turn_anchor, work_profile
 
 
 HOST_ADAPTER_TURN_INPUT_SCHEMA = "jikuo.host_adapter.turn_input.v0"
@@ -149,12 +149,26 @@ def normalize_turn_input(raw: dict[str, Any] | None) -> dict[str, Any]:
             "turn_anchor": anchor,
         }
     semantic_intent = work_profile.normalize_host_semantic_intent(raw_semantic_intent)
+    project_root = _string_or_none(raw.get("project_root") or raw.get("projectRoot"))
+    private_input_ref = private_turn_input_index.build_index_ref(
+        project_root=project_root,
+        turn_anchor=anchor,
+        raw_input_present=bool(raw_turn),
+    )
+    envelope = execution_envelope.build_execution_envelope(
+        project_root=project_root,
+        turn_anchor=anchor,
+        host_semantic_intent=semantic_intent,
+        lifecycle_state="received",
+        lifecycle_event="conversation_turn",
+        private_turn_input_ref=private_input_ref if raw_turn else None,
+    )
 
     return {
         "schema": HOST_ADAPTER_TURN_INPUT_SCHEMA,
         "client_id": _normalize_client_id(raw.get("client_id") or raw.get("clientId")),
         "client_event": _string_or_none(raw.get("client_event") or raw.get("clientEvent")),
-        "project_root": _string_or_none(raw.get("project_root") or raw.get("projectRoot")),
+        "project_root": project_root,
         "project_root_ref": (
             str(Path(str(raw.get("project_root") or raw.get("projectRoot"))))
             if raw.get("project_root") or raw.get("projectRoot")
@@ -170,10 +184,13 @@ def normalize_turn_input(raw: dict[str, Any] | None) -> dict[str, Any]:
         "raw_turn_present": bool(raw_turn),
         "turn_anchor": anchor,
         "host_semantic_intent": semantic_intent,
+        "execution_envelope": envelope,
+        "private_turn_input_index": private_input_ref,
         "privacy": {
             "raw_prompt_persisted": False,
             "raw_transcript_persisted": False,
             "stored_input": user_turn_summary_status,
+            "private_turn_input_index_write_performed": False,
         },
         "non_effects": [
             "does_not_call_host_ai",

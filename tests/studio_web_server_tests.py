@@ -973,6 +973,7 @@ class StudioWebServerTests(unittest.TestCase):
         self.assertIn("Latest Semantic Classification", html)
         self.assertIn("semantic-evidence-list", html)
         self.assertIn("Classified by", html)
+        self.assertIn("Classification round", html)
         self.assertIn("Host AI supplied semantic intent", html)
         self.assertIn("Turn anchor", html)
         self.assertIn("semanticAnchorOverviewValue", html)

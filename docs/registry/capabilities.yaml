@@ -282,6 +282,22 @@ entries:
     referenced_by_transitional_cache:
       - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md"
       - "docs/insights/INSIGHT-2026-06-03-gui-subscription-semantic-intent-return-gap.md"
+  - id: "CAP-EXECUTION-ENVELOPE-PROJECTION-01"
+    title: "Shared execution envelope projection"
+    status: "implemented first CLI enhanced shared projection: agent_flow builds jikuo.execution_envelope.v0 from turn_anchor, host_semantic_intent evidence, explicit lifecycle event, optional private turn input index ref, and runtime visibility refs; host adapter exposes a received-state envelope and a no-write private input index ref without storing raw prompt text"
+    metadata_status: "complete"
+    entry_point: "src/jikuo/execution_envelope.py; src/jikuo/private_turn_input_index.py; src/jikuo/integrations/host_adapter_contract.py; .codex/hooks/jikuo_user_prompt_submit.py; src/jikuo/agent_flow.py; src/jikuo/runtime_visibility.py"
+    write_effect: "none by envelope projection; private turn input index writes only through explicit confirmed private-index command"
+    approval: "does not replace turn_anchor, does not call an LLM provider, does not infer semantic intent, and does not expose raw prompt or transcript in public runtime cards or state_summary"
+    non_effects:
+      - "does_not_replace_turn_anchor"
+      - "does_not_call_llm_provider"
+      - "does_not_infer_semantic_intent"
+      - "does_not_expose_raw_prompt_in_public_cards"
+      - "does_not_perform_lifecycle_transition_by_itself"
+    referenced_by_transitional_cache:
+      - "docs/governance/jikuo_cli_enhanced_execution_envelope.md"
+      - "docs/governance/JIKUO_CLI_ENHANCED_HANDOFF.md"
   - id: "CAP-SEMANTIC-INTENT-PRECONDITION-01"
     title: "Semantic intent precondition response"
     status: "implemented no-write semantic_intent_precondition card and atom trace; MCP adapter enables it for selected governed editing / write-capable proposal entry points and Sampling unavailable / invalid paths when semantic evidence is missing, fallback-only, or selected-tool precondition enforcement requires host intent; those selected proposal tools expose host_semantic_intent so the host can re-call and satisfy the precondition"

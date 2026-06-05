@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-MVP-01: Work Receipt And Configuration MVP
 
-> **Status**: Planned MVP work-order sequence; configuration surface now includes policy read UI, guarded policy evolution/refinement, guarded active-policy reusable-template publication, and guarded package-template activation slices.
+> **Status**: Planned MVP work-order sequence; configuration surface now includes policy read UI, guarded policy evolution/refinement, guarded active-policy reusable-template publication, guarded package-template activation, and CLI enhanced execution-envelope/private-index linkage slices.
 > **Date**: 2026-06-03
 > **JIKUO layer**: product slice / Studio surface / runtime evidence projection.
 > **Business meaning**: Ship a small usable JIKUO version where a test user can configure documents and policies, let the host AI work, and then inspect an independently checkable AI work receipt without trusting the AI's chat summary.
@@ -426,6 +426,38 @@ Acceptance:
 - Studio does not claim strict GUI semantic gating;
 - policy evaluator inputs and scope taxonomy are unchanged.
 
+### `MVP-RECEIPT-06A`: CLI Enhanced Execution Envelope And Private Input Index
+
+Add a shared envelope and private input index linkage for GUI and CLI flows
+without creating a second governance model.
+
+Capability:
+
+- `CAP-EXECUTION-ENVELOPE-PROJECTION-01`
+
+Deliverables:
+
+- `jikuo.execution_envelope.v0` projection in `agent_flow` proposal JSON,
+  runtime cards, and `state_summary.json`;
+- `jikuo.private_turn_input_index.v0` local/private module and CLI surface for
+  explicit raw input storage;
+- host adapter output that includes a received-state envelope and no-write
+  private-index ref without persisting raw prompt text;
+- Codex hook passthrough for the private-index ref to later task lifecycle
+  proposals;
+- design note:
+  `docs/governance/jikuo_cli_enhanced_execution_envelope.md`.
+
+Acceptance:
+
+- `turn_anchor` remains the stable identity object;
+- host AI remains responsible for `host_semantic_intent`;
+- JIKUO does not perform semantic search or infer semantic meaning;
+- public runtime cards and state summaries show refs, hashes, lifecycle state,
+  and private index identifiers without raw prompt text;
+- raw user input is written only by an explicit private-index command and stays
+  under `.jikuo/private/`.
+
 ### `MVP-CONFIG-01`: Document Rules CRUD Frontend Completion
 
 Complete the thin frontend for Document Rules over the existing plan/apply
@@ -621,12 +653,13 @@ Defer these until the MVP receipt and configuration loop is usable:
 5. `MVP-RECEIPT-04`
 6. `MVP-RECEIPT-05`
 7. `MVP-RECEIPT-06`
-8. `MVP-CONFIG-01`
-9. `MVP-CONFIG-02`
-10. `MVP-CONFIG-03`
-11. `MVP-CONFIG-04`
-12. `MVP-CONFIG-05`
-13. `MVP-RELEASE-01`
+8. `MVP-RECEIPT-06A`
+9. `MVP-CONFIG-01`
+10. `MVP-CONFIG-02`
+11. `MVP-CONFIG-03`
+12. `MVP-CONFIG-04`
+13. `MVP-CONFIG-05`
+14. `MVP-RELEASE-01`
 
 `MVP-CONFIG-01` may start in parallel with `MVP-RECEIPT-01` if capacity allows,
 but receipt observation should be proven early because it carries the core MVP

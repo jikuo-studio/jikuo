@@ -152,6 +152,12 @@ class CodexHookProofTests(unittest.TestCase):
         )
 
         self.assertIn("--user-phrase-stdin", command)
+        self.assertIn("--private-turn-input-ref-json", command)
+        private_ref_json = command[command.index("--private-turn-input-ref-json") + 1]
+        self.assertEqual(
+            json.loads(private_ref_json)["status"],
+            "available_for_private_storage",
+        )
         self.assertNotIn("--user-phrase", command)
         self.assertNotIn(raw_prompt, command)
 
@@ -302,6 +308,10 @@ class CodexHookProofTests(unittest.TestCase):
         self.assertEqual(calls["builder"]["trigger_mode"], "mounted")
         self.assertEqual(calls["builder"]["host_semantic_intent"]["provider"], "host_ai")
         self.assertEqual(calls["builder"]["host_semantic_intent"]["status"], "provided")
+        self.assertEqual(
+            calls["builder"]["private_turn_input_ref"]["status"],
+            "available_for_private_storage",
+        )
         self.assertEqual(calls["formatter"]["project_root"], ROOT)
         self.assertEqual(result["runtime_visibility"]["last_card_ref"], ".jikuo/runtime/last_card.md")
 

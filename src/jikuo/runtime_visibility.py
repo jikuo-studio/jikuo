@@ -245,6 +245,7 @@ def build_state_summary(
         "policy_runtime_status": policy_runtime_status,
         "semantic_intent_coverage": semantic_intent_coverage_for(proposal),
         "turn_anchor": turn_anchor.turn_anchor_for_proposal(proposal),
+        "execution_envelope": proposal.get("execution_envelope"),
         "counts": {
             "card_count": len(proposal.get("cards", [])),
             "triggered_policy_count": len(proposal.get("triggered_policies", [])),
@@ -853,6 +854,34 @@ def format_state_summary(summary: dict[str, Any]) -> str:
         )
         if anchor.get("gap_reason"):
             lines.append(f"- Gap reason: `{anchor.get('gap_reason')}`")
+    envelope = summary.get("execution_envelope") or {}
+    if envelope:
+        lifecycle = envelope.get("lifecycle") or {}
+        privacy = envelope.get("privacy") or {}
+        links = envelope.get("links") or {}
+        private_ref = links.get("private_turn_input_ref") or {}
+        lines.extend(
+            [
+                "",
+                "## Execution Envelope",
+                "",
+                f"- Envelope id: `{envelope.get('envelope_id')}`",
+                f"- Lifecycle state: `{lifecycle.get('state')}`",
+                f"- Lifecycle event: `{lifecycle.get('event')}`",
+                f"- Raw prompt storage: `{privacy.get('raw_prompt_storage', 'none')}`",
+                (
+                    "- Raw prompt exposed in audit: "
+                    f"`{str(privacy.get('raw_prompt_exposed_in_audit', False)).lower()}`"
+                ),
+            ]
+        )
+        if private_ref:
+            lines.append(
+                f"- Private input index ref: `{private_ref.get('index_ref')}`"
+            )
+            lines.append(
+                f"- Private input record id: `{private_ref.get('record_id') or 'pending'}`"
+            )
     artifact = summary.get("artifact_assurance") or {}
     if artifact:
         read = artifact.get("read_assurance") or {}
