@@ -36,6 +36,7 @@ POLICY_WRITE_RESULT_SCHEMA = "jikuo.policy_write_result.v0"
 POLICY_STORE_MANIFEST_SCHEMA = "jikuo.policy_store_manifest.v0"
 POLICY_DECISION_SCHEMA = "jikuo.policy_decision.v0"
 POLICY_SCHEMA = "jikuo.configurable_rule_policy.v0"
+POLICY_FINAL_RESPONSE_GATE_SCHEMA = "jikuo.policy_final_response_gate.v0"
 POLICY_MISSING_EVIDENCE_REPORT_SCHEMA = "jikuo.missing_evidence_report.v0"
 POLICY_EVAL_STATUS_NOT_EVALUATED = "not_evaluated"
 POLICY_EVAL_STATUS_EVALUATED = "evaluated"
@@ -155,6 +156,46 @@ def read_minimal_yaml(path: Path) -> dict[str, Any]:
 def schema_from_record(record: dict[str, Any]) -> str | None:
     schema = record.get("schema_version") or record.get("schema")
     return schema if isinstance(schema, str) else None
+
+
+def normalize_final_response_gate(value: Any) -> dict[str, Any]:
+    """Normalize optional policy final-response gate metadata.
+
+    Project policy files may use the compact boolean form:
+    ``final_response_gate: true``. A mapping with ``enabled`` is accepted for
+    forward compatibility, but absence always means not a final-response gate.
+    """
+
+    enabled = False
+    source = "default_false"
+    warning: str | None = None
+    if isinstance(value, bool):
+        enabled = value
+        source = "declared_boolean"
+    elif isinstance(value, dict):
+        raw_enabled = value.get("enabled")
+        if isinstance(raw_enabled, bool):
+            enabled = raw_enabled
+            source = "declared_mapping"
+        elif raw_enabled is None:
+            source = "declared_mapping_without_enabled"
+            warning = "final_response_gate mapping has no enabled field; defaulting to false"
+        else:
+            source = "invalid_enabled_value"
+            warning = "final_response_gate.enabled must be boolean; defaulting to false"
+    elif value is not None:
+        source = "invalid_value"
+        warning = "final_response_gate must be boolean or mapping; defaulting to false"
+
+    result: dict[str, Any] = {
+        "schema": POLICY_FINAL_RESPONSE_GATE_SCHEMA,
+        "enabled": enabled,
+        "source": source,
+        "visibility": "final_response_required" if enabled else "not_final_response_gate",
+    }
+    if warning:
+        result["warning"] = warning
+    return result
 
 
 def display_path(path: Path, project_root: Path) -> str:
@@ -418,6 +459,9 @@ def summarize_policy(
         "title": record.get("title"),
         "status": record.get("status"),
         "schema_version": schema,
+        "final_response_gate": normalize_final_response_gate(
+            record.get("final_response_gate")
+        ),
     }
     work_profile_applicability = normalize_work_profile_applicability(
         record.get("applies_to_work_profile")
@@ -962,6 +1006,7 @@ def build_policy_write_plan(
         "version": 1,
         "status": "active_report_only",
         "title": title,
+        "final_response_gate": False,
         "scenario_package": "engineering_governance",
         "source_refs": [
             {
@@ -2949,6 +2994,317 @@ def write_policy_from_plan(
             ),
         },
         0 if policy_found else 2,
+    )
+
+
+def build_policy_final_response_gate_update_refusal_result(
+    *,
+    project_root: Path,
+    policy_ref: str | None,
+    policy_path_ref: str | None,
+    policy_store_status: str | None,
+    refusal_reasons: list[str],
+    approval_phrase: str | None,
+    warnings: list[str] | None = None,
+    error: str = "preflight rejected policy final-response gate update",
+) -> dict[str, Any]:
+    return {
+        "schema": POLICY_WRITE_RESULT_SCHEMA,
+        "schema_version": POLICY_WRITE_RESULT_SCHEMA,
+        "status": "refused",
+        "write_performed": False,
+        "operation": "update_policy_final_response_gate",
+        "plan_ref": None,
+        "policy_ref": policy_ref,
+        "project_root": str(project_root),
+        "policy_store_status_before": policy_store_status,
+        "policy_store_status_after": policy_store_status,
+        "written_paths": [],
+        "created_paths": [],
+        "proposal_ref": None,
+        "decision_record_ref": None,
+        "target_policy_path": policy_path_ref,
+        "refusal_reasons": sorted(set(refusal_reasons)),
+        "warnings": warnings or [],
+        "approval_record": {
+            "phrase": approval_phrase,
+            "decision_target": "JIKUO policy final-response gate setting",
+            "decision_effect": f"update final_response_gate on {policy_ref or 'selected policy'}",
+            "decision_noneffect": "does not execute policy actions or infer semantic intent",
+            "source_plan_schema": None,
+            "source_plan_ref": None,
+        }
+        if approval_phrase
+        else None,
+        "error": error,
+        "post_write_verification": {
+            "reread_ok": False,
+            "active_policy_resolvable": False,
+            "final_response_gate_matches": False,
+        },
+        "next_actions": policy_store_write_next_actions("refused"),
+    }
+
+
+def active_policy_path_for_ref(
+    *,
+    project_root: Path,
+    status_report: dict[str, Any],
+    policy_ref: str,
+) -> tuple[Path | None, str | None, str | None]:
+    if "/" in policy_ref or "\\" in policy_ref:
+        return None, None, "policy_ref_must_not_include_path_separators"
+    matches = [
+        item
+        for item in status_report.get("active_policy_refs", [])
+        if isinstance(item, dict) and item.get("policy_id") == policy_ref
+    ]
+    if len(matches) > 1:
+        return None, None, "policy_ref_matches_multiple_active_policies"
+    if not matches:
+        return None, None, "policy_ref_not_active"
+    raw_path = matches[0].get("path")
+    if not isinstance(raw_path, str) or not raw_path:
+        return None, None, "active_policy_path_missing"
+    policy_path, path_error = resolve_project_path(project_root, raw_path)
+    if path_error or policy_path is None:
+        return None, raw_path, path_error or "active_policy_path_invalid"
+    return policy_path, raw_path.replace("\\", "/"), None
+
+
+def resolve_policy_final_response_gate_target(
+    *,
+    project_root: Path,
+    status_report: dict[str, Any],
+    policy_ref: str | None,
+    policy_path: Path | str | None,
+) -> tuple[Path | None, str | None, str | None]:
+    if policy_path is not None:
+        target_path, path_error = resolve_project_path(project_root, str(policy_path))
+        path_ref = (
+            display_path(target_path, project_root)
+            if target_path is not None
+            else str(policy_path)
+        )
+        if path_error or target_path is None:
+            return None, path_ref, path_error or "policy_path_invalid"
+        return target_path, path_ref, None
+    if policy_ref:
+        return active_policy_path_for_ref(
+            project_root=project_root,
+            status_report=status_report,
+            policy_ref=policy_ref,
+        )
+    return None, None, "policy_ref_or_policy_path_required"
+
+
+def update_policy_final_response_gate(
+    *,
+    project_root: Path | None = None,
+    cwd: Path | None = None,
+    policy_ref: str | None = None,
+    policy_path: Path | str | None = None,
+    enabled: bool = False,
+    reviewed_policy_sha256: str | None = None,
+    confirmed: bool = False,
+    approval_phrase: str | None = None,
+) -> tuple[dict[str, Any], int]:
+    status_report = inspect_policy_store(project_root=project_root, cwd=cwd)
+    resolved_root = Path(status_report["project_root"])
+    warnings = list(status_report.get("warnings") or [])
+    refusals: list[str] = []
+
+    target_path, target_path_ref, target_error = resolve_policy_final_response_gate_target(
+        project_root=resolved_root,
+        status_report=status_report,
+        policy_ref=policy_ref,
+        policy_path=policy_path,
+    )
+    if target_error:
+        refusals.append(target_error)
+
+    approved_root = (resolved_root / POLICY_STORE_ROOT / "approved").resolve()
+    if target_path is not None:
+        try:
+            target_path.resolve().relative_to(approved_root)
+        except ValueError:
+            refusals.append("policy_path_outside_approved_policy_store")
+        if not target_path.is_file():
+            refusals.append("policy_file_missing")
+
+    if status_report.get("policy_store_status") != "active":
+        refusals.append("active_policy_store_required_for_policy_config_update")
+    if not confirmed:
+        refusals.append("missing_confirmation_flag")
+    if not approval_phrase:
+        refusals.append("approval_evidence_missing")
+
+    record: dict[str, Any] = {}
+    current_sha: str | None = None
+    resolved_policy_ref = policy_ref
+    if target_path is not None and target_path.is_file():
+        try:
+            record = read_yaml_subset(target_path)
+            current_sha = hashlib.sha256(target_path.read_bytes()).hexdigest()
+        except OSError as exc:
+            refusals.append("policy_file_not_readable")
+            warnings.append(f"policy_file_not_readable:{exc}")
+    if record:
+        schema = schema_from_record(record)
+        if schema != POLICY_SCHEMA:
+            refusals.append("unsupported_policy_schema")
+        record_policy_id = record.get("policy_id")
+        if isinstance(record_policy_id, str) and record_policy_id:
+            if resolved_policy_ref and resolved_policy_ref != record_policy_id:
+                refusals.append("policy_ref_does_not_match_policy_file")
+            resolved_policy_ref = record_policy_id
+        else:
+            refusals.append("policy_id_missing")
+    active_policy_ids = policy_ids_from_refs(status_report.get("active_policy_refs"))
+    if resolved_policy_ref and resolved_policy_ref not in active_policy_ids:
+        refusals.append("policy_ref_not_active")
+    if reviewed_policy_sha256 and current_sha and reviewed_policy_sha256 != current_sha:
+        refusals.append("reviewed_policy_sha256_does_not_match_current_policy")
+
+    if refusals:
+        return (
+            build_policy_final_response_gate_update_refusal_result(
+                project_root=resolved_root,
+                policy_ref=resolved_policy_ref,
+                policy_path_ref=target_path_ref,
+                policy_store_status=status_report.get("policy_store_status"),
+                refusal_reasons=refusals,
+                approval_phrase=approval_phrase,
+                warnings=warnings,
+            ),
+            2,
+        )
+
+    assert target_path is not None
+    assert target_path_ref is not None
+    previous_gate = normalize_final_response_gate(record.get("final_response_gate"))
+    if previous_gate["enabled"] == bool(enabled):
+        return (
+            {
+                "schema": POLICY_WRITE_RESULT_SCHEMA,
+                "schema_version": POLICY_WRITE_RESULT_SCHEMA,
+                "status": "unchanged",
+                "write_performed": False,
+                "operation": "update_policy_final_response_gate",
+                "plan_ref": None,
+                "policy_ref": resolved_policy_ref,
+                "project_root": str(resolved_root),
+                "policy_store_status_before": status_report.get("policy_store_status"),
+                "policy_store_status_after": status_report.get("policy_store_status"),
+                "written_paths": [],
+                "created_paths": [],
+                "proposal_ref": None,
+                "decision_record_ref": None,
+                "target_policy_path": target_path_ref,
+                "final_response_gate": previous_gate,
+                "previous_final_response_gate": previous_gate,
+                "refusal_reasons": [],
+                "warnings": warnings,
+                "approval_record": {
+                    "phrase": approval_phrase,
+                    "decision_target": "JIKUO policy final-response gate setting",
+                    "decision_effect": f"leave final_response_gate unchanged on {resolved_policy_ref}",
+                    "decision_noneffect": "does not execute policy actions or infer semantic intent",
+                    "source_plan_schema": None,
+                    "source_plan_ref": None,
+                },
+                "error": None,
+                "post_write_verification": {
+                    "reread_ok": True,
+                    "active_policy_resolvable": True,
+                    "final_response_gate_matches": True,
+                },
+                "next_actions": ["continue; final_response_gate already matched requested value"],
+            },
+            0,
+        )
+
+    updated = dict(record)
+    updated["final_response_gate"] = bool(enabled)
+    temp_path = target_path.with_suffix(target_path.suffix + ".tmp")
+    try:
+        temp_path.write_text(
+            render_yaml_document(updated),
+            encoding="utf-8",
+            newline="\n",
+        )
+        os.replace(temp_path, target_path)
+    except Exception as exc:
+        temp_path.unlink(missing_ok=True)
+        return (
+            build_policy_final_response_gate_update_refusal_result(
+                project_root=resolved_root,
+                policy_ref=resolved_policy_ref,
+                policy_path_ref=target_path_ref,
+                policy_store_status=status_report.get("policy_store_status"),
+                refusal_reasons=["policy_final_response_gate_update_failed"],
+                approval_phrase=approval_phrase,
+                warnings=warnings,
+                error=str(exc),
+            ),
+            2,
+        )
+
+    status_after = inspect_policy_store(project_root=resolved_root)
+    reread_record, reread_warnings = read_policy_record(target_path)
+    if reread_warnings:
+        warnings.extend(reread_warnings)
+    updated_gate = normalize_final_response_gate(
+        (reread_record or {}).get("final_response_gate")
+    )
+    active_policy_resolvable = any(
+        item.get("policy_id") == resolved_policy_ref
+        for item in status_after.get("active_policy_refs", [])
+        if isinstance(item, dict)
+    )
+    ok = active_policy_resolvable and updated_gate["enabled"] == bool(enabled)
+    return (
+        {
+            "schema": POLICY_WRITE_RESULT_SCHEMA,
+            "schema_version": POLICY_WRITE_RESULT_SCHEMA,
+            "status": "written" if ok else "failed",
+            "write_performed": True,
+            "operation": "update_policy_final_response_gate",
+            "plan_ref": None,
+            "policy_ref": resolved_policy_ref,
+            "project_root": str(resolved_root),
+            "policy_store_status_before": status_report.get("policy_store_status"),
+            "policy_store_status_after": status_after.get("policy_store_status"),
+            "written_paths": [target_path_ref],
+            "created_paths": [],
+            "proposal_ref": None,
+            "decision_record_ref": None,
+            "target_policy_path": target_path_ref,
+            "final_response_gate": updated_gate,
+            "previous_final_response_gate": previous_gate,
+            "refusal_reasons": [],
+            "warnings": warnings + list(status_after.get("warnings") or []),
+            "approval_record": {
+                "phrase": approval_phrase,
+                "decision_target": "JIKUO policy final-response gate setting",
+                "decision_effect": (
+                    f"set final_response_gate={bool(enabled)} on {resolved_policy_ref}"
+                ),
+                "decision_noneffect": "does not execute policy actions or infer semantic intent",
+                "source_plan_schema": None,
+                "source_plan_ref": None,
+            },
+            "error": None if ok else "post-write final_response_gate verification failed",
+            "post_write_verification": {
+                "reread_ok": reread_record is not None,
+                "active_policy_resolvable": active_policy_resolvable,
+                "final_response_gate_matches": updated_gate["enabled"] == bool(enabled),
+            },
+            "next_actions": policy_store_write_next_actions(
+                "written" if ok else "refused"
+            ),
+        },
+        0 if ok else 2,
     )
 
 

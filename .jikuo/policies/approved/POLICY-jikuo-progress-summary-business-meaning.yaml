@@ -14,7 +14,7 @@ triggers:
     type: "task_lifecycle_event"
     event: "completion_review"
 conditions:
-  []
+  {}
 required_actions:
   - action_id: "ACT-include-business-meaning-in-progress-todo-summary"
     type: "include_business_meaning_in_progress_todo_summary"
@@ -25,3 +25,4 @@ required_evidence:
 enforcement:
   phase: "report_only"
   level: "review_required"
+final_response_gate: true

@@ -485,6 +485,98 @@ class StudioWebServerTests(unittest.TestCase):
             ).read_text(encoding="utf-8")
             self.assertIn('pattern: "src/jikuo/**"', policy_text)
 
+    def test_policy_final_response_gate_apply_api_updates_active_policy_after_approval(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            write_project_state(project_root)
+            policy_id = "POLICY-studio-final-response-gate"
+            policy_path = write_active_policy(project_root, policy_id)
+            store = project_root / ".jikuo" / "policies"
+            (store / "manifest.yaml").write_text(
+                "\n".join(
+                    [
+                        'schema_version: "jikuo.policy_store_manifest.v0"',
+                        'project_id: "studio_web_fixture"',
+                        'store_root: ".jikuo/policies"',
+                        "active_policy_refs:",
+                        f'  - policy_id: "{policy_id}"',
+                        "    version: 1",
+                        f'    path: "{policy_path.relative_to(project_root).as_posix()}"',
+                        "proposal_refs: []",
+                        "deprecated_policy_refs: []",
+                        "superseded_policy_refs: []",
+                        'last_updated_at: "2026-06-05T00:00:00Z"',
+                        "compatibility:",
+                        '  unknown_fields: "preserve"',
+                        '  writer: "test_fixture"',
+                        "",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            status_code, refused = server.api_policy_final_response_gate_apply_payload(
+                {
+                    "policy_ref": policy_id,
+                    "enabled": True,
+                },
+                project_root=project_root,
+            )
+            _status_code, policy_status = server.api_payload_for_path(
+                "/api/policy-management/status",
+                project_root=project_root,
+            )
+            detail = policy_status["policy_store"]["active_policy_details"][0]
+
+            approved_code, result = server.api_policy_final_response_gate_apply_payload(
+                {
+                    "policy_ref": policy_id,
+                    "policy_path": detail["path"],
+                    "enabled": True,
+                    "reviewed_policy_sha256": detail["policy_sha256"],
+                    "confirm_apply": True,
+                    "approval_phrase": "Approve Policy Final Response Gate update",
+                    "approval_source": "studio_confirmation_dialog",
+                },
+                project_root=project_root,
+            )
+
+            self.assertEqual(status_code, 200)
+            self.assertEqual(refused["status"], "refused")
+            self.assertFalse(refused["write_performed"])
+            self.assertIn("missing_confirmation_flag", refused["refusal_reasons"])
+            self.assertIn("approval_evidence_missing", refused["refusal_reasons"])
+            self.assertEqual(approved_code, 200)
+            self.assertEqual(result["status"], "written")
+            self.assertTrue(result["write_performed"])
+            self.assertEqual(result["policy_ref"], policy_id)
+            self.assertTrue(result["final_response_gate"]["enabled"])
+            self.assertEqual(
+                result["studio_web"]["route"],
+                "/api/policy-management/final-response-gate/apply",
+            )
+            self.assertTrue(result["studio_web"]["writes_performed"])
+            self.assertIn(
+                ".jikuo/policies/approved/POLICY-studio-final-response-gate.yaml",
+                result["written_paths"],
+            )
+            self.assertIn(
+                "final_response_gate: true",
+                policy_path.read_text(encoding="utf-8"),
+            )
+
+            _status_code, updated_status = server.api_payload_for_path(
+                "/api/policy-management/status",
+                project_root=project_root,
+            )
+            updated_detail = updated_status["policy_store"]["active_policy_details"][0]
+            self.assertTrue(updated_detail["final_response_gate"]["enabled"])
+            self.assertEqual(
+                updated_detail["final_response_gate"]["visibility"],
+                "final_response_required",
+            )
+
     def test_policy_template_publication_plan_api_returns_no_write_plan(self):
         with tempfile.TemporaryDirectory() as tmp:
             project_root = Path(tmp) / "project"
@@ -871,10 +963,24 @@ class StudioWebServerTests(unittest.TestCase):
         self.assertIn("policy-evolution-preview-button", html)
         self.assertIn("policy-evolution-apply-button", html)
         self.assertIn("POLICY_EVOLUTION_APPROVAL_PHRASE", html)
+        self.assertIn("POLICY_FINAL_RESPONSE_GATE_APPROVAL_PHRASE", html)
         self.assertIn("currentPolicyEvolutionPlan", html)
         self.assertIn("currentPolicyEvolutionRequest", html)
         self.assertIn("proposal_ref: currentPolicyEvolutionPlan.proposal_ref", html)
         self.assertIn("policy-evolution-plan-result", html)
+        self.assertIn("policy-final-response-gate-toggle", html)
+        self.assertIn("policy-final-response-gate-apply-button", html)
+        self.assertIn("/api/policy-management/final-response-gate/apply", html)
+        self.assertIn("Require in final response", html)
+        self.assertLess(
+            html.index("Proposed change"),
+            html.index("policy-final-response-gate-toggle"),
+        )
+        self.assertLess(
+            html.index("policy-final-response-gate-toggle"),
+            html.index("policy-evolution-plan-result"),
+        )
+        self.assertIn("applyPolicyFinalResponseGateChange", html)
         self.assertIn("policy-editor-grid", html)
         self.assertIn("policy-editor-note", html)
         self.assertIn("policy-action-buttons", html)

@@ -960,6 +960,22 @@ INDEX_HTML = """<!doctype html>
               </label>
               <span class="subhead policy-editor-note" id="policy-trigger-mode-note">Scope and lifecycle values are selected from the project policy option set.</span>
             </div>
+            <div class="policy-editor-grid">
+              <label>Final-response gate
+                <span class="option-group">
+                  <label class="option-pill">
+                    <input id="policy-final-response-gate-toggle" type="checkbox">
+                    Require in final response
+                  </label>
+                </span>
+              </label>
+              <span id="policy-final-response-gate-note" class="subhead policy-editor-note">Select a policy to configure final-response gate behavior.</span>
+              <span class="subhead policy-editor-note">Guarded policy metadata change; current state remains visible in Selected policy.</span>
+            </div>
+            <div class="plan-apply-row">
+              <button type="button" id="policy-final-response-gate-apply-button" disabled>Save gate setting</button>
+            </div>
+            <div class="list" id="policy-final-response-gate-result"></div>
           </div>
         </div>
         <div class="plan-apply-row">
@@ -1238,6 +1254,7 @@ INDEX_HTML = """<!doctype html>
     const termDescription = (terms, id, fallback) => (terms[id] && terms[id].user_description) || fallback;
     const DOCUMENT_RULES_APPROVAL_PHRASE = "Approve Document Rules update";
     const POLICY_EVOLUTION_APPROVAL_PHRASE = "Approve Policy Evolution write";
+    const POLICY_FINAL_RESPONSE_GATE_APPROVAL_PHRASE = "Approve Policy Final Response Gate update";
     const POLICY_TEMPLATE_PUBLICATION_APPROVAL_PHRASE = "Approve Policy Template publication";
     const POLICY_TEMPLATE_ACTIVATION_APPROVAL_PHRASE = "Approve Policy Template activation";
     const POLICY_CANDIDATE_ACTIVATION_APPROVAL_PHRASE = "Approve Policy Candidate activation";
@@ -1507,6 +1524,106 @@ INDEX_HTML = """<!doctype html>
     };
     const selectedPolicyDetail = (report) => selectedActivePolicyDetail(report, "policy-evolution-policy");
     const selectedPublicationPolicyDetail = (report) => selectedActivePolicyDetail(report, "policy-template-publication-policy");
+    const finalResponseGateState = (detail) => {
+      const gate = (detail || {}).final_response_gate || {};
+      return {
+        enabled: Boolean(gate.enabled),
+        source: gate.source || "default_false",
+        visibility: gate.visibility || (gate.enabled ? "final_response_required" : "not_final_response_gate"),
+      };
+    };
+    const finalResponseGateSummary = (detail) => {
+      const gate = finalResponseGateState(detail);
+      return gate.enabled
+        ? `Enabled / ${gate.source}; triggered policy evidence must be visible in the final response.`
+        : `Disabled / ${gate.source}; policy evidence remains runtime-visible but is not a final-response gate.`;
+    };
+    const refreshPolicyFinalResponseGateApplyState = () => {
+      const detail = selectedPolicyDetail(policyManagementReport || {});
+      const toggle = document.getElementById("policy-final-response-gate-toggle");
+      const button = document.getElementById("policy-final-response-gate-apply-button");
+      const note = document.getElementById("policy-final-response-gate-note");
+      if (!detail) {
+        toggle.checked = false;
+        toggle.disabled = true;
+        button.disabled = true;
+        note.textContent = "Select a policy to configure final-response gate behavior.";
+        return;
+      }
+      const gate = finalResponseGateState(detail);
+      toggle.disabled = false;
+      button.disabled = toggle.checked === gate.enabled;
+      note.textContent = toggle.checked === gate.enabled
+        ? finalResponseGateSummary(detail)
+        : `Pending change: final-response gate will be ${toggle.checked ? "enabled" : "disabled"} for ${detail.policy_id || "selected policy"}.`;
+    };
+    const resetPolicyFinalResponseGateControls = (detail) => {
+      const toggle = document.getElementById("policy-final-response-gate-toggle");
+      toggle.checked = Boolean((detail || {}).final_response_gate && (detail || {}).final_response_gate.enabled);
+      refreshPolicyFinalResponseGateApplyState();
+    };
+    const renderPolicyFinalResponseGateResult = (result) => {
+      const container = document.getElementById("policy-final-response-gate-result");
+      const gate = result.final_response_gate || {};
+      const verification = result.post_write_verification || {};
+      const status = result.status || "unknown";
+      const summaryStatus = status === "written" || status === "unchanged" ? "available" : "unavailable";
+      const refusals = (result.refusal_reasons || []).map((item) => compactItem("Refusal", item));
+      const warnings = (result.warnings || []).map((item) => compactItem("Warning", item));
+      container.replaceChildren(
+        row(`Gate update ${status}`, `write performed: ${String(Boolean(result.write_performed))}`, summaryStatus),
+        compactItem("Policy", `${result.policy_ref || "policy id missing"} / ${result.target_policy_path || "path not supplied"}`),
+        compactItem("Final-response gate", `${String(Boolean(gate.enabled))} / ${gate.source || "source unknown"}`),
+        compactItem("Verification", `reread=${String(Boolean(verification.reread_ok))} / matches=${String(Boolean(verification.final_response_gate_matches))}`),
+        ...(refusals.length ? refusals : []),
+        ...(warnings.length ? warnings : [])
+      );
+    };
+    const applyPolicyFinalResponseGateChange = () => {
+      const detail = selectedPolicyDetail(policyManagementReport || {});
+      const toggle = document.getElementById("policy-final-response-gate-toggle");
+      const button = document.getElementById("policy-final-response-gate-apply-button");
+      const container = document.getElementById("policy-final-response-gate-result");
+      if (!detail) {
+        container.replaceChildren(row("Policy required", "Select an active policy before saving gate configuration.", "unavailable"));
+        refreshPolicyFinalResponseGateApplyState();
+        return;
+      }
+      const desired = Boolean(toggle.checked);
+      const confirmed = window.confirm(
+        `Save final-response gate setting?\n\nPolicy: ${detail.policy_id || "policy"}\nFinal-response gate: ${desired ? "enabled" : "disabled"}\n\nThis edits only the selected active policy YAML field after guarded confirmation.`
+      );
+      if (!confirmed) {
+        return;
+      }
+      button.disabled = true;
+      button.textContent = "Saving";
+      fetch("/api/policy-management/final-response-gate/apply", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          policy_ref: detail.policy_id || null,
+          policy_path: detail.path || null,
+          enabled: desired,
+          reviewed_policy_sha256: detail.policy_sha256 || null,
+          confirm_apply: true,
+          approval_phrase: POLICY_FINAL_RESPONSE_GATE_APPROVAL_PHRASE,
+          approval_source: "studio_confirmation_dialog",
+        }),
+      })
+        .then((response) => response.json())
+        .then((result) => {
+          renderPolicyFinalResponseGateResult(result);
+          if (result.status === "written" || result.status === "unchanged") {
+            fetch("/api/status", {cache: "no-store"}).then((response) => response.json()).then(render);
+          }
+        })
+        .catch((error) => container.replaceChildren(row("Save failed", error.message, "unavailable")))
+        .finally(() => {
+          button.textContent = "Save gate setting";
+          refreshPolicyFinalResponseGateApplyState();
+        });
+    };
     const proposalDetailsById = (report) => {
       const output = {};
       activatablePolicyProposals(report || {}).forEach((item) => {
@@ -1681,6 +1798,7 @@ INDEX_HTML = """<!doctype html>
         summary.replaceChildren(compactItem("No policy selected", "Select an active policy to inspect its current configuration."));
         triggerTags.replaceChildren(tag("no selection", "review"));
         config.replaceChildren(compactItem("No current configuration", "Policy detail is unavailable in the read model."));
+        resetPolicyFinalResponseGateControls(null);
         populatePolicyTriggerOptions(report, null);
         return;
       }
@@ -1690,12 +1808,17 @@ INDEX_HTML = """<!doctype html>
       header.querySelector("span").textContent = `${detail.policy_id || "policy id missing"} / ${detail.status || "status unknown"} / ${detail.path || "path not supplied"}`;
       summary.replaceChildren(header);
       const profile = detail.trigger_profile || {};
-      triggerTags.replaceChildren(...policyProfileTags(profile));
+      const gate = finalResponseGateState(detail);
+      triggerTags.replaceChildren(
+        ...policyProfileTags(profile),
+        tag(gate.enabled ? "final-response gate" : "not final-response gate", gate.enabled ? "guarded" : "available")
+      );
       const filters = detail.condition_filters || {};
       const actions = detail.required_actions || [];
       const evidence = detail.required_evidence || [];
       config.replaceChildren(
         compactItem("Trigger profile", triggerProfileDetailText(profile)),
+        compactItem("Final-response gate", finalResponseGateSummary(detail)),
         compactItem("Task types", listSummary(filters.task_types, "No task-type filter")),
         compactItem("JIKUO layers", listSummary(filters.jikuo_layers, "No layer filter")),
         compactItem("Path filters", [
@@ -1705,6 +1828,7 @@ INDEX_HTML = """<!doctype html>
         compactItem("Required actions", actions.length ? actions.map((item) => item.type || item.action_id || "action").join(", ") : "No required actions declared"),
         compactItem("Required evidence", evidence.length ? evidence.map((item) => item.type || item.evidence_id || "evidence").join(", ") : "No required evidence declared")
       );
+      resetPolicyFinalResponseGateControls(detail);
       populatePolicyTriggerOptions(report, detail);
     };
     const populatePolicyEvolutionTargets = (report) => {
@@ -2620,10 +2744,15 @@ INDEX_HTML = """<!doctype html>
           [
             policyStatusTag(item.status),
             tag(dist.distribution_state || "distribution unknown", dist.distribution_state === "active_project_policy_only" ? "review" : "available"),
+            tag(
+              finalResponseGateState(detail).enabled ? "final-response gate" : "not final-response gate",
+              finalResponseGateState(detail).enabled ? "guarded" : "available"
+            ),
             ...policyProfileTags(detail.trigger_profile || item.applies_to_work_profile),
           ],
           [
             compactItem("Current constraint", triggerProfileDetailText(detail.trigger_profile || item.applies_to_work_profile)),
+            compactItem("Final-response gate", finalResponseGateSummary(detail)),
             compactItem("Required actions", shortRecordList(detail.required_actions, "No required actions declared.")),
             compactItem("Required evidence", shortRecordList(detail.required_evidence, "No required evidence declared.")),
           ]
@@ -3279,6 +3408,8 @@ INDEX_HTML = """<!doctype html>
       invalidatePolicyEvolutionPlan();
       renderSelectedPolicyDetail(policyManagementReport || {});
     });
+    document.getElementById("policy-final-response-gate-toggle").addEventListener("change", refreshPolicyFinalResponseGateApplyState);
+    document.getElementById("policy-final-response-gate-apply-button").addEventListener("click", applyPolicyFinalResponseGateChange);
     updatePolicyEvolutionApplyButton();
     document.getElementById("policy-template-activation-preview-button").addEventListener("click", previewPolicyTemplateActivationPlan);
     document.getElementById("policy-template-activation-apply-button").addEventListener("click", applyPolicyTemplateActivationPlan);
@@ -3697,6 +3828,43 @@ def api_policy_evolution_apply_payload(
     return HTTPStatus.OK, result
 
 
+def api_policy_final_response_gate_apply_payload(
+    request_payload: Any,
+    *,
+    project_root: Path | None = None,
+) -> tuple[int, dict[str, Any]]:
+    if not isinstance(request_payload, dict):
+        return HTTPStatus.BAD_REQUEST, {
+            "schema": STUDIO_WEB_SCHEMA,
+            "status": "invalid_request",
+            "message": "policy final-response gate requests must be JSON objects",
+            "writes_performed": False,
+            "write_allowed_by_command": False,
+        }
+    result, _exit_code = policy_store.update_policy_final_response_gate(
+        project_root=project_root,
+        policy_ref=optional_string(request_payload.get("policy_ref")),
+        policy_path=optional_string(request_payload.get("policy_path"))
+        or optional_string(request_payload.get("source_policy_path")),
+        enabled=bool(request_payload.get("enabled")),
+        reviewed_policy_sha256=optional_string(
+            request_payload.get("reviewed_policy_sha256")
+        ),
+        confirmed=bool(request_payload.get("confirm_apply")),
+        approval_phrase=optional_string(request_payload.get("approval_phrase")),
+    )
+    result["studio_web"] = {
+        "schema": STUDIO_WEB_SCHEMA,
+        "route": "/api/policy-management/final-response-gate/apply",
+        "method": "POST",
+        "write_mode": "guarded",
+        "writes_performed": bool(result.get("write_performed")),
+        "write_allowed_by_command": bool(result.get("write_performed")),
+        "approval_source": optional_string(request_payload.get("approval_source")),
+    }
+    return HTTPStatus.OK, result
+
+
 def api_policy_template_publication_plan_payload(
     request_payload: Any,
     *,
@@ -4062,6 +4230,7 @@ def make_handler(project_root: Path | None = None) -> type[BaseHTTPRequestHandle
                 "/api/document-rules/apply",
                 "/api/policy-management/evolution/plan",
                 "/api/policy-management/evolution/apply",
+                "/api/policy-management/final-response-gate/apply",
                 "/api/policy-management/template-publication/plan",
                 "/api/policy-management/template-publication/apply",
                 "/api/policy-management/template-activation/plan",
@@ -4130,6 +4299,11 @@ def make_handler(project_root: Path | None = None) -> type[BaseHTTPRequestHandle
                 )
             elif route == "/api/policy-management/evolution/apply":
                 status, payload = api_policy_evolution_apply_payload(
+                    request_payload,
+                    project_root=project_root,
+                )
+            elif route == "/api/policy-management/final-response-gate/apply":
+                status, payload = api_policy_final_response_gate_apply_payload(
                     request_payload,
                     project_root=project_root,
                 )

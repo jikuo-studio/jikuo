@@ -203,6 +203,44 @@ class PolicyManagementStatusTests(unittest.TestCase):
             distribution["starter_pack_refs"][0]["pack_id"],
             "engineering_governance",
         )
+        detail = report["policy_store"]["active_policy_details"][0]
+        self.assertFalse(detail["final_response_gate"]["enabled"])
+        self.assertEqual(detail["final_response_gate"]["source"], "default_false")
+        self.assertTrue(detail["policy_sha256"])
+
+    def test_status_read_model_projects_declared_final_response_gate(self):
+        with temp_project_dir() as project_root:
+            policy_id = "POLICY-final-response-gate-fixture"
+            write_policy_store(
+                project_root,
+                policy_id=policy_id,
+                title="Final response gate fixture",
+            )
+            policy_path = (
+                project_root
+                / ".jikuo"
+                / "policies"
+                / "approved"
+                / f"{policy_id}.yaml"
+            )
+            policy_path.write_text(
+                policy_path.read_text(encoding="utf-8")
+                + "final_response_gate: true\n",
+                encoding="utf-8",
+            )
+
+            report = policy_management_status.build_policy_management_status(
+                project_root=project_root,
+                starter_pack_id="engineering_governance",
+            )
+
+        detail = report["policy_store"]["active_policy_details"][0]
+        self.assertTrue(detail["final_response_gate"]["enabled"])
+        self.assertEqual(detail["final_response_gate"]["source"], "declared_boolean")
+        self.assertEqual(
+            detail["final_response_gate"]["visibility"],
+            "final_response_required",
+        )
 
     def test_policy_management_status_cli_returns_json_and_markdown(self):
         with temp_project_dir() as project_root:

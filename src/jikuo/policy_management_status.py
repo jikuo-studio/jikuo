@@ -301,15 +301,26 @@ def policy_detail_summary(
     active_policy: dict[str, Any],
     record: dict[str, Any],
     distribution: dict[str, Any] | None,
+    policy_path: Path | None = None,
 ) -> dict[str, Any]:
+    policy_sha256 = None
+    if policy_path is not None and policy_path.is_file():
+        try:
+            policy_sha256 = policy_templates.file_sha256(policy_path)
+        except OSError:
+            policy_sha256 = None
     return {
         "policy_id": record.get("policy_id") or active_policy.get("policy_id"),
         "title": record.get("title") or active_policy.get("title"),
         "version": record.get("version") or active_policy.get("version"),
         "status": record.get("status") or active_policy.get("status"),
         "path": active_policy.get("path"),
+        "policy_sha256": policy_sha256,
         "schema_version": record.get("schema_version") or record.get("schema"),
         "scenario_package": record.get("scenario_package"),
+        "final_response_gate": policy_store.normalize_final_response_gate(
+            record.get("final_response_gate")
+        ),
         "trigger_profile": policy_trigger_profile(record),
         "condition_filters": condition_filter_summary(record.get("conditions")),
         "triggers": record.get("triggers") if isinstance(record.get("triggers"), list) else [],
@@ -590,6 +601,7 @@ def load_active_policy_details(
                 active_policy=active_policy,
                 record=record,
                 distribution=distribution_by_policy.get(policy_id),
+                policy_path=policy_path,
             )
         )
     return details, warnings
@@ -789,6 +801,11 @@ def build_policy_management_status(
             {
                 "operation": "policy_evolution_write",
                 "surface": "jikuo.apply_policy_evolution_write",
+                "write_mode": "guarded-write",
+            },
+            {
+                "operation": "policy_final_response_gate_update",
+                "surface": "/api/policy-management/final-response-gate/apply",
                 "write_mode": "guarded-write",
             },
             {
