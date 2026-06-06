@@ -908,6 +908,16 @@ def build_policy_management_status(
                 "write_mode": "guarded-write",
             },
             {
+                "operation": "starter_policy_pack_init_plan",
+                "surface": "/api/policy-management/starter-init/plan",
+                "write_mode": "no-write",
+            },
+            {
+                "operation": "starter_policy_pack_init",
+                "surface": "/api/policy-management/starter-init/apply",
+                "write_mode": "guarded-write",
+            },
+            {
                 "operation": "policy_candidate_activation_plan",
                 "surface": "/api/policy-management/candidate-activation/plan",
                 "write_mode": "no-write",
@@ -944,6 +954,7 @@ def build_policy_management_status(
             "starter manifest inclusion is not user-project initialization",
             "proposal_details is historical; activatable_policy_proposals filters out already-active or already-decided proposals",
             "natural-language policy selection still depends on host AI or deterministic candidate matching",
+            "starter policy pack activation installs report-only baseline policies; it does not prove semantic intent or enable blocking gates by itself",
         ],
         "non_effects": [
             "does not publish package templates",

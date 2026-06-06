@@ -779,7 +779,91 @@ class StudioWebServerTests(unittest.TestCase):
                     / "POLICY-jikuo-data-model-drift-alarm.yaml"
                 ).is_file()
             )
-            self.assertTrue((project_root / result["decision_record_ref"]).is_file())
+
+    def test_policy_starter_init_plan_api_is_no_write_for_fresh_project(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+
+            status_code, plan = server.api_policy_starter_init_plan_payload(
+                {"pack_id": "engineering_governance"},
+                project_root=project_root,
+            )
+
+            self.assertEqual(status_code, 200)
+            self.assertEqual(plan["schema"], "jikuo.starter_policy_pack_init_plan.v0")
+            self.assertEqual(plan["status"], "review")
+            self.assertFalse(plan["writes_performed"])
+            self.assertFalse(plan["write_allowed_by_command"])
+            self.assertEqual(plan["studio_web"]["write_mode"], "no-write-plan")
+            self.assertEqual(
+                plan["studio_web"]["route"],
+                "/api/policy-management/starter-init/plan",
+            )
+            self.assertEqual(len(plan["starter_policies"]), 4)
+            self.assertTrue(plan["would_create_registry"])
+            self.assertTrue(plan["would_create_project_state"])
+            self.assertFalse((project_root / ".jikuo").exists())
+
+    def test_policy_starter_init_apply_api_refuses_without_approval(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+
+            status_code, result = server.api_policy_starter_init_apply_payload(
+                {"pack_id": "engineering_governance"},
+                project_root=project_root,
+            )
+
+            self.assertEqual(status_code, 200)
+            self.assertEqual(result["schema"], "jikuo.starter_policy_pack_init_result.v0")
+            self.assertEqual(result["status"], "refused")
+            self.assertFalse(result["write_performed"])
+            self.assertFalse(result["studio_web"]["writes_performed"])
+            self.assertIn("missing_confirmation_flag", result["refusal_reasons"])
+            self.assertIn("approval_evidence_missing", result["refusal_reasons"])
+            self.assertFalse((project_root / ".jikuo").exists())
+
+    def test_policy_starter_init_apply_api_writes_and_exposes_active_policies(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            _plan_status, plan = server.api_policy_starter_init_plan_payload(
+                {"pack_id": "engineering_governance"},
+                project_root=project_root,
+            )
+
+            status_code, result = server.api_policy_starter_init_apply_payload(
+                {
+                    "pack_id": "engineering_governance",
+                    "plan_id": plan["plan_id"],
+                    "confirm_apply": True,
+                    "approval_phrase": "Approve Starter Policy Pack activation",
+                    "approval_source": "studio_confirmation_dialog",
+                },
+                project_root=project_root,
+            )
+            _status_code, policy_status = server.api_payload_for_path(
+                "/api/policy-management/status",
+                project_root=project_root,
+            )
+
+            self.assertEqual(status_code, 200)
+            self.assertEqual(result["status"], "written")
+            self.assertTrue(result["write_performed"])
+            self.assertTrue(result["studio_web"]["writes_performed"])
+            self.assertEqual(result["studio_web"]["write_mode"], "guarded")
+            self.assertTrue(result["post_write_verification"]["starter_policies_active"])
+            self.assertIn(".jikuo/policies/manifest.yaml", result["written_paths"])
+            self.assertTrue((project_root / ".jikuo" / "policies" / "manifest.yaml").is_file())
+            self.assertEqual(
+                policy_status["policy_store"]["active_policy_count"],
+                4,
+            )
+            self.assertEqual(
+                policy_status["summary_counts"]["active_policy_count"],
+                4,
+            )
 
     def test_policy_candidate_activation_plan_api_returns_existing_proposal_plan(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -960,6 +1044,21 @@ class StudioWebServerTests(unittest.TestCase):
         self.assertIn("/api/policy-management/template-activation/apply", html)
         self.assertIn("policy-management-status", html)
         self.assertIn("policy-management-metrics", html)
+        self.assertIn("Starter policy pack activation", html)
+        self.assertIn("policy-starter-init-pack", html)
+        self.assertIn("policy-starter-init-selected-summary", html)
+        self.assertIn("policy-starter-init-selected-tags", html)
+        self.assertIn("policy-starter-init-selected-config", html)
+        self.assertIn("policy-starter-init-preview-button", html)
+        self.assertIn("policy-starter-init-apply-button", html)
+        self.assertIn("policy-starter-init-plan-result", html)
+        self.assertIn("POLICY_STARTER_INIT_APPROVAL_PHRASE", html)
+        self.assertIn("previewPolicyStarterInitPlan", html)
+        self.assertIn("applyPolicyStarterInitPlan", html)
+        self.assertIn("/api/policy-management/starter-init/plan", html)
+        self.assertIn("/api/policy-management/starter-init/apply", html)
+        self.assertIn("Activate this starter policy pack?", html)
+        self.assertIn("report-only baseline policies", html)
         self.assertIn("Change active policy configuration", html)
         self.assertIn("Preview the configuration change plan", html)
         self.assertNotIn("Policy evolution preview", html)

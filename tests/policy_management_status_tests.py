@@ -288,6 +288,22 @@ class PolicyManagementStatusTests(unittest.TestCase):
             distribution["starter_pack_refs"][0]["pack_id"],
             "engineering_governance",
         )
+        operations = {
+            item["operation"]: item
+            for item in report["available_operations"]
+        }
+        self.assertEqual(
+            operations["starter_policy_pack_init_plan"]["surface"],
+            "/api/policy-management/starter-init/plan",
+        )
+        self.assertEqual(
+            operations["starter_policy_pack_init"]["write_mode"],
+            "guarded-write",
+        )
+        self.assertIn(
+            "starter policy pack activation installs report-only baseline policies; it does not prove semantic intent or enable blocking gates by itself",
+            report["read_model_limitations"],
+        )
         detail = report["policy_store"]["active_policy_details"][0]
         self.assertFalse(detail["final_response_gate"]["enabled"])
         self.assertEqual(detail["final_response_gate"]["source"], "default_false")

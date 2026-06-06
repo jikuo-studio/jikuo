@@ -12,11 +12,23 @@ from typing import Any
 from urllib.parse import urlparse
 
 if __package__:
-    from ... import policy_management_status, policy_store, policy_templates, project_state
+    from ... import (
+        policy_management_status,
+        policy_store,
+        policy_templates,
+        project_state,
+        starter_policies,
+    )
     from ...studio import document_rules, global_status, project_files
 else:  # pragma: no cover - direct module execution fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from jikuo import policy_management_status, policy_store, policy_templates, project_state
+    from jikuo import (
+        policy_management_status,
+        policy_store,
+        policy_templates,
+        project_state,
+        starter_policies,
+    )
     from jikuo.studio import document_rules, global_status, project_files
 
 
@@ -897,6 +909,46 @@ INDEX_HTML = """<!doctype html>
       <p class="subhead">No-write view of project policies, candidate proposals, package templates, starter packs, and guarded operation boundaries.</p>
       <div class="policy-metrics" id="policy-management-metrics"></div>
       <div class="plan-tool">
+        <h3>Starter policy pack activation</h3>
+        <p class="subhead">Activate baseline report-only policy coverage for a project through a reviewed starter pack plan and guarded writer.</p>
+        <div class="policy-detail-grid">
+          <div class="policy-detail-panel">
+            <h3>Selected starter pack</h3>
+            <label>Starter pack
+              <select id="policy-starter-init-pack"></select>
+            </label>
+            <div class="policy-detail-header" id="policy-starter-init-selected-summary"></div>
+            <div class="tag-list" id="policy-starter-init-selected-tags"></div>
+            <div class="compact-list" id="policy-starter-init-selected-config"></div>
+          </div>
+          <div class="policy-detail-panel">
+            <h3>Activation boundary</h3>
+            <div class="compact-list">
+              <div class="compact-item">
+                <strong>Writes after approval</strong>
+                <span>project state if missing, governance registry if missing, approved starter policies, decision records, proposal snapshots, and policy manifest refs</span>
+              </div>
+              <div class="compact-item">
+                <strong>Policy behavior</strong>
+                <span>Starter policies are report-only baseline coverage unless later policy metadata explicitly promotes stronger gates.</span>
+              </div>
+              <div class="compact-item">
+                <strong>Non-effect</strong>
+                <span>Does not execute policy actions, infer semantic intent, modify starter templates, or enable blocking enforcement by itself.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="plan-apply-row">
+          <div class="policy-action-buttons">
+            <button type="button" id="policy-starter-init-preview-button">Preview starter pack</button>
+            <button type="button" id="policy-starter-init-apply-button" disabled>Apply guarded starter pack</button>
+          </div>
+          <span id="policy-starter-init-apply-note" class="subhead">Preview starter pack activation to enable guarded apply.</span>
+        </div>
+        <div class="list" id="policy-starter-init-plan-result"></div>
+      </div>
+      <div class="plan-tool">
         <h3>Change active policy configuration</h3>
         <p class="subhead">Inspect the selected policy, preview controlled configuration changes, then apply them through a guarded writer.</p>
         <div class="policy-detail-grid">
@@ -1098,16 +1150,17 @@ INDEX_HTML = """<!doctype html>
           <div class="compact-list" id="policy-candidate-list"></div>
         </div>
       </div>
-      <div class="policy-columns" hidden aria-hidden="true">
+      <div class="policy-columns">
         <div class="policy-column">
           <h3>Available templates</h3>
           <p class="subhead">Reusable package policy templates and starter-pack inclusion status.</p>
           <div class="compact-list" id="policy-template-list"></div>
         </div>
       </div>
-      <div class="policy-columns" hidden aria-hidden="true">
+      <div class="policy-columns">
         <div class="policy-column">
           <h3>Starter packs</h3>
+          <p class="subhead">Package-owned baseline policy bundles that can initialize project policy coverage.</p>
           <div class="compact-list" id="policy-starter-pack-list"></div>
         </div>
         <div class="policy-column">
@@ -1255,6 +1308,7 @@ INDEX_HTML = """<!doctype html>
     const POLICY_TEMPLATE_PUBLICATION_APPROVAL_PHRASE = "Approve Policy Template publication";
     const POLICY_TEMPLATE_ACTIVATION_APPROVAL_PHRASE = "Approve Policy Template activation";
     const POLICY_CANDIDATE_ACTIVATION_APPROVAL_PHRASE = "Approve Policy Candidate activation";
+    const POLICY_STARTER_INIT_APPROVAL_PHRASE = "Approve Starter Policy Pack activation";
     let currentDocumentRulesPlan = null;
     let currentPolicyEvolutionPlan = null;
     let currentPolicyEvolutionRequest = null;
@@ -1264,6 +1318,8 @@ INDEX_HTML = """<!doctype html>
     let currentPolicyTemplateActivationRequest = null;
     let currentPolicyCandidateActivationPlan = null;
     let currentPolicyCandidateActivationRequest = null;
+    let currentPolicyStarterInitPlan = null;
+    let currentPolicyStarterInitRequest = null;
     let policyManagementReport = null;
     let projectFileItems = [];
     let selectedPolicyTraceId = null;
@@ -2099,6 +2155,225 @@ INDEX_HTML = """<!doctype html>
           updatePolicyTemplatePublicationApplyButton();
         });
     };
+    const starterPacksFromReport = (report) => ((report.starter_packs || {}).packs || []);
+    const selectedStarterPackRecord = (report) => {
+      const packId = document.getElementById("policy-starter-init-pack").value;
+      return starterPacksFromReport(report || policyManagementReport || {}).find((item) =>
+        (item.pack_id || item.manifest_ref || item.manifest_path) === packId
+      ) || null;
+    };
+    const renderSelectedStarterPackDetail = (report) => {
+      const detail = selectedStarterPackRecord(report);
+      const summary = document.getElementById("policy-starter-init-selected-summary");
+      const tags = document.getElementById("policy-starter-init-selected-tags");
+      const config = document.getElementById("policy-starter-init-selected-config");
+      if (!detail) {
+        summary.replaceChildren(compactItem("No starter pack selected", "Select a starter pack to preview baseline policy activation."));
+        tags.replaceChildren(tag("no selection", "review"));
+        config.replaceChildren(compactItem("No starter pack detail", "Starter pack detail is unavailable in the read model."));
+        return;
+      }
+      const header = document.createElement("div");
+      header.innerHTML = `<strong></strong><span></span>`;
+      header.querySelector("strong").textContent = detail.title || detail.pack_id || "Untitled starter pack";
+      header.querySelector("span").textContent = `${detail.pack_id || "pack id missing"} / ${detail.manifest_ref || detail.manifest_path || "manifest ref not supplied"}`;
+      const templates = detail.policy_templates || [];
+      const migrationCount = templates.filter((item) => item.migration_available).length;
+      summary.replaceChildren(header);
+      tags.replaceChildren(
+        tag(detail.status || "available", detail.status || "available"),
+        tag(`${detail.template_count || templates.length || 0} templates`, "available"),
+        tag(migrationCount ? `${migrationCount} migrations` : "current templates", migrationCount ? "review" : "available")
+      );
+      config.replaceChildren(
+        compactItem("Starter pack", detail.pack_id || "pack id missing"),
+        compactItem("Manifest", detail.manifest_ref || detail.manifest_path || "manifest ref not supplied"),
+        compactItem("Included policies", templates.map((item) => item.policy_id || item.title || "policy").join(", ") || "No starter policies listed."),
+        compactItem("Report-only boundary", "Starter policies provide baseline governance evidence and do not prove semantic intent or enable blocking gates by themselves."),
+        compactItem("Compatibility", templates.map((item) => `${item.policy_id || item.title || "policy"}:${item.compatibility_status || "unknown"}`).join("; ") || "No compatibility detail.")
+      );
+    };
+    const populatePolicyStarterInitTargets = (report) => {
+      const select = document.getElementById("policy-starter-init-pack");
+      const previousValue = select.value;
+      const options = starterPacksFromReport(report).map((item) => {
+        const option = document.createElement("option");
+        option.value = item.pack_id || item.manifest_ref || item.manifest_path || "";
+        option.textContent = `${item.pack_id || "starter pack"}${item.title ? ` / ${item.title}` : ""}`;
+        option.dataset.manifestRef = item.manifest_ref || "";
+        return option;
+      }).filter((option) => option.value);
+      select.replaceChildren(...options);
+      if (!options.length) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "No starter packs";
+        select.replaceChildren(option);
+      }
+      if (previousValue && options.some((option) => option.value === previousValue)) {
+        select.value = previousValue;
+      }
+      renderSelectedStarterPackDetail(report);
+    };
+    const policyStarterInitRequest = () => ({
+      pack_id: document.getElementById("policy-starter-init-pack").value || null,
+    });
+    const policyStarterInitApplyReady = (plan) => {
+      const candidate = plan || currentPolicyStarterInitPlan || {};
+      return Boolean(
+        candidate.status === "review"
+        && (candidate.write_set || []).length
+        && !(candidate.refusal_reasons || []).length
+      );
+    };
+    const updatePolicyStarterInitApplyButton = () => {
+      const button = document.getElementById("policy-starter-init-apply-button");
+      const note = document.getElementById("policy-starter-init-apply-note");
+      const plan = currentPolicyStarterInitPlan || {};
+      const ready = policyStarterInitApplyReady(plan);
+      button.disabled = !ready;
+      button.textContent = "Apply guarded starter pack";
+      if (ready) {
+        note.textContent = `Confirmation required before writing ${numberValue((plan.write_set || []).length)} starter policy item(s).`;
+      } else if (currentPolicyStarterInitPlan && (plan.status || "") !== "review") {
+        note.textContent = "Resolve starter pack refusal reasons before guarded activation.";
+      } else {
+        note.textContent = "Preview starter pack activation to enable guarded apply.";
+      }
+    };
+    const invalidatePolicyStarterInitPlan = () => {
+      currentPolicyStarterInitPlan = null;
+      currentPolicyStarterInitRequest = null;
+      const container = document.getElementById("policy-starter-init-plan-result");
+      if (container.childElementCount) {
+        container.replaceChildren(row("Preview required", "Starter pack selection changed after the last preview.", "degraded"));
+      }
+      updatePolicyStarterInitApplyButton();
+    };
+    const renderPolicyStarterInitPlan = (plan) => {
+      const container = document.getElementById("policy-starter-init-plan-result");
+      const status = plan.status || "unknown";
+      const summaryStatus = status === "review" ? "degraded" : (status === "refused" ? "unavailable" : "available");
+      const policies = (plan.starter_policies || []).map((item) =>
+        compactItem(
+          item.policy_id || "starter policy",
+          `${item.title || "title not supplied"} / ${item.compatibility_status || "compatibility unknown"} / report-only baseline`
+        )
+      );
+      const writeSet = (plan.write_set || []).map((item) =>
+        compactItem(item.operation || "write", `${item.path || "path not supplied"} / ${item.effect || "effect not supplied"}`)
+      );
+      const refusals = (plan.refusal_reasons || []).map((item) => compactItem("Refusal", item));
+      const warnings = (plan.warnings || []).map((item) => compactItem("Warning", item));
+      const nonEffects = (plan.non_effects || []).map((item) => compactItem("Non-effect", item));
+      const nextActions = (plan.next_actions || []).map((item) => compactItem("Next", item));
+      container.replaceChildren(
+        row(`Plan ${status}`, `starter pack activation / writes performed: ${String(Boolean(plan.writes_performed))}`, summaryStatus),
+        compactItem("Target pack", plan.pack_id || "pack id not supplied"),
+        compactItem("Project state", `${plan.project_state_status || "unknown"} / would create: ${String(Boolean(plan.would_create_project_state))}`),
+        compactItem("Policy store", plan.policy_store_status || "unknown"),
+        compactItem("Governance registry", `would create: ${String(Boolean(plan.would_create_registry))}`),
+        compactItem("Approval phrase", POLICY_STARTER_INIT_APPROVAL_PHRASE),
+        ...(policies.length ? policies : [compactItem("Starter policies", "No starter policies resolved.")]),
+        ...(writeSet.length ? writeSet : [compactItem("Write set", "No starter policy writes projected.")]),
+        ...(refusals.length ? refusals : []),
+        ...(warnings.length ? warnings : []),
+        ...(nextActions.length ? nextActions : []),
+        ...(nonEffects.length ? nonEffects : [])
+      );
+      updatePolicyStarterInitApplyButton();
+    };
+    const renderPolicyStarterInitApplyResult = (result) => {
+      const container = document.getElementById("policy-starter-init-plan-result");
+      const status = result.status || "unknown";
+      const summaryStatus = status === "written" ? "available" : "unavailable";
+      const writtenPaths = (result.written_paths || []).map((item) => compactItem("Written path", item));
+      const createdPaths = (result.created_paths || []).map((item) => compactItem("Created path", item));
+      const refusals = (result.refusal_reasons || []).map((item) => compactItem("Refusal", item));
+      const warnings = (result.warnings || []).map((item) => compactItem("Warning", item));
+      const nextActions = (result.next_actions || []).map((item) => compactItem("Next", item));
+      const verification = result.post_write_verification || {};
+      container.replaceChildren(
+        row(`Apply ${status}`, `starter pack activation / write performed: ${String(Boolean(result.write_performed))}`, summaryStatus),
+        compactItem("Target pack", result.pack_id || "pack id not supplied"),
+        compactItem("Verification", `starter policies active: ${String(Boolean(verification.starter_policies_active))} / store: ${verification.policy_store_status || "unknown"}`),
+        ...(writtenPaths.length ? writtenPaths : [compactItem("Written paths", "No starter policy writes were reported.")]),
+        ...(createdPaths.length ? createdPaths : []),
+        ...(refusals.length ? refusals : []),
+        ...(warnings.length ? warnings : []),
+        ...(nextActions.length ? nextActions : [])
+      );
+      if (status === "written") {
+        currentPolicyStarterInitPlan = null;
+        currentPolicyStarterInitRequest = null;
+        updatePolicyStarterInitApplyButton();
+        fetch("/api/status", {cache: "no-store"}).then((response) => response.json()).then(render);
+      }
+    };
+    const previewPolicyStarterInitPlan = () => {
+      const button = document.getElementById("policy-starter-init-preview-button");
+      const container = document.getElementById("policy-starter-init-plan-result");
+      const requestPayload = policyStarterInitRequest();
+      currentPolicyStarterInitPlan = null;
+      currentPolicyStarterInitRequest = null;
+      updatePolicyStarterInitApplyButton();
+      button.disabled = true;
+      button.textContent = "Previewing";
+      container.replaceChildren(row("Previewing starter pack", "Building no-write starter policy pack activation plan.", "degraded"));
+      fetch("/api/policy-management/starter-init/plan", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(requestPayload),
+      })
+        .then((response) => response.json())
+        .then((plan) => {
+          currentPolicyStarterInitPlan = plan;
+          currentPolicyStarterInitRequest = requestPayload;
+          renderPolicyStarterInitPlan(plan);
+        })
+        .catch((error) => container.replaceChildren(row("Preview failed", error.message, "unavailable")))
+        .finally(() => {
+          button.disabled = false;
+          button.textContent = "Preview starter pack";
+          updatePolicyStarterInitApplyButton();
+        });
+    };
+    const applyPolicyStarterInitPlan = () => {
+      const button = document.getElementById("policy-starter-init-apply-button");
+      const container = document.getElementById("policy-starter-init-plan-result");
+      if (!currentPolicyStarterInitPlan || !currentPolicyStarterInitRequest || !policyStarterInitApplyReady(currentPolicyStarterInitPlan)) {
+        container.replaceChildren(row("Plan required", "Preview and review a starter policy pack activation plan before applying.", "unavailable"));
+        updatePolicyStarterInitApplyButton();
+        return;
+      }
+      const writeCount = (currentPolicyStarterInitPlan.write_set || []).length;
+      const confirmed = window.confirm(
+        `Activate this starter policy pack?\n\nPack: ${currentPolicyStarterInitPlan.pack_id || "starter pack"}\nStarter policies: ${(currentPolicyStarterInitPlan.starter_policies || []).length}\nPolicy-store records/files to write: ${writeCount}\n\nThis persists report-only baseline policies and starter approval records through the guarded writer. It does not execute policy actions, infer semantic intent, or enable blocking enforcement by itself.`
+      );
+      if (!confirmed) {
+        return;
+      }
+      button.disabled = true;
+      button.textContent = "Applying";
+      fetch("/api/policy-management/starter-init/apply", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          ...currentPolicyStarterInitRequest,
+          plan_id: currentPolicyStarterInitPlan.plan_id || null,
+          confirm_apply: true,
+          approval_phrase: POLICY_STARTER_INIT_APPROVAL_PHRASE,
+          approval_source: "studio_confirmation_dialog",
+        }),
+      })
+        .then((response) => response.json())
+        .then(renderPolicyStarterInitApplyResult)
+        .catch((error) => container.replaceChildren(row("Apply failed", error.message, "unavailable")))
+        .finally(() => {
+          button.textContent = "Apply guarded starter pack";
+          updatePolicyStarterInitApplyButton();
+        });
+    };
     const packageTemplates = (report) => ((report.package_templates || {}).templates || []);
     const selectedTemplateRecord = (report) => {
       const templateRef = document.getElementById("policy-template-activation-template").value;
@@ -2789,18 +3064,21 @@ INDEX_HTML = """<!doctype html>
       policyManagementReport = null;
       populatePolicyEvolutionTargets({policy_store: {active_policies: []}});
       populatePolicyTemplatePublicationTargets({policy_store: {active_policies: []}});
+      populatePolicyStarterInitTargets({starter_packs: {packs: []}});
       populatePolicyTemplateActivationTargets({package_templates: {templates: []}});
       populatePolicyCandidateActivationTargets({policy_store: {activatable_policy_proposals: []}});
       document.getElementById("policy-management-status").className = statusClass(status || "unavailable");
       document.getElementById("policy-management-status").textContent = status || "unavailable";
       document.getElementById("policy-management-metrics").replaceChildren(metric(title, detail));
-      ["policy-active-list", "policy-candidate-list", "policy-template-list", "policy-starter-pack-list", "policy-operation-list", "policy-limitation-list", "policy-selected-config", "policy-template-publication-selected-config", "policy-template-selected-config", "policy-candidate-selected-config"].forEach((id) => {
+      ["policy-active-list", "policy-candidate-list", "policy-template-list", "policy-starter-pack-list", "policy-operation-list", "policy-limitation-list", "policy-selected-config", "policy-template-publication-selected-config", "policy-starter-init-selected-config", "policy-template-selected-config", "policy-candidate-selected-config"].forEach((id) => {
         document.getElementById(id).replaceChildren(compactItem(title, detail));
       });
       document.getElementById("policy-selected-summary").replaceChildren(compactItem(title, detail));
       document.getElementById("policy-selected-trigger-tags").replaceChildren(tag(status || "unavailable", status || "unavailable"));
       document.getElementById("policy-template-publication-selected-summary").replaceChildren(compactItem(title, detail));
       document.getElementById("policy-template-publication-selected-tags").replaceChildren(tag(status || "unavailable", status || "unavailable"));
+      document.getElementById("policy-starter-init-selected-summary").replaceChildren(compactItem(title, detail));
+      document.getElementById("policy-starter-init-selected-tags").replaceChildren(tag(status || "unavailable", status || "unavailable"));
       document.getElementById("policy-template-selected-summary").replaceChildren(compactItem(title, detail));
       document.getElementById("policy-template-selected-tags").replaceChildren(tag(status || "unavailable", status || "unavailable"));
       document.getElementById("policy-candidate-selected-summary").replaceChildren(compactItem(title, detail));
@@ -2810,6 +3088,7 @@ INDEX_HTML = """<!doctype html>
       policyManagementReport = report;
       populatePolicyEvolutionTargets(report);
       populatePolicyTemplatePublicationTargets(report);
+      populatePolicyStarterInitTargets(report);
       populatePolicyTemplateActivationTargets(report);
       populatePolicyCandidateActivationTargets(report);
       const status = report.status || "unavailable";
@@ -2819,7 +3098,9 @@ INDEX_HTML = """<!doctype html>
       const counts = report.summary_counts || {};
       document.getElementById("policy-management-metrics").replaceChildren(
         metric(counts.active_policy_count || 0, "Active policies"),
-        metric(counts.activatable_policy_proposal_count || 0, "Activatable policies")
+        metric(counts.activatable_policy_proposal_count || 0, "Activatable policies"),
+        metric(counts.starter_pack_count || 0, "Starter packs"),
+        metric(counts.starter_template_ref_count || 0, "Starter refs")
       );
 
       const distribution = distributionByPolicyId(report);
@@ -3699,6 +3980,13 @@ INDEX_HTML = """<!doctype html>
     });
     updatePolicyEvolutionOperationAffordance();
     updatePolicyEvolutionApplyButton();
+    updatePolicyStarterInitApplyButton();
+    document.getElementById("policy-starter-init-preview-button").addEventListener("click", previewPolicyStarterInitPlan);
+    document.getElementById("policy-starter-init-apply-button").addEventListener("click", applyPolicyStarterInitPlan);
+    document.getElementById("policy-starter-init-pack").addEventListener("change", () => {
+      invalidatePolicyStarterInitPlan();
+      renderSelectedStarterPackDetail(policyManagementReport || {});
+    });
     document.getElementById("policy-template-activation-preview-button").addEventListener("click", previewPolicyTemplateActivationPlan);
     document.getElementById("policy-template-activation-apply-button").addEventListener("click", applyPolicyTemplateActivationPlan);
     document.getElementById("policy-template-activation-template").addEventListener("change", () => {
@@ -4430,6 +4718,94 @@ def api_policy_candidate_activation_apply_payload(
     return HTTPStatus.OK, result
 
 
+def api_policy_starter_init_plan_payload(
+    request_payload: Any,
+    *,
+    project_root: Path | None = None,
+) -> tuple[int, dict[str, Any]]:
+    if not isinstance(request_payload, dict):
+        return HTTPStatus.BAD_REQUEST, {
+            "schema": STUDIO_WEB_SCHEMA,
+            "status": "invalid_request",
+            "message": "policy starter init plan requests must be JSON objects",
+            "writes_performed": False,
+            "write_allowed_by_command": False,
+        }
+    plan = starter_policies.build_starter_init_plan(
+        project_root=project_root,
+        pack_id=optional_string(request_payload.get("pack_id"))
+        or starter_policies.DEFAULT_PACK_ID,
+    )
+    plan["studio_web"] = {
+        "schema": STUDIO_WEB_SCHEMA,
+        "route": "/api/policy-management/starter-init/plan",
+        "method": "POST",
+        "write_mode": "no-write-plan",
+        "writes_performed": False,
+        "write_allowed_by_command": False,
+    }
+    return HTTPStatus.OK, plan
+
+
+def api_policy_starter_init_apply_payload(
+    request_payload: Any,
+    *,
+    project_root: Path | None = None,
+) -> tuple[int, dict[str, Any]]:
+    if not isinstance(request_payload, dict):
+        return HTTPStatus.BAD_REQUEST, {
+            "schema": STUDIO_WEB_SCHEMA,
+            "status": "invalid_request",
+            "message": "policy starter init apply requests must be JSON objects",
+            "writes_performed": False,
+            "write_allowed_by_command": False,
+        }
+    pack_id = optional_string(request_payload.get("pack_id")) or starter_policies.DEFAULT_PACK_ID
+    reviewed_plan_id = optional_string(request_payload.get("plan_id"))
+    if reviewed_plan_id:
+        preview_plan = starter_policies.build_starter_init_plan(
+            project_root=project_root,
+            pack_id=pack_id,
+        )
+        if preview_plan.get("plan_id") != reviewed_plan_id:
+            result = starter_policies.build_refusal_result(
+                plan=preview_plan,
+                approval_phrase=optional_string(request_payload.get("approval_phrase")),
+                confirmed=bool(request_payload.get("confirm_apply")),
+                refusals=["reviewed_plan_id_does_not_match_current_request"],
+            )
+            result["studio_web"] = {
+                "schema": STUDIO_WEB_SCHEMA,
+                "route": "/api/policy-management/starter-init/apply",
+                "method": "POST",
+                "write_mode": "guarded",
+                "writes_performed": False,
+                "write_allowed_by_command": False,
+                "approval_source": optional_string(request_payload.get("approval_source")),
+                "reviewed_plan_id": reviewed_plan_id,
+                "current_plan_id": preview_plan.get("plan_id"),
+            }
+            return HTTPStatus.OK, result
+
+    result, _exit_code = starter_policies.initialize_starter_pack(
+        project_root=project_root,
+        pack_id=pack_id,
+        confirmed=bool(request_payload.get("confirm_apply")),
+        approval_phrase=optional_string(request_payload.get("approval_phrase")),
+    )
+    result["studio_web"] = {
+        "schema": STUDIO_WEB_SCHEMA,
+        "route": "/api/policy-management/starter-init/apply",
+        "method": "POST",
+        "write_mode": "guarded",
+        "writes_performed": bool(result.get("write_performed")),
+        "write_allowed_by_command": bool(result.get("write_performed")),
+        "approval_source": optional_string(request_payload.get("approval_source")),
+        "reviewed_plan_id": reviewed_plan_id,
+    }
+    return HTTPStatus.OK, result
+
+
 def api_payload_for_path(path: str, *, project_root: Path | None = None) -> tuple[int, dict[str, Any]]:
     parsed = urlparse(path)
     route = parsed.path.rstrip("/") or "/"
@@ -4525,6 +4901,8 @@ def make_handler(project_root: Path | None = None) -> type[BaseHTTPRequestHandle
                 "/api/policy-management/template-activation/apply",
                 "/api/policy-management/candidate-activation/plan",
                 "/api/policy-management/candidate-activation/apply",
+                "/api/policy-management/starter-init/plan",
+                "/api/policy-management/starter-init/apply",
             }:
                 status, payload = api_payload_for_path(self.path, project_root=project_root)
                 self._send(
@@ -4620,8 +4998,18 @@ def make_handler(project_root: Path | None = None) -> type[BaseHTTPRequestHandle
                     request_payload,
                     project_root=project_root,
                 )
-            else:
+            elif route == "/api/policy-management/candidate-activation/apply":
                 status, payload = api_policy_candidate_activation_apply_payload(
+                    request_payload,
+                    project_root=project_root,
+                )
+            elif route == "/api/policy-management/starter-init/plan":
+                status, payload = api_policy_starter_init_plan_payload(
+                    request_payload,
+                    project_root=project_root,
+                )
+            else:
+                status, payload = api_policy_starter_init_apply_payload(
                     request_payload,
                     project_root=project_root,
                 )

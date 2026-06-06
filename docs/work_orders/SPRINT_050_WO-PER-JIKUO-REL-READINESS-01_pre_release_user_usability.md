@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-REL-READINESS-01: Pre-release User Usability
 
-> **Status**: Active pre-release work order; P0-01 and P0-02 accepted; P0-03 next.
+> **Status**: Active pre-release work order; P0-01, P0-02, and P0-03 accepted; P0-04 next.
 > **Date**: 2026-06-06
 > **JIKUO layer**: release readiness / first-use configuration / user-facing governance.
 > **Business meaning**: before publishing JIKUO to GitHub, a new user should be able to install it, understand the initial configuration state, configure documents and starter policies, see known evidence limits, and complete a first governed workflow without relying on private local knowledge.
@@ -27,7 +27,7 @@ Stop rule for execution:
 |---|---|---|---|---|
 | P0-01 | Clean install and startup smoke | Accepted | A new user can install the package and open the CLI / Studio without private environment assumptions. | Editable install, CLI entry points, Studio HTTP smoke, and full unit suite pass. |
 | P0-02 | First-run initialization and configuration status | Accepted | A new user can tell whether JIKUO is configured, what is missing, and which guarded action should happen next. | CLI and Studio expose a first-run status with required blockers, recommended actions, and no writes. |
-| P0-03 | Policy starter pack minimum usable path | Next | Users can activate baseline policy coverage instead of starting from an empty policy store. | Starter pack status, preview activation, guarded apply, and post-activation policy visibility are documented and smoked. |
+| P0-03 | Policy starter pack minimum usable path | Accepted | Users can activate baseline policy coverage instead of starting from an empty policy store. | Starter pack status, preview activation, guarded apply, and post-activation policy visibility are documented and smoked. |
 | P0-04 | Policy configuration changes through guarded plan | Not started | Users understand that policy metadata changes are governed configuration changes, not ad hoc UI toggles. | Scope/lifecycle/trigger/final-response-gate changes all use preview then guarded apply. |
 | P0-05 | Document Rules default configuration and local mount layering | Not started | Users understand which local documents JIKUO reads, which files are editable configuration, and how to add their own docs safely. | First-run project context and Document Rules UI show editable targets, defaults, and guarded add/remove flow. |
 | P0-06 | Evidence missing classification | Not started | Users can distinguish product limits from genuine missing work evidence instead of reading every `missing` as failure. | Missing evidence is classified by reason and surfaced in runtime / Studio read models. |
@@ -110,20 +110,51 @@ from scattered configuration warnings. The current JIKUO project now reports
 context and starter policies are complete. A blank project reports activation
 settings, project context, and starter policies as required setup blockers.
 
-## 7. Next Item: P0-03
+## 7. Accepted Item: P0-03
 
-P0-03 should verify the minimum usable starter policy path.
+P0-03 is accepted as of 2026-06-06.
+
+Implemented behavior:
+
+- added a Studio starter policy pack activation panel in Policy Configuration;
+- exposed starter pack selection, pack details, included policies, compatibility,
+  and report-only boundary;
+- added no-write `/api/policy-management/starter-init/plan`;
+- added guarded `/api/policy-management/starter-init/apply`;
+- required preview before apply by checking the reviewed `plan_id`;
+- refreshed policy-management status after successful apply so newly activated
+  starter policies become visible;
+- surfaced starter pack init operations in the policy-management read model;
+- made starter packs, available templates, guarded operations, and read-model
+  limitations visible instead of hidden in the thin frontend.
+
+Acceptance evidence:
+
+- `python -m unittest tests.starter_policies_tests tests.policy_management_status_tests tests.studio_web_server_tests` passed with 53 tests;
+- `python -m unittest discover -s tests -p "*_tests.py"` passed with 388 tests;
+- `git diff --check` reported no whitespace errors.
+
+Business meaning:
+
+P0-03 turns starter policies from package metadata into a visible first-use
+product path. A new user can preview baseline policy coverage, understand that
+the starter policies are report-only and do not prove semantic intent or enable
+blocking gates by themselves, apply the pack through a guarded writer, and then
+see the resulting active policies in policy management.
+
+## 8. Next Item: P0-04
+
+P0-04 should verify policy configuration changes through guarded plans.
 
 Required behavior:
 
-- show starter policy status in the user-facing configuration path;
-- preview starter policy activation without writing;
-- apply starter policy activation only through guarded approval;
-- verify that activated policies become visible in policy management and
-  runtime policy trace/status surfaces;
-- document which starter policies are report-only and what they do not prove.
+- scope, lifecycle, trigger, and final-response-gate changes use preview then
+  guarded apply;
+- the Studio Proposed change panel has one consistent submission path;
+- plan review shows target policy, current state, proposed state, approval
+  phrase, and expected write path.
 
-## 8. Known Limits To Expose Before Release
+## 9. Known Limits To Expose Before Release
 
 - JIKUO does not perform semantic judgment by itself. Host AI supplies compact
   semantic intent when available; JIKUO records, merges, triggers policies, and
