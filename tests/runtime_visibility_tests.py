@@ -60,6 +60,72 @@ class RuntimeVisibilityTests(unittest.TestCase):
         self.assertEqual(missing["coverage_status"], "missing")
         self.assertEqual(missing["gap_reason"], "host_ai_did_not_return_intent")
 
+    def test_inherit_semantic_intent_reads_legacy_policy_runtime_work_profile(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            history_root = project_root / ".jikuo" / "runtime" / "history"
+            history_root.mkdir(parents=True)
+            anchor = turn_anchor.build_turn_anchor(
+                client_id="codex",
+                client_event="UserPromptSubmit",
+                session_id="legacy-session",
+                turn_id="legacy-turn",
+                received_at_utc="2026-06-05T00:00:00Z",
+            )
+            semantic_intent = {
+                "schema": "jikuo.host_semantic_intent.v0",
+                "status": "provided",
+                "provider": "host_ai",
+                "confidence": "high",
+                "policy_scopes": ["editing"],
+                "turn_anchor": anchor,
+            }
+            legacy_state = {
+                "schema": "jikuo.runtime_state_summary.v0",
+                "status": "available",
+                "updated_at_utc": "2026-06-05T00:00:01Z",
+                "source": {
+                    "proposal_id": "proposal_legacy",
+                    "event": "task_start",
+                },
+                "runtime_visibility": {
+                    "history_ref": ".jikuo/runtime/history/legacy.md",
+                },
+                "turn_anchor": anchor,
+                "policy_runtime_status": {
+                    "work_profile": {
+                        "policy_scopes": ["editing"],
+                        "basis": {"host_semantic_intent": semantic_intent},
+                        "semantic_intent_evidence": {
+                            "required": True,
+                            "status": "ok",
+                            "provider": "host_ai",
+                            "semantic_intent_status": "provided",
+                        },
+                    }
+                },
+            }
+            (history_root / "legacy.json").write_text(
+                json.dumps(legacy_state),
+                encoding="utf-8",
+            )
+
+            inherited = runtime_visibility.inherit_host_semantic_intent(
+                project_root=project_root,
+                semantic_intent_ref=f"anchor:{anchor['anchor_id']}",
+            )
+
+            self.assertIsNotNone(inherited)
+            assert inherited is not None
+            self.assertEqual(inherited["status"], "provided")
+            self.assertEqual(inherited["provider"], "host_ai")
+            self.assertEqual(inherited["evidence_source_kind"], "runtime_inherited")
+            self.assertEqual(inherited["turn_anchor"]["anchor_id"], anchor["anchor_id"])
+            self.assertEqual(
+                inherited["inherited_from"]["history_ref"],
+                ".jikuo/runtime/history/legacy.md",
+            )
+
     def test_agent_flow_writes_runtime_snapshot_and_show_reads_it(self):
         with tempfile.TemporaryDirectory() as tmp:
             project_root = Path(tmp) / "project"
@@ -315,6 +381,168 @@ class RuntimeVisibilityTests(unittest.TestCase):
             )
             self.assertEqual(show_card.returncode, 0, show_card.stderr)
             self.assertEqual(show_card.stdout, proposal["chat_ready_markdown"])
+
+    def test_completion_review_inherits_runtime_semantic_intent_by_turn_anchor(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            shutil.copytree(READY_PROJECT, project_root)
+            raw_prompt = "SECRET_SEMANTIC_INHERITANCE_PROMPT"
+            anchor = turn_anchor.build_turn_anchor(
+                client_id="codex",
+                client_event="UserPromptSubmit",
+                session_id="runtime-session-inherit",
+                turn_id="runtime-turn-inherit",
+                received_at_utc="2026-06-05T00:00:00Z",
+                raw_prompt=raw_prompt,
+                user_turn_summary="implement semantic inheritance",
+                user_turn_summary_status="provided_compact",
+            )
+            semantic_intent = {
+                "schema": "jikuo.host_semantic_intent.v0",
+                "provider": "host_ai",
+                "confidence": "high",
+                "policy_scopes": ["editing"],
+                "requested_outcome": "Implement semantic inheritance.",
+                "execution_boundary": "repository_edit",
+                "response_contract": ["summarize verification"],
+                "work_profile": {
+                    "intent_class": "implementation",
+                    "operation_class": "write_file",
+                    "output_class": "change",
+                    "policy_scopes": ["editing"],
+                },
+                "turn_anchor": anchor,
+            }
+
+            start = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "propose",
+                    "--event",
+                    "task_start",
+                    "--task-title",
+                    "Semantic Inheritance Probe",
+                    "--project-root",
+                    str(project_root),
+                    "--turn-anchor-json",
+                    json.dumps(anchor, separators=(",", ":")),
+                    "--host-semantic-intent-json",
+                    json.dumps(semantic_intent, separators=(",", ":")),
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertEqual(start.returncode, 0, start.stderr)
+            start_proposal = json.loads(start.stdout)
+            start_state = json.loads(
+                (project_root / ".jikuo" / "runtime" / "state_summary.json").read_text(
+                    encoding="utf-8",
+                )
+            )
+            semantic_ref = start_state["semantic_intent_evidence"][
+                "semantic_intent_ref"
+            ]
+            self.assertEqual(
+                start_state["semantic_intent_coverage"]["coverage_status"],
+                "complete",
+            )
+            self.assertEqual(
+                start_state["semantic_intent_evidence"]["evidence_source_kind"],
+                "host_supplied",
+            )
+
+            completion = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "propose",
+                    "--event",
+                    "completion_review",
+                    "--task-title",
+                    "Semantic Inheritance Probe",
+                    "--summary",
+                    "Completion should inherit host semantic evidence.",
+                    "--project-root",
+                    str(project_root),
+                    "--turn-anchor-json",
+                    json.dumps(anchor, separators=(",", ":")),
+                    "--inherit-semantic-intent",
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertEqual(completion.returncode, 0, completion.stderr)
+            self.assertNotIn(raw_prompt, completion.stdout)
+            completion_proposal = json.loads(completion.stdout)
+            semantic = completion_proposal["work_profile"]["basis"][
+                "host_semantic_intent"
+            ]
+            self.assertEqual(semantic["status"], "provided")
+            self.assertEqual(semantic["provider"], "host_ai")
+            self.assertEqual(semantic["evidence_source_kind"], "runtime_inherited")
+            self.assertEqual(semantic["semantic_intent_ref"], semantic_ref)
+            self.assertEqual(
+                semantic["inherited_from"]["history_ref"],
+                start_proposal["runtime_visibility"]["history_ref"],
+            )
+            self.assertEqual(
+                completion_proposal["semantic_intent_evidence"]["status"],
+                "ok",
+            )
+            self.assertEqual(
+                completion_proposal["semantic_intent_evidence"][
+                    "semantic_intent_status"
+                ],
+                "provided",
+            )
+            self.assertIn(
+                "CAP-RUNTIME-SEMANTIC-INTENT-INHERITANCE-01",
+                {trace["atom_id"] for trace in completion_proposal["atom_trace"]},
+            )
+            completion_state = json.loads(
+                (project_root / ".jikuo" / "runtime" / "state_summary.json").read_text(
+                    encoding="utf-8",
+                )
+            )
+            self.assertEqual(
+                completion_state["semantic_intent_coverage"]["coverage_status"],
+                "complete",
+            )
+            self.assertEqual(
+                completion_state["semantic_intent_coverage"]["evidence_source_kind"],
+                "runtime_inherited",
+            )
+            self.assertEqual(
+                completion_state["semantic_intent_evidence"][
+                    "evidence_source_kind"
+                ],
+                "runtime_inherited",
+            )
+            self.assertEqual(
+                completion_state["turn_anchor"]["anchor_id"],
+                anchor["anchor_id"],
+            )
+            self.assertIn(
+                "Semantic evidence source: `runtime_inherited`",
+                completion_proposal["chat_ready_markdown"],
+            )
+            self.assertIn(
+                f"Semantic intent ref: `{semantic_ref}`",
+                completion_proposal["chat_ready_markdown"],
+            )
 
     def test_runtime_lifecycle_card_links_record_observed_nodes(self):
         with tempfile.TemporaryDirectory() as tmp:

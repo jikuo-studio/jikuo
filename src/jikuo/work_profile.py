@@ -449,6 +449,25 @@ def _normalize_policy_contract(
     }
 
 
+def _normalize_semantic_inheritance_ref(value: Any) -> dict[str, Any] | None:
+    if not isinstance(value, dict):
+        return None
+    output = {
+        key: _string_value(value.get(key))
+        for key in (
+            "semantic_intent_ref",
+            "history_ref",
+            "history_state_summary_ref",
+            "proposal_id",
+            "lifecycle_event",
+            "updated_at_utc",
+            "evidence_source_kind",
+        )
+        if _string_value(value.get(key))
+    }
+    return output or None
+
+
 def normalize_host_semantic_intent(raw: dict[str, Any] | None) -> dict[str, Any] | None:
     """Normalize host/classifier semantic intent into a prompt-free projection."""
 
@@ -523,6 +542,17 @@ def normalize_host_semantic_intent(raw: dict[str, Any] | None) -> dict[str, Any]
     if not scopes and not any(work_profile.values()) and status != "unavailable":
         status = "invalid"
 
+    evidence_source_kind = (
+        _string_value(raw.get("evidence_source_kind"))
+        or _string_value(raw.get("evidenceSourceKind"))
+        or ("heuristic_fallback" if provider == "heuristic_fallback" else None)
+        or ("host_supplied" if status == "provided" else "unavailable")
+    )
+    semantic_intent_ref = _first_string(
+        raw.get("semantic_intent_ref"),
+        raw.get("semanticIntentRef"),
+    )
+
     return {
         "schema": HOST_SEMANTIC_INTENT_SCHEMA,
         "status": status,
@@ -538,6 +568,11 @@ def normalize_host_semantic_intent(raw: dict[str, Any] | None) -> dict[str, Any]
         "intent_slices": intent_slices,
         "work_profile": work_profile,
         "policy_contract": policy_contract,
+        "semantic_intent_ref": semantic_intent_ref,
+        "evidence_source_kind": evidence_source_kind,
+        "inherited_from": _normalize_semantic_inheritance_ref(
+            raw.get("inherited_from") or raw.get("inheritedFrom")
+        ),
         "turn_anchor": turn_anchor.normalize_turn_anchor(
             raw.get("turn_anchor") or raw.get("turnAnchor")
         ),

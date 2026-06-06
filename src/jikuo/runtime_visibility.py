@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -23,6 +24,7 @@ else:
 RUNTIME_VISIBILITY_REPORT_SCHEMA = "jikuo.runtime_visibility_report.v0"
 RUNTIME_STATE_SUMMARY_SCHEMA = "jikuo.runtime_state_summary.v0"
 SEMANTIC_INTENT_COVERAGE_SCHEMA = "jikuo.semantic_intent_coverage.v0"
+SEMANTIC_INTENT_EVIDENCE_SCHEMA = "jikuo.semantic_intent_evidence.v0"
 CLIENT_DISPLAY_LINKS_SCHEMA = "jikuo.client_display_links.v0"
 TASK_SESSION_INDEX_STATUS_SCHEMA = "jikuo.task_session_index_status.v0"
 OBSERVED_LIFECYCLE_SCHEMA = "jikuo.observed_lifecycle.v0"
@@ -134,12 +136,21 @@ def string_items(value: Any) -> list[str]:
     return [str(item) for item in value if str(item)]
 
 
-def semantic_intent_coverage_for(proposal: dict[str, Any]) -> dict[str, Any]:
+def work_profile_for_proposal(proposal: dict[str, Any]) -> dict[str, Any]:
     work_profile = proposal.get("work_profile")
     if not isinstance(work_profile, dict):
         work_profile = (proposal.get("policy_context") or {}).get("work_profile")
     if not isinstance(work_profile, dict):
-        work_profile = {}
+        work_profile = (proposal.get("policy_runtime_status") or {}).get("work_profile")
+    if not isinstance(work_profile, dict):
+        return {}
+    return work_profile
+
+
+def semantic_parts_for_proposal(
+    proposal: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    work_profile = work_profile_for_proposal(proposal)
     evidence = proposal.get("semantic_intent_evidence")
     if not isinstance(evidence, dict):
         evidence = work_profile.get("semantic_intent_evidence")
@@ -151,6 +162,102 @@ def semantic_intent_coverage_for(proposal: dict[str, Any]) -> dict[str, Any]:
     host_intent = basis.get("host_semantic_intent")
     if not isinstance(host_intent, dict):
         host_intent = {}
+    return work_profile, evidence, host_intent
+
+
+def _short_hash(*parts: Any) -> str:
+    material = "|".join(str(part or "") for part in parts)
+    return hashlib.sha256(material.encode("utf-8", errors="surrogatepass")).hexdigest()[
+        :16
+    ]
+
+
+def semantic_intent_ref_for(
+    *,
+    host_intent: dict[str, Any],
+    anchor: dict[str, Any],
+    proposal: dict[str, Any],
+) -> str | None:
+    direct = host_intent.get("semantic_intent_ref")
+    if isinstance(direct, str) and direct.strip():
+        return direct.strip()
+    if host_intent.get("status") not in {"provided", "heuristic_fallback"}:
+        return None
+    anchor_id = anchor.get("anchor_id") if anchor.get("status") == "available" else None
+    proposal_id = proposal.get("proposal_id")
+    if anchor_id:
+        return f"sem_{_short_hash(anchor_id, proposal_id, host_intent.get('provider'))}"
+    return f"sem_{_short_hash(proposal_id, host_intent.get('provider'), host_intent.get('status'))}"
+
+
+def semantic_intent_evidence_for(proposal: dict[str, Any]) -> dict[str, Any]:
+    work_profile, evidence, host_intent = semantic_parts_for_proposal(proposal)
+    anchor = turn_anchor.turn_anchor_for_proposal(proposal)
+    semantic_status = str(
+        evidence.get("semantic_intent_status")
+        or host_intent.get("status")
+        or "unavailable"
+    )
+    evidence_status = str(evidence.get("status") or "unknown")
+    provider = str(evidence.get("provider") or host_intent.get("provider") or "unavailable")
+    source_kind = str(
+        host_intent.get("evidence_source_kind")
+        or (
+            "heuristic_fallback"
+            if semantic_status in {"heuristic_fallback", "fallback"}
+            else "host_supplied"
+            if semantic_status == "provided"
+            else "unavailable"
+        )
+    )
+    semantic_ref = semantic_intent_ref_for(
+        host_intent=host_intent,
+        anchor=anchor,
+        proposal=proposal,
+    )
+    status = (
+        "available"
+        if semantic_status in {"provided", "heuristic_fallback"}
+        and host_intent
+        else "unavailable"
+    )
+    compact_host = dict(host_intent) if status == "available" else {}
+    if compact_host:
+        compact_host["semantic_intent_ref"] = semantic_ref
+        compact_host.setdefault("evidence_source_kind", source_kind)
+    return {
+        "schema": SEMANTIC_INTENT_EVIDENCE_SCHEMA,
+        "status": status,
+        "semantic_intent_ref": semantic_ref,
+        "evidence_source_kind": source_kind,
+        "semantic_intent_status": semantic_status,
+        "evidence_status": evidence_status,
+        "provider": provider,
+        "confidence": str(host_intent.get("confidence") or "unavailable"),
+        "required": bool(evidence.get("required")),
+        "policy_scopes": string_items(
+            work_profile.get("policy_scopes") or host_intent.get("policy_scopes")
+        ),
+        "policy_contract": host_intent.get("policy_contract") or {},
+        "turn_anchor": anchor,
+        "host_semantic_intent": compact_host,
+        "inherited_from": host_intent.get("inherited_from") or {},
+        "privacy": {
+            "raw_prompt_persisted": False,
+            "raw_transcript_persisted": False,
+            "raw_prompt_included": False,
+        },
+        "non_effects": [
+            "does_not_call_llm_provider",
+            "does_not_infer_semantic_intent",
+            "does_not_include_raw_prompt_or_transcript",
+            "does_not_change_policy_evaluator_results",
+        ],
+    }
+
+
+def semantic_intent_coverage_for(proposal: dict[str, Any]) -> dict[str, Any]:
+    work_profile, evidence, host_intent = semantic_parts_for_proposal(proposal)
 
     semantic_status = str(
         evidence.get("semantic_intent_status")
@@ -163,6 +270,21 @@ def semantic_intent_coverage_for(proposal: dict[str, Any]) -> dict[str, Any]:
     fallback_expanded = bool(work_profile.get("fallback_expanded"))
     policy_scopes = string_items(
         work_profile.get("policy_scopes") or host_intent.get("policy_scopes")
+    )
+    source_kind = str(
+        host_intent.get("evidence_source_kind")
+        or (
+            "heuristic_fallback"
+            if semantic_status in {"heuristic_fallback", "fallback"}
+            else "host_supplied"
+            if semantic_status == "provided"
+            else "unavailable"
+        )
+    )
+    semantic_ref = semantic_intent_ref_for(
+        host_intent=host_intent,
+        anchor=turn_anchor.turn_anchor_for_proposal(proposal),
+        proposal=proposal,
     )
 
     if semantic_status == "provided" and evidence_status == "ok":
@@ -187,6 +309,8 @@ def semantic_intent_coverage_for(proposal: dict[str, Any]) -> dict[str, Any]:
         "semantic_intent_status": semantic_status,
         "evidence_status": evidence_status,
         "provider": provider,
+        "evidence_source_kind": source_kind,
+        "semantic_intent_ref": semantic_ref,
         "required": required,
         "policy_scopes": policy_scopes,
         "fallback_expanded": fallback_expanded,
@@ -243,7 +367,9 @@ def build_state_summary(
         "lifecycle_card_links": runtime_report.get("lifecycle_card_links", []),
         "observed_lifecycle": observed_lifecycle,
         "policy_runtime_status": policy_runtime_status,
+        "work_profile": work_profile_for_proposal(proposal),
         "semantic_intent_coverage": semantic_intent_coverage_for(proposal),
+        "semantic_intent_evidence": semantic_intent_evidence_for(proposal),
         "turn_anchor": turn_anchor.turn_anchor_for_proposal(proposal),
         "execution_envelope": proposal.get("execution_envelope"),
         "counts": {
@@ -688,6 +814,124 @@ def load_state_summary(project_root: Path | None = None) -> dict[str, Any]:
     return report
 
 
+def _history_state_summaries(project_root: Path) -> list[dict[str, Any]]:
+    history_root = runtime_root_for(project_root) / "history"
+    if not history_root.is_dir():
+        return []
+    summaries: list[dict[str, Any]] = []
+    for path in sorted(history_root.glob("*.json"), key=lambda item: item.name, reverse=True):
+        try:
+            state = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(state, dict):
+            continue
+        runtime = state.setdefault("runtime_visibility", {})
+        if isinstance(runtime, dict):
+            runtime.setdefault("history_state_summary_ref", rel_ref(path, project_root=project_root))
+        summaries.append(state)
+    return summaries
+
+
+def _semantic_evidence_from_state(state: dict[str, Any]) -> dict[str, Any]:
+    evidence = state.get("semantic_intent_evidence")
+    if isinstance(evidence, dict):
+        return evidence
+    return semantic_intent_evidence_for(state)
+
+
+def _anchor_matches(candidate: dict[str, Any], expected: dict[str, Any]) -> bool:
+    if expected.get("status") != "available":
+        return True
+    if candidate.get("status") != "available":
+        return False
+    if expected.get("anchor_id") and candidate.get("anchor_id") == expected.get("anchor_id"):
+        return True
+    return bool(
+        expected.get("session_id")
+        and expected.get("turn_id")
+        and candidate.get("session_id") == expected.get("session_id")
+        and candidate.get("turn_id") == expected.get("turn_id")
+    )
+
+
+def _semantic_ref_matches(
+    *,
+    evidence: dict[str, Any],
+    state: dict[str, Any],
+    expected_anchor: dict[str, Any],
+    semantic_intent_ref: str | None,
+) -> bool:
+    candidate_anchor = turn_anchor.normalize_turn_anchor(evidence.get("turn_anchor"))
+    ref = str(semantic_intent_ref or "").strip()
+    if not ref:
+        return _anchor_matches(candidate_anchor, expected_anchor)
+    if ref == "latest":
+        return True
+    if ref.startswith("anchor:"):
+        anchor_id = ref.split(":", 1)[1]
+        return bool(anchor_id and candidate_anchor.get("anchor_id") == anchor_id)
+    runtime = state.get("runtime_visibility") or {}
+    source = state.get("source") or {}
+    return ref in {
+        str(evidence.get("semantic_intent_ref") or ""),
+        str(runtime.get("history_ref") or ""),
+        str(runtime.get("history_state_summary_ref") or ""),
+        str(source.get("proposal_id") or ""),
+    }
+
+
+def inherit_host_semantic_intent(
+    *,
+    project_root: Path | None,
+    turn_anchor_input: dict[str, Any] | None = None,
+    semantic_intent_ref: str | None = None,
+) -> dict[str, Any] | None:
+    """Load prompt-free host semantic intent previously stored in runtime state."""
+
+    resolved_root = project_root_for(project_root)
+    expected_anchor = turn_anchor.normalize_turn_anchor(turn_anchor_input)
+    candidates = [load_state_summary(resolved_root)]
+    candidates.extend(_history_state_summaries(resolved_root))
+    for state in candidates:
+        if not isinstance(state, dict) or state.get("status") in {"missing", "invalid"}:
+            continue
+        evidence = _semantic_evidence_from_state(state)
+        if not isinstance(evidence, dict):
+            continue
+        if not _semantic_ref_matches(
+            evidence=evidence,
+            state=state,
+            expected_anchor=expected_anchor,
+            semantic_intent_ref=semantic_intent_ref,
+        ):
+            continue
+        host = evidence.get("host_semantic_intent")
+        if not isinstance(host, dict):
+            continue
+        if host.get("status") != "provided" or host.get("provider") != "host_ai":
+            continue
+        inherited = dict(host)
+        semantic_ref = evidence.get("semantic_intent_ref")
+        if semantic_ref:
+            inherited["semantic_intent_ref"] = semantic_ref
+        inherited["evidence_source_kind"] = "runtime_inherited"
+        inherited.setdefault("turn_anchor", evidence.get("turn_anchor"))
+        runtime = state.get("runtime_visibility") or {}
+        source = state.get("source") or {}
+        inherited["inherited_from"] = {
+            "semantic_intent_ref": semantic_ref,
+            "history_ref": runtime.get("history_ref"),
+            "history_state_summary_ref": runtime.get("history_state_summary_ref"),
+            "proposal_id": source.get("proposal_id"),
+            "lifecycle_event": source.get("event"),
+            "updated_at_utc": state.get("updated_at_utc"),
+            "evidence_source_kind": evidence.get("evidence_source_kind"),
+        }
+        return inherited
+    return None
+
+
 def load_last_card(project_root: Path | None = None) -> tuple[str | None, dict[str, Any]]:
     resolved_root = project_root_for(project_root)
     path = runtime_root_for(resolved_root) / "last_card.md"
@@ -832,6 +1076,8 @@ def format_state_summary(summary: dict[str, Any]) -> str:
                 f"- Semantic intent status: `{semantic.get('semantic_intent_status')}`",
                 f"- Evidence status: `{semantic.get('evidence_status')}`",
                 f"- Provider: `{semantic.get('provider')}`",
+                f"- Evidence source: `{semantic.get('evidence_source_kind', 'unavailable')}`",
+                f"- Semantic intent ref: `{semantic.get('semantic_intent_ref') or 'unavailable'}`",
                 f"- Required: `{str(semantic.get('required', False)).lower()}`",
                 f"- Policy scopes: `{', '.join(semantic.get('policy_scopes') or []) or 'none'}`",
             ]

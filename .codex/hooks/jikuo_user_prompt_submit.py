@@ -486,6 +486,43 @@ def _semantic_intent_precondition_lines(proposal: dict[str, Any]) -> list[str]:
     return lines
 
 
+def _completion_receipt_contract_lines(project_root: Path, turn_anchor: dict[str, Any]) -> list[str]:
+    anchor_id = _string_or_none(turn_anchor.get("anchor_id"))
+    if anchor_id:
+        return [
+            (
+                "Completion receipt contract: if the host AI performs workspace writes "
+                "in this turn, including file creation, edits, deletion, generated "
+                "outputs, git staging, commits, or guarded project writes, it must run "
+                "`python -B -m jikuo.agent_flow propose --event completion_review "
+                f"--project-root \"{project_root}\" --semantic-intent-ref "
+                f"\"anchor:{anchor_id}\" --inherit-semantic-intent --format json` "
+                "after verification and before the final response."
+            ),
+            (
+                "Completion semantic evidence contract: the inherited completion_review "
+                "reuses prompt-free host AI semantic intent evidence from this turn "
+                "anchor; if inheritance fails or no anchor/ref is available, report "
+                "semantic intent coverage as degraded or missing."
+            ),
+        ]
+    return [
+        (
+            "Completion receipt contract: if the host AI performs workspace writes "
+            "in this turn, including file creation, edits, deletion, generated "
+            "outputs, git staging, commits, or guarded project writes, it must run "
+            "`python -B -m jikuo.agent_flow propose --event completion_review "
+            f"--project-root \"{project_root}\" --format json` after verification and "
+            "before the final response."
+        ),
+        (
+            "Completion semantic evidence contract: no current turn anchor is available "
+            "for semantic inheritance, so report semantic intent coverage as degraded "
+            "or missing unless another prompt-free semantic_intent_ref is available."
+        ),
+    ]
+
+
 def render_additional_context(
     proposal: dict[str, Any],
     hook_input: HookInput,
@@ -555,15 +592,11 @@ def render_additional_context(
         f"Missing evidence report count: {missing_count}.",
         f"Latest card: {latest or 'unavailable'}.",
         f"History card: {history or 'unavailable'}.",
+        *_completion_receipt_contract_lines(project_root, turn_anchor),
         (
-            "Completion receipt contract: if the host AI performs workspace writes "
-            "in this turn, including file creation, edits, deletion, generated "
-            "outputs, git staging, commits, or guarded project writes, it must run "
-            "`python -B -m jikuo.agent_flow propose --event completion_review "
-            f"--project-root \"{project_root}\" --format json` after verification and "
-            "before the final response. Do not ask the user to run this routine "
-            "completion receipt. If it cannot be run or fails, report that the "
-            "completion receipt is missing or failed."
+            "Do not ask the user to run that routine completion receipt. If it "
+            "cannot be run or fails, report that the completion receipt is missing "
+            "or failed."
         ),
         "Required follow-up tools: " + (", ".join(followups) if followups else "none reported."),
         "Durable writes remain guarded; this hook must not create task sessions, policies, commits, or evidence writes by itself.",

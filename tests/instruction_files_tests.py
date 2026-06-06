@@ -82,6 +82,9 @@ class InstructionFilesTests(unittest.TestCase):
             self.assertIn("host_semantic_intent", agents_text)
             self.assertIn("semantic intent coverage as degraded or missing", agents_text)
             self.assertIn("--event completion_review", agents_text)
+            self.assertIn("--semantic-intent-ref", agents_text)
+            self.assertIn("anchor:<current turn_anchor anchor_id>", agents_text)
+            self.assertIn("--inherit-semantic-intent", agents_text)
             self.assertIn("after verification and before the final response", agents_text)
             self.assertIn("python --% -B -m jikuo.agent_flow propose", agents_text)
             self.assertIn("does not strip JSON quotes", agents_text)
@@ -113,6 +116,7 @@ class InstructionFilesTests(unittest.TestCase):
             self.assertIn("Configured trigger mode for this client: `mounted`", block)
             self.assertIn("host_semantic_intent", block)
             self.assertIn("--event completion_review", block)
+            self.assertIn("--inherit-semantic-intent", block)
             self.assertIn("python --% -B -m jikuo.agent_flow propose", block)
             self.assertIn("not strictly enforceable until a pre-turn adapter is installed", block)
 

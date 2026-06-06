@@ -809,6 +809,7 @@ def semantic_intent_evidence_overview(
     evidence_status = str(coverage.get("evidence_status") or "unknown")
     coverage_status = str(coverage.get("coverage_status") or "unknown")
     provider = str(coverage.get("provider") or "unavailable")
+    evidence_source_kind = str(coverage.get("evidence_source_kind") or "unknown")
     policy_scopes = [
         str(item)
         for item in coverage.get("policy_scopes", [])
@@ -825,7 +826,9 @@ def semantic_intent_evidence_overview(
         else "unknown"
     )
     ai_classified = semantic_status == "provided" and provider == "host_ai"
-    if ai_classified:
+    if ai_classified and evidence_source_kind == "runtime_inherited":
+        classification_source = "runtime_inherited"
+    elif ai_classified:
         classification_source = "host_ai"
     elif coverage_status == "fallback_only" or bool(coverage.get("fallback_expanded")):
         classification_source = "fallback_only"
@@ -984,6 +987,7 @@ def semantic_intent_evidence_overview(
             "evidence_status": evidence_status,
             "coverage_status": coverage_status,
             "provider": provider,
+            "evidence_source_kind": evidence_source_kind,
             "fallback_expanded": bool(coverage.get("fallback_expanded")),
         },
         "turn_anchor": anchor,

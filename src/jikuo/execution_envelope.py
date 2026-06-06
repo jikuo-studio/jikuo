@@ -131,6 +131,8 @@ def compact_host_semantic_intent_ref(raw: dict[str, Any] | None) -> dict[str, An
         "provider": _string_or_none(raw.get("provider")) or "unavailable",
         "confidence": _string_or_none(raw.get("confidence")) or "unavailable",
         "lifecycle_event": _string_or_none(raw.get("lifecycle_event")),
+        "semantic_intent_ref": _string_or_none(raw.get("semantic_intent_ref")),
+        "evidence_source_kind": _string_or_none(raw.get("evidence_source_kind")),
         "policy_scopes": _string_list(raw.get("policy_scopes")),
         "policy_contract": _policy_contract_ref(raw),
         "turn_anchor_id": (

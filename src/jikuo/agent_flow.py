@@ -4594,6 +4594,19 @@ def build_proposal(
                 ),
             )
         )
+        if semantic_basis.get("evidence_source_kind") == "runtime_inherited":
+            traces.append(
+                atom_trace(
+                    loop_step_id="DPL-06",
+                    atom_id="CAP-RUNTIME-SEMANTIC-INTENT-INHERITANCE-01",
+                    mode="runtime-projection",
+                    status="ok",
+                    summary=(
+                        "inherited prompt-free host semantic intent evidence "
+                        "from runtime state using a turn anchor or semantic ref"
+                    ),
+                )
+            )
     if semantic_intent_evidence:
         traces.append(
             atom_trace(
@@ -5677,6 +5690,15 @@ def render_work_profile(work_profile_projection: dict[str, Any]) -> list[str]:
     lines.append(f"- Semantic intent status: `{semantic.get('status', 'unavailable')}`")
     if semantic.get("provider"):
         lines.append(f"- Semantic provider: `{semantic.get('provider')}`")
+    if semantic.get("evidence_source_kind"):
+        lines.append(
+            f"- Semantic evidence source: `{semantic.get('evidence_source_kind')}`"
+        )
+    if semantic.get("semantic_intent_ref"):
+        lines.append(f"- Semantic intent ref: `{semantic.get('semantic_intent_ref')}`")
+    inherited_from = semantic.get("inherited_from") or {}
+    if isinstance(inherited_from, dict) and inherited_from.get("history_ref"):
+        lines.append(f"- Semantic inherited from: `{inherited_from.get('history_ref')}`")
     semantic_evidence = work_profile_projection.get("semantic_intent_evidence") or {}
     if semantic_evidence:
         lines.extend(
@@ -6253,6 +6275,23 @@ def build_parser() -> argparse.ArgumentParser:
         help="Compact host/classifier semantic intent JSON object; must not contain raw transcripts.",
     )
     propose.add_argument(
+        "--inherit-semantic-intent",
+        action="store_true",
+        help=(
+            "When no host semantic JSON is supplied, inherit prompt-free host "
+            "semantic evidence from runtime state using --turn-anchor-json or "
+            "--semantic-intent-ref."
+        ),
+    )
+    propose.add_argument(
+        "--semantic-intent-ref",
+        default=None,
+        help=(
+            "Runtime semantic evidence reference to inherit, such as latest, "
+            "anchor:<turn_anchor_id>, a proposal id, or a runtime history ref."
+        ),
+    )
+    propose.add_argument(
         "--turn-anchor-json",
         default=None,
         help="Non-AI host turn anchor JSON object; must not contain raw prompt text.",
@@ -6458,6 +6497,15 @@ def main(argv: list[str] | None = None) -> int:
         if not isinstance(decoded_private_ref, dict):
             parser.error("--private-turn-input-ref-json must decode to an object")
         private_turn_input_ref = decoded_private_ref
+
+    if host_semantic_intent is None and (
+        args.inherit_semantic_intent or args.semantic_intent_ref
+    ):
+        host_semantic_intent = runtime_visibility.inherit_host_semantic_intent(
+            project_root=args.project_root,
+            turn_anchor_input=turn_anchor_input,
+            semantic_intent_ref=args.semantic_intent_ref,
+        )
 
     proposal = build_proposal(
         raw_event=args.event,

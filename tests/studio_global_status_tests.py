@@ -151,6 +151,73 @@ class StudioGlobalStatusTests(unittest.TestCase):
                 1,
             )
 
+    def test_semantic_evidence_exposes_runtime_inherited_source(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            runtime_root = project_root / ".jikuo" / "runtime"
+            runtime_root.mkdir(parents=True)
+            (project_root / ".jikuo" / "project_context.yaml").write_text(
+                "\n".join(
+                    [
+                        'schema_version: "jikuo.project_context.v0"',
+                        "document_roles: {}",
+                        "main_document_mounts:",
+                        '  canonical_path_root: "."',
+                        "  active_mount_authority: []",
+                        "  checked_before_slice_completion: []",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            (runtime_root / "state_summary.json").write_text(
+                json.dumps(
+                    {
+                        "schema": "jikuo.runtime_state_summary.v0",
+                        "status": "available",
+                        "source": {
+                            "proposal_id": "proposal_inherited",
+                            "status": "review",
+                            "event": "completion_review",
+                        },
+                        "runtime_visibility": {
+                            "history_ref": ".jikuo/runtime/history/inherited.md"
+                        },
+                        "work_profile": {
+                            "intent_class": "implementation",
+                            "operation_class": "write_file",
+                        },
+                        "semantic_intent_coverage": {
+                            "schema": "jikuo.semantic_intent_coverage.v0",
+                            "coverage_status": "complete",
+                            "semantic_intent_status": "provided",
+                            "evidence_status": "ok",
+                            "provider": "host_ai",
+                            "evidence_source_kind": "runtime_inherited",
+                            "semantic_intent_ref": "sem_fixture",
+                            "required": True,
+                            "policy_scopes": ["editing"],
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            report = global_status.build_global_status(project_root=project_root)
+
+            classification = report["summaries"]["runtime"][
+                "semantic_intent_evidence"
+            ]["classification"]
+            self.assertTrue(classification["ai_classified"])
+            self.assertEqual(
+                classification["classification_source"],
+                "runtime_inherited",
+            )
+            self.assertEqual(
+                classification["evidence_source_kind"],
+                "runtime_inherited",
+            )
+
     def test_semantic_evidence_uses_retained_available_turn_anchor(self):
         with tempfile.TemporaryDirectory() as tmp:
             project_root = Path(tmp) / "project"

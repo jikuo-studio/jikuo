@@ -3311,6 +3311,12 @@ INDEX_HTML = """<!doctype html>
       const policyScopes = Array.isArray(classification.policy_scopes)
         ? classification.policy_scopes.join(", ")
         : "";
+      const classificationSource = classification.classification_source || "unknown";
+      const classifiedByText = classification.ai_classified
+        ? (classificationSource === "runtime_inherited"
+          ? "Host AI semantic intent was inherited from JIKUO runtime evidence."
+          : "Host AI supplied semantic intent to JIKUO for the latest round.")
+        : `Not proven AI-classified; source=${classificationSource}.`;
       const status = document.getElementById("semantic-evidence-status");
       status.className = statusClass(evidence.status || "unavailable");
       status.textContent = evidence.status || "unavailable";
@@ -3318,9 +3324,7 @@ INDEX_HTML = """<!doctype html>
       list.replaceChildren(
         row(
           "Classified by",
-          classification.ai_classified
-            ? "Host AI supplied semantic intent to JIKUO for the latest round."
-            : `Not proven AI-classified; source=${classification.classification_source || "unknown"}.`,
+          classifiedByText,
           classification.ai_classified ? "available" : (evidence.status || "degraded")
         ),
         row(
@@ -3367,6 +3371,10 @@ INDEX_HTML = """<!doctype html>
       const integrations = summaries.integrations || {};
       const mcp = integrations.mcp || {};
       const semanticClassification = semanticEvidence.classification || {};
+      const semanticClassificationSource = semanticClassification.classification_source || "";
+      const semanticClassificationLabel = semanticClassification.ai_classified
+        ? (semanticClassificationSource === "runtime_inherited" ? "inherited" : "AI")
+        : (semanticClassificationSource || semanticEvidence.status || semanticCoverage.coverage_status || "unknown");
       const semanticAnchor = semanticEvidence.turn_anchor || runtime.turn_anchor || {};
       const semanticAnchorOverviewValue = semanticAnchor.status === "available"
         ? (semanticAnchor.anchor_id || "available")
@@ -3374,7 +3382,7 @@ INDEX_HTML = """<!doctype html>
       const overview = document.getElementById("overview");
       overview.replaceChildren(
         metric(runtime.status || "unknown", "Runtime"),
-        metric(semanticClassification.ai_classified ? "AI" : (semanticClassification.classification_source || semanticEvidence.status || semanticCoverage.coverage_status || "unknown"), "Latest semantic classification"),
+        metric(semanticClassificationLabel, "Latest semantic classification"),
         metric(semanticAnchorOverviewValue, "Turn anchor"),
         metric((summaries.document_mounts || {}).checked_document_count || 0, "Completion docs"),
         metric(policyCounts.active_policy_count || 0, "Active policies"),
