@@ -292,95 +292,16 @@ INDEX_HTML = """<!doctype html>
       font-size: 12px;
       line-height: 1.35;
     }
-    .trace-summary {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin: 10px 0;
-    }
-    .trace-round-list {
+    .trace-round-selector {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 8px;
+      grid-template-columns: minmax(280px, 1.2fr) minmax(240px, 0.8fr);
+      gap: 10px;
       margin: 10px 0;
+      align-items: start;
     }
-    .round-button {
-      display: grid;
-      gap: 5px;
-      min-height: 72px;
-      border: 1px solid var(--line);
-      border-radius: 6px;
-      background: var(--panel);
-      color: var(--ink);
-      text-align: left;
-      padding: 9px 10px;
-    }
-    .round-button.selected {
-      border-color: #7bb2a5;
-      background: #eef8f4;
-    }
-    .round-button strong {
-      display: block;
-      overflow-wrap: anywhere;
-      font-size: 13px;
-    }
-    .round-button span {
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.35;
-    }
-    .trace-badges {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 5px;
-    }
-    .trace-badge {
-      display: inline-flex;
-      align-items: center;
-      min-height: 22px;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      padding: 2px 7px;
-      background: #fff;
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.2;
-    }
-    .trace-badge.trace-yes, .trace-badge.changes-yes {
-      border-color: #8db8ac;
+    #round-trace-round-select option.round-option-modified {
       color: #176555;
-      background: #eef8f4;
-    }
-    .trace-badge.trace-no, .trace-badge.changes-no {
-      color: var(--warn);
-      background: #fff8ec;
-    }
-    .trace-chip {
-      min-width: 150px;
-      border: 1px solid var(--line);
-      border-radius: 6px;
-      background: var(--panel);
-      padding: 8px 10px;
-    }
-    .trace-chip strong {
-      display: block;
-      font-size: 13px;
-      color: var(--ink);
-    }
-    .trace-chip span {
-      display: block;
-      margin-top: 2px;
-      color: var(--muted);
-      font-size: 12px;
-    }
-    .trace-timeline {
-      margin-top: 10px;
-      border-top: 1px solid var(--line);
-      padding-top: 10px;
-    }
-    .trace-timeline h3 {
-      margin: 0 0 8px;
-      font-size: 14px;
+      font-weight: 650;
     }
     .policy-metrics {
       display: grid;
@@ -757,6 +678,7 @@ INDEX_HTML = """<!doctype html>
       .row { grid-template-columns: 1fr; }
       .split { grid-template-columns: 1fr; }
       .trace-layout { grid-template-columns: 1fr; }
+      .trace-round-selector { grid-template-columns: 1fr; }
       .policy-columns { grid-template-columns: 1fr; }
       .policy-columns.policy-primary { grid-template-columns: 1fr; }
       .policy-detail-grid { grid-template-columns: 1fr; }
@@ -870,16 +792,21 @@ INDEX_HTML = """<!doctype html>
         <span id="round-trace-status" class="status">Loading</span>
       </div>
       <p class="subhead">Select a runtime round to inspect expected documents, observed evidence, write activity, and gaps.</p>
-      <div class="trace-round-list" id="round-trace-rounds"></div>
-      <div class="trace-summary" id="round-trace-summary"></div>
+      <div class="trace-round-selector">
+        <label>
+          Runtime round
+          <select id="round-trace-round-select"></select>
+        </label>
+        <div class="compact-list" id="round-trace-round-overview"></div>
+      </div>
       <div class="trace-layout">
         <div class="trace-panel">
-          <h3>Expected</h3>
+          <h3>Expected documents</h3>
           <p class="subhead">Document and artifact obligations projected for this round.</p>
           <div class="compact-list" id="round-trace-expected"></div>
         </div>
         <div class="trace-panel">
-          <h3>Observed</h3>
+          <h3>Observed evidence</h3>
           <p class="subhead">Runtime evidence and planned or actual writes captured for the round.</p>
           <div class="compact-list" id="round-trace-observed"></div>
         </div>
@@ -888,10 +815,6 @@ INDEX_HTML = """<!doctype html>
           <p class="subhead">Missing or mismatched read/write evidence that needs attention.</p>
           <div class="compact-list" id="round-trace-gaps"></div>
         </div>
-      </div>
-      <div class="trace-timeline">
-        <h3>Action chain</h3>
-        <div class="compact-list" id="round-trace-timeline"></div>
       </div>
     </section>
     <section>
@@ -1124,10 +1047,6 @@ INDEX_HTML = """<!doctype html>
           <div class="compact-list" id="policy-limitation-list"></div>
         </div>
       </div>
-    </section>
-    <section>
-      <h2>Panels</h2>
-      <div class="list" id="panels"></div>
     </section>
     <section>
       <h2>Available Actions</h2>
@@ -2976,14 +2895,6 @@ INDEX_HTML = """<!doctype html>
       );
       guidanceOverview.replaceChildren(...(guidanceOverviewRows.length ? guidanceOverviewRows : [compactItem("No governance references", "No rule sources are configured.")]));
     };
-    const traceChip = (title, detail) => {
-      const item = document.createElement("div");
-      item.className = "trace-chip";
-      item.innerHTML = `<strong></strong><span></span>`;
-      item.querySelector("strong").textContent = title;
-      item.querySelector("span").textContent = detail || "";
-      return item;
-    };
     const artifactPath = (item) => text((item || {}).path || (item || {}).path_ref || (item || {}).ref || (item || {}).target || (item || {}).source_ref || "path not supplied");
     const artifactDetail = (item, fallback) => {
       const record = item || {};
@@ -3080,28 +2991,23 @@ INDEX_HTML = """<!doctype html>
       }
       return {key: "partial_trace", label: "Partial trace"};
     };
-    const roundButton = (round, selected, data) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = `round-button${selected ? " selected" : ""}`;
-      button.innerHTML = `<strong></strong><span></span><div class="trace-badges"></div>`;
-      button.querySelector("strong").textContent = round.label || round.round_id || "runtime round";
+    const roundOptionLabel = (round) => {
       const counts = round.counts || {};
-      button.querySelector("span").textContent = `${round.lifecycle_event || "unknown event"} / ${numberValue(counts.required_companion_write_count)} required / ${numberValue(counts.declared_write_count || counts.planned_write_count)} declared / ${numberValue(counts.actual_write_count)} actual`;
-      const badges = button.querySelector(".trace-badges");
-      const traceBadge = document.createElement("span");
-      traceBadge.className = `trace-badge ${round.has_document_trace ? "trace-yes" : "trace-no"}`;
-      traceBadge.textContent = round.has_document_trace ? "Trace" : "No trace";
-      const changeBadge = document.createElement("span");
-      changeBadge.className = `trace-badge ${round.has_document_changes ? "changes-yes" : "changes-no"}`;
-      changeBadge.textContent = round.has_document_changes ? "Changes" : "No changes";
-      badges.append(traceBadge, changeBadge);
-      button.addEventListener("click", () => {
-        selectedRoundTraceId = round.round_id;
-        renderRoundDocumentTrace(data);
-      });
-      return button;
+      const semantic = (round.semantic_intent_coverage || {}).coverage_status
+        || (round.semantic_intent_coverage || {}).semantic_intent_status
+        || "semantic unknown";
+      const writes = round.writes_summary
+        || `${numberValue(counts.required_companion_write_count)} required / ${numberValue(counts.declared_write_count || counts.planned_write_count)} declared / ${numberValue(counts.actual_write_count)} actual`;
+      const baseLabel = round.selector_label
+        || `${round.updated_at_utc || round.label || "unknown time"} / ${round.lifecycle_event || "unknown event"} / ${semantic} / ${numberValue(counts.gap_count)} gaps / ${writes}`;
+      return `${baseLabel} / ${roundTurnAnchorLabel(round)}`;
     };
+    const roundTurnAnchorLabel = (round) => {
+      const anchor = (round || {}).turn_anchor || {};
+      const anchorId = anchor.status === "available" ? text(anchor.anchor_id) : "";
+      return `turn_anchor=${anchorId || "unavailable"}`;
+    };
+    const roundHasActualWrites = (round) => numberValue(((round || {}).counts || {}).actual_write_count) > 0;
     const renderRoundDocumentTrace = (data) => {
       const summaries = data.summaries || {};
       const traceList = (summaries.runtime || {}).round_document_traces || {};
@@ -3111,13 +3017,11 @@ INDEX_HTML = """<!doctype html>
         selectedRoundTraceId = defaultRoundId || null;
       }
       const selectedRound = rounds.find((round) => round.round_id === selectedRoundTraceId) || null;
-      const latestRuntimeRound = rounds.find((round) => round.round_id === traceList.latest_runtime_round_id) || (rounds[0] || null);
-      const latestReceiptRound = rounds.find((round) => round.round_id === traceList.latest_completion_receipt_round_id) || null;
       const selectedCounts = (selectedRound || {}).counts || {};
       const selectedSemantic = (selectedRound || {}).semantic_intent_coverage || {};
       const activeTrace = (selectedRound || {}).artifact_assurance || {};
-      const latestAvailable = Boolean(selectedRound && selectedRound.has_document_trace && activeTrace.schema);
-      const active = latestAvailable ? activeTrace : {};
+      const selectedTraceAvailable = Boolean(selectedRound && selectedRound.has_document_trace && activeTrace.schema);
+      const active = selectedTraceAvailable ? activeTrace : {};
       const activeRead = (active || {}).read_assurance || {};
       const activeWrite = (active || {}).write_assurance || {};
       const activeGap = (active || {}).gap_report || {};
@@ -3127,12 +3031,29 @@ INDEX_HTML = """<!doctype html>
       const status = document.getElementById("round-trace-status");
       status.className = statusClass(statusState.key);
       status.textContent = statusState.label;
-      const roundList = document.getElementById("round-trace-rounds");
-      roundList.replaceChildren(
+      const roundSelect = document.getElementById("round-trace-round-select");
+      roundSelect.disabled = !rounds.length;
+      roundSelect.replaceChildren(
         ...(rounds.length
-          ? rounds.map((round) => roundButton(round, round.round_id === selectedRoundTraceId, data))
-          : [compactItem("No runtime rounds", "Run a card-producing JIKUO proposal to capture runtime rounds.")])
+          ? rounds.map((round) => {
+              const option = document.createElement("option");
+              option.value = round.round_id || "";
+              option.textContent = roundOptionLabel(round);
+              option.className = roundHasActualWrites(round) ? "round-option-modified" : "";
+              return option;
+            })
+          : [(() => {
+              const option = document.createElement("option");
+              option.value = "";
+              option.textContent = "No runtime rounds captured";
+              return option;
+            })()])
       );
+      roundSelect.value = selectedRoundTraceId || "";
+      roundSelect.onchange = () => {
+        selectedRoundTraceId = roundSelect.value || null;
+        renderRoundDocumentTrace(data);
+      };
 
       const expectedReads = artifactList(activeRead.required_read_set);
       const readEvidence = artifactList(activeRead.read_evidence_set);
@@ -3193,20 +3114,15 @@ INDEX_HTML = """<!doctype html>
         selectedCounts.completion_check_not_evaluated_count
       );
 
-      document.getElementById("round-trace-summary").replaceChildren(
-        traceChip("Latest runtime turn", latestRuntimeRound ? (latestRuntimeRound.label || latestRuntimeRound.round_id) : "no runtime round"),
-        traceChip("Latest completion receipt", latestReceiptRound ? (latestReceiptRound.label || latestReceiptRound.round_id) : "No completion receipt"),
-        traceChip("Selected round", selectedRound ? (selectedRound.label || selectedRound.round_id) : "no runtime round"),
-        traceChip("Trace source", selectedRound ? `${selectedRound.source_kind || "runtime"} / ${selectedRound.trace_label || ""}` : "no runtime evidence"),
-        traceChip("Document changes", selectedRound ? selectedRound.document_change_label : "No document trace"),
-        traceChip("Semantic intent", selectedRound
-          ? `${selectedSemantic.coverage_status || "unknown"} / ${selectedSemantic.provider || "provider unavailable"}`
-          : "No semantic evidence"),
-        traceChip("Expected reads", detailCount(requiredReadCount, "documents")),
-        traceChip("Observed reads", detailCount(readEvidenceCount, "evidence items")),
-        traceChip("Writes", `${requiredCompanionWriteCount} required / ${declaredWriteCount} declared / ${actualWriteCount} actual`),
-        traceChip("Gaps", detailCount(gapCount, "items")),
-        traceChip("Unchecked applicability", detailCount(completionNotEvaluatedCount, "items"))
+      document.getElementById("round-trace-round-overview").replaceChildren(
+        compactItem("Selected round", selectedRound ? (selectedRound.label || selectedRound.round_id) : "No runtime round selected."),
+        compactItem("Trace source", selectedRound ? `${selectedRound.source_kind || "runtime"} / ${selectedRound.trace_label || ""}` : "No runtime evidence."),
+        compactItem("Turn anchor", selectedRound ? roundTurnAnchorLabel(selectedRound) : "turn_anchor=unavailable"),
+        compactItem("Semantic intent", selectedRound
+          ? `${selectedSemantic.coverage_status || selectedSemantic.semantic_intent_status || "unknown"} / ${selectedSemantic.provider || "provider unavailable"}`
+          : "No semantic evidence."),
+        compactItem("Writes", `${requiredCompanionWriteCount} required / ${declaredWriteCount} declared / ${actualWriteCount} actual`),
+        compactItem("Gaps", `${detailCount(gapCount, "items")} / unchecked ${detailCount(completionNotEvaluatedCount, "items")}`)
       );
 
       document.getElementById("round-trace-expected").replaceChildren(
@@ -3225,7 +3141,7 @@ INDEX_HTML = """<!doctype html>
       );
 
       document.getElementById("round-trace-observed").replaceChildren(
-        ...(latestAvailable
+        ...(selectedTraceAvailable
           ? [
               traceGroup("Runtime source", "Projection and observation provenance", [
                 compactItem("Runtime projection", `${runtimeProjection.event || selectedRound.lifecycle_event || "latest task"} / ${runtimeProjection.persistence || selectedRound.source_kind || "runtime summary"}`),
@@ -3260,7 +3176,7 @@ INDEX_HTML = """<!doctype html>
             ])
       );
 
-      const gapRowsForTrace = latestAvailable
+      const gapRowsForTrace = selectedTraceAvailable
         ? [
             ...traceGapRows(readGaps, "No required-read gaps are currently reported.", readGapCount),
             ...traceGapRows(writeGaps, "No write gaps are currently reported.", writeGapCount),
@@ -3271,10 +3187,10 @@ INDEX_HTML = """<!doctype html>
         : [compactItem("No comparable trace", "This selected round has no runtime document evidence to compare.")];
       document.getElementById("round-trace-gaps").replaceChildren(
         traceGroup("Read gaps", detailCount(readGapCount, "items"), [
-          ...(latestAvailable ? traceGapRows(readGaps, "No required-read gaps are currently reported.", readGapCount) : gapRowsForTrace),
+          ...(selectedTraceAvailable ? traceGapRows(readGaps, "No required-read gaps are currently reported.", readGapCount) : gapRowsForTrace),
         ]),
         traceGroup("Write gaps", detailCount(writeGapCount + uncategorizedGapCount, "items"), [
-          ...(latestAvailable
+          ...(selectedTraceAvailable
             ? [
                 ...traceGapRows(writeGaps, "No write gaps are currently reported.", writeGapCount),
                 ...(uncategorizedGapCount
@@ -3288,17 +3204,6 @@ INDEX_HTML = """<!doctype html>
             ? artifactRows(completionNotEvaluated, "", "needs applicability decision evidence", completionNotEvaluatedCount, "completion checks")
             : [compactItem("No unchecked applicability", "No unevaluated completion-check applicability is reported.")]),
         ])
-      );
-
-      document.getElementById("round-trace-timeline").replaceChildren(
-        compactItem("1. Round source", selectedRound ? `${selectedRound.lifecycle_event || "runtime round"} from ${selectedRound.source_kind || "runtime state"}` : "No runtime round selected."),
-        compactItem("2. Expected documents", `${requiredReadCount} reads / ${completionCandidateCount} completion candidates`),
-        compactItem("3. Observed evidence", `${readEvidenceCount} reads / ${requiredCompanionWriteCount} required writes / ${declaredWriteCount} declared writes / ${actualWriteCount} actual writes`),
-        compactItem("4. Review result", statusState.label),
-        compactItem("5. Semantic coverage", selectedSemantic.coverage_status
-          ? `${selectedSemantic.coverage_status} / ${selectedSemantic.gap_reason || selectedSemantic.semantic_intent_status || "no gap"}`
-          : "No semantic coverage projection for this round."),
-        compactItem("6. Guarantee", active.guarantee || "evidence_comparison_only")
       );
     };
     const renderSemanticEvidence = (runtime) => {
@@ -3395,10 +3300,6 @@ INDEX_HTML = """<!doctype html>
       renderDocumentMounts(data);
       renderRoundDocumentTrace(data);
       loadPolicyManagement(data);
-      const panels = document.getElementById("panels");
-      panels.replaceChildren(...(data.panels || []).map((panel) =>
-        row(panel.title || panel.panel_id, `${panel.provider_ref || ""} · ${panel.privacy_level || ""}`, panel.status)
-      ));
       const actions = document.getElementById("actions");
       actions.replaceChildren(...(data.available_actions || []).map((action) =>
         row(action.title || action.action_id, `${action.write_mode || ""} · ${action.plan_surface || ""}`, action.status)

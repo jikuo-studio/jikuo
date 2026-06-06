@@ -472,6 +472,24 @@ def round_document_change_label(status: str) -> str:
     }.get(status, status)
 
 
+def round_document_writes_summary(counts: dict[str, int]) -> str:
+    declared = counts.get("declared_write_count") or counts.get("planned_write_count") or 0
+    return (
+        f"{counts.get('required_companion_write_count', 0)} required / "
+        f"{declared} declared / "
+        f"{counts.get('actual_write_count', 0)} actual"
+    )
+
+
+def round_document_semantic_label(semantic_coverage: dict[str, Any] | None) -> str:
+    coverage = semantic_coverage or {}
+    status = coverage.get("coverage_status") or coverage.get("semantic_intent_status")
+    provider = coverage.get("provider")
+    if status and provider:
+        return f"{status}/{provider}"
+    return str(status or "semantic_unknown")
+
+
 def round_trace_from_parts(
     *,
     project_root: Path,
@@ -493,10 +511,16 @@ def round_trace_from_parts(
     round_id = Path(history_ref).stem if history_ref else f"{source_kind}:{updated_at_utc or 'unknown'}"
     label_time = updated_at_utc or "unknown time"
     event_label = lifecycle_event or "unknown event"
+    semantic_label = round_document_semantic_label(semantic_coverage)
+    writes_summary = round_document_writes_summary(counts)
     return {
         "schema": ROUND_DOCUMENT_TRACE_SCHEMA,
         "round_id": round_id,
         "label": f"{label_time} / {event_label}",
+        "selector_label": (
+            f"{label_time} / {event_label} / {semantic_label} / "
+            f"{counts.get('gap_count', 0)} gaps / {writes_summary}"
+        ),
         "updated_at_utc": updated_at_utc,
         "source_kind": source_kind,
         "history_ref": history_ref,
@@ -512,6 +536,9 @@ def round_trace_from_parts(
         "document_change_label": round_document_change_label(change_status),
         "trace_label": "Document trace available" if has_trace else "No document trace",
         "counts": counts,
+        "writes_summary": writes_summary,
+        "gap_count": counts.get("gap_count", 0),
+        "semantic_label": semantic_label,
         "semantic_intent_coverage": semantic_coverage or {},
         "turn_anchor": turn_anchor_projection or turn_anchor.missing_turn_anchor(),
         "artifact_assurance": artifact_report if has_trace else {},
@@ -631,6 +658,14 @@ def latest_completion_receipt_round(rounds: list[dict[str, Any]]) -> dict[str, A
     return None
 
 
+def round_trace_sort_key(round_trace: dict[str, Any]) -> tuple[str, str, str]:
+    return (
+        str(round_trace.get("updated_at_utc") or ""),
+        str(round_trace.get("history_ref") or ""),
+        str(round_trace.get("round_id") or ""),
+    )
+
+
 def round_document_traces(project_root: Path, state: dict[str, Any]) -> dict[str, Any]:
     runtime_root = runtime_visibility.runtime_root_for(project_root)
     history_root = runtime_root / "history"
@@ -650,21 +685,26 @@ def round_document_traces(project_root: Path, state: dict[str, Any]) -> dict[str
             seen_refs.add(history_ref)
             if len(rounds) >= ROUND_DOCUMENT_TRACE_HISTORY_LIMIT:
                 break
-    latest_runtime_round = rounds[0] if rounds else None
+    latest_runtime_state_round = latest
+    rounds = sorted(rounds, key=round_trace_sort_key, reverse=True)[
+        :ROUND_DOCUMENT_TRACE_HISTORY_LIMIT
+    ]
+    latest_runtime_round = latest_runtime_state_round or (rounds[0] if rounds else None)
+    newest_round = rounds[0] if rounds else None
     latest_receipt_round = latest_completion_receipt_round(rounds)
-    default_round = latest_receipt_round or latest_runtime_round
+    default_round = newest_round
     return {
         "schema": ROUND_DOCUMENT_TRACES_SCHEMA,
         "schema_version": ROUND_DOCUMENT_TRACES_SCHEMA,
         "status": "available" if rounds else "missing",
         "default_round_id": default_round.get("round_id") if default_round else None,
         "default_selection": (
-            "latest_completion_receipt"
-            if latest_receipt_round
-            else "latest_runtime_state"
-            if latest_runtime_round
+            "latest_round"
+            if newest_round
             else None
         ),
+        "newest_round_id": newest_round.get("round_id") if newest_round else None,
+        "newest_round_label": newest_round.get("label") if newest_round else None,
         "latest_runtime_round_id": (
             latest_runtime_round.get("round_id") if latest_runtime_round else None
         ),

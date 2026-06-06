@@ -493,8 +493,9 @@ class StudioGlobalStatusTests(unittest.TestCase):
 
             traces = report["summaries"]["runtime"]["round_document_traces"]
             self.assertEqual(traces["schema"], global_status.ROUND_DOCUMENT_TRACES_SCHEMA)
-            self.assertEqual(traces["default_round_id"], Path(older_ref).stem)
-            self.assertEqual(traces["default_selection"], "latest_completion_receipt")
+            self.assertEqual(traces["default_round_id"], Path(latest_ref).stem)
+            self.assertEqual(traces["default_selection"], "latest_round")
+            self.assertEqual(traces["newest_round_id"], Path(latest_ref).stem)
             self.assertEqual(traces["latest_runtime_round_id"], Path(latest_ref).stem)
             self.assertEqual(
                 traces["latest_completion_receipt_round_id"],
@@ -512,6 +513,11 @@ class StudioGlobalStatusTests(unittest.TestCase):
             self.assertTrue(older["has_document_changes"])
             self.assertEqual(older["counts"]["planned_write_count"], 2)
             self.assertEqual(older["counts"]["actual_write_count"], 1)
+            self.assertEqual(older["gap_count"], 1)
+            self.assertIn("completion_review", older["selector_label"])
+            self.assertIn("1 gaps", older["selector_label"])
+            ordered_times = [item["updated_at_utc"] for item in traces["rounds"]]
+            self.assertEqual(ordered_times, sorted(ordered_times, reverse=True))
 
     def test_history_state_summary_preserves_itemized_round_trace_details(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -654,7 +660,9 @@ class StudioGlobalStatusTests(unittest.TestCase):
             report = global_status.build_global_status(project_root=project_root)
 
             traces = report["summaries"]["runtime"]["round_document_traces"]
-            self.assertEqual(traces["default_round_id"], Path(receipt_ref).stem)
+            self.assertEqual(traces["default_round_id"], Path(latest_ref).stem)
+            self.assertEqual(traces["default_selection"], "latest_round")
+            self.assertEqual(traces["newest_round_id"], Path(latest_ref).stem)
             receipt = next(
                 item for item in traces["rounds"] if item["round_id"] == Path(receipt_ref).stem
             )
