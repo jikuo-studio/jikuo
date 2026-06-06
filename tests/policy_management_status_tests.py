@@ -300,6 +300,14 @@ class PolicyManagementStatusTests(unittest.TestCase):
             operations["starter_policy_pack_init"]["write_mode"],
             "guarded-write",
         )
+        self.assertEqual(
+            operations["policy_final_response_gate_update"]["surface"],
+            "/api/policy-management/evolution/plan -> /api/policy-management/evolution/apply",
+        )
+        self.assertEqual(
+            operations["policy_final_response_gate_update"]["write_mode"],
+            "no-write-plan+guarded-write",
+        )
         self.assertIn(
             "starter policy pack activation installs report-only baseline policies; it does not prove semantic intent or enable blocking gates by itself",
             report["read_model_limitations"],

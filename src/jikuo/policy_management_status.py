@@ -894,8 +894,8 @@ def build_policy_management_status(
             },
             {
                 "operation": "policy_final_response_gate_update",
-                "surface": "/api/policy-management/final-response-gate/apply",
-                "write_mode": "guarded-write",
+                "surface": "/api/policy-management/evolution/plan -> /api/policy-management/evolution/apply",
+                "write_mode": "no-write-plan+guarded-write",
             },
             {
                 "operation": "policy_template_import_plan",

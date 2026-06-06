@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-REL-READINESS-01: Pre-release User Usability
 
-> **Status**: Active pre-release work order; P0-01, P0-02, and P0-03 accepted; P0-04 next.
+> **Status**: Active pre-release work order; P0-01, P0-02, P0-03, and P0-04 accepted; P0-05 next.
 > **Date**: 2026-06-06
 > **JIKUO layer**: release readiness / first-use configuration / user-facing governance.
 > **Business meaning**: before publishing JIKUO to GitHub, a new user should be able to install it, understand the initial configuration state, configure documents and starter policies, see known evidence limits, and complete a first governed workflow without relying on private local knowledge.
@@ -28,7 +28,7 @@ Stop rule for execution:
 | P0-01 | Clean install and startup smoke | Accepted | A new user can install the package and open the CLI / Studio without private environment assumptions. | Editable install, CLI entry points, Studio HTTP smoke, and full unit suite pass. |
 | P0-02 | First-run initialization and configuration status | Accepted | A new user can tell whether JIKUO is configured, what is missing, and which guarded action should happen next. | CLI and Studio expose a first-run status with required blockers, recommended actions, and no writes. |
 | P0-03 | Policy starter pack minimum usable path | Accepted | Users can activate baseline policy coverage instead of starting from an empty policy store. | Starter pack status, preview activation, guarded apply, and post-activation policy visibility are documented and smoked. |
-| P0-04 | Policy configuration changes through guarded plan | Not started | Users understand that policy metadata changes are governed configuration changes, not ad hoc UI toggles. | Scope/lifecycle/trigger/final-response-gate changes all use preview then guarded apply. |
+| P0-04 | Policy configuration changes through guarded plan | Accepted | Users understand that policy metadata changes are governed configuration changes, not ad hoc UI toggles. | Scope/lifecycle/trigger/final-response-gate changes all use preview then guarded apply. |
 | P0-05 | Document Rules default configuration and local mount layering | Not started | Users understand which local documents JIKUO reads, which files are editable configuration, and how to add their own docs safely. | First-run project context and Document Rules UI show editable targets, defaults, and guarded add/remove flow. |
 | P0-06 | Evidence missing classification | Not started | Users can distinguish product limits from genuine missing work evidence instead of reading every `missing` as failure. | Missing evidence is classified by reason and surfaced in runtime / Studio read models. |
 | P0-07 | Current limitation disclosure | Not started | Users know what JIKUO does not yet prove, especially around semantic classification, mounted enforcement, and observed-read evidence. | README / quickstart / Studio limitations show the same limits in user-facing language. |
@@ -142,19 +142,55 @@ the starter policies are report-only and do not prove semantic intent or enable
 blocking gates by themselves, apply the pack through a guarded writer, and then
 see the resulting active policies in policy management.
 
-## 8. Next Item: P0-04
+## 8. Accepted Item: P0-04
 
-P0-04 should verify policy configuration changes through guarded plans.
+P0-04 is accepted as of 2026-06-06.
+
+Implemented behavior:
+
+- added a backend no-write plan schema for `update_final_response_gate`;
+- routed final-response-gate preview through
+  `/api/policy-management/evolution/plan`;
+- routed final-response-gate writes through
+  `/api/policy-management/evolution/apply`;
+- required the reviewed `plan_id` before guarded apply, matching the starter
+  policy pack preview/apply pattern;
+- removed the browser-side final-response-gate plan builder and the dedicated
+  final-response-gate apply URL from the thin frontend;
+- updated policy-management available operations so final-response-gate appears
+  as `no-write-plan+guarded-write`, not a standalone small toggle writer;
+- kept the existing dedicated writer function available for compatibility, but
+  no longer exposes it as the Studio configuration path.
+
+Acceptance evidence:
+
+- `python -m unittest tests.policy_management_status_tests tests.studio_web_server_tests` passed with 38 tests;
+- `python -m unittest discover -s tests -p "*_tests.py"` passed with 388 tests.
+
+Business meaning:
+
+P0-04 stabilizes the user's mental model for policy configuration. A
+final-response gate is now treated like other active-policy configuration:
+first preview a backend plan, then apply a guarded write against the reviewed
+policy file. This avoids presenting final-response-gate as a lightweight UI
+save action when it actually changes compliance behavior in final answers.
+
+## 9. Next Item: P0-05
+
+P0-05 should make Document Rules defaults and local mount layering clear enough
+for a new user.
 
 Required behavior:
 
-- scope, lifecycle, trigger, and final-response-gate changes use preview then
-  guarded apply;
-- the Studio Proposed change panel has one consistent submission path;
-- plan review shows target policy, current state, proposed state, approval
-  phrase, and expected write path.
+- expose which documents are read as project context, completion checks, and
+  governance references;
+- distinguish editable project-local configuration from package defaults and
+  runtime-observed evidence;
+- keep add/remove changes behind the existing Document Rules preview/apply path;
+- show empty states and defaults without relying on the maintainer's local
+  private document layout.
 
-## 9. Known Limits To Expose Before Release
+## 10. Known Limits To Expose Before Release
 
 - JIKUO does not perform semantic judgment by itself. Host AI supplies compact
   semantic intent when available; JIKUO records, merges, triggers policies, and

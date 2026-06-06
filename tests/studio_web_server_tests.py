@@ -485,7 +485,7 @@ class StudioWebServerTests(unittest.TestCase):
             ).read_text(encoding="utf-8")
             self.assertIn('pattern: "src/jikuo/**"', policy_text)
 
-    def test_policy_final_response_gate_apply_api_updates_active_policy_after_approval(self):
+    def test_policy_final_response_gate_uses_evolution_plan_and_apply_path(self):
         with tempfile.TemporaryDirectory() as tmp:
             project_root = Path(tmp) / "project"
             project_root.mkdir()
@@ -528,13 +528,32 @@ class StudioWebServerTests(unittest.TestCase):
                 project_root=project_root,
             )
             detail = policy_status["policy_store"]["active_policy_details"][0]
+            request_payload = {
+                "policy_ref": policy_id,
+                "policy_evolution_operation": "update_final_response_gate",
+                "policy_path": detail["path"],
+                "enabled": True,
+                "reviewed_policy_sha256": detail["policy_sha256"],
+            }
 
-            approved_code, result = server.api_policy_final_response_gate_apply_payload(
+            plan_code, plan = server.api_policy_evolution_plan_payload(
+                request_payload,
+                project_root=project_root,
+            )
+            stale_code, stale = server.api_policy_evolution_apply_payload(
                 {
-                    "policy_ref": policy_id,
-                    "policy_path": detail["path"],
-                    "enabled": True,
-                    "reviewed_policy_sha256": detail["policy_sha256"],
+                    **request_payload,
+                    "plan_id": "stale-plan-id",
+                    "confirm_apply": True,
+                    "approval_phrase": "Approve Policy Final Response Gate update",
+                    "approval_source": "studio_confirmation_dialog",
+                },
+                project_root=project_root,
+            )
+            approved_code, result = server.api_policy_evolution_apply_payload(
+                {
+                    **request_payload,
+                    "plan_id": plan["plan_id"],
                     "confirm_apply": True,
                     "approval_phrase": "Approve Policy Final Response Gate update",
                     "approval_source": "studio_confirmation_dialog",
@@ -547,6 +566,43 @@ class StudioWebServerTests(unittest.TestCase):
             self.assertFalse(refused["write_performed"])
             self.assertIn("missing_confirmation_flag", refused["refusal_reasons"])
             self.assertIn("approval_evidence_missing", refused["refusal_reasons"])
+            self.assertEqual(plan_code, 200)
+            self.assertEqual(plan["schema"], "jikuo.policy_final_response_gate_plan.v0")
+            self.assertEqual(plan["status"], "review")
+            self.assertEqual(plan["operation"], "update_final_response_gate")
+            self.assertEqual(
+                plan["studio_web"]["route"],
+                "/api/policy-management/evolution/plan",
+            )
+            self.assertFalse(plan["writes_performed"])
+            self.assertFalse(plan["write_allowed_by_command"])
+            self.assertEqual(plan["target_policy_ref"], policy_id)
+            self.assertEqual(plan["target_policy_sha256"], detail["policy_sha256"])
+            self.assertFalse(plan["current_final_response_gate"]["enabled"])
+            self.assertTrue(plan["proposed_final_response_gate"]["enabled"])
+            self.assertEqual(
+                plan["approval_phrase"],
+                "Approve Policy Final Response Gate update",
+            )
+            self.assertEqual(
+                plan["future_write_boundary"]["writer_route"],
+                "/api/policy-management/evolution/apply",
+            )
+            self.assertEqual(
+                plan["write_set"][0]["path"],
+                ".jikuo/policies/approved/POLICY-studio-final-response-gate.yaml",
+            )
+            self.assertEqual(stale_code, 200)
+            self.assertEqual(stale["status"], "refused")
+            self.assertIn(
+                "reviewed_plan_id_does_not_match_current_request",
+                stale["refusal_reasons"],
+            )
+            self.assertFalse(stale["writes_performed"])
+            self.assertEqual(
+                stale["studio_web"]["route"],
+                "/api/policy-management/evolution/apply",
+            )
             self.assertEqual(approved_code, 200)
             self.assertEqual(result["status"], "written")
             self.assertTrue(result["write_performed"])
@@ -554,9 +610,10 @@ class StudioWebServerTests(unittest.TestCase):
             self.assertTrue(result["final_response_gate"]["enabled"])
             self.assertEqual(
                 result["studio_web"]["route"],
-                "/api/policy-management/final-response-gate/apply",
+                "/api/policy-management/evolution/apply",
             )
             self.assertTrue(result["studio_web"]["writes_performed"])
+            self.assertEqual(result["studio_web"]["reviewed_plan_id"], plan["plan_id"])
             self.assertIn(
                 ".jikuo/policies/approved/POLICY-studio-final-response-gate.yaml",
                 result["written_paths"],
@@ -1083,12 +1140,13 @@ class StudioWebServerTests(unittest.TestCase):
         self.assertIn("currentPolicyEvolutionPlan", html)
         self.assertIn("currentPolicyEvolutionRequest", html)
         self.assertIn("proposal_ref: currentPolicyEvolutionPlan.proposal_ref", html)
+        self.assertIn("plan_id: currentPolicyEvolutionPlan.plan_id", html)
         self.assertIn("policy-evolution-plan-result", html)
         self.assertIn("policy-final-response-gate-toggle", html)
-        self.assertIn("/api/policy-management/final-response-gate/apply", html)
+        self.assertNotIn("/api/policy-management/final-response-gate/apply", html)
         self.assertIn('<option value="update_final_response_gate">Update final-response gate</option>', html)
         self.assertIn("policy-final-response-gate-fields", html)
-        self.assertIn("policyFinalResponseGatePlanFromRequest", html)
+        self.assertNotIn("policyFinalResponseGatePlanFromRequest", html)
         self.assertIn("current_final_response_gate", html)
         self.assertIn("proposed_final_response_gate", html)
         self.assertIn("Require in final response", html)

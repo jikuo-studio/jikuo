@@ -1592,12 +1592,6 @@ INDEX_HTML = """<!doctype html>
         ? `Enabled / ${gate.source}; triggered policy evidence must be visible in the final response.`
         : `Disabled / ${gate.source}; policy evidence remains runtime-visible but is not a final-response gate.`;
     };
-    const proposedFinalResponseGateState = (enabled) => ({
-      schema: "jikuo.policy_final_response_gate.v0",
-      enabled: Boolean(enabled),
-      source: "studio_proposed_boolean",
-      visibility: enabled ? "final_response_required" : "not_final_response_gate",
-    });
     const isFinalResponseGateOperation = () =>
       document.getElementById("policy-evolution-operation").value === "update_final_response_gate";
     const refreshPolicyFinalResponseGateInputState = () => {
@@ -1625,76 +1619,6 @@ INDEX_HTML = """<!doctype html>
       const toggle = document.getElementById("policy-final-response-gate-toggle");
       toggle.checked = Boolean((detail || {}).final_response_gate && (detail || {}).final_response_gate.enabled);
       refreshPolicyFinalResponseGateInputState();
-    };
-    const policyFinalResponseGatePlanFromRequest = (requestPayload) => {
-      const detail = selectedPolicyDetail(policyManagementReport || {});
-      const currentGate = finalResponseGateState(detail);
-      const proposedGate = proposedFinalResponseGateState(Boolean(requestPayload.enabled));
-      const refusalReasons = [];
-      if (!detail) refusalReasons.push("policy_required_for_final_response_gate_plan");
-      if (!requestPayload.policy_ref) refusalReasons.push("policy_ref_required_for_final_response_gate_plan");
-      if (!(detail || {}).path && !requestPayload.policy_path) refusalReasons.push("target_policy_path_required_for_final_response_gate_plan");
-      const stateChanged = currentGate.enabled !== proposedGate.enabled;
-      const writeSet = !refusalReasons.length && stateChanged
-        ? [{
-            operation: "update_final_response_gate",
-            path: requestPayload.policy_path || (detail || {}).path || "path not supplied",
-            effect: `set final_response_gate to ${String(proposedGate.enabled)}`,
-          }]
-        : [];
-      const warnings = stateChanged ? [] : ["final_response_gate_already_matches_requested_state"];
-      const status = refusalReasons.length ? "refused" : "review";
-      return {
-        schema: "jikuo.policy_final_response_gate_plan.v0",
-        schema_version: "jikuo.policy_final_response_gate_plan.v0",
-        report_only: true,
-        operation: "update_final_response_gate",
-        status,
-        status_reason: refusalReasons.length
-          ? "final-response gate preview refused because required target policy data is missing"
-          : (stateChanged
-            ? "previewed final-response gate metadata change without writing"
-            : "previewed final-response gate metadata and found no state change"),
-        writes_performed: false,
-        write_allowed_by_command: false,
-        plan_id: `studio-final-response-gate-${requestPayload.policy_ref || "policy"}-${String(proposedGate.enabled)}`,
-        proposal_ref: `studio-final-response-gate:${requestPayload.policy_ref || "policy"}:${String(proposedGate.enabled)}:${requestPayload.reviewed_policy_sha256 || "unreviewed"}`,
-        target_policy_ref: requestPayload.policy_ref || (detail || {}).policy_id || null,
-        target_policy_path: requestPayload.policy_path || (detail || {}).path || null,
-        target_policy_sha256: requestPayload.reviewed_policy_sha256 || (detail || {}).policy_sha256 || null,
-        current_final_response_gate: currentGate,
-        proposed_final_response_gate: proposedGate,
-        approval_phrase: POLICY_FINAL_RESPONSE_GATE_APPROVAL_PHRASE,
-        future_write_boundary: {
-          requires_guarded_writer: true,
-          requires_decision_record: false,
-          writer_implemented: true,
-          writer_route: "/api/policy-management/final-response-gate/apply",
-          approval_phrase: POLICY_FINAL_RESPONSE_GATE_APPROVAL_PHRASE,
-        },
-        write_set: writeSet,
-        refusal_reasons: refusalReasons,
-        warnings,
-        recommended_changes: stateChanged
-          ? ["review final-response gate impact on final answer obligations before applying"]
-          : ["change the toggle before applying a guarded policy metadata write"],
-        next_actions: writeSet.length
-          ? ["click Apply guarded change after reviewing the target policy, current state, proposed state, and write path"]
-          : ["no guarded write is available until the proposed final-response gate state differs from the current state"],
-        non_effects: [
-          "does not execute policy actions",
-          "does not alter trigger scope, lifecycle events, required actions, or evidence requirements",
-          "does not write until Apply guarded change confirms the dedicated guarded writer",
-        ],
-        studio_web: {
-          schema: "jikuo.studio.web_console.v0",
-          route: "client-side final-response gate preview",
-          method: "derived-from-read-model",
-          write_mode: "no-write-plan",
-          writes_performed: false,
-          write_allowed_by_command: false,
-        },
-      };
     };
     const proposalDetailsById = (report) => {
       const output = {};
@@ -2980,21 +2904,6 @@ INDEX_HTML = """<!doctype html>
       button.disabled = true;
       button.textContent = "Previewing";
       container.replaceChildren(row("Previewing configuration change", "Building no-write active-policy configuration change plan.", "degraded"));
-      if (requestPayload.policy_evolution_operation === "update_final_response_gate") {
-        try {
-          const plan = policyFinalResponseGatePlanFromRequest(requestPayload);
-          currentPolicyEvolutionPlan = plan;
-          currentPolicyEvolutionRequest = requestPayload;
-          renderPolicyEvolutionPlan(plan);
-        } catch (error) {
-          container.replaceChildren(row("Preview failed", error.message, "unavailable"));
-        } finally {
-          button.disabled = false;
-          button.textContent = "Preview plan";
-          updatePolicyEvolutionApplyButton();
-        }
-        return;
-      }
       fetch("/api/policy-management/evolution/plan", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
@@ -3034,12 +2943,13 @@ INDEX_HTML = """<!doctype html>
       }
       button.disabled = true;
       button.textContent = "Applying";
-      fetch(isGateOperation ? "/api/policy-management/final-response-gate/apply" : "/api/policy-management/evolution/apply", {
+      fetch("/api/policy-management/evolution/apply", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify(isGateOperation
           ? {
               ...currentPolicyEvolutionRequest,
+              plan_id: currentPolicyEvolutionPlan.plan_id || null,
               confirm_apply: true,
               approval_phrase: POLICY_FINAL_RESPONSE_GATE_APPROVAL_PHRASE,
               approval_source: "studio_confirmation_dialog",
@@ -4084,6 +3994,20 @@ def policy_evolution_args_from_payload(request_payload: dict[str, Any]) -> dict[
     }
 
 
+def policy_final_response_gate_args_from_payload(
+    request_payload: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "policy_ref": optional_string(request_payload.get("policy_ref")),
+        "policy_path": optional_string(request_payload.get("policy_path"))
+        or optional_string(request_payload.get("source_policy_path")),
+        "enabled": bool(request_payload.get("enabled")),
+        "reviewed_policy_sha256": optional_string(
+            request_payload.get("reviewed_policy_sha256")
+        ),
+    }
+
+
 def studio_active_policy_path_from_payload(
     request_payload: dict[str, Any],
     *,
@@ -4329,6 +4253,23 @@ def api_policy_evolution_plan_payload(
             "writes_performed": False,
             "write_allowed_by_command": False,
         }
+    if (
+        optional_string(request_payload.get("policy_evolution_operation"))
+        == "update_final_response_gate"
+    ):
+        plan = policy_store.build_policy_final_response_gate_plan(
+            project_root=project_root,
+            **policy_final_response_gate_args_from_payload(request_payload),
+        )
+        plan["studio_web"] = {
+            "schema": STUDIO_WEB_SCHEMA,
+            "route": "/api/policy-management/evolution/plan",
+            "method": "POST",
+            "write_mode": "no-write-plan",
+            "writes_performed": False,
+            "write_allowed_by_command": False,
+        }
+        return HTTPStatus.OK, plan
     plan = policy_store.build_policy_evolution_plan(
         project_root=project_root,
         **policy_evolution_args_from_payload(request_payload),
@@ -4357,6 +4298,59 @@ def api_policy_evolution_apply_payload(
             "writes_performed": False,
             "write_allowed_by_command": False,
         }
+    if (
+        optional_string(request_payload.get("policy_evolution_operation"))
+        == "update_final_response_gate"
+    ):
+        gate_args = policy_final_response_gate_args_from_payload(request_payload)
+        reviewed_plan_id = optional_string(request_payload.get("plan_id"))
+        if reviewed_plan_id:
+            preview_plan = policy_store.build_policy_final_response_gate_plan(
+                project_root=project_root,
+                **gate_args,
+            )
+            if preview_plan.get("plan_id") != reviewed_plan_id:
+                refusal_reasons = set(preview_plan.get("refusal_reasons") or [])
+                refusal_reasons.add("reviewed_plan_id_does_not_match_current_request")
+                preview_plan["status"] = "refused"
+                preview_plan["refusal_reasons"] = sorted(refusal_reasons)
+                preview_plan["writes_performed"] = False
+                preview_plan["write_allowed_by_command"] = False
+                preview_plan["status_reason"] = (
+                    "policy final-response gate apply refused because the reviewed "
+                    "plan id does not match the current request payload"
+                )
+                preview_plan["studio_web"] = {
+                    "schema": STUDIO_WEB_SCHEMA,
+                    "route": "/api/policy-management/evolution/apply",
+                    "method": "POST",
+                    "write_mode": "guarded",
+                    "writes_performed": False,
+                    "write_allowed_by_command": False,
+                    "approval_source": optional_string(
+                        request_payload.get("approval_source")
+                    ),
+                    "reviewed_plan_id": reviewed_plan_id,
+                    "current_plan_id": preview_plan.get("plan_id"),
+                }
+                return HTTPStatus.OK, preview_plan
+        result, _exit_code = policy_store.update_policy_final_response_gate(
+            project_root=project_root,
+            **gate_args,
+            confirmed=bool(request_payload.get("confirm_apply")),
+            approval_phrase=optional_string(request_payload.get("approval_phrase")),
+        )
+        result["studio_web"] = {
+            "schema": STUDIO_WEB_SCHEMA,
+            "route": "/api/policy-management/evolution/apply",
+            "method": "POST",
+            "write_mode": "guarded",
+            "writes_performed": bool(result.get("write_performed")),
+            "write_allowed_by_command": bool(result.get("write_performed")),
+            "approval_source": optional_string(request_payload.get("approval_source")),
+            "reviewed_plan_id": reviewed_plan_id,
+        }
+        return HTTPStatus.OK, result
     evolution_args = policy_evolution_args_from_payload(request_payload)
     reviewed_proposal_ref = optional_string(request_payload.get("proposal_ref"))
     if reviewed_proposal_ref:
@@ -4419,13 +4413,7 @@ def api_policy_final_response_gate_apply_payload(
         }
     result, _exit_code = policy_store.update_policy_final_response_gate(
         project_root=project_root,
-        policy_ref=optional_string(request_payload.get("policy_ref")),
-        policy_path=optional_string(request_payload.get("policy_path"))
-        or optional_string(request_payload.get("source_policy_path")),
-        enabled=bool(request_payload.get("enabled")),
-        reviewed_policy_sha256=optional_string(
-            request_payload.get("reviewed_policy_sha256")
-        ),
+        **policy_final_response_gate_args_from_payload(request_payload),
         confirmed=bool(request_payload.get("confirm_apply")),
         approval_phrase=optional_string(request_payload.get("approval_phrase")),
     )

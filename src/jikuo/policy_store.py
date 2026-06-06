@@ -32,11 +32,13 @@ POLICY_TRIGGER_EVAL_REPORT_SCHEMA = "jikuo.policy_trigger_eval_report.v0"
 POLICY_WRITE_PLAN_SCHEMA = "jikuo.policy_write_plan.v0"
 POLICY_PROPOSAL_ACTIVATION_PLAN_SCHEMA = "jikuo.policy_proposal_activation_plan.v0"
 POLICY_EVOLUTION_PLAN_SCHEMA = "jikuo.policy_evolution_plan.v0"
+POLICY_FINAL_RESPONSE_GATE_PLAN_SCHEMA = "jikuo.policy_final_response_gate_plan.v0"
 POLICY_WRITE_RESULT_SCHEMA = "jikuo.policy_write_result.v0"
 POLICY_STORE_MANIFEST_SCHEMA = "jikuo.policy_store_manifest.v0"
 POLICY_DECISION_SCHEMA = "jikuo.policy_decision.v0"
 POLICY_SCHEMA = "jikuo.configurable_rule_policy.v0"
 POLICY_FINAL_RESPONSE_GATE_SCHEMA = "jikuo.policy_final_response_gate.v0"
+POLICY_FINAL_RESPONSE_GATE_APPROVAL_PHRASE = "Approve Policy Final Response Gate update"
 POLICY_MISSING_EVIDENCE_REPORT_SCHEMA = "jikuo.missing_evidence_report.v0"
 POLICY_EVAL_STATUS_NOT_EVALUATED = "not_evaluated"
 POLICY_EVAL_STATUS_EVALUATED = "evaluated"
@@ -3096,6 +3098,171 @@ def resolve_policy_final_response_gate_target(
             policy_ref=policy_ref,
         )
     return None, None, "policy_ref_or_policy_path_required"
+
+
+def build_policy_final_response_gate_plan(
+    *,
+    project_root: Path | None = None,
+    cwd: Path | None = None,
+    policy_ref: str | None = None,
+    policy_path: Path | str | None = None,
+    enabled: bool = False,
+    reviewed_policy_sha256: str | None = None,
+) -> dict[str, Any]:
+    status_report = inspect_policy_store(project_root=project_root, cwd=cwd)
+    resolved_root = Path(status_report["project_root"])
+    warnings = list(status_report.get("warnings") or [])
+    refusals: list[str] = []
+
+    target_path, target_path_ref, target_error = resolve_policy_final_response_gate_target(
+        project_root=resolved_root,
+        status_report=status_report,
+        policy_ref=policy_ref,
+        policy_path=policy_path,
+    )
+    if target_error:
+        refusals.append(target_error)
+
+    approved_root = (resolved_root / POLICY_STORE_ROOT / "approved").resolve()
+    if target_path is not None:
+        try:
+            target_path.resolve().relative_to(approved_root)
+        except ValueError:
+            refusals.append("policy_path_outside_approved_policy_store")
+        if not target_path.is_file():
+            refusals.append("policy_file_missing")
+
+    if status_report.get("policy_store_status") != "active":
+        refusals.append("active_policy_store_required_for_policy_config_update")
+
+    record: dict[str, Any] = {}
+    current_sha: str | None = None
+    resolved_policy_ref = policy_ref
+    if target_path is not None and target_path.is_file():
+        try:
+            record = read_yaml_subset(target_path)
+            current_sha = hashlib.sha256(target_path.read_bytes()).hexdigest()
+        except OSError as exc:
+            refusals.append("policy_file_not_readable")
+            warnings.append(f"policy_file_not_readable:{exc}")
+    if record:
+        schema = schema_from_record(record)
+        if schema != POLICY_SCHEMA:
+            refusals.append("unsupported_policy_schema")
+        record_policy_id = record.get("policy_id")
+        if isinstance(record_policy_id, str) and record_policy_id:
+            if resolved_policy_ref and resolved_policy_ref != record_policy_id:
+                refusals.append("policy_ref_does_not_match_policy_file")
+            resolved_policy_ref = record_policy_id
+        else:
+            refusals.append("policy_id_missing")
+    active_policy_ids = policy_ids_from_refs(status_report.get("active_policy_refs"))
+    if resolved_policy_ref and resolved_policy_ref not in active_policy_ids:
+        refusals.append("policy_ref_not_active")
+    if reviewed_policy_sha256 and current_sha and reviewed_policy_sha256 != current_sha:
+        refusals.append("reviewed_policy_sha256_does_not_match_current_policy")
+
+    current_gate = normalize_final_response_gate(record.get("final_response_gate"))
+    proposed_gate = {
+        "schema": POLICY_FINAL_RESPONSE_GATE_SCHEMA,
+        "enabled": bool(enabled),
+        "source": "requested_boolean",
+        "visibility": (
+            "final_response_required" if bool(enabled) else "not_final_response_gate"
+        ),
+    }
+    state_changed = current_gate["enabled"] != proposed_gate["enabled"]
+    if not refusals and not state_changed:
+        warnings.append("final_response_gate_already_matches_requested_state")
+
+    plan_id = stable_id(
+        "POLICYGATEPLAN",
+        "|".join(
+            [
+                str(resolved_root),
+                resolved_policy_ref or policy_ref or "",
+                target_path_ref or "",
+                str(bool(enabled)).lower(),
+                current_sha or "",
+            ]
+        ),
+    )
+    write_set = (
+        [
+            {
+                "operation": "update_final_response_gate",
+                "path": target_path_ref,
+                "effect": f"set final_response_gate to {bool(enabled)}",
+            }
+        ]
+        if not refusals and state_changed and target_path_ref
+        else []
+    )
+    status = "refused" if refusals else "review"
+    return {
+        "schema": POLICY_FINAL_RESPONSE_GATE_PLAN_SCHEMA,
+        "schema_version": POLICY_FINAL_RESPONSE_GATE_PLAN_SCHEMA,
+        "report_only": True,
+        "operation": "update_final_response_gate",
+        "status": status,
+        "status_reason": (
+            "final-response gate preview refused because the active policy target is not write-ready"
+            if refusals
+            else (
+                "previewed final-response gate metadata change without writing"
+                if state_changed
+                else "previewed final-response gate metadata and found no state change"
+            )
+        ),
+        "writes_performed": False,
+        "write_allowed_by_command": False,
+        "project_root": str(resolved_root),
+        "policy_store_status": status_report.get("policy_store_status"),
+        "plan_id": plan_id,
+        "proposal_ref": f"policy-final-response-gate:{plan_id}",
+        "target_policy_ref": resolved_policy_ref or policy_ref,
+        "target_policy_path": target_path_ref,
+        "target_policy_sha256": current_sha,
+        "target_policy_snapshot": {
+            "policy_id": record.get("policy_id") or resolved_policy_ref or policy_ref,
+            "title": record.get("title"),
+            "status": record.get("status"),
+            "version": record.get("version"),
+            "path": target_path_ref,
+        },
+        "current_final_response_gate": current_gate,
+        "proposed_final_response_gate": proposed_gate,
+        "approval_phrase": POLICY_FINAL_RESPONSE_GATE_APPROVAL_PHRASE,
+        "future_write_boundary": {
+            "requires_guarded_writer": True,
+            "requires_decision_record": False,
+            "writer_implemented": True,
+            "writer_route": "/api/policy-management/evolution/apply",
+            "approval_phrase": POLICY_FINAL_RESPONSE_GATE_APPROVAL_PHRASE,
+        },
+        "write_set": write_set,
+        "approval_required": bool(write_set),
+        "guarded_apply_available": status == "review" and bool(write_set),
+        "refusal_reasons": sorted(set(refusals)),
+        "warnings": sorted(set(warnings)),
+        "source_refs": CONTRACT_REFS,
+        "recommended_changes": [
+            "review final-response gate impact on final answer obligations before applying"
+        ]
+        if write_set
+        else ["change the requested final-response gate state before guarded apply"],
+        "next_actions": [
+            "click Apply guarded change after reviewing the target policy, current state, proposed state, and expected write path"
+        ]
+        if write_set
+        else ["resolve refusal reasons or change the requested gate state before retrying"],
+        "non_effects": [
+            "does not execute policy actions",
+            "does not infer semantic intent",
+            "does not alter trigger scope, lifecycle events, required actions, or evidence requirements",
+            "does not update package templates or starter-pack manifests",
+        ],
+    }
 
 
 def update_policy_final_response_gate(
