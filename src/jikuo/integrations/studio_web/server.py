@@ -107,8 +107,9 @@ INDEX_HTML = """<!doctype html>
     #policy-trace-section { order: 31; }
     #document-trace-section { order: 32; }
     #studio-configuration-heading { order: 40; }
-    #policy-configuration-section { order: 41; }
-    #document-configuration-section { order: 42; }
+    #first-run-section { order: 41; }
+    #policy-configuration-section { order: 42; }
+    #document-configuration-section { order: 43; }
     #actions-section { order: 50; }
     #diagnostics-section { order: 60; }
     section {
@@ -753,6 +754,29 @@ INDEX_HTML = """<!doctype html>
       <h2>Configuration</h2>
       <p class="subhead">Current policy and document configuration plus guarded preview/apply change paths. These panels are where future governance behavior is configured.</p>
     </section>
+    <section class="studio-subsection" id="first-run-section">
+      <div class="section-title">
+        <h2>First-run readiness</h2>
+        <span id="first-run-status" class="status">Loading</span>
+      </div>
+      <div class="grid" id="first-run-metrics"></div>
+      <div class="rules-overview" aria-labelledby="first-run-required-title">
+        <div class="rules-groups">
+          <div class="rules-group">
+            <h3 id="first-run-required-title">Required setup</h3>
+            <div class="compact-list" id="first-run-required"></div>
+          </div>
+          <div class="rules-group">
+            <h3>Recommended checks</h3>
+            <div class="compact-list" id="first-run-recommended"></div>
+          </div>
+          <div class="rules-group">
+            <h3>Next actions</h3>
+            <div class="compact-list" id="first-run-next-actions"></div>
+          </div>
+        </div>
+      </div>
+    </section>
     <section class="studio-subsection" id="document-configuration-section">
       <div class="section-title">
         <h2 id="document-rules-title">Document Rules</h2>
@@ -1214,9 +1238,18 @@ INDEX_HTML = """<!doctype html>
       return rows.length ? [...rows, ...(extra ? [extra] : [])] : [compactItem("No gaps", fallback)];
     };
     const termsById = (items) => Object.fromEntries((items || []).map((item) => [item.term_id, item]));
-    const termLabel = (terms, id, fallback) => (terms[id] && terms[id].user_label) || fallback;
-    const termDescription = (terms, id, fallback) => (terms[id] && terms[id].user_description) || fallback;
-    const DOCUMENT_RULES_APPROVAL_PHRASE = "Approve Document Rules update";
+      const termLabel = (terms, id, fallback) => (terms[id] && terms[id].user_label) || fallback;
+      const termDescription = (terms, id, fallback) => (terms[id] && terms[id].user_description) || fallback;
+      const firstRunStepStatus = (step) => {
+        if ((step || {}).status === "complete") {
+          return "available";
+        }
+        if ((step || {}).status === "blocked") {
+          return "unavailable";
+        }
+        return "degraded";
+      };
+      const DOCUMENT_RULES_APPROVAL_PHRASE = "Approve Document Rules update";
     const POLICY_EVOLUTION_APPROVAL_PHRASE = "Approve Policy Evolution write";
     const POLICY_FINAL_RESPONSE_GATE_APPROVAL_PHRASE = "Approve Policy Final Response Gate update";
     const POLICY_TEMPLATE_PUBLICATION_APPROVAL_PHRASE = "Approve Policy Template publication";
@@ -2909,7 +2942,7 @@ INDEX_HTML = """<!doctype html>
         .then((report) => renderPolicyManagement(report, studioData))
         .catch((error) => renderPolicyManagementFallback("Policy management unavailable", error.message, "unavailable"));
     };
-    const renderDocumentMounts = (data) => {
+      const renderDocumentMounts = (data) => {
       const summaries = data.summaries || {};
       const mounts = summaries.document_mounts || {};
       const terms = termsById(mounts.configuration_terms);
@@ -2953,9 +2986,40 @@ INDEX_HTML = """<!doctype html>
       const guidanceOverviewRows = (mounts.document_rule_sources || []).map((item) =>
         compactItem(item.path || "unbound", `${item.user_label || item.source_kind || "source"} / ${item.user_description || ""}`)
       );
-      guidanceOverview.replaceChildren(...(guidanceOverviewRows.length ? guidanceOverviewRows : [compactItem("No governance references", "No rule sources are configured.")]));
-    };
-    const artifactPath = (item) => text((item || {}).path || (item || {}).path_ref || (item || {}).ref || (item || {}).target || (item || {}).source_ref || "path not supplied");
+        guidanceOverview.replaceChildren(...(guidanceOverviewRows.length ? guidanceOverviewRows : [compactItem("No governance references", "No rule sources are configured.")]));
+      };
+      const renderFirstRun = (data) => {
+        const summaries = data.summaries || {};
+        const configuration = summaries.configuration || {};
+        const firstRun = configuration.first_run || {};
+        const status = document.getElementById("first-run-status");
+        status.className = statusClass(firstRun.status || "unavailable");
+        status.textContent = firstRun.status || "unavailable";
+        document.getElementById("first-run-metrics").replaceChildren(
+          metric(firstRun.user_usable ? "yes" : "no", "User usable"),
+          metric(`${firstRun.required_complete_count || 0}/${firstRun.required_total_count || 0}`, "Required complete"),
+          metric(firstRun.blocker_count || 0, "Required blockers"),
+          metric(firstRun.recommended_attention_count || 0, "Recommended checks")
+        );
+        const stepRow = (step) => row(
+          step.title || step.key || "setup item",
+          [step.current || "", step.next_action ? `next: ${step.next_action}` : ""].filter(Boolean).join(" / "),
+          firstRunStepStatus(step)
+        );
+        const required = firstRun.required_steps || [];
+        const recommended = firstRun.recommended_steps || [];
+        const actions = firstRun.next_actions || [];
+        document.getElementById("first-run-required").replaceChildren(
+          ...(required.length ? required.map(stepRow) : [emptyRow("No required first-run setup items reported.")])
+        );
+        document.getElementById("first-run-recommended").replaceChildren(
+          ...(recommended.length ? recommended.map(stepRow) : [emptyRow("No recommended first-run checks reported.")])
+        );
+        document.getElementById("first-run-next-actions").replaceChildren(
+          ...(actions.length ? actions.slice(0, 6).map((action) => row("Next action", action, "degraded")) : [emptyRow("No next action reported.")])
+        );
+      };
+      const artifactPath = (item) => text((item || {}).path || (item || {}).path_ref || (item || {}).ref || (item || {}).target || (item || {}).source_ref || "path not supplied");
     const artifactDetail = (item, fallback) => {
       const record = item || {};
       const evidenceParts = [
@@ -3338,6 +3402,7 @@ INDEX_HTML = """<!doctype html>
       return [
         compactItem("Selected round", record.label || record.trace_id || "No policy trace round selected."),
         compactItem("History card", record.history_markdown || record.history_ref || "history ref not supplied"),
+        compactItem("Turn anchor", policyTraceAnchorLabel(record.turn_anchor)),
         compactItem("Lifecycle event", record.lifecycle_event || "event not supplied"),
         compactItem("Policy runtime", `${record.policy_eval_status || "policy eval status unknown"} / ${record.condition_eval_status || "condition status unknown"} / ${record.evidence_check_status || "evidence status unknown"}`),
         compactItem("Work profile", `${workProfile.intent_class || "intent unknown"} / ${workProfile.operation_class || "operation unknown"} / scopes: ${scopes}`),
@@ -3346,15 +3411,16 @@ INDEX_HTML = """<!doctype html>
     };
     const renderPolicyTrace = (runtime) => {
       const trace = (runtime || {}).policy_trace || {};
-      const traces = trace.traces || [];
-      const defaultTraceId = trace.default_trace_id || (traces[0] || {}).trace_id;
-      if (!selectedPolicyTraceId || !traces.some((item) => item.trace_id === selectedPolicyTraceId)) {
+      const currentTurnTraces = trace.traces || [];
+      const selectorTraces = trace.retained_traces || currentTurnTraces;
+      const defaultTraceId = trace.default_trace_id || (selectorTraces[0] || {}).trace_id;
+      if (!selectedPolicyTraceId || !selectorTraces.some((item) => item.trace_id === selectedPolicyTraceId)) {
         selectedPolicyTraceId = defaultTraceId || null;
       }
-      const selectedTrace = traces.find((item) => item.trace_id === selectedPolicyTraceId) || null;
+      const selectedTrace = selectorTraces.find((item) => item.trace_id === selectedPolicyTraceId) || null;
       const recommendedEvents = trace.recommended_lifecycle_events || ["conversation_turn", "task_start", "completion_review"];
       const events = [...recommendedEvents];
-      traces.forEach((item) => {
+      selectorTraces.forEach((item) => {
         const eventName = item.lifecycle_event || "unknown_lifecycle";
         if (!events.includes(eventName)) {
           events.push(eventName);
@@ -3364,10 +3430,10 @@ INDEX_HTML = """<!doctype html>
       status.className = statusClass(trace.status || "unavailable");
       status.textContent = trace.status || "unavailable";
       const roundSelect = document.getElementById("policy-trace-round-select");
-      roundSelect.disabled = !traces.length;
+      roundSelect.disabled = !selectorTraces.length;
       roundSelect.replaceChildren(
-        ...(traces.length
-          ? traces.map((item) => {
+        ...(selectorTraces.length
+          ? selectorTraces.map((item) => {
               const option = document.createElement("option");
               option.value = item.trace_id || "";
               option.textContent = policyTraceRoundLabel(item);
@@ -3399,9 +3465,13 @@ INDEX_HTML = """<!doctype html>
         ...(events.length
           ? events.map((eventName) => {
               const observed = (trace.observed_lifecycle_events || []).includes(eventName);
-              const count = traces.filter((item) => item.lifecycle_event === eventName).length;
+              const currentCount = currentTurnTraces.filter((item) => item.lifecycle_event === eventName).length;
+              const retainedCount = selectorTraces.filter((item) => item.lifecycle_event === eventName).length;
               const selected = selectedTrace && selectedTrace.lifecycle_event === eventName;
-              return compactItem(eventName, observed ? `${count} trace record(s) observed${selected ? " / selected" : ""}` : "not observed for current turn anchor");
+              const detail = observed
+                ? `${currentCount} current turn / ${retainedCount} retained${selected ? " / selected" : ""}`
+                : `${retainedCount} retained / not observed for current turn anchor${selected ? " / selected" : ""}`;
+              return compactItem(eventName, detail);
             })
           : [compactItem("No lifecycle projection", "No recommended lifecycle nodes were supplied.")])
       );
@@ -3499,21 +3569,25 @@ INDEX_HTML = """<!doctype html>
       const semanticAnchorOverviewValue = semanticAnchor.status === "available"
         ? (semanticAnchor.anchor_id || "available")
         : (semanticAnchor.status || "missing");
-      const overview = document.getElementById("overview");
-      overview.replaceChildren(
-        metric(runtime.status || "unknown", "Runtime"),
-        metric(semanticClassificationLabel, "Latest semantic classification"),
-        metric(semanticAnchorOverviewValue, "Turn anchor"),
-        metric((summaries.document_mounts || {}).checked_document_count || 0, "Completion docs"),
-        metric(policyCounts.active_policy_count || 0, "Active policies"),
+        const overview = document.getElementById("overview");
+        const configuration = summaries.configuration || {};
+        const firstRun = configuration.first_run || {};
+        overview.replaceChildren(
+          metric(runtime.status || "unknown", "Runtime"),
+          metric(semanticClassificationLabel, "Latest semantic classification"),
+          metric(semanticAnchorOverviewValue, "Turn anchor"),
+          metric(firstRun.status || "unknown", "First run"),
+          metric((summaries.document_mounts || {}).checked_document_count || 0, "Completion docs"),
+          metric(policyCounts.active_policy_count || 0, "Active policies"),
         metric(policyCounts.package_template_count || 0, "Package templates"),
         metric(mcp.tool_count || 0, "MCP tools"),
         metric((data.pending_user_decisions || []).length, "Pending decisions"),
         metric((data.diagnostics || []).length, "Diagnostics")
-      );
-      renderSemanticEvidence(runtime);
-      renderPolicyTrace(runtime);
-      renderDocumentMounts(data);
+        );
+        renderSemanticEvidence(runtime);
+        renderPolicyTrace(runtime);
+        renderFirstRun(data);
+        renderDocumentMounts(data);
       renderRoundDocumentTrace(data);
       loadPolicyManagement(data);
       const actions = document.getElementById("actions");

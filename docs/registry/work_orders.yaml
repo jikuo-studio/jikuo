@@ -1089,6 +1089,21 @@ entries:
     implements_capabilities: []
     capability_extraction_status: "no_capability_refs_found"
     required_mount_sets: []
+  - id: "JIKUO-REL-READINESS-01"
+    title: "SPRINT_050_WO-PER-JIKUO-REL-READINESS-01: Pre-release User Usability"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-REL-READINESS-01_pre_release_user_usability.md"
+    sprint: "SPRINT_050"
+    status: "Active pre-release work order; P0-01 and P0-02 accepted; P0-03 next"
+    impact_tags:
+      - "release_readiness"
+      - "first_use"
+      - "configuration"
+      - "studio"
+      - "policy_management"
+      - "document_rules"
+    implements_capabilities: []
+    capability_extraction_status: "no_capability_refs_found"
+    required_mount_sets: []
   - id: "JIKUO-ROUTER-01"
     title: "SPRINT 050 WO-PER-JIKUO-ROUTER-01: Trigger Mode And Conversation-Turn Router"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-ROUTER-01_trigger_mode_and_conversation_turn_router.md"

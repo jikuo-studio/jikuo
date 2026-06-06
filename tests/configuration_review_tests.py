@@ -40,6 +40,22 @@ class ConfigurationReviewTests(unittest.TestCase):
             )
             self.assertEqual(activation_item["status"], "missing")
             self.assertIn("strict_mount_status=not_configured", activation_item["current"])
+            first_run = report["first_run"]
+            self.assertEqual(
+                first_run["schema"],
+                configuration_review.FIRST_RUN_STATUS_SCHEMA,
+            )
+            self.assertEqual(first_run["status"], "needs_configuration")
+            self.assertFalse(first_run["user_usable"])
+            self.assertEqual(first_run["required_total_count"], 3)
+            self.assertEqual(first_run["blocker_count"], 3)
+            self.assertEqual(
+                [item["key"] for item in first_run["blockers"]],
+                ["activation_settings", "project_context", "starter_policies"],
+            )
+            markdown = configuration_review.format_review(report)
+            self.assertIn("## First Run", markdown)
+            self.assertIn("- Status: `needs_configuration`", markdown)
             self.assertFalse((project_root / ".jikuo" / "activation_settings.yaml").exists())
 
     def test_top_level_configure_command_outputs_json(self):
@@ -73,6 +89,7 @@ class ConfigurationReviewTests(unittest.TestCase):
                 report["schema"], configuration_review.CONFIGURATION_REVIEW_SCHEMA
             )
             self.assertEqual(report["status"], "review")
+            self.assertEqual(report["first_run"]["status"], "needs_configuration")
 
     def test_agent_flow_can_render_configuration_review_card(self):
         with tempfile.TemporaryDirectory() as tmp:

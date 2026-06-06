@@ -47,6 +47,26 @@ class StudioGlobalStatusTests(unittest.TestCase):
         self.assertIn("studio.policy_evolution.plan", action_ids)
         self.assertIn("studio.runtime.open_latest_card", action_ids)
 
+    def test_global_status_exposes_first_run_configuration_status(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+
+            report = global_status.build_global_status(project_root=project_root)
+
+            first_run = report["summaries"]["configuration"]["first_run"]
+            self.assertEqual(
+                first_run["schema"],
+                "jikuo.first_run_configuration_status.v0",
+            )
+            self.assertEqual(first_run["status"], "needs_configuration")
+            self.assertFalse(first_run["user_usable"])
+            self.assertEqual(first_run["blocker_count"], 3)
+            diagnostic_codes = {item["code"] for item in report["diagnostics"]}
+            self.assertIn("first_run_configuration_incomplete", diagnostic_codes)
+            markdown = global_status.format_markdown(report)
+            self.assertIn("First run: `needs_configuration`", markdown)
+
     def test_runtime_summary_exposes_latest_task_artifact_assurance(self):
         with tempfile.TemporaryDirectory() as tmp:
             project_root = Path(tmp) / "project"
@@ -419,7 +439,9 @@ class StudioGlobalStatusTests(unittest.TestCase):
                 history_ref: str,
                 updated_at_utc: str,
                 policy_ref: str,
+                turn_anchor: dict[str, object] | None = None,
             ) -> dict[str, object]:
+                state_anchor = turn_anchor or anchor
                 return {
                     "schema": "jikuo.runtime_state_summary.v0",
                     "status": "available",
@@ -430,7 +452,7 @@ class StudioGlobalStatusTests(unittest.TestCase):
                         "event": event,
                     },
                     "runtime_visibility": {"history_ref": history_ref},
-                    "turn_anchor": anchor,
+                    "turn_anchor": state_anchor,
                     "policy_runtime_status": {
                         "schema": "jikuo.policy_runtime_status.v0",
                         "policy_store_status": "active",
@@ -455,7 +477,7 @@ class StudioGlobalStatusTests(unittest.TestCase):
                                 "host_semantic_intent": {
                                     "status": "provided",
                                     "provider": "host_ai",
-                                    "turn_anchor": anchor,
+                                    "turn_anchor": state_anchor,
                                 }
                             },
                         },
@@ -510,6 +532,15 @@ class StudioGlobalStatusTests(unittest.TestCase):
 
             task_start_ref = ".jikuo/runtime/history/20260606T010000Z_task_start.md"
             conversation_ref = ".jikuo/runtime/history/20260606T000000Z_conversation.md"
+            previous_anchor = {
+                "schema": "jikuo.turn_anchor.v0",
+                "status": "available",
+                "anchor_id": "turn_previous_policy_trace_fixture",
+                "source_kind": "host_adapter",
+                "session_id": "session-policy-trace",
+                "turn_id": "turn-policy-trace-previous",
+            }
+            previous_ref = ".jikuo/runtime/history/20260605T230000Z_previous.md"
             latest_state = runtime_state(
                 event="task_start",
                 history_ref=task_start_ref,
@@ -522,6 +553,13 @@ class StudioGlobalStatusTests(unittest.TestCase):
                 updated_at_utc="2026-06-06T00:00:00Z",
                 policy_ref="POLICY-conversation-fixture",
             )
+            previous_state = runtime_state(
+                event="completion_review",
+                history_ref=previous_ref,
+                updated_at_utc="2026-06-05T23:00:00Z",
+                policy_ref="POLICY-previous-fixture",
+                turn_anchor=previous_anchor,
+            )
             (runtime_root / "state_summary.json").write_text(
                 json.dumps(latest_state),
                 encoding="utf-8",
@@ -529,6 +567,7 @@ class StudioGlobalStatusTests(unittest.TestCase):
             for rel_ref, state in (
                 (task_start_ref, latest_state),
                 (conversation_ref, conversation_state),
+                (previous_ref, previous_state),
             ):
                 card_path = project_root / rel_ref
                 card_path.write_text("# Runtime card\n", encoding="utf-8")
@@ -548,6 +587,10 @@ class StudioGlobalStatusTests(unittest.TestCase):
             )
             self.assertEqual(policy_trace["triggered_policy_count"], 2)
             self.assertEqual(policy_trace["missing_evidence_count"], 2)
+            self.assertEqual(policy_trace["trace_count"], 2)
+            self.assertEqual(policy_trace["all_trace_count"], 3)
+            self.assertEqual(len(policy_trace["traces"]), 2)
+            self.assertEqual(len(policy_trace["retained_traces"]), 3)
             self.assertEqual(
                 policy_trace["observed_lifecycle_events"],
                 ["conversation_turn", "task_start"],
@@ -561,6 +604,19 @@ class StudioGlobalStatusTests(unittest.TestCase):
             self.assertEqual(
                 policy_refs,
                 {"POLICY-conversation-fixture", "POLICY-task-start-fixture"},
+            )
+            retained_policy_refs = {
+                policy["policy_ref"]
+                for trace in policy_trace["retained_traces"]
+                for policy in trace["triggered_policies"]
+            }
+            self.assertEqual(
+                retained_policy_refs,
+                {
+                    "POLICY-conversation-fixture",
+                    "POLICY-task-start-fixture",
+                    "POLICY-previous-fixture",
+                },
             )
 
     def test_runtime_summary_exposes_selectable_round_document_traces(self):

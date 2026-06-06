@@ -26,6 +26,17 @@ else:
 
 CONFIGURATION_REVIEW_SCHEMA = "jikuo.configuration_review.v0"
 CONFIGURATION_ITEM_SCHEMA = "jikuo.configuration_review_item.v0"
+FIRST_RUN_STATUS_SCHEMA = "jikuo.first_run_configuration_status.v0"
+FIRST_RUN_REQUIRED_ITEM_KEYS = (
+    "activation_settings",
+    "project_context",
+    "starter_policies",
+)
+FIRST_RUN_RECOMMENDED_ITEM_KEYS = (
+    "instruction_files",
+    "runtime_visibility",
+    "mcp_server",
+)
 
 
 def status_rank(status: str) -> int:
@@ -59,6 +70,98 @@ def item(
         "evidence_refs": evidence_refs or [],
         "next_actions": next_actions or [],
         "details": details or {},
+    }
+
+
+def build_first_run_step(
+    *,
+    entry: dict[str, Any] | None,
+    key: str,
+    requirement: str,
+) -> dict[str, Any]:
+    entry_status = str((entry or {}).get("status") or "missing")
+    step_status = (
+        "complete"
+        if entry_status == "ok"
+        else "blocked"
+        if entry_status == "blocked"
+        else "needs_review"
+    )
+    required = requirement == "required"
+    next_actions = list((entry or {}).get("next_actions") or [])
+    return {
+        "key": key,
+        "title": str((entry or {}).get("title") or key.replace("_", " ").title()),
+        "requirement": requirement,
+        "status": step_status,
+        "source_status": entry_status,
+        "is_blocker": required and step_status != "complete",
+        "current": str((entry or {}).get("current") or "not observed"),
+        "business_meaning": str(
+            (entry or {}).get("meaning")
+            or "This setup concern affects first-run usability."
+        ),
+        "next_action": next_actions[0] if next_actions else None,
+    }
+
+
+def build_first_run_status(items: list[dict[str, Any]]) -> dict[str, Any]:
+    by_key = {
+        str(entry.get("key")): entry
+        for entry in items
+        if isinstance(entry, dict) and entry.get("key")
+    }
+    required_steps = [
+        build_first_run_step(entry=by_key.get(key), key=key, requirement="required")
+        for key in FIRST_RUN_REQUIRED_ITEM_KEYS
+    ]
+    recommended_steps = [
+        build_first_run_step(
+            entry=by_key.get(key),
+            key=key,
+            requirement="recommended",
+        )
+        for key in FIRST_RUN_RECOMMENDED_ITEM_KEYS
+    ]
+    steps = [*required_steps, *recommended_steps]
+    blockers = [step for step in required_steps if step["is_blocker"]]
+    blocked_count = sum(1 for step in blockers if step["status"] == "blocked")
+    recommended_attention = [
+        step for step in recommended_steps if step["status"] != "complete"
+    ]
+    status = (
+        "blocked"
+        if blocked_count
+        else "needs_configuration"
+        if blockers
+        else "ready"
+    )
+    next_actions = [
+        str(step["next_action"])
+        for step in steps
+        if step.get("next_action")
+    ][:8]
+    return {
+        "schema": FIRST_RUN_STATUS_SCHEMA,
+        "status": status,
+        "user_usable": not blockers and not blocked_count,
+        "required_complete_count": sum(
+            1 for step in required_steps if step["status"] == "complete"
+        ),
+        "required_total_count": len(required_steps),
+        "blocker_count": len(blockers),
+        "recommended_attention_count": len(recommended_attention),
+        "blockers": blockers,
+        "required_steps": required_steps,
+        "recommended_steps": recommended_steps,
+        "next_actions": next_actions,
+        "business_meaning": (
+            "First-run status separates required setup blockers from recommended "
+            "integration checks so a new user can see whether JIKUO is actually "
+            "ready to use."
+        ),
+        "writes_performed": False,
+        "write_allowed_by_command": False,
     }
 
 
@@ -275,6 +378,7 @@ def build_configuration_review(*, project_root: Path | None = None) -> dict[str,
         build_starter_policy_item(resolved_root),
         build_guarded_write_item(),
     ]
+    first_run = build_first_run_status(items)
     worst = max(status_rank(entry["status"]) for entry in items)
     status = "ok" if worst == 0 else "review" if worst < 3 else "blocked"
     return {
@@ -289,7 +393,10 @@ def build_configuration_review(*, project_root: Path | None = None) -> dict[str,
             "review_count": sum(1 for entry in items if entry["status"] == "review"),
             "missing_count": sum(1 for entry in items if entry["status"] == "missing"),
             "blocked_count": sum(1 for entry in items if entry["status"] == "blocked"),
+            "first_run_status": first_run["status"],
+            "first_run_blocker_count": first_run["blocker_count"],
         },
+        "first_run": first_run,
         "items": items,
         "next_actions": [
             action
@@ -314,6 +421,32 @@ def format_review(report: dict[str, Any]) -> str:
     summary = report.get("summary") or {}
     for key in ("item_count", "ok_count", "review_count", "missing_count", "blocked_count"):
         lines.append(f"- {key}: `{summary.get(key, 0)}`")
+    first_run = report.get("first_run") or {}
+    lines.extend(
+        [
+            "",
+            "## First Run",
+            "",
+            f"- Status: `{first_run.get('status')}`",
+            f"- User usable: `{str(first_run.get('user_usable')).lower()}`",
+            f"- Required complete: `{first_run.get('required_complete_count', 0)} of {first_run.get('required_total_count', 0)}`",
+            f"- Blockers: `{first_run.get('blocker_count', 0)}`",
+            f"- Recommended attention: `{first_run.get('recommended_attention_count', 0)}`",
+        ]
+    )
+    if first_run.get("business_meaning"):
+        lines.append(f"- Meaning: {first_run.get('business_meaning')}")
+    if first_run.get("blockers"):
+        lines.extend(["", "### Required Setup"])
+        for step in first_run["blockers"]:
+            lines.append(
+                f"- `{step.get('key')}`: {step.get('title')} / {step.get('source_status')}"
+            )
+            if step.get("next_action"):
+                lines.append(f"  next: {step.get('next_action')}")
+    if first_run.get("next_actions"):
+        lines.extend(["", "### First-run Next Actions"])
+        lines.extend(f"- {action}" for action in first_run["next_actions"][:5])
     lines.extend(["", "## Configuration Items", ""])
     for entry in report.get("items") or []:
         lines.extend(

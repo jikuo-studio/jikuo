@@ -1057,6 +1057,7 @@ def policy_traces(project_root: Path, state: dict[str, Any]) -> dict[str, Any]:
         "triggered_policy_count": triggered_policy_count,
         "missing_evidence_count": missing_evidence_count,
         "traces": current_turn_traces,
+        "retained_traces": traces,
         "read_model_limitations": [
             "policy trace is projected from retained runtime state summaries only",
             "history cards without adjacent JSON state summaries cannot expose structured policy details",
@@ -1526,11 +1527,24 @@ def configuration_summary(
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     report = configuration_review.build_configuration_review(project_root=project_root)
     status = "available" if report.get("status") == "ok" else "degraded"
+    first_run = report.get("first_run") or {}
     review_items = [
         item
         for item in report.get("items") or []
         if isinstance(item, dict) and item.get("status") != "ok"
     ]
+    if first_run.get("blocker_count"):
+        diagnostics.append(
+            diagnostic(
+                "first_run_configuration_incomplete",
+                severity="warning",
+                message=(
+                    "first-run setup has required configuration blockers: "
+                    f"{first_run.get('blocker_count')}"
+                ),
+                next_action=(first_run.get("next_actions") or [None])[0],
+            )
+        )
     for item in review_items[:5]:
         diagnostics.append(
             diagnostic(
@@ -1546,17 +1560,18 @@ def configuration_summary(
             "status": status,
             "source_status": report.get("status"),
             "summary": report.get("summary") or {},
+            "first_run": first_run,
             "review_item_count": len(review_items),
-            "review_items": [
-                {
-                    "key": item.get("key"),
-                    "title": item.get("title"),
-                    "status": item.get("status"),
-                    "current": item.get("current"),
-                    "next_action": (item.get("next_actions") or [None])[0],
-                }
-                for item in review_items
-            ],
+              "review_items": [
+                  {
+                      "key": item.get("key"),
+                      "title": item.get("title"),
+                      "status": item.get("status"),
+                      "current": item.get("current"),
+                      "next_action": (item.get("next_actions") or [None])[0],
+                  }
+                  for item in review_items
+              ],
             "next_actions": report.get("next_actions") or [],
         },
         [
@@ -2056,6 +2071,8 @@ def format_markdown(report: dict[str, Any]) -> str:
     summaries = report.get("summaries") or {}
     policy_counts = ((summaries.get("policy_management") or {}).get("summary_counts") or {})
     activation = summaries.get("activation") or {}
+    configuration = summaries.get("configuration") or {}
+    first_run = configuration.get("first_run") or {}
     document_mounts = summaries.get("document_mounts") or {}
     configuration_terms = {
         item.get("term_id"): item
@@ -2085,6 +2102,7 @@ def format_markdown(report: dict[str, Any]) -> str:
         "## Overview",
         "",
         f"- Activation: `{activation.get('source_status') or activation.get('status')}` / trigger_mode=`{activation.get('desired_trigger_mode')}` / strict_mount=`{activation.get('strict_mount_status')}`",
+        f"- First run: `{first_run.get('status')}` / usable=`{str(first_run.get('user_usable')).lower()}` / blockers=`{first_run.get('blocker_count', 0)}`",
         f"- Runtime: `{runtime.get('status')}` / triggered_policies=`{(runtime.get('counts') or {}).get('triggered_policy_count', 0)}` / missing_evidence=`{(runtime.get('counts') or {}).get('missing_evidence_count', 0)}`",
         f"- {document_rules_label}: `{document_mounts.get('status')}` / configured roles=`{document_mounts.get('role_count', 0)}` / {completion_checks_label.lower()}=`{document_mounts.get('checked_document_count', 0)}`",
         f"- Artifact assurance: `{assurance.get('status')}` / required_writes=`{assurance_write.get('required_write_count', 0)}` / gaps=`{assurance_gap.get('gap_count', 0)}`",
