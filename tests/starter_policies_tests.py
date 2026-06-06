@@ -17,7 +17,7 @@ PACKAGE_TEMPLATE_REF = (
     "POLICYTEMPLATE-local-policy-task-scope-control-before-packaging.yaml"
 )
 sys.path.insert(0, str(ROOT / "src"))
-from jikuo import starter_policies  # noqa: E402
+from jikuo import policy_templates, starter_policies  # noqa: E402
 
 
 @contextmanager
@@ -29,6 +29,66 @@ def temp_project_dir():
         yield path
     finally:
         shutil.rmtree(path, ignore_errors=True)
+
+
+@contextmanager
+def temp_package_template_dir():
+    path = (
+        ROOT
+        / "src"
+        / "jikuo"
+        / "policy_templates"
+        / f"test_legacy_{uuid.uuid4().hex}"
+    )
+    path.mkdir(parents=True)
+    try:
+        yield path
+    finally:
+        shutil.rmtree(path, ignore_errors=True)
+
+
+def package_template_ref(path: Path) -> str:
+    relative = path.resolve().relative_to((ROOT / "src" / "jikuo").resolve())
+    return f"pkg://jikuo/{relative.as_posix()}"
+
+
+def write_legacy_package_template(path: Path) -> None:
+    path.write_text(
+        "\n".join(
+            [
+                'schema_version: "jikuo.policy_template.legacy_v0"',
+                'template_id: "POLICYTEMPLATE-legacy-starter-policy"',
+                'namespace: "local"',
+                "version: 1",
+                'title: "Legacy starter policy"',
+                "required_bindings: []",
+                "template_policy:",
+                '  policy_id: "POLICY-legacy-starter-policy"',
+                "  version: 1",
+                '  status: "active_report_only"',
+                '  title: "Legacy starter policy"',
+                '  scenario_package: "engineering_governance"',
+                "  source_refs: []",
+                "  triggers:",
+                '    - trigger_id: "TRG-task-start"',
+                '      type: "task_lifecycle_event"',
+                '      event: "task_start"',
+                "  conditions: []",
+                "  required_actions:",
+                '    - action_id: "ACT-review"',
+                '      type: "review"',
+                "  required_evidence:",
+                '    - evidence_id: "EVD-review"',
+                '      type: "review_evidence"',
+                '      satisfies_action: "ACT-review"',
+                "  enforcement:",
+                '    phase: "report_only"',
+                '    level: "review_required"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
 
 
 def create_policy_write_ready_project(root: Path) -> None:
@@ -58,17 +118,32 @@ def create_policy_write_ready_project(root: Path) -> None:
     )
 
 
-def write_test_starter_manifest(root: Path, *, pack_id: str = "test_pack") -> Path:
+def write_test_starter_manifest(
+    root: Path,
+    *,
+    pack_id: str = "test_pack",
+    template_ref: str | None = None,
+    policy_id: str = "POLICY-legacy-starter-policy",
+    title: str = "Legacy starter policy",
+) -> Path:
     pack_root = root / "packs" / pack_id
     pack_root.mkdir(parents=True)
     manifest_path = pack_root / "manifest.yaml"
+    policy_template_lines = ["policy_templates: []"]
+    if template_ref:
+        policy_template_lines = [
+            "policy_templates:",
+            f'  - template_ref: "{template_ref}"',
+            f'    policy_id: "{policy_id}"',
+            f'    title: "{title}"',
+        ]
     manifest_path.write_text(
         "\n".join(
             [
                 'schema_version: "jikuo.starter_policy_pack_manifest.v0"',
                 f'pack_id: "{pack_id}"',
                 'title: "Test starter pack"',
-                "policy_templates: []",
+                *policy_template_lines,
                 "",
             ]
         ),
@@ -242,6 +317,62 @@ class StarterPolicyPackTests(unittest.TestCase):
             "pkg://jikuo/.jikuo/policies/approved/POLICY-jikuo-self-bootstrap-workflow.yaml",
             warnings,
         )
+
+    def test_starter_init_normalizes_legacy_template_without_rewriting_template(self):
+        with temp_project_dir() as root, temp_package_template_dir() as template_dir:
+            template_path = template_dir / "POLICYTEMPLATE-legacy-starter-policy.yaml"
+            write_legacy_package_template(template_path)
+            original_template_text = template_path.read_text(encoding="utf-8")
+            template_ref = package_template_ref(template_path)
+            write_test_starter_manifest(
+                root,
+                pack_id="legacy_pack",
+                template_ref=template_ref,
+            )
+            old_pack_root = starter_policies.STARTER_PACKS_ROOT
+            try:
+                starter_policies.STARTER_PACKS_ROOT = root / "packs"
+                plan = starter_policies.build_starter_init_plan(
+                    project_root=root,
+                    pack_id="legacy_pack",
+                )
+                report, exit_code = starter_policies.initialize_starter_pack(
+                    project_root=root,
+                    pack_id="legacy_pack",
+                    confirmed=True,
+                    approval_phrase="<exact user phrase as spoken>",
+                )
+            finally:
+                starter_policies.STARTER_PACKS_ROOT = old_pack_root
+
+            self.assertEqual(plan["status"], "review")
+            self.assertEqual(len(plan["starter_policies"]), 1)
+            plan_item = plan["starter_policies"][0]
+            self.assertEqual(plan_item["compatibility_status"], "legacy_compatible")
+            self.assertTrue(plan_item["migration_available"])
+            compatibility = plan_item["template_compatibility"]
+            self.assertEqual(compatibility["migration_kind"], "deterministic_format_only")
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(report["write_performed"])
+            approved_path = (
+                root
+                / ".jikuo"
+                / "policies"
+                / "approved"
+                / "POLICY-legacy-starter-policy.yaml"
+            )
+            approved_policy = policy_templates.read_yaml_subset(approved_path)
+            self.assertEqual(
+                approved_policy["schema_version"],
+                policy_templates.policy_store.POLICY_SCHEMA,
+            )
+            self.assertFalse(approved_policy["final_response_gate"])
+            self.assertEqual(approved_policy["applies_to_work_profile"], [])
+            self.assertEqual(approved_policy["template_ref"], template_ref)
+            self.assertEqual(
+                template_path.read_text(encoding="utf-8"),
+                original_template_text,
+            )
 
     def test_plan_refuses_pack_id_path_escape(self):
         with temp_project_dir() as root:

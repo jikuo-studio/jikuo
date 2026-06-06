@@ -10,7 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
-from jikuo import policy_management_status  # noqa: E402
+from jikuo import policy_management_status, policy_templates, starter_policies  # noqa: E402
 
 
 TEMP_ROOT = ROOT / "tmp" / "jikuo_policy_management_status_tests"
@@ -25,6 +25,91 @@ def temp_project_dir():
         yield path
     finally:
         shutil.rmtree(path, ignore_errors=True)
+
+
+@contextmanager
+def temp_package_template_dir():
+    path = (
+        ROOT
+        / "src"
+        / "jikuo"
+        / "policy_templates"
+        / f"test_status_{uuid.uuid4().hex}"
+    )
+    path.mkdir(parents=True)
+    try:
+        yield path
+    finally:
+        shutil.rmtree(path, ignore_errors=True)
+
+
+def package_template_ref(path: Path) -> str:
+    relative = path.resolve().relative_to((ROOT / "src" / "jikuo").resolve())
+    return f"pkg://jikuo/{relative.as_posix()}"
+
+
+def write_legacy_package_template(path: Path) -> None:
+    path.write_text(
+        "\n".join(
+            [
+                'schema_version: "jikuo.policy_template.legacy_v0"',
+                'template_id: "POLICYTEMPLATE-legacy-status-policy"',
+                'namespace: "local"',
+                "version: 1",
+                'title: "Legacy status policy"',
+                "required_bindings: []",
+                "template_policy:",
+                '  policy_id: "POLICY-legacy-status-policy"',
+                "  version: 1",
+                '  status: "active_report_only"',
+                '  title: "Legacy status policy"',
+                '  scenario_package: "engineering_governance"',
+                "  source_refs: []",
+                "  triggers:",
+                '    - trigger_id: "TRG-task-start"',
+                '      type: "task_lifecycle_event"',
+                '      event: "task_start"',
+                "  conditions: []",
+                "  required_actions:",
+                '    - action_id: "ACT-review"',
+                '      type: "review"',
+                "  required_evidence:",
+                '    - evidence_id: "EVD-review"',
+                '      type: "review_evidence"',
+                '      satisfies_action: "ACT-review"',
+                "  enforcement:",
+                '    phase: "report_only"',
+                '    level: "review_required"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+
+def write_test_starter_manifest(
+    root: Path,
+    *,
+    pack_id: str,
+    template_ref: str,
+) -> None:
+    pack_root = root / "packs" / pack_id
+    pack_root.mkdir(parents=True)
+    (pack_root / "manifest.yaml").write_text(
+        "\n".join(
+            [
+                'schema_version: "jikuo.starter_policy_pack_manifest.v0"',
+                f'pack_id: "{pack_id}"',
+                'title: "Legacy status pack"',
+                "policy_templates:",
+                f'  - template_ref: "{template_ref}"',
+                '    policy_id: "POLICY-legacy-status-policy"',
+                '    title: "Legacy status policy"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
 
 
 def write_project_state(root: Path) -> None:
@@ -207,6 +292,57 @@ class PolicyManagementStatusTests(unittest.TestCase):
         self.assertFalse(detail["final_response_gate"]["enabled"])
         self.assertEqual(detail["final_response_gate"]["source"], "default_false")
         self.assertTrue(detail["policy_sha256"])
+
+    def test_status_read_model_projects_legacy_template_compatibility(self):
+        with temp_project_dir() as project_root, temp_package_template_dir() as template_dir:
+            template_path = template_dir / "POLICYTEMPLATE-legacy-status-policy.yaml"
+            write_legacy_package_template(template_path)
+            template_ref = package_template_ref(template_path)
+            write_test_starter_manifest(
+                project_root,
+                pack_id="legacy_status_pack",
+                template_ref=template_ref,
+            )
+            old_pack_root = starter_policies.STARTER_PACKS_ROOT
+            try:
+                starter_policies.STARTER_PACKS_ROOT = project_root / "packs"
+                report = policy_management_status.build_policy_management_status(
+                    project_root=project_root,
+                    template_dir=template_dir,
+                    starter_pack_id="legacy_status_pack",
+                )
+            finally:
+                starter_policies.STARTER_PACKS_ROOT = old_pack_root
+
+        self.assertEqual(report["package_templates"]["template_count"], 1)
+        detail = report["package_templates"]["templates"][0]
+        self.assertEqual(detail["template_ref"], template_ref)
+        self.assertEqual(
+            detail["schema_version"],
+            "jikuo.policy_template.legacy_v0",
+        )
+        self.assertEqual(detail["compatibility_status"], "legacy_compatible")
+        self.assertTrue(detail["migration_available"])
+        self.assertEqual(detail["migration_kind"], "deterministic_format_only")
+        self.assertEqual(
+            detail["target_active_policy_schema"],
+            policy_templates.policy_store.POLICY_SCHEMA,
+        )
+        self.assertFalse(detail["final_response_gate"]["enabled"])
+        self.assertEqual(detail["final_response_gate"]["source"], "default_false")
+        self.assertEqual(detail["trigger_profile"]["trigger_mode"], "legacy_event_only")
+        self.assertEqual(
+            report["summary_counts"]["legacy_compatible_template_count"],
+            1,
+        )
+        self.assertEqual(
+            report["summary_counts"]["migration_available_template_count"],
+            1,
+        )
+        starter_entry = report["starter_packs"]["packs"][0]["policy_templates"][0]
+        self.assertEqual(starter_entry["template_ref"], template_ref)
+        self.assertEqual(starter_entry["compatibility_status"], "legacy_compatible")
+        self.assertTrue(starter_entry["migration_available"])
 
     def test_status_read_model_projects_declared_final_response_gate(self):
         with temp_project_dir() as project_root:

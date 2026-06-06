@@ -103,6 +103,45 @@ def write_source_ref_only_policy(path: Path) -> None:
     )
 
 
+def write_legacy_template(path: Path) -> None:
+    path.write_text(
+        "\n".join(
+            [
+                'schema_version: "jikuo.policy_template.legacy_v0"',
+                'template_id: "POLICYTEMPLATE-legacy-policy"',
+                'namespace: "local"',
+                "version: 1",
+                'title: "Legacy policy"',
+                "required_bindings: []",
+                "template_policy:",
+                '  policy_id: "POLICY-legacy-policy"',
+                "  version: 1",
+                '  status: "active_report_only"',
+                '  title: "Legacy policy"',
+                '  scenario_package: "engineering_governance"',
+                "  source_refs: []",
+                "  triggers:",
+                '    - trigger_id: "TRG-task-start"',
+                '      type: "task_lifecycle_event"',
+                '      event: "task_start"',
+                "  conditions: []",
+                "  required_actions:",
+                '    - action_id: "ACT-review"',
+                '      type: "review"',
+                "  required_evidence:",
+                '    - evidence_id: "EVD-review"',
+                '      type: "review_evidence"',
+                '      satisfies_action: "ACT-review"',
+                "  enforcement:",
+                '    phase: "report_only"',
+                '    level: "review_required"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+
 def write_policy_store_with_policies(root: Path, policies: list[tuple[str, str, str]]) -> None:
     store = root / ".jikuo" / "policies"
     approved = store / "approved"
@@ -1158,6 +1197,119 @@ class PolicyTemplateTests(unittest.TestCase):
                 source_refs,
             )
             self.assertTrue((root / ".jikuo" / "policies" / "manifest.yaml").is_file())
+
+    def test_plan_import_normalizes_legacy_template_without_writing_template(self):
+        with temp_project_dir() as root:
+            template_path = root / "POLICYTEMPLATE-legacy-policy.yaml"
+            write_legacy_template(template_path)
+            original_template_text = template_path.read_text(encoding="utf-8")
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "plan-import",
+                    "--template",
+                    str(template_path),
+                    "--project-root",
+                    str(root),
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            report = json.loads(completed.stdout)
+            self.assertEqual(report["status"], "review")
+            self.assertFalse(report["writes_performed"])
+            self.assertEqual(
+                report["source_template_schema"],
+                "jikuo.policy_template.legacy_v0",
+            )
+            self.assertEqual(
+                report["target_active_policy_schema"],
+                policy_templates.policy_store.POLICY_SCHEMA,
+            )
+            compatibility = report["template_compatibility"]
+            self.assertEqual(compatibility["compatibility_status"], "legacy_compatible")
+            self.assertTrue(compatibility["migration_available"])
+            self.assertEqual(compatibility["migration_kind"], "deterministic_format_only")
+            self.assertIn("schema_version", compatibility["added_default_fields"])
+            self.assertIn("final_response_gate", compatibility["added_default_fields"])
+            self.assertIn("applies_to_work_profile", compatibility["added_default_fields"])
+            self.assertIn(
+                "does not infer final_response_gate semantics",
+                compatibility["non_effects"],
+            )
+            preview = report["resolved_policy_preview"]
+            self.assertEqual(
+                preview["schema_version"],
+                policy_templates.policy_store.POLICY_SCHEMA,
+            )
+            self.assertFalse(preview["final_response_gate"])
+            self.assertEqual(preview["applies_to_work_profile"], [])
+            self.assertEqual(
+                template_path.read_text(encoding="utf-8"),
+                original_template_text,
+            )
+
+    def test_activate_legacy_template_writes_current_policy_without_rewriting_template(self):
+        with temp_project_dir() as root:
+            template_path = root / "POLICYTEMPLATE-legacy-policy.yaml"
+            write_legacy_template(template_path)
+            original_template_text = template_path.read_text(encoding="utf-8")
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "activate-template",
+                    "--template",
+                    str(template_path),
+                    "--project-root",
+                    str(root),
+                    "--confirm-activate-template",
+                    "--approval-phrase",
+                    "<exact user phrase as spoken>",
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            report = json.loads(completed.stdout)
+            self.assertTrue(report["write_performed"])
+            self.assertEqual(report["policy_ref"], "POLICY-legacy-policy")
+            approved_path = (
+                root
+                / ".jikuo"
+                / "policies"
+                / "approved"
+                / "POLICY-legacy-policy.yaml"
+            )
+            approved_policy = policy_templates.read_yaml_subset(approved_path)
+            self.assertEqual(
+                approved_policy["schema_version"],
+                policy_templates.policy_store.POLICY_SCHEMA,
+            )
+            self.assertFalse(approved_policy["final_response_gate"])
+            self.assertEqual(approved_policy["applies_to_work_profile"], [])
+            self.assertEqual(
+                template_path.read_text(encoding="utf-8"),
+                original_template_text,
+            )
 
 
 if __name__ == "__main__":

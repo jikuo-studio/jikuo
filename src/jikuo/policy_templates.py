@@ -33,6 +33,7 @@ POLICY_TEMPLATE_PUBLICATION_PLAN_SCHEMA = "jikuo.policy_template_publication_pla
 POLICY_TEMPLATE_PUBLICATION_RESULT_SCHEMA = "jikuo.policy_template_publication_result.v0"
 POLICY_TEMPLATE_ACTIVATION_RESULT_SCHEMA = "jikuo.policy_template_activation_result.v0"
 POLICY_TEMPLATE_SOURCE_INSPECTION_SCHEMA = "jikuo.policy_template_source_inspection.v0"
+POLICY_TEMPLATE_COMPATIBILITY_SCHEMA = "jikuo.policy_template_compatibility.v0"
 POLICY_DISTRIBUTION_REVIEW_SCHEMA = "jikuo.policy_distribution_review.v0"
 POLICY_DISTRIBUTION_SOURCE_RESOLUTION_SCHEMA = "jikuo.policy_distribution_source_resolution.v0"
 PROJECT_CONTEXT_SCHEMA = "jikuo.project_context.v0"
@@ -284,8 +285,175 @@ def public_source_ref(policy_id: str) -> str:
     return f"redacted://local_project_policy/{slug_token(policy_id)}"
 
 
+def schema_from_record(record: dict[str, Any]) -> str | None:
+    schema = record.get("schema_version") or record.get("schema")
+    return schema if isinstance(schema, str) else None
+
+
+def normalize_template_policy_body_for_current_schema(
+    policy: dict[str, Any] | None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Project a template policy body into the current active-policy shape.
+
+    This is a deterministic format migration only. It does not infer policy
+    scopes, lifecycle gates, or final-response behavior from intent; absent
+    semantic fields receive non-promoting defaults.
+    """
+
+    if not isinstance(policy, dict):
+        return (
+            {},
+            {
+                "schema": POLICY_TEMPLATE_COMPATIBILITY_SCHEMA,
+                "source_policy_schema": None,
+                "normalized_schema_version": policy_store.POLICY_SCHEMA,
+                "compatibility_status": "blocked",
+                "migration_available": False,
+                "migration_kind": None,
+                "added_default_fields": [],
+                "migration_notes": ["template_policy_missing_or_not_mapping"],
+                "semantic_change_required": False,
+                "semantic_change_notes": [],
+            },
+        )
+
+    normalized = deepcopy(policy)
+    source_policy_schema = schema_from_record(normalized)
+    added_default_fields: list[str] = []
+    migration_notes: list[str] = []
+    semantic_notes: list[str] = []
+    blocked = False
+
+    if source_policy_schema is None:
+        normalized["schema_version"] = policy_store.POLICY_SCHEMA
+        added_default_fields.append("schema_version")
+        migration_notes.append("defaulted_missing_template_policy_schema_version")
+    elif source_policy_schema == policy_store.POLICY_SCHEMA:
+        if normalized.get("schema_version") != policy_store.POLICY_SCHEMA:
+            normalized["schema_version"] = policy_store.POLICY_SCHEMA
+            added_default_fields.append("schema_version")
+            migration_notes.append("normalized_schema_alias_to_schema_version")
+    else:
+        blocked = True
+        migration_notes.append(f"unsupported_template_policy_schema:{source_policy_schema}")
+
+    if "final_response_gate" not in normalized:
+        normalized["final_response_gate"] = False
+        added_default_fields.append("final_response_gate")
+        migration_notes.append("defaulted_final_response_gate_false")
+        semantic_notes.append(
+            "enabling final_response_gate remains a semantic governance decision"
+        )
+    else:
+        gate = policy_store.normalize_final_response_gate(
+            normalized.get("final_response_gate")
+        )
+        normalized["final_response_gate"] = bool(gate.get("enabled"))
+        if gate.get("source") != "declared_boolean":
+            migration_notes.append("normalized_final_response_gate_to_boolean")
+
+    if "applies_to_work_profile" not in normalized:
+        normalized["applies_to_work_profile"] = []
+        added_default_fields.append("applies_to_work_profile")
+        migration_notes.append("defaulted_empty_applies_to_work_profile")
+        semantic_notes.append(
+            "adding policy scopes or lifecycle gates remains a semantic governance decision"
+        )
+    elif isinstance(normalized.get("applies_to_work_profile"), dict):
+        normalized["applies_to_work_profile"] = [
+            deepcopy(normalized["applies_to_work_profile"])
+        ]
+        migration_notes.append("normalized_applies_to_work_profile_mapping_to_list")
+    elif not isinstance(normalized.get("applies_to_work_profile"), list):
+        normalized["applies_to_work_profile"] = []
+        migration_notes.append("invalid_applies_to_work_profile_defaulted_empty")
+
+    compatibility_status = (
+        "blocked"
+        if blocked
+        else ("legacy_compatible" if added_default_fields or migration_notes else "compatible")
+    )
+    return (
+        normalized,
+        {
+            "schema": POLICY_TEMPLATE_COMPATIBILITY_SCHEMA,
+            "source_policy_schema": source_policy_schema,
+            "normalized_schema_version": policy_store.POLICY_SCHEMA,
+            "compatibility_status": compatibility_status,
+            "migration_available": compatibility_status == "legacy_compatible",
+            "migration_kind": (
+                "deterministic_format_only"
+                if compatibility_status == "legacy_compatible"
+                else None
+            ),
+            "added_default_fields": added_default_fields,
+            "migration_notes": migration_notes,
+            "semantic_change_required": False,
+            "semantic_change_notes": semantic_notes,
+        },
+    )
+
+
+def template_compatibility_projection(template: dict[str, Any]) -> dict[str, Any]:
+    source_template_schema = schema_from_record(template)
+    template_policy = template.get("template_policy")
+    _, policy_compatibility = normalize_template_policy_body_for_current_schema(
+        template_policy if isinstance(template_policy, dict) else None
+    )
+    migration_notes = list(policy_compatibility.get("migration_notes") or [])
+    added_default_fields = list(policy_compatibility.get("added_default_fields") or [])
+    compatibility_status = str(policy_compatibility.get("compatibility_status"))
+
+    if source_template_schema is None:
+        migration_notes.append("defaulted_missing_policy_template_schema_version")
+        compatibility_status = (
+            "blocked" if compatibility_status == "blocked" else "legacy_compatible"
+        )
+    elif source_template_schema != POLICY_TEMPLATE_SCHEMA:
+        migration_notes.append(f"legacy_policy_template_schema:{source_template_schema}")
+        compatibility_status = (
+            "blocked" if compatibility_status == "blocked" else "legacy_compatible"
+        )
+
+    if not isinstance(template_policy, dict):
+        compatibility_status = "blocked"
+
+    return {
+        "schema": POLICY_TEMPLATE_COMPATIBILITY_SCHEMA,
+        "source_template_schema": source_template_schema,
+        "normalized_schema_version": POLICY_TEMPLATE_SCHEMA,
+        "target_active_policy_schema": policy_store.POLICY_SCHEMA,
+        "compatibility_status": compatibility_status,
+        "migration_available": compatibility_status == "legacy_compatible",
+        "migration_kind": (
+            "deterministic_format_only"
+            if compatibility_status == "legacy_compatible"
+            else None
+        ),
+        "added_default_fields": added_default_fields,
+        "migration_notes": migration_notes,
+        "semantic_change_required": False,
+        "semantic_change_notes": policy_compatibility.get("semantic_change_notes")
+        or [],
+        "non_effects": [
+            "does not write template files during read or preview",
+            "does not infer final_response_gate semantics",
+            "does not add policy scopes or lifecycle gates",
+        ],
+    }
+
+
+def normalized_template_policy_body(template: dict[str, Any]) -> dict[str, Any]:
+    policy, _ = normalize_template_policy_body_for_current_schema(
+        template.get("template_policy")
+        if isinstance(template.get("template_policy"), dict)
+        else None
+    )
+    return policy
+
+
 def normalize_template_policy(policy: dict[str, Any], template_id: str) -> dict[str, Any]:
-    template_policy = deepcopy(policy)
+    template_policy, _ = normalize_template_policy_body_for_current_schema(policy)
     template_policy["source_refs"] = [
         {
             "type": "policy_template",
@@ -1216,8 +1384,16 @@ def build_import_plan(
         template = read_yaml_subset(resolved_template)
 
     schema = template.get("schema_version") or template.get("schema")
+    template_compatibility = (
+        template_compatibility_projection(template) if template else {}
+    )
     if template and schema != POLICY_TEMPLATE_SCHEMA:
-        refusals.append(f"unsupported template schema: {schema}")
+        warnings.append(f"legacy policy template schema: {schema or 'missing'}")
+    if (
+        template
+        and template_compatibility.get("compatibility_status") == "blocked"
+    ):
+        refusals.append("policy_template_compatibility_blocked")
     context, project_context_status, context_warnings = load_project_context(
         resolved_project_root
     )
@@ -1343,6 +1519,9 @@ def build_import_plan(
         "project_context_ref": PROJECT_CONTEXT_REF,
         "project_context_status": project_context_status,
         "policy_store_status": policy_report["policy_store_status"],
+        "source_template_schema": schema,
+        "target_active_policy_schema": policy_store.POLICY_SCHEMA,
+        "template_compatibility": template_compatibility,
         "binding_status": binding_status,
         "resolved_policy": resolved_policy,
         "resolved_policy_preview": resolved_policy_preview,
@@ -1644,8 +1823,8 @@ def build_resolved_policy_preview(
     project_root: Path,
     binding_status: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    template_policy = template.get("template_policy")
-    if not isinstance(template_policy, dict):
+    template_policy = normalized_template_policy_body(template)
+    if not template_policy:
         return {}
     resolution_map = {
         str(item["role_ref"]): str(item["resolved_ref"])

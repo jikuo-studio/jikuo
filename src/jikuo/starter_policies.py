@@ -9,7 +9,6 @@ workflow for producing reusable package assets.
 from __future__ import annotations
 
 import argparse
-from copy import deepcopy
 import json
 import os
 from pathlib import Path
@@ -151,12 +150,15 @@ def load_template_policy(
         return None, [f"starter template not found: {template_path}"]
     template = policy_templates.read_yaml_subset(template_path)
     schema = template.get("schema_version") or template.get("schema")
+    compatibility = policy_templates.template_compatibility_projection(template)
     if schema != policy_templates.POLICY_TEMPLATE_SCHEMA:
-        warnings.append(f"unsupported policy template schema: {schema}")
+        warnings.append(f"legacy policy template schema: {schema or 'missing'}")
+    if compatibility.get("compatibility_status") == "blocked":
+        return None, [*warnings, "policy_template_compatibility_blocked"]
     template_policy = template.get("template_policy")
     if not isinstance(template_policy, dict):
         return None, [*warnings, "template_policy_missing"]
-    policy = deepcopy(template_policy)
+    policy = policy_templates.normalized_template_policy_body(template)
     source_refs = policy.get("source_refs")
     if not isinstance(source_refs, list):
         source_refs = []
@@ -230,12 +232,17 @@ def load_pack_policies(pack_id: str) -> tuple[list[dict[str, Any]], list[str]]:
             template_ref=template_ref,
             pack_id=pack_id,
         )
+        template_record = policy_templates.read_yaml_subset(template_path)
+        template_compatibility = policy_templates.template_compatibility_projection(
+            template_record
+        )
         policies.append(
             {
                 "policy_id": policy.get("policy_id"),
                 "title": policy.get("title"),
                 "template_ref": item.get("template_ref"),
                 "template_path": str(template_path),
+                "template_compatibility": template_compatibility,
                 "policy": policy,
             }
         )
@@ -729,6 +736,13 @@ def build_starter_init_plan(
                 "title": item["title"],
                 "template_ref": item["template_ref"],
                 "provenance": item["policy"].get("provenance"),
+                "template_compatibility": item.get("template_compatibility"),
+                "compatibility_status": (
+                    item.get("template_compatibility") or {}
+                ).get("compatibility_status"),
+                "migration_available": (
+                    item.get("template_compatibility") or {}
+                ).get("migration_available"),
             }
             for item in policies
         ],

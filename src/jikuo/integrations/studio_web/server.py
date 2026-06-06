@@ -2043,12 +2043,18 @@ INDEX_HTML = """<!doctype html>
       tags.replaceChildren(
         tag(detail.namespace || "namespace", "available"),
         tag(`v${detail.version || "?"}`, "available"),
+        tag(detail.compatibility_status || "compatibility unknown", detail.compatibility_status === "compatible" ? "available" : "review"),
+        tag(detail.migration_available ? "migration available" : "no migration", detail.migration_available ? "review" : "available"),
         tag(`${detail.required_binding_count || 0} bindings`, detail.required_binding_count ? "review" : "available"),
         ...templateStarterTags(detail.included_in_starter_packs)
       );
       config.replaceChildren(
         compactItem("Template policy", `${detail.template_policy_id || "policy id missing"} / ${detail.template_policy_title || "title not supplied"}`),
         compactItem("Template file", detail.template_path || detail.template_ref || "template path not supplied"),
+        compactItem("Schema", `${detail.schema_version || "schema missing"} -> ${detail.target_active_policy_schema || "target schema missing"}`),
+        compactItem("Compatibility", detail.compatibility_status || "compatibility not reported"),
+        compactItem("Migration", detail.migration_available ? (detail.migration_notes || []).join("; ") || "deterministic format migration available" : "No template-file migration needed"),
+        compactItem("Final-response gate", (detail.final_response_gate || {}).enabled ? "required in final response" : "not final-response gate"),
         compactItem("Portability", detail.portability_status || "portability not reported"),
         compactItem("Starter packs", (detail.included_in_starter_packs || []).map((pack) => pack.pack_id).join(", ") || "No starter pack ref")
       );
@@ -2788,6 +2794,8 @@ INDEX_HTML = """<!doctype html>
           [
             tag(item.namespace || "namespace", "available"),
             tag(`v${item.version || "?"}`, "available"),
+            tag(item.compatibility_status || "compatibility unknown", item.compatibility_status === "compatible" ? "available" : "review"),
+            tag(item.migration_available ? "migration available" : "current format", item.migration_available ? "review" : "available"),
             tag(`${item.required_binding_count || 0} bindings`, item.required_binding_count ? "review" : "available"),
             ...templateStarterTags(item.included_in_starter_packs),
           ],
@@ -2804,7 +2812,10 @@ INDEX_HTML = """<!doctype html>
             tag(pack.status || "available", pack.status || "available"),
           ],
           (pack.policy_templates || []).slice(0, 4).map((item) =>
-            compactItem(item.title || item.policy_id || "starter template", item.template_ref || "")
+            compactItem(
+              item.title || item.policy_id || "starter template",
+              `${item.template_ref || ""} / ${item.compatibility_status || "compatibility unknown"}`
+            )
           )
         )
       );

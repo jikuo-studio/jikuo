@@ -78,24 +78,51 @@ def load_package_templates(
             warnings.append(f"policy_template_not_readable:{path}:{exc}")
             continue
         schema = record.get("schema_version") or record.get("schema")
+        compatibility = policy_templates.template_compatibility_projection(record)
         if schema != policy_templates.POLICY_TEMPLATE_SCHEMA:
-            warnings.append(f"unsupported_policy_template_schema:{path}:{schema}")
-            continue
+            warnings.append(f"legacy_policy_template_schema:{path}:{schema or 'missing'}")
         template_policy = record.get("template_policy")
         if not isinstance(template_policy, dict):
             template_policy = {}
             warnings.append(f"policy_template_missing_template_policy:{path}")
+        normalized_policy = policy_templates.normalized_template_policy_body(record)
+        trigger_profile = policy_trigger_profile(normalized_policy)
         templates.append(
             {
                 "template_id": record.get("template_id"),
                 "template_ref": package_ref(path),
                 "template_path": str(path),
+                "schema_version": schema,
+                "normalized_schema_version": compatibility.get(
+                    "normalized_schema_version"
+                ),
+                "target_active_policy_schema": compatibility.get(
+                    "target_active_policy_schema"
+                ),
+                "compatibility_status": compatibility.get("compatibility_status"),
+                "migration_available": compatibility.get("migration_available"),
+                "migration_kind": compatibility.get("migration_kind"),
+                "migration_notes": compatibility.get("migration_notes") or [],
+                "added_default_fields": compatibility.get("added_default_fields") or [],
+                "template_compatibility": compatibility,
                 "namespace": record.get("namespace"),
                 "version": record.get("version"),
                 "title": record.get("title"),
-                "template_policy_id": template_policy.get("policy_id"),
-                "template_policy_title": template_policy.get("title"),
-                "template_policy_status": template_policy.get("status"),
+                "template_policy_id": normalized_policy.get("policy_id")
+                or template_policy.get("policy_id"),
+                "template_policy_title": normalized_policy.get("title")
+                or template_policy.get("title"),
+                "template_policy_status": normalized_policy.get("status")
+                or template_policy.get("status"),
+                "final_response_gate": policy_store.normalize_final_response_gate(
+                    template_policy.get("final_response_gate")
+                    if "final_response_gate" in template_policy
+                    else None
+                ),
+                "applies_to_work_profile": trigger_profile.get(
+                    "work_profile_applicability"
+                ),
+                "trigger_profile": trigger_profile,
                 "portability_status": (record.get("portability") or {}).get("status")
                 if isinstance(record.get("portability"), dict)
                 else None,
@@ -686,6 +713,51 @@ def build_policy_management_status(
             str(template.get("template_ref") or ""),
             [],
         )
+    templates_by_ref = {
+        str(template.get("template_ref") or ""): template
+        for template in templates
+        if template.get("template_ref")
+    }
+    for pack in starter_packs:
+        enriched_entries: list[dict[str, Any]] = []
+        for item in pack.get("policy_templates") or []:
+            if not isinstance(item, dict):
+                continue
+            template_ref = str(item.get("template_ref") or "")
+            template_detail = templates_by_ref.get(template_ref)
+            if template_detail is None:
+                enriched_entries.append(
+                    {
+                        **item,
+                        "compatibility_status": "blocked",
+                        "migration_available": False,
+                        "migration_notes": [
+                            "starter_template_ref_not_found_in_package_templates"
+                        ],
+                    }
+                )
+                continue
+            enriched_entries.append(
+                {
+                    **item,
+                    "compatibility_status": template_detail.get(
+                        "compatibility_status"
+                    ),
+                    "migration_available": template_detail.get(
+                        "migration_available"
+                    ),
+                    "migration_kind": template_detail.get("migration_kind"),
+                    "migration_notes": template_detail.get("migration_notes") or [],
+                    "target_active_policy_schema": template_detail.get(
+                        "target_active_policy_schema"
+                    ),
+                    "trigger_profile": template_detail.get("trigger_profile"),
+                    "final_response_gate": template_detail.get(
+                        "final_response_gate"
+                    ),
+                }
+            )
+        pack["policy_templates"] = enriched_entries
 
     templates_by_policy_id: dict[str, list[dict[str, Any]]] = {}
     for template in templates:
@@ -710,6 +782,14 @@ def build_policy_management_status(
         item
         for item in active_policy_distribution
         if item["distribution_state"] == "active_project_policy_only"
+    ]
+    legacy_templates = [
+        item
+        for item in templates
+        if item.get("compatibility_status") == "legacy_compatible"
+    ]
+    blocked_templates = [
+        item for item in templates if item.get("compatibility_status") == "blocked"
     ]
     active_policy_details, detail_warnings = load_active_policy_details(
         resolved_root=resolved_root,
@@ -786,6 +866,15 @@ def build_policy_management_status(
             ),
             "active_policy_with_package_template_count": len(active_with_templates),
             "active_policy_without_package_template_count": len(active_without_templates),
+            "legacy_compatible_template_count": len(legacy_templates),
+            "migration_available_template_count": len(
+                [
+                    item
+                    for item in templates
+                    if item.get("migration_available")
+                ]
+            ),
+            "blocked_template_count": len(blocked_templates),
         },
         "available_operations": [
             {
@@ -900,6 +989,7 @@ def format_markdown(report: dict[str, Any]) -> str:
         pack_text = ", ".join(str(pack.get("pack_id")) for pack in starter_packs) or "none"
         lines.append(
             f"- `{item.get('template_ref')}` / policy=`{item.get('template_policy_id')}` / "
+            f"compatibility=`{item.get('compatibility_status') or 'unknown'}` / "
             f"starter_packs=`{pack_text}`"
         )
     lines.extend(["", "## Starter Packs"])
