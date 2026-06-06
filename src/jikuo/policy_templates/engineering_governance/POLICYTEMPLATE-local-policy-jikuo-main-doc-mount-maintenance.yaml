@@ -1,0 +1,50 @@
+schema_version: "jikuo.policy_template.v0"
+template_id: "POLICYTEMPLATE-local-policy-jikuo-main-doc-mount-maintenance"
+namespace: "local"
+version: 1
+title: "Main development document mount maintenance before slice completion"
+source:
+  type: "local_project_policy"
+  ref: "redacted://local_project_policy/policy-jikuo-main-doc-mount-maintenance"
+  source_project_ref: "redacted"
+  source_policy_id: "POLICY-jikuo-main-doc-mount-maintenance"
+  source_sha256: "4b5bc73ddc3f9505644912193f989312acc97e9434406f39679d881e91820cfe"
+  privacy:
+    local_path: "redacted"
+    project_identity: "redacted"
+    source_refs: "redacted"
+portability:
+  status: "portable"
+  detected_project_refs: []
+  warnings: []
+required_bindings: []
+template_policy:
+  schema_version: "jikuo.configurable_rule_policy.v0"
+  policy_id: "POLICY-jikuo-main-doc-mount-maintenance"
+  version: 1
+  status: "active_report_only"
+  title: "Main development document mount maintenance before slice completion"
+  scenario_package: "engineering_governance"
+  source_refs:
+    - type: "policy_template"
+      ref: "POLICYTEMPLATE-local-policy-jikuo-main-doc-mount-maintenance"
+  applies_to_work_profile:
+    - lifecycle_events: ["completion_review"]
+      policy_scopes: ["editing", "progress_summary"]
+  triggers:
+    - trigger_id: "TRG-completion"
+      type: "task_lifecycle_event"
+      event: "completion_review"
+  conditions:
+    {}
+  required_actions:
+    - action_id: "ACT-maintain-main-doc-mounts-before-completion"
+      type: "maintain_main_document_mounts_and_update_scope_before_completion"
+  required_evidence:
+    - evidence_id: "EVD-main-document-mount-maintenance-evidence"
+      type: "main_document_mount_maintenance_evidence"
+      satisfies_action: "ACT-maintain-main-doc-mounts-before-completion"
+  enforcement:
+    phase: "report_only"
+    level: "review_required"
+  final_response_gate: false
