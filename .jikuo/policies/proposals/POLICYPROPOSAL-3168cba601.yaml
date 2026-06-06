@@ -1,0 +1,89 @@
+schema: "jikuo.policy_write_plan.v0"
+schema_version: "jikuo.policy_write_plan.v0"
+report_only: true
+plan_id: "POLICYWRITEPLAN-a7d2b7eb06"
+operation: "append_policy"
+status: "review"
+proposal_ref: ".jikuo/policies/proposals/POLICYPROPOSAL-3168cba601.yaml"
+policy_ref: "POLICY-jikuo-studio-frontend-authoritative-data-source"
+project_root: "D:\\personal_project\\Jikuo"
+policy_store_status: "active"
+policy_store_root: "D:\\personal_project\\Jikuo\\.jikuo\\policies"
+preflight:
+  project_state_initialized: true
+  store_exists: true
+  target_collision: false
+  decision_record_collision: false
+  proposal_snapshot_collision: false
+  manifest_stale: false
+  approval_present: false
+write_set:
+  - path: ".jikuo/policies/approved/POLICY-jikuo-studio-frontend-authoritative-data-source.yaml"
+    effect: "create approved policy file"
+    operation: "create"
+  - path: ".jikuo/policies/decisions/POLICYDECISION-0c03ec4529.yaml"
+    effect: "create policy decision record"
+    operation: "create"
+  - path: ".jikuo/policies/manifest.yaml"
+    effect: "create or update policy-store manifest active_policy_refs"
+    operation: "create_or_update"
+  - path: ".jikuo/policies/proposals/POLICYPROPOSAL-3168cba601.yaml"
+    effect: "create policy write proposal snapshot"
+    operation: "create"
+non_effects: ["does not create .jikuo/policies/", "does not write approved policy files", "does not update manifest.yaml", "does not execute policy actions", "does not create task-session evidence", "does not promote gates"]
+approval_required: true
+write_allowed_by_command: false
+writes_performed: false
+guarded_apply_available: false
+authoring_review:
+  mode: "lifecycle_gated"
+  scope_first: false
+  compatibility_trigger_event: "conversation_turn"
+  policy_scopes: ["discussion", "editing", "progress_summary"]
+  lifecycle_events: ["conversation_turn", "task_start", "completion_review"]
+  hard_gated_by_lifecycle: true
+  warnings: ["lifecycle_events_hard_gate_policy_applicability"]
+  summary: "lifecycle_events will hard-gate this policy"
+proposed_policy:
+  schema_version: "jikuo.configurable_rule_policy.v0"
+  policy_id: "POLICY-jikuo-studio-frontend-authoritative-data-source"
+  version: 1
+  status: "active_report_only"
+  title: "Studio Frontend Authoritative Data Source Boundary"
+  final_response_gate: false
+  scenario_package: "engineering_governance"
+  source_refs:
+    - type: "user_natural_language"
+      ref: "user_approved_2026-06-06_studio_frontend_authoritative_data_source_policy"
+  triggers:
+    - trigger_id: "TRG-conversation-turn"
+      type: "task_lifecycle_event"
+      event: "conversation_turn"
+  conditions:
+    - condition_id: "COND-policy-jikuo-studio-frontend-authoritative-data-source-task-type"
+      type: "task_type_is"
+      value: "frontend_change"
+    - condition_id: "COND-policy-jikuo-studio-frontend-authoritative-data-source-jikuo-layer"
+      type: "jikuo_layer_is"
+      value: "studio_web"
+    - condition_id: "COND-policy-jikuo-studio-frontend-authoritative-data-source-changed-path"
+      type: "changed_path_matches"
+      pattern: "src/jikuo/integrations/studio_web/**"
+  required_actions:
+    - action_id: "ACT-review-studio-frontend-authoritative-read-model-boundary"
+      type: "review_studio_frontend_authoritative_read_model_boundary"
+  required_evidence:
+    - evidence_id: "EVD-frontend-authoritative-read-model-review"
+      type: "frontend_authoritative_read_model_review"
+      satisfies_action: "ACT-review-studio-frontend-authoritative-read-model-boundary"
+  enforcement:
+    phase: "report_only"
+    level: "review_required"
+  applies_to_work_profile:
+    - lifecycle_events: ["conversation_turn", "task_start", "completion_review"]
+      policy_scopes: ["discussion", "editing", "progress_summary"]
+refusal_reasons: []
+warnings: []
+source_refs: ["pkg://jikuo/governance/jikuo_policy_store_configuration_flow.md", "pkg://jikuo/governance/jikuo_configurable_rule_trigger_policy.md", "pkg://jikuo/governance/jikuo_rule_action_evidence_model.md", "pkg://jikuo/governance/jikuo_policy_aware_agent_flow_contract.md"]
+status_reason: "policy write plan is ready for desktop review; no durable write was performed"
+next_actions: ["review the proposed policy, write targets, and non-effects in chat", "approve a future guarded policy writer only after the plan is correct"]

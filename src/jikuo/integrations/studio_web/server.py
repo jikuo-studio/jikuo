@@ -505,7 +505,7 @@ INDEX_HTML = """<!doctype html>
     .rules-groups {
       display: grid;
       gap: 10px;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     }
     .rules-group {
       border: 1px solid var(--line);
@@ -810,13 +810,18 @@ INDEX_HTML = """<!doctype html>
             <p class="subhead">Checked before claiming a governed slice is complete. Source: completion-check rules.</p>
             <div class="compact-list" id="document-rules-completion-overview"></div>
           </div>
-          <div class="rules-group">
-            <h3>Governance references</h3>
-            <p class="subhead">Explain boundaries and editable configuration. Source: rule-source references.</p>
-            <div class="compact-list" id="document-rules-guidance-overview"></div>
+            <div class="rules-group">
+              <h3>Governance references</h3>
+              <p class="subhead">Explain boundaries and editable configuration. Source: rule-source references.</p>
+              <div class="compact-list" id="document-rules-guidance-overview"></div>
+            </div>
+            <div class="rules-group">
+              <h3>User guide</h3>
+              <p class="subhead">First-run documentation for defaults, local mount layering, and guarded changes.</p>
+              <div class="compact-list" id="document-rules-user-docs"></div>
+            </div>
           </div>
         </div>
-      </div>
       <div class="plan-tool" aria-labelledby="document-rules-plan-title">
         <h3 id="document-rules-plan-title">Preview a Document Rules change</h3>
         <form id="document-rules-form">
@@ -3147,12 +3152,13 @@ INDEX_HTML = """<!doctype html>
       status.className = statusClass(mounts.status || "unavailable");
       status.textContent = mounts.status || "unavailable";
       const metrics = document.getElementById("document-mounts-metrics");
-      metrics.replaceChildren(
-        metric(mounts.role_count || 0, "Document roles"),
-        metric(mounts.checked_document_count || 0, "Completion documents"),
-        metric(mounts.missing_required_role_count || 0, "Missing required roles"),
-        metric(mounts.mount_set_count || 0, "Rule sets")
-      );
+        metrics.replaceChildren(
+          metric(mounts.role_count || 0, "Document roles"),
+          metric(mounts.checked_document_count || 0, "Completion documents"),
+          metric(mounts.missing_required_role_count || 0, "Missing required roles"),
+          metric(mounts.mount_set_count || 0, "Rule sets"),
+          metric(mounts.user_doc_count || 0, "User docs")
+        );
       const contextOverview = document.getElementById("document-rules-context-overview");
       const roles = mounts.roles || [];
       const contextRows = roles.slice(0, 6).map((item) =>
@@ -3174,11 +3180,20 @@ INDEX_HTML = """<!doctype html>
       const completionOverflow = overflowNote(completionOverviewDocs.length, completionRows.length, "completion checks", completionHiddenRows);
       completionOverview.replaceChildren(...(completionRows.length ? completionRows : [compactItem("No completion checks", "No completion-check documents are configured.")]), ...(completionOverflow ? [completionOverflow] : []));
       const guidanceOverview = document.getElementById("document-rules-guidance-overview");
-      const guidanceOverviewRows = (mounts.document_rule_sources || []).map((item) =>
-        compactItem(item.path || "unbound", `${item.user_label || item.source_kind || "source"} / ${item.user_description || ""}`)
-      );
+        const guidanceOverviewRows = (mounts.document_rule_sources || []).map((item) =>
+          compactItem(item.path || "unbound", `${item.user_label || item.source_kind || "source"} / ${item.user_description || ""}`)
+        );
         guidanceOverview.replaceChildren(...(guidanceOverviewRows.length ? guidanceOverviewRows : [compactItem("No governance references", "No rule sources are configured.")]));
-      };
+        const userDocsOverview = document.getElementById("document-rules-user-docs");
+        const userDocRows = (mounts.user_docs || []).map((item) =>
+          compactItem(item.path || "unbound", `${item.title || item.doc_id || "User guide"} / ${item.status || "unknown"} / ${item.purpose || ""}`)
+        );
+        const defaults = mounts.default_configuration || {};
+        userDocsOverview.replaceChildren(
+          ...(userDocRows.length ? userDocRows : [compactItem("No user guide", "No Document Rules user guide is registered.")]),
+          compactItem(defaults.editable_config_ref || ".jikuo/project_context.yaml", `editable target / ${defaults.path_policy || "project-relative paths"}`)
+        );
+        };
       const renderFirstRun = (data) => {
         const summaries = data.summaries || {};
         const configuration = summaries.configuration || {};
@@ -3323,6 +3338,45 @@ INDEX_HTML = """<!doctype html>
       return `turn_anchor=${anchorId || "unavailable"}`;
     };
     const roundHasActualWrites = (round) => numberValue(((round || {}).counts || {}).actual_write_count) > 0;
+    const missingClassificationRecords = (classification) => {
+      const record = classification || {};
+      const categories = Array.isArray(record.categories) ? record.categories : [];
+      if (categories.length) {
+        return categories;
+      }
+      const counts = record.category_counts || {};
+      return Object.keys(counts).map((category) => ({
+        category,
+        label: category,
+        count: numberValue(counts[category]),
+        meaning: "",
+        user_action: "",
+      }));
+    };
+    const missingClassificationSummary = (classification) => {
+      const records = missingClassificationRecords(classification);
+      if (!records.length) {
+        return "No missing evidence classification.";
+      }
+      return records.map((item) =>
+        `${item.label || item.category || "missing"}:${numberValue(item.count || 1)}`
+      ).join(" / ");
+    };
+    const missingClassificationRows = (classification) => {
+      const records = missingClassificationRecords(classification);
+      return records.length
+        ? records.map((item) =>
+            compactItem(
+              item.label || item.category || "Missing evidence",
+              [
+                detailCount(item.count || 1, "items"),
+                item.meaning || "",
+                item.user_action ? `Next: ${item.user_action}` : "",
+              ].filter(Boolean).join(" / ")
+            )
+          )
+        : [compactItem("No missing classification", "No missing evidence classification is reported for this selection.")];
+    };
     const renderRoundDocumentTrace = (data) => {
       const summaries = data.summaries || {};
       const traceList = (summaries.runtime || {}).round_document_traces || {};
@@ -3340,6 +3394,9 @@ INDEX_HTML = """<!doctype html>
       const activeRead = (active || {}).read_assurance || {};
       const activeWrite = (active || {}).write_assurance || {};
       const activeGap = (active || {}).gap_report || {};
+      const selectedMissingClassification = (selectedRound || {}).missing_evidence_classification
+        || activeGap.missing_evidence_classification
+        || {};
       const runtimeProjection = activeTrace.runtime_projection || {};
       const companionProjection = runtimeProjection.companion_write_obligations || {};
       const statusState = traceState(selectedRound, active, activeGap);
@@ -3437,7 +3494,8 @@ INDEX_HTML = """<!doctype html>
           ? `${selectedSemantic.coverage_status || selectedSemantic.semantic_intent_status || "unknown"} / ${selectedSemantic.provider || "provider unavailable"}`
           : "No semantic evidence."),
         compactItem("Writes", `${requiredCompanionWriteCount} required / ${declaredWriteCount} declared / ${actualWriteCount} actual`),
-        compactItem("Gaps", `${detailCount(gapCount, "items")} / unchecked ${detailCount(completionNotEvaluatedCount, "items")}`)
+        compactItem("Gaps", `${detailCount(gapCount, "items")} / unchecked ${detailCount(completionNotEvaluatedCount, "items")}`),
+        compactItem("Missing classification", missingClassificationSummary(selectedMissingClassification))
       );
 
       document.getElementById("round-trace-expected").replaceChildren(
@@ -3501,6 +3559,9 @@ INDEX_HTML = """<!doctype html>
           ]
         : [compactItem("No comparable trace", "This selected round has no runtime document evidence to compare.")];
       document.getElementById("round-trace-gaps").replaceChildren(
+        traceGroup("Missing classification", detailCount((selectedMissingClassification || {}).total_count, "items"), [
+          ...missingClassificationRows(selectedMissingClassification),
+        ]),
         traceGroup("Read gaps", detailCount(readGapCount, "items"), [
           ...(selectedTraceAvailable ? traceGapRows(readGaps, "No required-read gaps are currently reported.", readGapCount) : gapRowsForTrace),
         ]),
@@ -3561,10 +3622,27 @@ INDEX_HTML = """<!doctype html>
     const policyTraceMissingEvidenceRows = (reports) => {
       const records = reports || [];
       const rows = records.slice(0, 5).map((report) =>
-        compactItem(report.policy_ref || report.report_id || "missing evidence", `${report.status || "missing"} / ${report.summary || ""}`)
+        compactItem(
+          report.policy_ref || report.report_id || "missing evidence",
+          [
+            report.status || "missing",
+            ((report.missing_evidence_classification || {}).label || ""),
+            report.summary || "",
+            ((report.missing_evidence_classification || {}).user_action
+              ? `Next: ${(report.missing_evidence_classification || {}).user_action}`
+              : ""),
+          ].filter(Boolean).join(" / ")
+        )
       );
       const hiddenRows = records.slice(5).map((report) =>
-        compactItem(report.policy_ref || report.report_id || "missing evidence", `${report.status || "missing"} / ${report.summary || ""}`)
+        compactItem(
+          report.policy_ref || report.report_id || "missing evidence",
+          [
+            report.status || "missing",
+            ((report.missing_evidence_classification || {}).label || ""),
+            report.summary || "",
+          ].filter(Boolean).join(" / ")
+        )
       );
       const extra = overflowNote(records.length, rows.length, "missing evidence reports", hiddenRows);
       return rows.length
@@ -3598,6 +3676,7 @@ INDEX_HTML = """<!doctype html>
         compactItem("Policy runtime", `${record.policy_eval_status || "policy eval status unknown"} / ${record.condition_eval_status || "condition status unknown"} / ${record.evidence_check_status || "evidence status unknown"}`),
         compactItem("Work profile", `${workProfile.intent_class || "intent unknown"} / ${workProfile.operation_class || "operation unknown"} / scopes: ${scopes}`),
         compactItem("Counts", `${numberValue(counts.triggered_policy_count)} triggered / ${numberValue(counts.required_action_count)} actions / ${numberValue(counts.missing_evidence_count)} missing evidence`),
+        compactItem("Missing classification", missingClassificationSummary(record.missing_evidence_classification)),
       ];
     };
     const renderPolicyTrace = (runtime) => {
@@ -3649,6 +3728,7 @@ INDEX_HTML = """<!doctype html>
         compactItem("Trace records", `${numberValue(trace.trace_count)} current turn / ${numberValue(trace.all_trace_count)} retained`),
         compactItem("Triggered policies", detailCount(trace.triggered_policy_count, "policy triggers")),
         compactItem("Missing evidence", detailCount(trace.missing_evidence_count, "reports")),
+        compactItem("Missing classification", missingClassificationSummary(trace.missing_evidence_classification)),
         compactItem("Selected lifecycle", selectedTrace ? (selectedTrace.lifecycle_event || "event not supplied") : "No policy trace round selected")
       );
       const lifecycleOverview = document.getElementById("policy-trace-lifecycle-overview");
@@ -3672,7 +3752,10 @@ INDEX_HTML = """<!doctype html>
           ? [
               policyTraceDetailPanel("Runtime source", selectedTrace.proposal_id || selectedTrace.trace_id || "runtime trace", policyTraceRuntimeRows(selectedTrace)),
               policyTraceDetailPanel("Triggered policies", detailCount((selectedTrace.counts || {}).triggered_policy_count, "policies"), policyTracePolicyRows(selectedTrace.triggered_policies)),
-              policyTraceDetailPanel("Evidence gaps", detailCount((selectedTrace.counts || {}).missing_evidence_count, "reports"), policyTraceMissingEvidenceRows(selectedTrace.missing_evidence_reports)),
+              policyTraceDetailPanel("Evidence gaps", detailCount((selectedTrace.counts || {}).missing_evidence_count, "reports"), [
+                ...missingClassificationRows(selectedTrace.missing_evidence_classification),
+                ...policyTraceMissingEvidenceRows(selectedTrace.missing_evidence_reports),
+              ]),
             ]
           : [
               policyTraceDetailPanel("Runtime source", "No comparable policy trace", [

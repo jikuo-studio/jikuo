@@ -154,6 +154,12 @@ JIKUO before each user turn.
 - [`README.md`](README.md): product-facing private preview entry point.
 - [`docs/README.md`](docs/README.md): internal documentation layout and mount
   rules.
+- [`docs/user/document-management.md`](docs/user/document-management.md):
+  first-use guide for Document Rules, local mount layering, and guarded
+  document configuration changes.
+- [`docs/user/trace-and-evidence.md`](docs/user/trace-and-evidence.md):
+  guide for Policy Trace, Document Trace, turn anchors, and missing evidence
+  classifications.
 - [`docs/governance/jikuo_productization_task_map.md`](docs/governance/jikuo_productization_task_map.md):
   legacy human-readable roadmap projection.
 - [`docs/registry/`](docs/registry/): draft structured registry shards for

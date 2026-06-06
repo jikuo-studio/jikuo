@@ -16,6 +16,8 @@ JIKUO now uses this standalone repository as its active product-development home
 ## 2. Directory Layout
 
 - `docs/work_orders/`: JIKUO product work orders and implementation slices.
+- `docs/user/`: user-facing guides for first-run setup, document management,
+  policy management, trace inspection, and release limitations.
 - `docs/governance/`: JIKUO product maps, execution mounts, kernel/skeleton boundaries, policy contracts, and agent instruction contracts.
 - `docs/integrations/`: JIKUO integration examples, client configuration notes, and smoke-test companion artifacts.
 - `docs/schemas/`: JIKUO-owned schema and view-model contracts.
@@ -38,6 +40,8 @@ The following remain outside this repository's active documentation mount unless
 ## 4. Current Entry Points
 
 - `README.md`
+- `docs/user/document-management.md`
+- `docs/user/trace-and-evidence.md`
 - `docs/README.md`
 - `docs/governance/jikuo_execution_mounts.md`
 - `docs/governance/jikuo_productization_task_map.md` as a legacy
@@ -91,6 +95,7 @@ license, privacy sweep, and public-review IP gate are accepted.
 When a future task creates JIKUO-owned docs:
 
 - put work orders under `docs/work_orders/`
+- put user-facing first-run and product-operation guides under `docs/user/`
 - put durable contracts under `docs/governance/`
 - put integration examples and client-specific setup notes under `docs/integrations/`
 - put schemas under `docs/schemas/`

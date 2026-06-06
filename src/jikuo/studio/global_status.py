@@ -48,6 +48,10 @@ else:
 
 GLOBAL_STATUS_SCHEMA = "jikuo.studio.global_status.v0"
 PROJECT_CONTEXT_REF = ".jikuo/project_context.yaml"
+USER_DOC_REFS = {
+    "document_management": "docs/user/document-management.md",
+    "trace_and_evidence": "docs/user/trace-and-evidence.md",
+}
 REGISTRY_REFS = {
     "work_orders": "docs/registry/work_orders.yaml",
     "capabilities": "docs/registry/capabilities.yaml",
@@ -60,6 +64,9 @@ ROUND_DOCUMENT_TRACE_SCHEMA = "jikuo.studio.round_document_trace.v0"
 POLICY_TRACES_SCHEMA = "jikuo.studio.policy_traces.v0"
 POLICY_TRACE_SCHEMA = "jikuo.studio.policy_trace.v0"
 SEMANTIC_INTENT_EVIDENCE_SCHEMA = "jikuo.studio.semantic_intent_evidence.v0"
+MISSING_EVIDENCE_CLASSIFICATION_SCHEMA = (
+    "jikuo.studio.missing_evidence_classification.v0"
+)
 ROUND_DOCUMENT_TRACE_HISTORY_LIMIT = 24
 POLICY_TRACE_HISTORY_LIMIT = 24
 
@@ -166,6 +173,13 @@ def document_mount_configuration_terms(
                 "studio.document_mounts.apply_update",
             ],
             "stability_rule": "frontend says whether editing is available, not which implementation owns it",
+        },
+        {
+            "term_id": "document_management_guide",
+            "user_label": "Document management guide",
+            "user_description": "User-facing guide for first-run document configuration, local mount layering, and guarded Document Rules changes.",
+            "internal_refs": [USER_DOC_REFS["document_management"]],
+            "stability_rule": "user-facing documentation may be reorganized, but this term keeps the first-run help target explicit",
         },
     ]
 
@@ -516,6 +530,19 @@ def round_trace_from_parts(
     event_label = lifecycle_event or "unknown event"
     semantic_label = round_document_semantic_label(semantic_coverage)
     writes_summary = round_document_writes_summary(counts)
+    missing_classification = document_missing_classification(
+        artifact_report,
+        has_trace=has_trace,
+        counts=counts,
+    )
+    artifact_output = (
+        artifact_report_with_missing_classification(
+            artifact_report,
+            missing_classification,
+        )
+        if has_trace
+        else {}
+    )
     return {
         "schema": ROUND_DOCUMENT_TRACE_SCHEMA,
         "round_id": round_id,
@@ -541,10 +568,11 @@ def round_trace_from_parts(
         "counts": counts,
         "writes_summary": writes_summary,
         "gap_count": counts.get("gap_count", 0),
+        "missing_evidence_classification": missing_classification,
         "semantic_label": semantic_label,
         "semantic_intent_coverage": semantic_coverage or {},
         "turn_anchor": turn_anchor_projection or turn_anchor.missing_turn_anchor(),
-        "artifact_assurance": artifact_report if has_trace else {},
+        "artifact_assurance": artifact_output,
         "non_effects": [
             "does_not_read_files_by_itself",
             "does_not_inspect_git_diff",
@@ -760,6 +788,266 @@ def string_values(value: Any) -> list[str]:
     return [str(item) for item in value if str(item)]
 
 
+MISSING_EVIDENCE_CATEGORY_DEFS = {
+    "none": {
+        "label": "No missing evidence",
+        "meaning": "The selected trace has no missing evidence item in this category.",
+        "user_action": "No action is required for this category.",
+    },
+    "host_semantic_intent_missing": {
+        "label": "Host semantic intent missing",
+        "meaning": (
+            "JIKUO did not receive or retain host AI semantic-intent evidence for "
+            "this policy or round. JIKUO records semantic evidence; it does not "
+            "classify the turn by itself."
+        ),
+        "user_action": "Ensure the host AI supplies compact host_semantic_intent before governed work.",
+    },
+    "policy_evidence_not_recorded": {
+        "label": "Policy evidence not recorded",
+        "meaning": (
+            "A triggered policy expected structured evidence, but this runtime "
+            "round did not record a matching evidence item."
+        ),
+        "user_action": "Record the required evidence, mark the policy not applicable, or refine the policy scope.",
+    },
+    "policy_scope_review_needed": {
+        "label": "Policy scope review needed",
+        "meaning": (
+            "A report-only policy triggered broadly enough that its evidence may "
+            "not apply cleanly to the selected round."
+        ),
+        "user_action": "Review whether the policy should apply to this lifecycle or scope before treating it as a work failure.",
+    },
+    "document_read_observation_limit": {
+        "label": "Document read observation limit",
+        "meaning": (
+            "A configured document read obligation has no observed read evidence. "
+            "In the current version this can mean read proof was not captured, not "
+            "that the file was definitely ignored."
+        ),
+        "user_action": "Use the gap as a review prompt and capture explicit read evidence when the workflow needs proof.",
+    },
+    "document_write_evidence_gap": {
+        "label": "Document write evidence gap",
+        "meaning": (
+            "A required, planned, or actual write did not align with the evidence "
+            "recorded for this round."
+        ),
+        "user_action": "Update the plan, perform the write, or record why the write was not applicable.",
+    },
+    "applicability_not_evaluated": {
+        "label": "Applicability not evaluated",
+        "meaning": (
+            "A completion-check candidate still needs an explicit applicable, "
+            "unchanged, deferred, or not-applicable decision."
+        ),
+        "user_action": "Record an applicability decision before relying on completion-check evidence.",
+    },
+    "no_comparable_trace": {
+        "label": "No comparable trace",
+        "meaning": (
+            "The selected runtime round has no structured trace of this type. This "
+            "is a current read-model or runtime-history limit, not a direct work "
+            "failure by itself."
+        ),
+        "user_action": "Inspect adjacent lifecycle rounds or run a workflow that emits the required trace receipt.",
+    },
+    "unknown_missing_evidence": {
+        "label": "Unknown missing evidence",
+        "meaning": "The runtime report did not include enough structured detail to classify this gap more specifically.",
+        "user_action": "Inspect the runtime card and policy definition before deciding whether this is a work issue.",
+    },
+}
+
+
+def missing_category_definition(category: str) -> dict[str, str]:
+    return MISSING_EVIDENCE_CATEGORY_DEFS.get(
+        category,
+        MISSING_EVIDENCE_CATEGORY_DEFS["unknown_missing_evidence"],
+    )
+
+
+def missing_evidence_classification(
+    category: str,
+    *,
+    count: int = 1,
+    basis: str,
+    source_kind: str,
+    status: str = "review",
+) -> dict[str, Any]:
+    definition = missing_category_definition(category)
+    return {
+        "schema": MISSING_EVIDENCE_CLASSIFICATION_SCHEMA,
+        "category": category,
+        "label": definition["label"],
+        "meaning": definition["meaning"],
+        "user_action": definition["user_action"],
+        "status": status,
+        "count": count,
+        "basis": basis,
+        "source_kind": source_kind,
+        "guide_ref": USER_DOC_REFS["trace_and_evidence"],
+        "non_effects": [
+            "does_not_change_original_missing_status",
+            "does_not_satisfy_policy_evidence",
+            "does_not_infer_semantic_intent",
+        ],
+    }
+
+
+def missing_classification_summary(items: list[dict[str, Any]]) -> dict[str, Any]:
+    category_counts: dict[str, int] = {}
+    for item in items:
+        category = str(item.get("category") or "unknown_missing_evidence")
+        category_counts[category] = category_counts.get(category, 0) + int_value(
+            item.get("count") or 1
+        )
+    return {
+        "schema": MISSING_EVIDENCE_CLASSIFICATION_SCHEMA,
+        "status": "review" if category_counts else "ok",
+        "total_count": sum(category_counts.values()),
+        "category_counts": category_counts,
+        "categories": [
+            missing_evidence_classification(
+                category,
+                count=count,
+                basis="classification_summary",
+                source_kind="studio_read_model",
+            )
+            for category, count in sorted(category_counts.items())
+        ],
+        "guide_ref": USER_DOC_REFS["trace_and_evidence"],
+        "non_effects": [
+            "does_not_change_original_missing_status",
+            "does_not_satisfy_policy_evidence",
+            "does_not_infer_semantic_intent",
+        ],
+    }
+
+
+def text_blob(*values: Any) -> str:
+    return " ".join(str(value or "") for value in values).lower()
+
+
+def classify_policy_missing_evidence(item: dict[str, Any]) -> dict[str, Any]:
+    blob = text_blob(
+        item.get("report_id"),
+        item.get("policy_ref"),
+        item.get("summary"),
+        item.get("reason"),
+    )
+    if any(token in blob for token in ("semantic", "host_ai", "host semantic")):
+        category = "host_semantic_intent_missing"
+    elif "discussion_no_write_boundary" in blob:
+        category = "policy_scope_review_needed"
+    elif "no matching" in blob or "evidence found" in blob or "evidence" in blob:
+        category = "policy_evidence_not_recorded"
+    else:
+        category = "unknown_missing_evidence"
+    return missing_evidence_classification(
+        category,
+        count=int_value(item.get("missing_count") or 1),
+        basis="policy_runtime_status.missing_evidence_reports",
+        source_kind="policy_trace",
+    )
+
+
+def classify_document_gap(gap_type: str | None, *, count: int, basis: str) -> dict[str, Any]:
+    gap = str(gap_type or "")
+    if gap.startswith("required_read"):
+        category = "document_read_observation_limit"
+    elif gap in {
+        "required_write_not_planned",
+        "required_write_not_observed",
+        "planned_write_not_observed",
+        "actual_write_not_planned",
+    }:
+        category = "document_write_evidence_gap"
+    elif gap == "completion_check_not_evaluated":
+        category = "applicability_not_evaluated"
+    elif gap == "no_comparable_trace":
+        category = "no_comparable_trace"
+    else:
+        category = "unknown_missing_evidence"
+    return missing_evidence_classification(
+        category,
+        count=count,
+        basis=basis,
+        source_kind="document_trace",
+    )
+
+
+def document_missing_classification(
+    artifact_report: dict[str, Any],
+    *,
+    has_trace: bool,
+    counts: dict[str, int],
+) -> dict[str, Any]:
+    if not has_trace:
+        return missing_classification_summary(
+            [
+                classify_document_gap(
+                    "no_comparable_trace",
+                    count=1,
+                    basis="round_document_trace.has_document_trace=false",
+                )
+            ]
+        )
+    gap_report = artifact_report.get("gap_report") or {}
+    write = artifact_report.get("write_assurance") or {}
+    items: list[dict[str, Any]] = []
+    read_gap_count = int_value(gap_report.get("read_gap_count"))
+    if not read_gap_count:
+        read_gap_count = len(dict_list(gap_report.get("read_gaps")))
+    if read_gap_count:
+        items.append(
+            classify_document_gap(
+                "required_read_not_observed",
+                count=read_gap_count,
+                basis="artifact_assurance.gap_report.read_gaps",
+            )
+        )
+    write_gap_count = int_value(gap_report.get("write_gap_count"))
+    if not write_gap_count:
+        write_gap_count = len(dict_list(gap_report.get("write_gaps")))
+    if write_gap_count:
+        items.append(
+            classify_document_gap(
+                "required_write_not_observed",
+                count=write_gap_count,
+                basis="artifact_assurance.gap_report.write_gaps",
+            )
+        )
+    completion_count = int_value(
+        gap_report.get("completion_check_not_evaluated_count")
+        or write.get("completion_check_not_evaluated_count")
+        or counts.get("completion_check_not_evaluated_count")
+    )
+    if completion_count:
+        items.append(
+            classify_document_gap(
+                "completion_check_not_evaluated",
+                count=completion_count,
+                basis="artifact_assurance.write_assurance.completion_check_not_evaluated",
+            )
+        )
+    return missing_classification_summary(items)
+
+
+def artifact_report_with_missing_classification(
+    artifact_report: dict[str, Any],
+    classification: dict[str, Any],
+) -> dict[str, Any]:
+    if not artifact_report:
+        return {}
+    output = dict(artifact_report)
+    gap_report = dict(output.get("gap_report") or {})
+    gap_report["missing_evidence_classification"] = classification
+    output["gap_report"] = gap_report
+    return output
+
+
 def policy_trace_anchor_key(anchor: dict[str, Any]) -> tuple[str, ...] | None:
     if anchor.get("status") != "available":
         return None
@@ -845,6 +1133,7 @@ def policy_trace_missing_evidence_rows(
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for item in dict_list(policy_runtime.get("missing_evidence_reports")):
+        classification = classify_policy_missing_evidence(item)
         rows.append(
             {
                 "report_id": item.get("report_id"),
@@ -852,6 +1141,7 @@ def policy_trace_missing_evidence_rows(
                 "status": item.get("status"),
                 "missing_count": item.get("missing_count"),
                 "summary": item.get("summary") or item.get("reason"),
+                "missing_evidence_classification": classification,
             }
         )
     return rows
@@ -890,6 +1180,13 @@ def policy_trace_from_state(
     required_actions = policy_trace_action_rows(policy_runtime)
     evidence_rows = policy_trace_evidence_rows(policy_runtime)
     missing_evidence_rows = policy_trace_missing_evidence_rows(policy_runtime)
+    missing_classification = missing_classification_summary(
+        [
+            row["missing_evidence_classification"]
+            for row in missing_evidence_rows
+            if isinstance(row.get("missing_evidence_classification"), dict)
+        ]
+    )
     triggered_count = int_value(
         policy_runtime.get("triggered_policy_count") or len(triggered_policies)
     )
@@ -947,6 +1244,7 @@ def policy_trace_from_state(
         "required_actions": required_actions,
         "evidence_status": evidence_rows,
         "missing_evidence_reports": missing_evidence_rows,
+        "missing_evidence_classification": missing_classification,
         "non_effects": [
             "does_not_evaluate_policy_conditions",
             "does_not_execute_policy_actions",
@@ -1040,6 +1338,17 @@ def policy_traces(project_root: Path, state: dict[str, Any]) -> dict[str, Any]:
         int_value((item.get("counts") or {}).get("missing_evidence_count"))
         for item in current_turn_traces
     )
+    missing_classification = missing_classification_summary(
+        [
+            category
+            for item in current_turn_traces
+            for category in (
+                (item.get("missing_evidence_classification") or {}).get("categories")
+                or []
+            )
+            if isinstance(category, dict)
+        ]
+    )
     return {
         "schema": POLICY_TRACES_SCHEMA,
         "schema_version": POLICY_TRACES_SCHEMA,
@@ -1056,6 +1365,7 @@ def policy_traces(project_root: Path, state: dict[str, Any]) -> dict[str, Any]:
         "all_trace_count": len(traces),
         "triggered_policy_count": triggered_policy_count,
         "missing_evidence_count": missing_evidence_count,
+        "missing_evidence_classification": missing_classification,
         "traces": current_turn_traces,
         "retained_traces": traces,
         "read_model_limitations": [
@@ -1457,6 +1767,7 @@ def runtime_summary(project_root: Path, diagnostics: list[dict[str, Any]]) -> di
         "artifact_assurance": state.get("artifact_assurance") or {},
         "round_document_traces": round_traces,
         "policy_trace": policy_trace,
+        "trace_and_evidence_doc_ref": USER_DOC_REFS["trace_and_evidence"],
         "lifecycle_card_count": len(state.get("lifecycle_card_links") or []),
         "card_links": {
             "last_card": (links.get("last_card") or {}).get("markdown"),
@@ -1704,6 +2015,43 @@ def document_mounts_summary(
     status = "available" if not missing_required_roles else "degraded"
     active_mount_authority = list(main_mounts.get("active_mount_authority") or [])
     rule_source_descriptors = classify_document_rule_sources(active_mount_authority)
+    user_docs = [
+        {
+            "doc_id": "document_management",
+            "title": "Document management",
+            "path": USER_DOC_REFS["document_management"],
+            "status": "available"
+            if (project_root / USER_DOC_REFS["document_management"]).is_file()
+            else "missing",
+            "purpose": "First-run guide for Document Rules defaults, local mount layering, and guarded add/remove changes.",
+            "doc_type": "how_to",
+        },
+        {
+            "doc_id": "trace_and_evidence",
+            "title": "Trace and evidence",
+            "path": USER_DOC_REFS["trace_and_evidence"],
+            "status": "available"
+            if (project_root / USER_DOC_REFS["trace_and_evidence"]).is_file()
+            else "missing",
+            "purpose": "Guide for Policy Trace, Document Trace, turn anchors, and missing-evidence classifications.",
+            "doc_type": "concept_and_how_to",
+        }
+    ]
+    default_configuration = {
+        "schema": "jikuo.studio.document_rules_default_configuration.v0",
+        "editable_config_ref": PROJECT_CONTEXT_REF,
+        "guarded_plan_surface": "jikuo studio document-rules plan",
+        "guarded_apply_surface": "jikuo studio document-rules apply",
+        "canonical_path_root": main_mounts.get("canonical_path_root") or ".",
+        "path_policy": main_mounts.get("path_policy") or "standalone_repo_paths_only",
+        "default_write_target": PROJECT_CONTEXT_REF,
+        "default_authority_sources": active_mount_authority,
+        "non_effects": [
+            "does_not_edit_package_defaults",
+            "does_not_edit_runtime_history",
+            "does_not_read_files_by_itself",
+        ],
+    }
     return {
         "status": status,
         "source_status": "available",
@@ -1713,6 +2061,11 @@ def document_mounts_summary(
             mount_sets_ref=mount_sets_ref,
         ),
         "project_context_ref": PROJECT_CONTEXT_REF,
+        "document_management_doc_ref": USER_DOC_REFS["document_management"],
+        "trace_and_evidence_doc_ref": USER_DOC_REFS["trace_and_evidence"],
+        "user_docs": user_docs,
+        "user_doc_count": len(user_docs),
+        "default_configuration": default_configuration,
         "mount_sets_ref": mount_sets_ref,
         "canonical_path_root": main_mounts.get("canonical_path_root"),
         "path_policy": main_mounts.get("path_policy"),
@@ -2114,6 +2467,7 @@ def format_markdown(report: dict[str, Any]) -> str:
         f"## {document_rules_label}",
         "",
         f"- {rule_sources_label}: editable=`{len(document_mounts.get('editable_configuration_sources') or [])}` / guidance=`{len(document_mounts.get('governance_guidance_sources') or [])}`",
+        f"- User guide: `{document_mounts.get('document_management_doc_ref')}`",
         f"- Missing required roles: `{document_mounts.get('missing_required_role_count', 0)}`",
         f"- Rule sets: `{document_mounts.get('mount_set_count', 0)}` / Studio status=`{document_mounts.get('studio_mount_set_status')}`",
         "",

@@ -1,0 +1,70 @@
+schema_version: "jikuo.configurable_rule_policy.v0"
+policy_id: "POLICY-jikuo-studio-frontend-authoritative-data-source"
+version: 1
+status: "active_report_only"
+title: "Studio Frontend Authoritative Data Source Boundary"
+final_response_gate: true
+scenario_package: "engineering_governance"
+source_refs:
+  - type: "user_natural_language"
+    ref: "user_approved_2026-06-06_studio_frontend_authoritative_data_source_policy"
+triggers:
+  - trigger_id: "TRG-conversation-turn"
+    type: "task_lifecycle_event"
+    event: "conversation_turn"
+  - trigger_id: "TRG-task-start"
+    type: "task_lifecycle_event"
+    event: "task_start"
+  - trigger_id: "TRG-completion-review"
+    type: "task_lifecycle_event"
+    event: "completion_review"
+conditions: []
+required_actions:
+  - action_id: "ACT-review-studio-frontend-authoritative-read-model-boundary"
+    type: "review_studio_frontend_authoritative_read_model_boundary"
+    summary: "Review Studio frontend state designs and edits against backend-owned read models before accepting the approach."
+required_evidence:
+  - evidence_id: "EVD-frontend-authoritative-read-model-review"
+    type: "frontend_authoritative_read_model_review"
+    satisfies_action: "ACT-review-studio-frontend-authoritative-read-model-boundary"
+enforcement:
+  phase: "report_only"
+  level: "review_required"
+applies_to_work_profile:
+  - lifecycle_events: ["conversation_turn", "task_start", "completion_review"]
+    policy_scopes: ["discussion", "editing", "progress_summary"]
+applicability_boundary:
+  summary: "Applies when discussing, implementing, or summarizing Studio frontend state/data-source behavior."
+  design_scope: "Includes design discussion before file edits so the host AI does not accept raw-storage-driven UI architecture."
+  path_hints:
+    - "src/jikuo/integrations/studio_web/**"
+    - "src/jikuo/studio/**"
+    - "tests/studio_*_tests.py"
+authoritative_sources:
+  - api: "/api/status"
+    owner: "jikuo.studio.global_status"
+    purpose: "Global Studio runtime, document trace, policy trace, and Document Rules summary."
+  - api: "/api/policy-management/status"
+    owner: "jikuo.policy_management_status"
+    purpose: "Active policy, template, starter pack, and policy configuration read model."
+  - api: "/api/project-files"
+    owner: "jikuo.studio.project_files"
+    purpose: "Project file inventory for Document Rules selection."
+  - api: "plan/apply endpoints"
+    owner: "operation-specific guarded writer"
+    purpose: "Preview/apply result for the specific guarded operation only."
+frontend_boundary_obligations:
+  - "During design discussion, identify the authoritative API and read-model path before accepting a Studio frontend state approach."
+  - "During implementation, normalize missing or ambiguous facts in the backend Studio read model before rendering them in the frontend."
+  - "The frontend may format, select, lay out, and render empty states, but must not infer governance facts."
+  - "The frontend must not reconstruct semantic intent, policy trigger status, evidence status, missing evidence classification, or document trace meaning."
+  - "The frontend must not directly parse .jikuo/runtime state summaries, runtime history files, policy YAML, or project context YAML for display facts."
+  - "Completion or progress summaries must state whether the authoritative read-model boundary was preserved."
+disallowed_patterns:
+  - "frontend reads raw .jikuo files directly"
+  - "frontend reconstructs missing evidence classification from low-level reports"
+  - "frontend merges competing raw fields to decide governance meaning"
+  - "frontend treats absent read-model data as successful evidence"
+  - "design discussion proposes a UI fact without naming its backend read-model authority"
+final_response_gate_obligation: "When triggered, the final response must state whether Studio frontend work remained bound to authoritative read models and identify any remaining fallback or normalization debt."
+business_meaning: "Keeps Studio as a thin, predictable governance UI backed by one backend-owned projection of policy, document, runtime, and evidence facts."

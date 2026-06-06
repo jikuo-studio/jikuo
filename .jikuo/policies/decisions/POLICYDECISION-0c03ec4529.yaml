@@ -1,0 +1,17 @@
+schema_version: "jikuo.policy_decision.v0"
+decision_id: "POLICYDECISION-0c03ec4529"
+proposal_ref: ".jikuo/policies/proposals/POLICYPROPOSAL-3168cba601.yaml"
+policy_ref: "POLICY-jikuo-studio-frontend-authoritative-data-source"
+decision: "approve_write"
+target:
+  kind: "approved_policy"
+  ref: "POLICY-jikuo-studio-frontend-authoritative-data-source"
+effect: "append_policy POLICY-jikuo-studio-frontend-authoritative-data-source and update policy-store manifest active refs"
+non_effect: "does not execute policy actions, persist evidence, or promote gates"
+approval_phrase: "好的，请撰写这样的policy，并激活"
+created_at: "2026-06-06T15:08:28Z"
+source_plan_ref: "POLICYWRITEPLAN-a7d2b7eb06"
+source_plan_schema: "jikuo.policy_write_plan.v0"
+storage:
+  path: ".jikuo/policies/decisions/POLICYDECISION-0c03ec4529.yaml"
+  policy_store_ref: ".jikuo/policies"

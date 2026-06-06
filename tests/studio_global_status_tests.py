@@ -587,6 +587,10 @@ class StudioGlobalStatusTests(unittest.TestCase):
             )
             self.assertEqual(policy_trace["triggered_policy_count"], 2)
             self.assertEqual(policy_trace["missing_evidence_count"], 2)
+            self.assertEqual(
+                policy_trace["missing_evidence_classification"]["category_counts"],
+                {"policy_evidence_not_recorded": 2},
+            )
             self.assertEqual(policy_trace["trace_count"], 2)
             self.assertEqual(policy_trace["all_trace_count"], 3)
             self.assertEqual(len(policy_trace["traces"]), 2)
@@ -618,6 +622,17 @@ class StudioGlobalStatusTests(unittest.TestCase):
                     "POLICY-previous-fixture",
                 },
             )
+            for trace in policy_trace["traces"]:
+                self.assertEqual(
+                    trace["missing_evidence_classification"]["category_counts"],
+                    {"policy_evidence_not_recorded": 1},
+                )
+                self.assertEqual(
+                    trace["missing_evidence_reports"][0][
+                        "missing_evidence_classification"
+                    ]["category"],
+                    "policy_evidence_not_recorded",
+                )
 
     def test_runtime_summary_exposes_selectable_round_document_traces(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -729,12 +744,26 @@ class StudioGlobalStatusTests(unittest.TestCase):
             self.assertEqual(latest["history_ref"], latest_ref)
             self.assertFalse(latest["has_document_trace"])
             self.assertEqual(latest["document_change_status"], "no_trace")
+            self.assertEqual(
+                latest["missing_evidence_classification"]["category_counts"],
+                {"no_comparable_trace": 1},
+            )
             self.assertEqual(older["history_ref"], older_ref)
             self.assertTrue(older["has_document_trace"])
             self.assertTrue(older["has_document_changes"])
             self.assertEqual(older["counts"]["planned_write_count"], 2)
             self.assertEqual(older["counts"]["actual_write_count"], 1)
             self.assertEqual(older["gap_count"], 1)
+            self.assertEqual(
+                older["missing_evidence_classification"]["category_counts"],
+                {"document_read_observation_limit": 1},
+            )
+            self.assertEqual(
+                older["artifact_assurance"]["gap_report"][
+                    "missing_evidence_classification"
+                ]["category_counts"],
+                {"document_read_observation_limit": 1},
+            )
             self.assertIn("completion_review", older["selector_label"])
             self.assertIn("1 gaps", older["selector_label"])
             ordered_times = [item["updated_at_utc"] for item in traces["rounds"]]
@@ -951,6 +980,10 @@ class StudioGlobalStatusTests(unittest.TestCase):
             "Governance guidance",
         )
         self.assertIn("stability_rule", terms["edit_status"])
+        self.assertEqual(
+            terms["document_management_guide"]["internal_refs"],
+            ["docs/user/document-management.md"],
+        )
         editable_sources = document_mounts["editable_configuration_sources"]
         guidance_sources = document_mounts["governance_guidance_sources"]
         self.assertEqual(editable_sources[0]["path"], ".jikuo/project_context.yaml")
@@ -963,6 +996,26 @@ class StudioGlobalStatusTests(unittest.TestCase):
         self.assertEqual(
             document_mounts["source_truth_boundary"]["studio_write_target"],
             ".jikuo/project_context.yaml",
+        )
+        self.assertEqual(
+            document_mounts["document_management_doc_ref"],
+            "docs/user/document-management.md",
+        )
+        self.assertEqual(
+            document_mounts["trace_and_evidence_doc_ref"],
+            "docs/user/trace-and-evidence.md",
+        )
+        user_docs = {item["doc_id"]: item for item in document_mounts["user_docs"]}
+        self.assertEqual(user_docs["document_management"]["status"], "available")
+        self.assertEqual(user_docs["trace_and_evidence"]["status"], "available")
+        self.assertEqual(document_mounts["user_doc_count"], 2)
+        self.assertEqual(
+            document_mounts["default_configuration"]["editable_config_ref"],
+            ".jikuo/project_context.yaml",
+        )
+        self.assertEqual(
+            document_mounts["default_configuration"]["guarded_plan_surface"],
+            "jikuo studio document-rules plan",
         )
         self.assertFalse(report["writes_performed"])
 
