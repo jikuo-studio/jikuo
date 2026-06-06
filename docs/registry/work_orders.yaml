@@ -1276,6 +1276,25 @@ entries:
     capability_extraction_status: "extracted_from_work_order_body"
     required_mount_sets:
       - "MOUNT-STUDIO-01"
+  - id: "JIKUO-STUDIO-TRACE-CONFIG-01"
+    title: "SPRINT_050_WO-PER-JIKUO-STUDIO-TRACE-CONFIG-01: Studio Trace And Configuration IA"
+    path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-TRACE-CONFIG-01_studio_trace_configuration_ia.md"
+    sprint: "SPRINT_050"
+    status: "Accepted for implementation; first frontend grouping, policy trace read model, policy trace frontend, and Policy Trace round selector implemented"
+    impact_tags:
+      - "studio"
+      - "frontend"
+      - "runtime_visibility"
+      - "policy_trace"
+      - "document_trace"
+      - "configuration"
+    implements_capabilities:
+      - "CAP-STUDIO-TRACE-CONFIGURATION-IA-01"
+      - "CAP-STUDIO-POLICY-TRACE-READ-MODEL-01"
+      - "CAP-STUDIO-POLICY-TRACE-FRONTEND-01"
+    capability_extraction_status: "extracted_from_work_order_body"
+    required_mount_sets:
+      - "MOUNT-STUDIO-01"
   - id: "JIKUO-MVP-01"
     title: "SPRINT_050_WO-PER-JIKUO-MVP-01: Work Receipt And Configuration MVP"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-MVP-01_work_receipt_and_configuration_mvp.md"

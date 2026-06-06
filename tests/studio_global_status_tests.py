@@ -398,6 +398,171 @@ class StudioGlobalStatusTests(unittest.TestCase):
             self.assertEqual(trace["operation_class"], "workspace_edit")
             self.assertEqual(trace["turn_anchor"]["anchor_id"], "turn_trace_fixture")
 
+    def test_runtime_summary_exposes_policy_trace_by_turn_anchor(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            runtime_root = project_root / ".jikuo" / "runtime"
+            history_root = runtime_root / "history"
+            history_root.mkdir(parents=True)
+            anchor = {
+                "schema": "jikuo.turn_anchor.v0",
+                "status": "available",
+                "anchor_id": "turn_policy_trace_fixture",
+                "source_kind": "host_adapter",
+                "session_id": "session-policy-trace",
+                "turn_id": "turn-policy-trace",
+            }
+
+            def runtime_state(
+                *,
+                event: str,
+                history_ref: str,
+                updated_at_utc: str,
+                policy_ref: str,
+            ) -> dict[str, object]:
+                return {
+                    "schema": "jikuo.runtime_state_summary.v0",
+                    "status": "available",
+                    "updated_at_utc": updated_at_utc,
+                    "source": {
+                        "proposal_id": f"proposal_{event}",
+                        "status": "review",
+                        "event": event,
+                    },
+                    "runtime_visibility": {"history_ref": history_ref},
+                    "turn_anchor": anchor,
+                    "policy_runtime_status": {
+                        "schema": "jikuo.policy_runtime_status.v0",
+                        "policy_store_status": "active",
+                        "policy_eval_status": "evaluated",
+                        "policy_condition_eval_status": "checked",
+                        "policy_evidence_check_status": "checked",
+                        "active_policy_count": 2,
+                        "triggered_policy_count": 1,
+                        "not_triggered_policy_count": 1,
+                        "required_action_count": 1,
+                        "evidence_status_count": 1,
+                        "missing_evidence_count": 1,
+                        "policy_feedback_option_count": 0,
+                        "work_profile": {
+                            "lifecycle_event": event,
+                            "intent_class": "editing",
+                            "operation_class": "workspace_edit",
+                            "output_class": "change",
+                            "policy_scopes": ["editing"],
+                            "fallback_expanded": False,
+                            "basis": {
+                                "host_semantic_intent": {
+                                    "status": "provided",
+                                    "provider": "host_ai",
+                                    "turn_anchor": anchor,
+                                }
+                            },
+                        },
+                        "triggered_policies": [
+                            {
+                                "policy_ref": policy_ref,
+                                "policy_title": f"{event} policy",
+                                "trigger_ref": f"TRG-{event}",
+                                "trigger_reason": f"{event} matched",
+                                "declared_trigger_event": event,
+                                "evaluation_event": event,
+                                "condition_status": "matched",
+                                "status": "triggered",
+                                "confidence": "tool_verified",
+                                "work_profile_match": {
+                                    "matched_refs": [
+                                        f"lifecycle_event:{event}",
+                                        "policy_scope:editing",
+                                    ],
+                                    "summary": "work_profile matched editing",
+                                },
+                            }
+                        ],
+                        "required_actions": [
+                            {
+                                "action_id": f"ACT-{event}",
+                                "type": "render_policy_runtime_status_card",
+                                "status": "not_started",
+                                "approval_required": False,
+                            }
+                        ],
+                        "evidence_status": [
+                            {
+                                "evidence_id": f"EVD-{event}",
+                                "type": "policy_runtime_status_visibility_evidence",
+                                "status": "missing",
+                                "satisfies_action": f"ACT-{event}",
+                                "reason": "fixture missing evidence",
+                            }
+                        ],
+                        "missing_evidence_reports": [
+                            {
+                                "report_id": f"MER-{event}",
+                                "policy_ref": policy_ref,
+                                "status": "review_required",
+                                "missing_count": 1,
+                                "reason": "fixture missing evidence",
+                            }
+                        ],
+                    },
+                }
+
+            task_start_ref = ".jikuo/runtime/history/20260606T010000Z_task_start.md"
+            conversation_ref = ".jikuo/runtime/history/20260606T000000Z_conversation.md"
+            latest_state = runtime_state(
+                event="task_start",
+                history_ref=task_start_ref,
+                updated_at_utc="2026-06-06T01:00:00Z",
+                policy_ref="POLICY-task-start-fixture",
+            )
+            conversation_state = runtime_state(
+                event="conversation_turn",
+                history_ref=conversation_ref,
+                updated_at_utc="2026-06-06T00:00:00Z",
+                policy_ref="POLICY-conversation-fixture",
+            )
+            (runtime_root / "state_summary.json").write_text(
+                json.dumps(latest_state),
+                encoding="utf-8",
+            )
+            for rel_ref, state in (
+                (task_start_ref, latest_state),
+                (conversation_ref, conversation_state),
+            ):
+                card_path = project_root / rel_ref
+                card_path.write_text("# Runtime card\n", encoding="utf-8")
+                card_path.with_suffix(".json").write_text(
+                    json.dumps(state),
+                    encoding="utf-8",
+                )
+
+            summary = global_status.runtime_summary(project_root, [])
+            policy_trace = summary["policy_trace"]
+
+            self.assertEqual(policy_trace["schema"], global_status.POLICY_TRACES_SCHEMA)
+            self.assertFalse(policy_trace["writes_performed"])
+            self.assertEqual(
+                policy_trace["current_turn_anchor"]["anchor_id"],
+                "turn_policy_trace_fixture",
+            )
+            self.assertEqual(policy_trace["triggered_policy_count"], 2)
+            self.assertEqual(policy_trace["missing_evidence_count"], 2)
+            self.assertEqual(
+                policy_trace["observed_lifecycle_events"],
+                ["conversation_turn", "task_start"],
+            )
+            self.assertEqual(policy_trace["missing_recommended_events"], ["completion_review"])
+            policy_refs = {
+                policy["policy_ref"]
+                for trace in policy_trace["traces"]
+                for policy in trace["triggered_policies"]
+            }
+            self.assertEqual(
+                policy_refs,
+                {"POLICY-conversation-fixture", "POLICY-task-start-fixture"},
+            )
+
     def test_runtime_summary_exposes_selectable_round_document_traces(self):
         with tempfile.TemporaryDirectory() as tmp:
             project_root = Path(tmp) / "project"

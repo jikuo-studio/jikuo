@@ -57,8 +57,11 @@ REGISTRY_REFS = {
 CONFIGURATION_LANGUAGE_SCHEMA = "jikuo.studio.configuration_language.v0"
 ROUND_DOCUMENT_TRACES_SCHEMA = "jikuo.studio.round_document_traces.v0"
 ROUND_DOCUMENT_TRACE_SCHEMA = "jikuo.studio.round_document_trace.v0"
+POLICY_TRACES_SCHEMA = "jikuo.studio.policy_traces.v0"
+POLICY_TRACE_SCHEMA = "jikuo.studio.policy_trace.v0"
 SEMANTIC_INTENT_EVIDENCE_SCHEMA = "jikuo.studio.semantic_intent_evidence.v0"
 ROUND_DOCUMENT_TRACE_HISTORY_LIMIT = 24
+POLICY_TRACE_HISTORY_LIMIT = 24
 
 
 def document_rule_source_descriptor(path_ref: str) -> dict[str, Any]:
@@ -738,6 +741,340 @@ def round_document_traces(project_root: Path, state: dict[str, Any]) -> dict[str
     }
 
 
+def int_value(value: Any) -> int:
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def dict_list(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, dict)]
+
+
+def string_values(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item) for item in value if str(item)]
+
+
+def policy_trace_anchor_key(anchor: dict[str, Any]) -> tuple[str, ...] | None:
+    if anchor.get("status") != "available":
+        return None
+    anchor_id = str(anchor.get("anchor_id") or "")
+    if anchor_id:
+        return ("anchor_id", anchor_id)
+    session_id = str(anchor.get("session_id") or "")
+    turn_id = str(anchor.get("turn_id") or "")
+    if session_id and turn_id:
+        return ("session_turn", session_id, turn_id)
+    return None
+
+
+def policy_trace_anchor_matches(
+    trace: dict[str, Any],
+    expected_anchor: dict[str, Any],
+) -> bool:
+    expected_key = policy_trace_anchor_key(expected_anchor)
+    if not expected_key:
+        return True
+    return policy_trace_anchor_key(trace.get("turn_anchor") or {}) == expected_key
+
+
+def policy_trace_policy_rows(policy_runtime: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for item in dict_list(policy_runtime.get("triggered_policies")):
+        work_match = item.get("work_profile_match") or {}
+        final_response_gate = item.get("final_response_gate")
+        rows.append(
+            {
+                "policy_ref": item.get("policy_ref"),
+                "policy_title": item.get("policy_title"),
+                "trigger_ref": item.get("trigger_ref"),
+                "trigger_reason": item.get("trigger_reason"),
+                "trigger_match_mode": item.get("trigger_match_mode"),
+                "declared_trigger_event": item.get("declared_trigger_event"),
+                "evaluation_event": item.get("evaluation_event"),
+                "condition_status": item.get("condition_status"),
+                "status": item.get("status"),
+                "confidence": item.get("confidence"),
+                "matched_refs": string_values(work_match.get("matched_refs")),
+                "work_profile_match_summary": work_match.get("summary"),
+                "final_response_gate": (
+                    final_response_gate if isinstance(final_response_gate, dict) else {}
+                ),
+            }
+        )
+    return rows
+
+
+def policy_trace_action_rows(policy_runtime: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for item in dict_list(policy_runtime.get("required_actions")):
+        rows.append(
+            {
+                "action_id": item.get("action_id"),
+                "type": item.get("type"),
+                "status": item.get("status"),
+                "approval_required": item.get("approval_required"),
+                "policy_ref": item.get("policy_ref"),
+            }
+        )
+    return rows
+
+
+def policy_trace_evidence_rows(policy_runtime: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for item in dict_list(policy_runtime.get("evidence_status")):
+        rows.append(
+            {
+                "evidence_id": item.get("evidence_id"),
+                "satisfies_action": item.get("satisfies_action"),
+                "type": item.get("type"),
+                "status": item.get("status"),
+                "summary": item.get("summary") or item.get("reason"),
+            }
+        )
+    return rows
+
+
+def policy_trace_missing_evidence_rows(
+    policy_runtime: dict[str, Any],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for item in dict_list(policy_runtime.get("missing_evidence_reports")):
+        rows.append(
+            {
+                "report_id": item.get("report_id"),
+                "policy_ref": item.get("policy_ref"),
+                "status": item.get("status"),
+                "missing_count": item.get("missing_count"),
+                "summary": item.get("summary") or item.get("reason"),
+            }
+        )
+    return rows
+
+
+def policy_trace_from_state(
+    project_root: Path,
+    state: dict[str, Any],
+    *,
+    source_kind: str = "latest_runtime_state",
+) -> dict[str, Any] | None:
+    if state.get("status") in {"missing", "invalid", "unavailable"} and not state.get(
+        "runtime_visibility"
+    ):
+        return None
+    policy_runtime = state.get("policy_runtime_status") or {}
+    if not isinstance(policy_runtime, dict) or not policy_runtime:
+        return None
+    source = state.get("source") or {}
+    runtime = state.get("runtime_visibility") or {}
+    work_profile = policy_runtime.get("work_profile") or state.get("work_profile") or {}
+    if not isinstance(work_profile, dict):
+        work_profile = {}
+    history_ref = runtime.get("history_ref")
+    trace_id = Path(str(history_ref)).stem if history_ref else f"{source_kind}:{state.get('updated_at_utc') or 'unknown'}"
+    lifecycle_event = source.get("event") or work_profile.get("lifecycle_event")
+    turn_anchor_projection = turn_anchor.normalize_turn_anchor(state.get("turn_anchor"))
+    if turn_anchor_projection.get("status") != "available":
+        host_intent = ((work_profile.get("basis") or {}).get("host_semantic_intent") or {})
+        if isinstance(host_intent, dict):
+            turn_anchor_projection = turn_anchor.normalize_turn_anchor(
+                host_intent.get("turn_anchor")
+            )
+
+    triggered_policies = policy_trace_policy_rows(policy_runtime)
+    required_actions = policy_trace_action_rows(policy_runtime)
+    evidence_rows = policy_trace_evidence_rows(policy_runtime)
+    missing_evidence_rows = policy_trace_missing_evidence_rows(policy_runtime)
+    triggered_count = int_value(
+        policy_runtime.get("triggered_policy_count") or len(triggered_policies)
+    )
+    missing_evidence_count = int_value(
+        policy_runtime.get("missing_evidence_count") or len(missing_evidence_rows)
+    )
+    required_action_count = int_value(
+        policy_runtime.get("required_action_count") or len(required_actions)
+    )
+    return {
+        "schema": POLICY_TRACE_SCHEMA,
+        "trace_id": trace_id,
+        "label": f"{state.get('updated_at_utc') or 'unknown time'} / {lifecycle_event or 'unknown event'}",
+        "selector_label": (
+            f"{state.get('updated_at_utc') or 'unknown time'} / "
+            f"{lifecycle_event or 'unknown event'} / "
+            f"{triggered_count} triggered / {missing_evidence_count} missing evidence"
+        ),
+        "updated_at_utc": state.get("updated_at_utc"),
+        "source_kind": source_kind,
+        "history_ref": history_ref,
+        "history_markdown": history_markdown_for_ref(project_root, history_ref),
+        "lifecycle_event": lifecycle_event,
+        "proposal_status": source.get("status"),
+        "proposal_id": source.get("proposal_id"),
+        "policy_store_status": policy_runtime.get("policy_store_status"),
+        "policy_eval_status": policy_runtime.get("policy_eval_status"),
+        "condition_eval_status": policy_runtime.get("policy_condition_eval_status"),
+        "evidence_check_status": policy_runtime.get("policy_evidence_check_status"),
+        "turn_anchor": turn_anchor_projection,
+        "work_profile": {
+            "lifecycle_event": work_profile.get("lifecycle_event"),
+            "intent_class": work_profile.get("intent_class"),
+            "operation_class": work_profile.get("operation_class"),
+            "output_class": work_profile.get("output_class"),
+            "policy_scopes": string_values(work_profile.get("policy_scopes")),
+            "fallback_expanded": bool(work_profile.get("fallback_expanded")),
+        },
+        "counts": {
+            "active_policy_count": int_value(policy_runtime.get("active_policy_count")),
+            "triggered_policy_count": triggered_count,
+            "not_triggered_policy_count": int_value(
+                policy_runtime.get("not_triggered_policy_count")
+            ),
+            "required_action_count": required_action_count,
+            "evidence_status_count": int_value(
+                policy_runtime.get("evidence_status_count") or len(evidence_rows)
+            ),
+            "missing_evidence_count": missing_evidence_count,
+            "policy_feedback_option_count": int_value(
+                policy_runtime.get("policy_feedback_option_count")
+            ),
+        },
+        "triggered_policies": triggered_policies,
+        "required_actions": required_actions,
+        "evidence_status": evidence_rows,
+        "missing_evidence_reports": missing_evidence_rows,
+        "non_effects": [
+            "does_not_evaluate_policy_conditions",
+            "does_not_execute_policy_actions",
+            "does_not_create_policy_evidence",
+            "does_not_infer_semantic_intent",
+        ],
+    }
+
+
+def policy_trace_sort_key(trace: dict[str, Any]) -> tuple[str, str, str]:
+    return (
+        str(trace.get("updated_at_utc") or ""),
+        str(trace.get("history_ref") or ""),
+        str(trace.get("trace_id") or ""),
+    )
+
+
+def latest_available_policy_trace_anchor(
+    traces: list[dict[str, Any]],
+) -> dict[str, Any]:
+    for item in traces:
+        anchor = turn_anchor.normalize_turn_anchor(item.get("turn_anchor"))
+        if anchor.get("status") == "available":
+            enriched = dict(anchor)
+            enriched["evidence_trace_id"] = item.get("trace_id")
+            enriched["evidence_trace_label"] = item.get("label")
+            enriched["evidence_source_kind"] = item.get("source_kind")
+            enriched["evidence_history_ref"] = item.get("history_ref")
+            return enriched
+    return turn_anchor.missing_turn_anchor(
+        reason="no_retained_policy_trace_with_available_turn_anchor"
+    )
+
+
+def policy_traces(project_root: Path, state: dict[str, Any]) -> dict[str, Any]:
+    runtime_root = runtime_visibility.runtime_root_for(project_root)
+    history_root = runtime_root / "history"
+    traces: list[dict[str, Any]] = []
+    seen_refs: set[str] = set()
+    latest = policy_trace_from_state(project_root, state)
+    if latest:
+        traces.append(latest)
+        if latest.get("history_ref"):
+            seen_refs.add(str(latest["history_ref"]))
+    if history_root.is_dir():
+        for path in sorted(history_root.glob("*.md"), key=lambda item: item.name, reverse=True):
+            history_ref = history_ref_for_card(project_root, path)
+            if history_ref in seen_refs:
+                continue
+            history_state = state_summary_for_history_card(project_root, path)
+            if not history_state:
+                continue
+            trace = policy_trace_from_state(
+                project_root,
+                history_state,
+                source_kind="runtime_history_state_summary",
+            )
+            if trace:
+                traces.append(trace)
+                seen_refs.add(history_ref)
+            if len(traces) >= POLICY_TRACE_HISTORY_LIMIT:
+                break
+
+    traces = sorted(traces, key=policy_trace_sort_key, reverse=True)[
+        :POLICY_TRACE_HISTORY_LIMIT
+    ]
+    current_turn_anchor = latest_available_policy_trace_anchor(traces)
+    current_turn_traces = [
+        item for item in traces if policy_trace_anchor_matches(item, current_turn_anchor)
+    ] if current_turn_anchor.get("status") == "available" else traces
+    observed_lifecycle = state.get("observed_lifecycle") or {}
+    recommended_events = string_values(observed_lifecycle.get("recommended_events")) or [
+        "conversation_turn",
+        "task_start",
+        "completion_review",
+    ]
+    observed_events = []
+    for event in recommended_events:
+        if any(item.get("lifecycle_event") == event for item in current_turn_traces):
+            observed_events.append(event)
+    for item in current_turn_traces:
+        event = str(item.get("lifecycle_event") or "")
+        if event and event not in observed_events:
+            observed_events.append(event)
+    missing_events = [event for event in recommended_events if event not in observed_events]
+    triggered_policy_count = sum(
+        int_value((item.get("counts") or {}).get("triggered_policy_count"))
+        for item in current_turn_traces
+    )
+    missing_evidence_count = sum(
+        int_value((item.get("counts") or {}).get("missing_evidence_count"))
+        for item in current_turn_traces
+    )
+    return {
+        "schema": POLICY_TRACES_SCHEMA,
+        "schema_version": POLICY_TRACES_SCHEMA,
+        "status": "available" if current_turn_traces else "missing",
+        "default_trace_id": current_turn_traces[0].get("trace_id")
+        if current_turn_traces
+        else None,
+        "default_selection": "latest_turn_anchor" if current_turn_traces else None,
+        "current_turn_anchor": current_turn_anchor,
+        "recommended_lifecycle_events": recommended_events,
+        "observed_lifecycle_events": observed_events,
+        "missing_recommended_events": missing_events,
+        "trace_count": len(current_turn_traces),
+        "all_trace_count": len(traces),
+        "triggered_policy_count": triggered_policy_count,
+        "missing_evidence_count": missing_evidence_count,
+        "traces": current_turn_traces,
+        "read_model_limitations": [
+            "policy trace is projected from retained runtime state summaries only",
+            "history cards without adjacent JSON state summaries cannot expose structured policy details",
+            "this read model does not reevaluate policy triggers or conditions",
+            "turn grouping uses non-AI turn_anchor identity when available",
+            "host semantic intent is displayed only when already recorded by runtime state",
+        ],
+        "non_effects": [
+            "does_not_call_llm_provider",
+            "does_not_infer_semantic_intent",
+            "does_not_execute_policy_actions",
+            "does_not_write_policy_evidence",
+        ],
+        "writes_performed": False,
+        "write_allowed_by_command": False,
+    }
+
+
 def semantic_intent_status_for_latest_round(coverage: dict[str, Any]) -> str:
     coverage_status = str(coverage.get("coverage_status") or "")
     semantic_status = str(coverage.get("semantic_intent_status") or "")
@@ -1101,6 +1438,7 @@ def runtime_summary(project_root: Path, diagnostics: list[dict[str, Any]]) -> di
             )
         )
     round_traces = round_document_traces(project_root, state)
+    policy_trace = policy_traces(project_root, state)
     return {
         "status": status,
         "updated_at_utc": state.get("updated_at_utc"),
@@ -1117,6 +1455,7 @@ def runtime_summary(project_root: Path, diagnostics: list[dict[str, Any]]) -> di
         "turn_anchor": turn_anchor_projection,
         "artifact_assurance": state.get("artifact_assurance") or {},
         "round_document_traces": round_traces,
+        "policy_trace": policy_trace,
         "lifecycle_card_count": len(state.get("lifecycle_card_links") or []),
         "card_links": {
             "last_card": (links.get("last_card") or {}).get("markdown"),

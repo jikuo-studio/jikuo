@@ -71,6 +71,8 @@ INDEX_HTML = """<!doctype html>
       width: min(1280px, 100%);
       margin: 0 auto;
       padding: 24px 28px 40px;
+      display: flex;
+      flex-direction: column;
     }
     .status {
       display: inline-flex;
@@ -99,8 +101,29 @@ INDEX_HTML = """<!doctype html>
       gap: 14px;
       margin-bottom: 20px;
     }
+    #overview { order: 10; }
+    #semantic-classification-section { order: 20; }
+    #studio-trace-heading { order: 30; }
+    #policy-trace-section { order: 31; }
+    #document-trace-section { order: 32; }
+    #studio-configuration-heading { order: 40; }
+    #policy-configuration-section { order: 41; }
+    #document-configuration-section { order: 42; }
+    #actions-section { order: 50; }
+    #diagnostics-section { order: 60; }
     section {
       margin: 0 0 22px;
+    }
+    .studio-area-heading {
+      padding-top: 16px;
+      border-top: 2px solid var(--line);
+      margin-bottom: 10px;
+    }
+    .studio-area-heading h2 {
+      font-size: 19px;
+    }
+    .studio-subsection {
+      min-width: 0;
     }
     h2 {
       margin: 0 0 10px;
@@ -299,7 +322,8 @@ INDEX_HTML = """<!doctype html>
       margin: 10px 0;
       align-items: start;
     }
-    #round-trace-round-select option.round-option-modified {
+    #round-trace-round-select option.round-option-modified,
+    #policy-trace-round-select option.round-option-modified {
       color: #176555;
       font-weight: 650;
     }
@@ -697,7 +721,7 @@ INDEX_HTML = """<!doctype html>
   </header>
   <main>
     <section class="grid" id="overview"></section>
-    <section>
+    <section id="semantic-classification-section">
       <div class="section-title">
         <h2>Latest Semantic Classification</h2>
         <span id="semantic-evidence-status" class="status">Loading</span>
@@ -705,7 +729,31 @@ INDEX_HTML = """<!doctype html>
       <p class="subhead">Latest retained host AI semantic intent when available, plus the latest runtime round and remaining evidence limits.</p>
       <div class="list" id="semantic-evidence-list"></div>
     </section>
-    <section>
+    <section class="studio-area-heading" id="studio-trace-heading">
+      <h2>Trace</h2>
+      <p class="subhead">Read-only runtime evidence grouped by policy activation and document assurance. These views display recorded facts; they do not evaluate policy or infer semantic intent.</p>
+    </section>
+    <section class="studio-subsection" id="policy-trace-section">
+      <div class="section-title">
+        <h2>Policy Trace</h2>
+        <span id="policy-trace-status" class="status">Loading</span>
+      </div>
+      <p class="subhead">Current turn anchor policy activation by lifecycle node, projected from retained runtime state and history.</p>
+      <div class="trace-round-selector">
+        <label>
+          Policy trace round
+          <select id="policy-trace-round-select"></select>
+        </label>
+        <div class="compact-list" id="policy-trace-overview"></div>
+      </div>
+      <div class="compact-list" id="policy-trace-lifecycle-overview"></div>
+      <div class="trace-layout" id="policy-trace-lifecycle"></div>
+    </section>
+    <section class="studio-area-heading" id="studio-configuration-heading">
+      <h2>Configuration</h2>
+      <p class="subhead">Current policy and document configuration plus guarded preview/apply change paths. These panels are where future governance behavior is configured.</p>
+    </section>
+    <section class="studio-subsection" id="document-configuration-section">
       <div class="section-title">
         <h2 id="document-rules-title">Document Rules</h2>
         <span id="document-mounts-status" class="status">Loading</span>
@@ -786,12 +834,12 @@ INDEX_HTML = """<!doctype html>
         </div>
       </div>
     </section>
-    <section>
+    <section class="studio-subsection" id="document-trace-section">
       <div class="section-title">
-        <h2>Round Document Trace</h2>
+        <h2>Document Trace</h2>
         <span id="round-trace-status" class="status">Loading</span>
       </div>
-      <p class="subhead">Select a runtime round to inspect expected documents, observed evidence, write activity, and gaps.</p>
+      <p class="subhead">Round Document Trace: Select a runtime round to inspect expected documents, observed evidence, write activity, and gaps.</p>
       <div class="trace-round-selector">
         <label>
           Runtime round
@@ -817,9 +865,9 @@ INDEX_HTML = """<!doctype html>
         </div>
       </div>
     </section>
-    <section>
+    <section class="studio-subsection" id="policy-configuration-section">
       <div class="section-title">
-        <h2>Policies And Templates</h2>
+        <h2>Policy Configuration</h2>
         <span id="policy-management-status" class="status">Loading</span>
       </div>
       <p class="subhead">No-write view of project policies, candidate proposals, package templates, starter packs, and guarded operation boundaries.</p>
@@ -1048,11 +1096,11 @@ INDEX_HTML = """<!doctype html>
         </div>
       </div>
     </section>
-    <section>
+    <section id="actions-section">
       <h2>Available Actions</h2>
       <div class="list" id="actions"></div>
     </section>
-    <section>
+    <section id="diagnostics-section">
       <h2>Diagnostics</h2>
       <div class="list" id="diagnostics"></div>
     </section>
@@ -1185,6 +1233,7 @@ INDEX_HTML = """<!doctype html>
     let currentPolicyCandidateActivationRequest = null;
     let policyManagementReport = null;
     let projectFileItems = [];
+    let selectedPolicyTraceId = null;
     let selectedRoundTraceId = null;
     const selectedFileRecords = new Map();
     const addPlanMessage = (title, detail, status) => {
@@ -2864,7 +2913,7 @@ INDEX_HTML = """<!doctype html>
       const summaries = data.summaries || {};
       const mounts = summaries.document_mounts || {};
       const terms = termsById(mounts.configuration_terms);
-      document.getElementById("document-rules-title").textContent = termLabel(terms, "document_rules", "Document Rules");
+      document.getElementById("document-rules-title").textContent = "Document Configuration";
       document.getElementById("document-rules-description").textContent = termDescription(
         terms,
         "document_rules",
@@ -3217,6 +3266,161 @@ INDEX_HTML = """<!doctype html>
         ])
       );
     };
+    const policyTraceAnchorLabel = (anchor) => {
+      const record = anchor || {};
+      if (record.status !== "available") {
+        return `turn_anchor=${record.status || "unavailable"}`;
+      }
+      return `turn_anchor=${record.anchor_id || "unavailable"}`;
+    };
+    const policyTraceRoundLabel = (trace) => {
+      const counts = (trace || {}).counts || {};
+      const baseLabel = trace.selector_label
+        || `${trace.updated_at_utc || trace.label || "unknown time"} / ${trace.lifecycle_event || "unknown event"} / ${numberValue(counts.triggered_policy_count)} triggered / ${numberValue(counts.missing_evidence_count)} missing evidence`;
+      return `${baseLabel} / ${policyTraceAnchorLabel(trace.turn_anchor)}`;
+    };
+    const policyTraceHasTriggeredPolicies = (trace) =>
+      numberValue(((trace || {}).counts || {}).triggered_policy_count) > 0;
+    const policyTraceDetail = (policy) => {
+      const matched = (policy.matched_refs || []).join(", ");
+      return [
+        policy.trigger_ref || "",
+        policy.condition_status || policy.status || "",
+        matched ? `matched: ${matched}` : "",
+        policy.trigger_reason || policy.work_profile_match_summary || "",
+      ].filter(Boolean).join(" / ");
+    };
+    const policyTracePolicyRows = (policies) => {
+      const records = policies || [];
+      const rows = records.slice(0, 5).map((policy) =>
+        compactItem(policy.policy_ref || "policy ref missing", `${policy.policy_title || "untitled policy"} / ${policyTraceDetail(policy)}`)
+      );
+      const hiddenRows = records.slice(5).map((policy) =>
+        compactItem(policy.policy_ref || "policy ref missing", `${policy.policy_title || "untitled policy"} / ${policyTraceDetail(policy)}`)
+      );
+      const extra = overflowNote(records.length, rows.length, "triggered policies", hiddenRows);
+      return rows.length
+        ? [...rows, ...(extra ? [extra] : [])]
+        : [compactItem("No triggered policies", "No policy trigger evidence was recorded for this lifecycle node.")];
+    };
+    const policyTraceMissingEvidenceRows = (reports) => {
+      const records = reports || [];
+      const rows = records.slice(0, 5).map((report) =>
+        compactItem(report.policy_ref || report.report_id || "missing evidence", `${report.status || "missing"} / ${report.summary || ""}`)
+      );
+      const hiddenRows = records.slice(5).map((report) =>
+        compactItem(report.policy_ref || report.report_id || "missing evidence", `${report.status || "missing"} / ${report.summary || ""}`)
+      );
+      const extra = overflowNote(records.length, rows.length, "missing evidence reports", hiddenRows);
+      return rows.length
+        ? [...rows, ...(extra ? [extra] : [])]
+        : [compactItem("No missing evidence reports", "No missing policy evidence was recorded for this lifecycle node.")];
+    };
+    const policyTraceDetailPanel = (title, detail, rows) => {
+      const panel = document.createElement("div");
+      panel.className = "trace-panel";
+      const heading = document.createElement("h3");
+      heading.textContent = title;
+      const subhead = document.createElement("p");
+      subhead.className = "subhead";
+      subhead.textContent = detail || "";
+      const list = document.createElement("div");
+      list.className = "compact-list";
+      list.replaceChildren(...(rows || []));
+      panel.append(heading, subhead, list);
+      return panel;
+    };
+    const policyTraceRuntimeRows = (trace) => {
+      const record = trace || {};
+      const counts = record.counts || {};
+      const workProfile = record.work_profile || {};
+      const scopes = (workProfile.policy_scopes || []).join(", ") || "no scopes recorded";
+      return [
+        compactItem("Selected round", record.label || record.trace_id || "No policy trace round selected."),
+        compactItem("History card", record.history_markdown || record.history_ref || "history ref not supplied"),
+        compactItem("Lifecycle event", record.lifecycle_event || "event not supplied"),
+        compactItem("Policy runtime", `${record.policy_eval_status || "policy eval status unknown"} / ${record.condition_eval_status || "condition status unknown"} / ${record.evidence_check_status || "evidence status unknown"}`),
+        compactItem("Work profile", `${workProfile.intent_class || "intent unknown"} / ${workProfile.operation_class || "operation unknown"} / scopes: ${scopes}`),
+        compactItem("Counts", `${numberValue(counts.triggered_policy_count)} triggered / ${numberValue(counts.required_action_count)} actions / ${numberValue(counts.missing_evidence_count)} missing evidence`),
+      ];
+    };
+    const renderPolicyTrace = (runtime) => {
+      const trace = (runtime || {}).policy_trace || {};
+      const traces = trace.traces || [];
+      const defaultTraceId = trace.default_trace_id || (traces[0] || {}).trace_id;
+      if (!selectedPolicyTraceId || !traces.some((item) => item.trace_id === selectedPolicyTraceId)) {
+        selectedPolicyTraceId = defaultTraceId || null;
+      }
+      const selectedTrace = traces.find((item) => item.trace_id === selectedPolicyTraceId) || null;
+      const recommendedEvents = trace.recommended_lifecycle_events || ["conversation_turn", "task_start", "completion_review"];
+      const events = [...recommendedEvents];
+      traces.forEach((item) => {
+        const eventName = item.lifecycle_event || "unknown_lifecycle";
+        if (!events.includes(eventName)) {
+          events.push(eventName);
+        }
+      });
+      const status = document.getElementById("policy-trace-status");
+      status.className = statusClass(trace.status || "unavailable");
+      status.textContent = trace.status || "unavailable";
+      const roundSelect = document.getElementById("policy-trace-round-select");
+      roundSelect.disabled = !traces.length;
+      roundSelect.replaceChildren(
+        ...(traces.length
+          ? traces.map((item) => {
+              const option = document.createElement("option");
+              option.value = item.trace_id || "";
+              option.textContent = policyTraceRoundLabel(item);
+              option.className = policyTraceHasTriggeredPolicies(item) ? "round-option-modified" : "";
+              return option;
+            })
+          : [(() => {
+              const option = document.createElement("option");
+              option.value = "";
+              option.textContent = "No policy trace rounds captured";
+              return option;
+            })()])
+      );
+      roundSelect.value = selectedPolicyTraceId || "";
+      roundSelect.onchange = () => {
+        selectedPolicyTraceId = roundSelect.value || null;
+        renderPolicyTrace(runtime);
+      };
+      const overview = document.getElementById("policy-trace-overview");
+      overview.replaceChildren(
+        compactItem("Current turn anchor", policyTraceAnchorLabel(trace.current_turn_anchor)),
+        compactItem("Trace records", `${numberValue(trace.trace_count)} current turn / ${numberValue(trace.all_trace_count)} retained`),
+        compactItem("Triggered policies", detailCount(trace.triggered_policy_count, "policy triggers")),
+        compactItem("Missing evidence", detailCount(trace.missing_evidence_count, "reports")),
+        compactItem("Selected lifecycle", selectedTrace ? (selectedTrace.lifecycle_event || "event not supplied") : "No policy trace round selected")
+      );
+      const lifecycleOverview = document.getElementById("policy-trace-lifecycle-overview");
+      lifecycleOverview.replaceChildren(
+        ...(events.length
+          ? events.map((eventName) => {
+              const observed = (trace.observed_lifecycle_events || []).includes(eventName);
+              const count = traces.filter((item) => item.lifecycle_event === eventName).length;
+              const selected = selectedTrace && selectedTrace.lifecycle_event === eventName;
+              return compactItem(eventName, observed ? `${count} trace record(s) observed${selected ? " / selected" : ""}` : "not observed for current turn anchor");
+            })
+          : [compactItem("No lifecycle projection", "No recommended lifecycle nodes were supplied.")])
+      );
+      const lifecycle = document.getElementById("policy-trace-lifecycle");
+      lifecycle.replaceChildren(
+        ...(selectedTrace
+          ? [
+              policyTraceDetailPanel("Runtime source", selectedTrace.proposal_id || selectedTrace.trace_id || "runtime trace", policyTraceRuntimeRows(selectedTrace)),
+              policyTraceDetailPanel("Triggered policies", detailCount((selectedTrace.counts || {}).triggered_policy_count, "policies"), policyTracePolicyRows(selectedTrace.triggered_policies)),
+              policyTraceDetailPanel("Evidence gaps", detailCount((selectedTrace.counts || {}).missing_evidence_count, "reports"), policyTraceMissingEvidenceRows(selectedTrace.missing_evidence_reports)),
+            ]
+          : [
+              policyTraceDetailPanel("Runtime source", "No comparable policy trace", [
+                compactItem("Runtime projection", "No policy trace round is available for the current turn anchor."),
+                compactItem("Observed evidence", "No policy trigger/evidence details are available."),
+              ]),
+            ])
+      );
+    };
     const renderSemanticEvidence = (runtime) => {
       const evidence = (runtime || {}).semantic_intent_evidence || {};
       const classification = evidence.classification || {};
@@ -3308,6 +3512,7 @@ INDEX_HTML = """<!doctype html>
         metric((data.diagnostics || []).length, "Diagnostics")
       );
       renderSemanticEvidence(runtime);
+      renderPolicyTrace(runtime);
       renderDocumentMounts(data);
       renderRoundDocumentTrace(data);
       loadPolicyManagement(data);
