@@ -969,9 +969,16 @@ class StudioWebServerTests(unittest.TestCase):
         self.assertIn("proposal_ref: currentPolicyEvolutionPlan.proposal_ref", html)
         self.assertIn("policy-evolution-plan-result", html)
         self.assertIn("policy-final-response-gate-toggle", html)
-        self.assertIn("policy-final-response-gate-apply-button", html)
         self.assertIn("/api/policy-management/final-response-gate/apply", html)
+        self.assertIn('<option value="update_final_response_gate">Update final-response gate</option>', html)
+        self.assertIn("policy-final-response-gate-fields", html)
+        self.assertIn("policyFinalResponseGatePlanFromRequest", html)
+        self.assertIn("current_final_response_gate", html)
+        self.assertIn("proposed_final_response_gate", html)
         self.assertIn("Require in final response", html)
+        self.assertNotIn("policy-final-response-gate-apply-button", html)
+        self.assertNotIn("Save gate setting", html)
+        self.assertNotIn("applyPolicyFinalResponseGateChange", html)
         self.assertLess(
             html.index("Proposed change"),
             html.index("policy-final-response-gate-toggle"),
@@ -980,7 +987,6 @@ class StudioWebServerTests(unittest.TestCase):
             html.index("policy-final-response-gate-toggle"),
             html.index("policy-evolution-plan-result"),
         )
-        self.assertIn("applyPolicyFinalResponseGateChange", html)
         self.assertIn("policy-editor-grid", html)
         self.assertIn("policy-editor-note", html)
         self.assertIn("policy-action-buttons", html)

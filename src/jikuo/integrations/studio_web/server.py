@@ -922,9 +922,10 @@ INDEX_HTML = """<!doctype html>
                   <option value="refine_policy">Refine trigger conditions</option>
                   <option value="deprecate_policy">Deprecate policy</option>
                   <option value="supersede_policy">Supersede policy</option>
+                  <option value="update_final_response_gate">Update final-response gate</option>
                 </select>
               </label>
-              <label>Feedback
+              <label id="policy-evolution-feedback-field">Feedback
                 <select id="policy-evolution-feedback">
                   <option value="">No feedback label</option>
                   <option value="defer">Defer</option>
@@ -932,7 +933,7 @@ INDEX_HTML = """<!doctype html>
                   <option value="needs_scope_narrowing">Needs scope narrowing</option>
                 </select>
               </label>
-              <label>Trigger mode
+              <label id="policy-evolution-trigger-mode-field">Trigger mode
                 <select id="policy-evolution-trigger-mode">
                   <option value="scope_first">Scope-first</option>
                   <option value="event_anchored">Scope + lifecycle event</option>
@@ -940,7 +941,7 @@ INDEX_HTML = """<!doctype html>
                 </select>
               </label>
             </div>
-            <div class="policy-editor-grid">
+            <div class="policy-editor-grid" id="policy-evolution-scope-grid">
               <label>Policy scopes
                 <span class="option-group" id="policy-evolution-scope-options"></span>
               </label>
@@ -951,7 +952,7 @@ INDEX_HTML = """<!doctype html>
                 <input id="policy-evolution-changed-path" placeholder="Optional scope pattern">
               </label>
             </div>
-            <div class="policy-editor-grid">
+            <div class="policy-editor-grid" id="policy-evolution-replacement-grid">
               <label>Replacement title
                 <input id="policy-evolution-replacement-title" placeholder="Required for supersession">
               </label>
@@ -960,7 +961,7 @@ INDEX_HTML = """<!doctype html>
               </label>
               <span class="subhead policy-editor-note" id="policy-trigger-mode-note">Scope and lifecycle values are selected from the project policy option set.</span>
             </div>
-            <div class="policy-editor-grid">
+            <div class="policy-editor-grid" id="policy-final-response-gate-fields" hidden>
               <label>Final-response gate
                 <span class="option-group">
                   <label class="option-pill">
@@ -972,10 +973,6 @@ INDEX_HTML = """<!doctype html>
               <span id="policy-final-response-gate-note" class="subhead policy-editor-note">Select a policy to configure final-response gate behavior.</span>
               <span class="subhead policy-editor-note">Guarded policy metadata change; current state remains visible in Selected policy.</span>
             </div>
-            <div class="plan-apply-row">
-              <button type="button" id="policy-final-response-gate-apply-button" disabled>Save gate setting</button>
-            </div>
-            <div class="list" id="policy-final-response-gate-result"></div>
           </div>
         </div>
         <div class="plan-apply-row">
@@ -1538,91 +1535,109 @@ INDEX_HTML = """<!doctype html>
         ? `Enabled / ${gate.source}; triggered policy evidence must be visible in the final response.`
         : `Disabled / ${gate.source}; policy evidence remains runtime-visible but is not a final-response gate.`;
     };
-    const refreshPolicyFinalResponseGateApplyState = () => {
+    const proposedFinalResponseGateState = (enabled) => ({
+      schema: "jikuo.policy_final_response_gate.v0",
+      enabled: Boolean(enabled),
+      source: "studio_proposed_boolean",
+      visibility: enabled ? "final_response_required" : "not_final_response_gate",
+    });
+    const isFinalResponseGateOperation = () =>
+      document.getElementById("policy-evolution-operation").value === "update_final_response_gate";
+    const refreshPolicyFinalResponseGateInputState = () => {
       const detail = selectedPolicyDetail(policyManagementReport || {});
       const toggle = document.getElementById("policy-final-response-gate-toggle");
-      const button = document.getElementById("policy-final-response-gate-apply-button");
       const note = document.getElementById("policy-final-response-gate-note");
+      const isGateOperation = isFinalResponseGateOperation();
       if (!detail) {
         toggle.checked = false;
         toggle.disabled = true;
-        button.disabled = true;
         note.textContent = "Select a policy to configure final-response gate behavior.";
         return;
       }
       const gate = finalResponseGateState(detail);
-      toggle.disabled = false;
-      button.disabled = toggle.checked === gate.enabled;
-      note.textContent = toggle.checked === gate.enabled
+      toggle.disabled = !isGateOperation;
+      if (!isGateOperation) {
+        note.textContent = "Choose Update final-response gate to edit this policy metadata through Preview plan.";
+        return;
+      }
+      note.textContent = Boolean(toggle.checked) === gate.enabled
         ? finalResponseGateSummary(detail)
         : `Pending change: final-response gate will be ${toggle.checked ? "enabled" : "disabled"} for ${detail.policy_id || "selected policy"}.`;
     };
     const resetPolicyFinalResponseGateControls = (detail) => {
       const toggle = document.getElementById("policy-final-response-gate-toggle");
       toggle.checked = Boolean((detail || {}).final_response_gate && (detail || {}).final_response_gate.enabled);
-      refreshPolicyFinalResponseGateApplyState();
+      refreshPolicyFinalResponseGateInputState();
     };
-    const renderPolicyFinalResponseGateResult = (result) => {
-      const container = document.getElementById("policy-final-response-gate-result");
-      const gate = result.final_response_gate || {};
-      const verification = result.post_write_verification || {};
-      const status = result.status || "unknown";
-      const summaryStatus = status === "written" || status === "unchanged" ? "available" : "unavailable";
-      const refusals = (result.refusal_reasons || []).map((item) => compactItem("Refusal", item));
-      const warnings = (result.warnings || []).map((item) => compactItem("Warning", item));
-      container.replaceChildren(
-        row(`Gate update ${status}`, `write performed: ${String(Boolean(result.write_performed))}`, summaryStatus),
-        compactItem("Policy", `${result.policy_ref || "policy id missing"} / ${result.target_policy_path || "path not supplied"}`),
-        compactItem("Final-response gate", `${String(Boolean(gate.enabled))} / ${gate.source || "source unknown"}`),
-        compactItem("Verification", `reread=${String(Boolean(verification.reread_ok))} / matches=${String(Boolean(verification.final_response_gate_matches))}`),
-        ...(refusals.length ? refusals : []),
-        ...(warnings.length ? warnings : [])
-      );
-    };
-    const applyPolicyFinalResponseGateChange = () => {
+    const policyFinalResponseGatePlanFromRequest = (requestPayload) => {
       const detail = selectedPolicyDetail(policyManagementReport || {});
-      const toggle = document.getElementById("policy-final-response-gate-toggle");
-      const button = document.getElementById("policy-final-response-gate-apply-button");
-      const container = document.getElementById("policy-final-response-gate-result");
-      if (!detail) {
-        container.replaceChildren(row("Policy required", "Select an active policy before saving gate configuration.", "unavailable"));
-        refreshPolicyFinalResponseGateApplyState();
-        return;
-      }
-      const desired = Boolean(toggle.checked);
-      const confirmed = window.confirm(
-        `Save final-response gate setting?\n\nPolicy: ${detail.policy_id || "policy"}\nFinal-response gate: ${desired ? "enabled" : "disabled"}\n\nThis edits only the selected active policy YAML field after guarded confirmation.`
-      );
-      if (!confirmed) {
-        return;
-      }
-      button.disabled = true;
-      button.textContent = "Saving";
-      fetch("/api/policy-management/final-response-gate/apply", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({
-          policy_ref: detail.policy_id || null,
-          policy_path: detail.path || null,
-          enabled: desired,
-          reviewed_policy_sha256: detail.policy_sha256 || null,
-          confirm_apply: true,
+      const currentGate = finalResponseGateState(detail);
+      const proposedGate = proposedFinalResponseGateState(Boolean(requestPayload.enabled));
+      const refusalReasons = [];
+      if (!detail) refusalReasons.push("policy_required_for_final_response_gate_plan");
+      if (!requestPayload.policy_ref) refusalReasons.push("policy_ref_required_for_final_response_gate_plan");
+      if (!(detail || {}).path && !requestPayload.policy_path) refusalReasons.push("target_policy_path_required_for_final_response_gate_plan");
+      const stateChanged = currentGate.enabled !== proposedGate.enabled;
+      const writeSet = !refusalReasons.length && stateChanged
+        ? [{
+            operation: "update_final_response_gate",
+            path: requestPayload.policy_path || (detail || {}).path || "path not supplied",
+            effect: `set final_response_gate to ${String(proposedGate.enabled)}`,
+          }]
+        : [];
+      const warnings = stateChanged ? [] : ["final_response_gate_already_matches_requested_state"];
+      const status = refusalReasons.length ? "refused" : "review";
+      return {
+        schema: "jikuo.policy_final_response_gate_plan.v0",
+        schema_version: "jikuo.policy_final_response_gate_plan.v0",
+        report_only: true,
+        operation: "update_final_response_gate",
+        status,
+        status_reason: refusalReasons.length
+          ? "final-response gate preview refused because required target policy data is missing"
+          : (stateChanged
+            ? "previewed final-response gate metadata change without writing"
+            : "previewed final-response gate metadata and found no state change"),
+        writes_performed: false,
+        write_allowed_by_command: false,
+        plan_id: `studio-final-response-gate-${requestPayload.policy_ref || "policy"}-${String(proposedGate.enabled)}`,
+        proposal_ref: `studio-final-response-gate:${requestPayload.policy_ref || "policy"}:${String(proposedGate.enabled)}:${requestPayload.reviewed_policy_sha256 || "unreviewed"}`,
+        target_policy_ref: requestPayload.policy_ref || (detail || {}).policy_id || null,
+        target_policy_path: requestPayload.policy_path || (detail || {}).path || null,
+        target_policy_sha256: requestPayload.reviewed_policy_sha256 || (detail || {}).policy_sha256 || null,
+        current_final_response_gate: currentGate,
+        proposed_final_response_gate: proposedGate,
+        approval_phrase: POLICY_FINAL_RESPONSE_GATE_APPROVAL_PHRASE,
+        future_write_boundary: {
+          requires_guarded_writer: true,
+          requires_decision_record: false,
+          writer_implemented: true,
+          writer_route: "/api/policy-management/final-response-gate/apply",
           approval_phrase: POLICY_FINAL_RESPONSE_GATE_APPROVAL_PHRASE,
-          approval_source: "studio_confirmation_dialog",
-        }),
-      })
-        .then((response) => response.json())
-        .then((result) => {
-          renderPolicyFinalResponseGateResult(result);
-          if (result.status === "written" || result.status === "unchanged") {
-            fetch("/api/status", {cache: "no-store"}).then((response) => response.json()).then(render);
-          }
-        })
-        .catch((error) => container.replaceChildren(row("Save failed", error.message, "unavailable")))
-        .finally(() => {
-          button.textContent = "Save gate setting";
-          refreshPolicyFinalResponseGateApplyState();
-        });
+        },
+        write_set: writeSet,
+        refusal_reasons: refusalReasons,
+        warnings,
+        recommended_changes: stateChanged
+          ? ["review final-response gate impact on final answer obligations before applying"]
+          : ["change the toggle before applying a guarded policy metadata write"],
+        next_actions: writeSet.length
+          ? ["click Apply guarded change after reviewing the target policy, current state, proposed state, and write path"]
+          : ["no guarded write is available until the proposed final-response gate state differs from the current state"],
+        non_effects: [
+          "does not execute policy actions",
+          "does not alter trigger scope, lifecycle events, required actions, or evidence requirements",
+          "does not write until Apply guarded change confirms the dedicated guarded writer",
+        ],
+        studio_web: {
+          schema: "jikuo.studio.web_console.v0",
+          route: "client-side final-response gate preview",
+          method: "derived-from-read-model",
+          write_mode: "no-write-plan",
+          writes_performed: false,
+          write_allowed_by_command: false,
+        },
+      };
     };
     const proposalDetailsById = (report) => {
       const output = {};
@@ -1695,6 +1710,15 @@ INDEX_HTML = """<!doctype html>
       } else {
         note.textContent = "Scope + lifecycle event requires both selected scopes and selected lifecycle events to match.";
       }
+    };
+    const updatePolicyEvolutionOperationAffordance = () => {
+      const isGateOperation = isFinalResponseGateOperation();
+      document.getElementById("policy-evolution-feedback-field").hidden = isGateOperation;
+      document.getElementById("policy-evolution-trigger-mode-field").hidden = isGateOperation;
+      document.getElementById("policy-evolution-scope-grid").hidden = isGateOperation;
+      document.getElementById("policy-evolution-replacement-grid").hidden = isGateOperation;
+      document.getElementById("policy-final-response-gate-fields").hidden = !isGateOperation;
+      refreshPolicyFinalResponseGateInputState();
     };
     const policyEvolutionApplyReady = (plan) => {
       const candidate = plan || currentPolicyEvolutionPlan || {};
@@ -1788,6 +1812,7 @@ INDEX_HTML = """<!doctype html>
         events
       );
       updatePolicyTriggerModeAffordance();
+      updatePolicyEvolutionOperationAffordance();
     };
     const renderSelectedPolicyDetail = (report) => {
       const detail = selectedPolicyDetail(report);
@@ -2512,6 +2537,17 @@ INDEX_HTML = """<!doctype html>
     const policyEvolutionRequest = () => {
       const operation = document.getElementById("policy-evolution-operation").value;
       const policyRef = document.getElementById("policy-evolution-policy").value;
+      const detail = selectedPolicyDetail(policyManagementReport || {});
+      if (operation === "update_final_response_gate") {
+        return {
+          policy_ref: policyRef,
+          policy_evolution_operation: operation,
+          policy_path: (detail || {}).path || null,
+          enabled: Boolean(document.getElementById("policy-final-response-gate-toggle").checked),
+          reviewed_policy_sha256: (detail || {}).policy_sha256 || null,
+          summary: "Studio final-response gate configuration change preview",
+        };
+      }
       const feedbackType = document.getElementById("policy-evolution-feedback").value;
       const replacementTitle = document.getElementById("policy-evolution-replacement-title").value.trim();
       const replacementRef = document.getElementById("policy-evolution-replacement-ref").value.trim();
@@ -2576,6 +2612,16 @@ INDEX_HTML = """<!doctype html>
       const proposedProfile = plan.proposed_trigger_profile
         ? [compactItem("Proposed trigger profile", triggerProfileDetailText(plan.proposed_trigger_profile))]
         : [];
+      const currentGate = plan.current_final_response_gate || {};
+      const proposedGate = plan.proposed_final_response_gate || {};
+      const gateRows = plan.operation === "update_final_response_gate"
+        ? [
+            compactItem("Current final-response gate", `${String(Boolean(currentGate.enabled))} / ${currentGate.source || "source unknown"}`),
+            compactItem("Proposed final-response gate", `${String(Boolean(proposedGate.enabled))} / ${proposedGate.source || "source unknown"}`),
+            compactItem("Approval phrase", plan.approval_phrase || (writeBoundary.approval_phrase || "approval phrase not supplied")),
+            compactItem("Expected write path", plan.target_policy_path || "target policy path not supplied"),
+          ]
+        : [];
       container.replaceChildren(
         row(`Plan ${status}`, `${plan.operation || "operation"} / writes performed: ${String(Boolean(plan.writes_performed))}`, summaryStatus),
         ...planStatusRows,
@@ -2584,6 +2630,7 @@ INDEX_HTML = """<!doctype html>
         compactItem("Guarded writer", writeBoundary.writer_implemented ? "available in core after approval" : "not available for this operation"),
         ...targetProfile,
         ...proposedProfile,
+        ...gateRows,
         ...(writeSet.length ? writeSet : [compactItem("Write set", "No future writes projected.")]),
         ...(refusals.length ? refusals : []),
         ...(warnings.length ? warnings : []),
@@ -2596,7 +2643,8 @@ INDEX_HTML = """<!doctype html>
     const renderPolicyEvolutionApplyResult = (result) => {
       const container = document.getElementById("policy-evolution-plan-result");
       const status = result.status || "unknown";
-      const summaryStatus = status === "written" ? "available" : "unavailable";
+      const summaryStatus = status === "written" || status === "unchanged" ? "available" : "unavailable";
+      const isGateResult = result.operation === "update_policy_final_response_gate";
       const writtenPaths = (result.written_paths || []).map((item) =>
         compactItem("Written path", item)
       );
@@ -2612,18 +2660,28 @@ INDEX_HTML = """<!doctype html>
       const nextActions = (result.next_actions || []).map((item) =>
         compactItem("Next", item)
       );
+      const gate = result.final_response_gate || {};
+      const verification = result.post_write_verification || {};
+      const gateRows = isGateResult
+        ? [
+            compactItem("Final-response gate", `${String(Boolean(gate.enabled))} / ${gate.source || "source unknown"}`),
+            compactItem("Verification", `reread=${String(Boolean(verification.reread_ok))} / matches=${String(Boolean(verification.final_response_gate_matches))}`),
+          ]
+        : [
+            compactItem("Proposal ref", result.proposal_ref || "proposal ref not supplied"),
+            compactItem("Decision record", result.decision_record_ref || "decision record not supplied"),
+          ];
       container.replaceChildren(
         row(`Apply ${status}`, `${result.operation || "operation"} / write performed: ${String(Boolean(result.write_performed))}`, summaryStatus),
         compactItem("Target policy", result.policy_ref || result.target_policy_ref || "policy ref not supplied"),
-        compactItem("Proposal ref", result.proposal_ref || "proposal ref not supplied"),
-        compactItem("Decision record", result.decision_record_ref || "decision record not supplied"),
+        ...gateRows,
         ...(writtenPaths.length ? writtenPaths : [compactItem("Written paths", "No policy-store writes were reported.")]),
         ...(createdPaths.length ? createdPaths : []),
         ...(refusals.length ? refusals : []),
         ...(warnings.length ? warnings : []),
         ...(nextActions.length ? nextActions : [])
       );
-      if (status === "written") {
+      if (status === "written" || status === "unchanged") {
         currentPolicyEvolutionPlan = null;
         currentPolicyEvolutionRequest = null;
         updatePolicyEvolutionApplyButton();
@@ -2640,6 +2698,21 @@ INDEX_HTML = """<!doctype html>
       button.disabled = true;
       button.textContent = "Previewing";
       container.replaceChildren(row("Previewing configuration change", "Building no-write active-policy configuration change plan.", "degraded"));
+      if (requestPayload.policy_evolution_operation === "update_final_response_gate") {
+        try {
+          const plan = policyFinalResponseGatePlanFromRequest(requestPayload);
+          currentPolicyEvolutionPlan = plan;
+          currentPolicyEvolutionRequest = requestPayload;
+          renderPolicyEvolutionPlan(plan);
+        } catch (error) {
+          container.replaceChildren(row("Preview failed", error.message, "unavailable"));
+        } finally {
+          button.disabled = false;
+          button.textContent = "Preview plan";
+          updatePolicyEvolutionApplyButton();
+        }
+        return;
+      }
       fetch("/api/policy-management/evolution/plan", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
@@ -2667,25 +2740,35 @@ INDEX_HTML = """<!doctype html>
         return;
       }
       const writeCount = (currentPolicyEvolutionPlan.write_set || []).length;
+      const isGateOperation = currentPolicyEvolutionPlan.operation === "update_final_response_gate";
       const confirmed = window.confirm(
-        `Apply this active-policy configuration change?\n\nTarget: ${currentPolicyEvolutionPlan.target_policy_ref || "policy"}\nOperation: ${currentPolicyEvolutionPlan.operation || "operation"}\nPolicy-store records/files to write: ${writeCount}\n\nThis persists policy-store proposal, decision, manifest, and target/replacement policy records through the guarded writer. It does not execute policy actions.`
-          + `${currentPolicyEvolutionPlan.operation === "refine_policy" ? "\\nFor refinement, the target policy trigger profile is updated and reread for verification." : ""}`
+        isGateOperation
+          ? `Apply this final-response gate configuration change?\n\nTarget: ${currentPolicyEvolutionPlan.target_policy_ref || "policy"}\nCurrent: ${String(Boolean((currentPolicyEvolutionPlan.current_final_response_gate || {}).enabled))}\nProposed: ${String(Boolean((currentPolicyEvolutionPlan.proposed_final_response_gate || {}).enabled))}\nPolicy file to write: ${currentPolicyEvolutionPlan.target_policy_path || "policy path"}\n\nThis uses the guarded writer for the selected active policy YAML field. It does not execute policy actions or alter trigger scopes.`
+          : `Apply this active-policy configuration change?\n\nTarget: ${currentPolicyEvolutionPlan.target_policy_ref || "policy"}\nOperation: ${currentPolicyEvolutionPlan.operation || "operation"}\nPolicy-store records/files to write: ${writeCount}\n\nThis persists policy-store proposal, decision, manifest, and target/replacement policy records through the guarded writer. It does not execute policy actions.`
+            + `${currentPolicyEvolutionPlan.operation === "refine_policy" ? "\\nFor refinement, the target policy trigger profile is updated and reread for verification." : ""}`
       );
       if (!confirmed) {
         return;
       }
       button.disabled = true;
       button.textContent = "Applying";
-      fetch("/api/policy-management/evolution/apply", {
+      fetch(isGateOperation ? "/api/policy-management/final-response-gate/apply" : "/api/policy-management/evolution/apply", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({
-          ...currentPolicyEvolutionRequest,
-          proposal_ref: currentPolicyEvolutionPlan.proposal_ref || null,
-          confirm_apply: true,
-          approval_phrase: POLICY_EVOLUTION_APPROVAL_PHRASE,
-          approval_source: "studio_confirmation_dialog",
-        }),
+        body: JSON.stringify(isGateOperation
+          ? {
+              ...currentPolicyEvolutionRequest,
+              confirm_apply: true,
+              approval_phrase: POLICY_FINAL_RESPONSE_GATE_APPROVAL_PHRASE,
+              approval_source: "studio_confirmation_dialog",
+            }
+          : {
+              ...currentPolicyEvolutionRequest,
+              proposal_ref: currentPolicyEvolutionPlan.proposal_ref || null,
+              confirm_apply: true,
+              approval_phrase: POLICY_EVOLUTION_APPROVAL_PHRASE,
+              approval_source: "studio_confirmation_dialog",
+            }),
       })
         .then((response) => response.json())
         .then(renderPolicyEvolutionApplyResult)
@@ -3394,6 +3477,9 @@ INDEX_HTML = """<!doctype html>
     document.getElementById("policy-evolution-apply-button").addEventListener("click", applyPolicyEvolutionPlan);
     ["policy-evolution-operation", "policy-evolution-feedback", "policy-evolution-trigger-mode", "policy-evolution-changed-path", "policy-evolution-replacement-title", "policy-evolution-replacement-ref"].forEach((id) => {
       document.getElementById(id).addEventListener("change", () => {
+        if (id === "policy-evolution-operation") {
+          updatePolicyEvolutionOperationAffordance();
+        }
         if (id === "policy-evolution-trigger-mode") {
           updatePolicyTriggerModeAffordance();
         }
@@ -3408,8 +3494,11 @@ INDEX_HTML = """<!doctype html>
       invalidatePolicyEvolutionPlan();
       renderSelectedPolicyDetail(policyManagementReport || {});
     });
-    document.getElementById("policy-final-response-gate-toggle").addEventListener("change", refreshPolicyFinalResponseGateApplyState);
-    document.getElementById("policy-final-response-gate-apply-button").addEventListener("click", applyPolicyFinalResponseGateChange);
+    document.getElementById("policy-final-response-gate-toggle").addEventListener("change", () => {
+      refreshPolicyFinalResponseGateInputState();
+      invalidatePolicyEvolutionPlan();
+    });
+    updatePolicyEvolutionOperationAffordance();
     updatePolicyEvolutionApplyButton();
     document.getElementById("policy-template-activation-preview-button").addEventListener("click", previewPolicyTemplateActivationPlan);
     document.getElementById("policy-template-activation-apply-button").addEventListener("click", applyPolicyTemplateActivationPlan);
