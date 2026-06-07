@@ -79,10 +79,64 @@ INDEX_HTML = """<!doctype html>
       line-height: 1.2;
       font-weight: 700;
     }
-    main {
-      width: min(1280px, 100%);
+    html {
+      scroll-behavior: smooth;
+    }
+    .studio-shell {
+      width: min(1540px, 100%);
       margin: 0 auto;
-      padding: 24px 28px 40px;
+      padding: 0 28px 40px;
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr);
+      gap: 24px;
+      align-items: start;
+    }
+    .studio-nav {
+      position: sticky;
+      top: 18px;
+      max-height: calc(100vh - 36px);
+      overflow: auto;
+      padding: 18px 0 20px;
+      display: grid;
+      gap: 14px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+    .studio-nav-title {
+      color: var(--ink);
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .studio-nav-group {
+      display: grid;
+      gap: 5px;
+      min-width: 0;
+    }
+    .studio-nav-group span {
+      color: var(--ink);
+      font-weight: 650;
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+    .studio-nav a {
+      display: block;
+      color: var(--muted);
+      text-decoration: none;
+      padding: 4px 0 4px 10px;
+      border-left: 2px solid transparent;
+      overflow-wrap: anywhere;
+    }
+    .studio-nav a:hover,
+    .studio-nav a:focus {
+      color: var(--accent);
+      border-left-color: var(--accent);
+      outline: 0;
+    }
+    main {
+      width: 100%;
+      min-width: 0;
+      padding: 24px 0 0;
       display: flex;
       flex-direction: column;
     }
@@ -122,10 +176,9 @@ INDEX_HTML = """<!doctype html>
     #first-run-section { order: 41; }
     #policy-configuration-section { order: 42; }
     #document-configuration-section { order: 43; }
-    #actions-section { order: 50; }
-    #diagnostics-section { order: 60; }
     section {
       margin: 0 0 22px;
+      scroll-margin-top: 18px;
     }
     .studio-area-heading {
       padding-top: 16px;
@@ -721,7 +774,19 @@ INDEX_HTML = """<!doctype html>
     }
     @media (max-width: 700px) {
       header { align-items: flex-start; flex-direction: column; }
-      main { padding: 18px 16px 32px; }
+      .studio-shell {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        padding: 0 16px 32px;
+      }
+      .studio-nav {
+        position: static;
+        max-height: none;
+        padding: 14px 0 0;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 10px 14px;
+      }
+      main { padding: 12px 0 0; }
       .row { grid-template-columns: 1fr; }
       .split { grid-template-columns: 1fr; }
       .trace-layout { grid-template-columns: 1fr; }
@@ -742,7 +807,35 @@ INDEX_HTML = """<!doctype html>
     <h1>JIKUO Studio</h1>
     <span id="global-status" class="status">Loading</span>
   </header>
-  <main>
+  <div class="studio-shell">
+  <nav class="studio-nav" aria-label="Studio module navigation">
+    <div class="studio-nav-title">Studio map</div>
+    <div class="studio-nav-group">
+      <span>Status</span>
+      <a href="#overview">Overview</a>
+      <a href="#semantic-classification-section">Semantic classification</a>
+      <a href="#release-limitations-section">Current limitations</a>
+    </div>
+    <div class="studio-nav-group">
+      <span>Trace</span>
+      <a href="#policy-trace-section">Policy Trace</a>
+      <a href="#document-trace-section">Document Trace</a>
+    </div>
+    <div class="studio-nav-group">
+      <span>Configuration</span>
+      <a href="#first-run-section">First-run readiness</a>
+      <a href="#document-configuration-section">Document Rules</a>
+      <a href="#project-files-title">Add files to Document Rules</a>
+      <a href="#policy-configuration-section">Policy Configuration</a>
+      <a href="#policy-starter-init-section">Starter policy pack</a>
+      <a href="#policy-evolution-section">Active policy changes</a>
+      <a href="#policy-template-publication-section">Reusable templates</a>
+      <a href="#policy-template-activation-section">Template activation</a>
+      <a href="#policy-candidate-activation-section">Pending policy activation</a>
+      <a href="#policy-inventory-section">Policy inventory</a>
+    </div>
+  </nav>
+  <main id="studio-main">
     <section class="grid" id="overview"></section>
     <section id="semantic-classification-section">
       <div class="section-title">
@@ -931,7 +1024,7 @@ INDEX_HTML = """<!doctype html>
       </div>
       <p class="subhead">No-write view of project policies, candidate proposals, package templates, starter packs, and guarded operation boundaries.</p>
       <div class="policy-metrics" id="policy-management-metrics"></div>
-      <div class="plan-tool">
+      <div class="plan-tool" id="policy-starter-init-section">
         <h3>Starter policy pack activation</h3>
         <p class="subhead">Activate baseline report-only policy coverage for a project through a reviewed starter pack plan and guarded writer.</p>
         <div class="policy-detail-grid">
@@ -971,7 +1064,7 @@ INDEX_HTML = """<!doctype html>
         </div>
         <div class="list" id="policy-starter-init-plan-result"></div>
       </div>
-      <div class="plan-tool">
+      <div class="plan-tool" id="policy-evolution-section">
         <h3>Change active policy configuration</h3>
         <p class="subhead">Inspect the selected policy, preview controlled configuration changes, then apply them through a guarded writer.</p>
         <div class="policy-detail-grid">
@@ -1052,7 +1145,7 @@ INDEX_HTML = """<!doctype html>
         </div>
         <div class="list" id="policy-evolution-plan-result"></div>
       </div>
-      <div class="plan-tool">
+      <div class="plan-tool" id="policy-template-publication-section">
         <h3>Make active policy reusable</h3>
         <p class="subhead">Publish a reviewed active policy as a reusable package template for future projects. This does not change the current project's active constraints.</p>
         <div class="policy-detail-grid">
@@ -1098,7 +1191,7 @@ INDEX_HTML = """<!doctype html>
         </div>
         <div class="list" id="policy-template-publication-plan-result"></div>
       </div>
-      <div class="plan-tool">
+      <div class="plan-tool" id="policy-template-activation-section">
         <h3>Template activation preview</h3>
         <p class="subhead">Select a package policy template, inspect the resolved project bindings, then activate it as a project policy through the guarded writer.</p>
         <div class="policy-detail-grid">
@@ -1138,7 +1231,7 @@ INDEX_HTML = """<!doctype html>
         </div>
         <div class="list" id="policy-template-activation-plan-result"></div>
       </div>
-      <div class="panel">
+      <div class="panel" id="policy-candidate-activation-section">
         <h2>Activatable policy proposals</h2>
         <p class="subhead">Only proposal snapshots that can still become active policies are listed here. Review the pending constraint before guarded activation.</p>
         <div class="form-grid">
@@ -1159,7 +1252,7 @@ INDEX_HTML = """<!doctype html>
         </div>
         <div class="list" id="policy-candidate-activation-plan-result"></div>
       </div>
-      <div class="policy-columns policy-primary">
+      <div class="policy-columns policy-primary" id="policy-inventory-section">
         <div class="policy-column">
           <h3>Active policies</h3>
           <p class="subhead">Current project constraints that can affect AI work.</p>
@@ -1194,15 +1287,8 @@ INDEX_HTML = """<!doctype html>
         </div>
       </div>
     </section>
-    <section id="actions-section">
-      <h2>Available Actions</h2>
-      <div class="list" id="actions"></div>
-    </section>
-    <section id="diagnostics-section">
-      <h2>Diagnostics</h2>
-      <div class="list" id="diagnostics"></div>
-    </section>
   </main>
+  </div>
   <script>
     const text = (value) => value === null || value === undefined ? "" : String(value);
     const statusClass = (value) => `status ${text(value).replace(/[^a-z_]/g, "")}`;
@@ -3965,8 +4051,7 @@ INDEX_HTML = """<!doctype html>
           metric(policyCounts.active_policy_count || 0, "Active policies"),
         metric(policyCounts.package_template_count || 0, "Package templates"),
         metric(mcp.tool_count || 0, "MCP tools"),
-        metric((data.pending_user_decisions || []).length, "Pending decisions"),
-        metric((data.diagnostics || []).length, "Diagnostics")
+        metric((data.pending_user_decisions || []).length, "Pending decisions")
         );
         renderSemanticEvidence(runtime);
         renderReleaseLimitations(summaries);
@@ -3975,15 +4060,6 @@ INDEX_HTML = """<!doctype html>
         renderDocumentMounts(data);
       renderRoundDocumentTrace(data);
       loadPolicyManagement(data);
-      const actions = document.getElementById("actions");
-      actions.replaceChildren(...(data.available_actions || []).map((action) =>
-        row(action.title || action.action_id, `${action.write_mode || ""} · ${action.plan_surface || ""}`, action.status)
-      ));
-      const diagnostics = document.getElementById("diagnostics");
-      const items = data.diagnostics || [];
-      diagnostics.replaceChildren(...(items.length ? items : [{code: "ok", message: "No diagnostics reported.", severity: "available"}]).map((item) =>
-        row(item.code || "diagnostic", item.message || "", item.severity || "available")
-      ));
     };
     fetch("/api/status", {cache: "no-store"})
       .then((response) => response.json())
@@ -3992,7 +4068,7 @@ INDEX_HTML = """<!doctype html>
         const global = document.getElementById("global-status");
         global.className = "status unavailable";
         global.textContent = "unavailable";
-        document.getElementById("diagnostics").replaceChildren(row("fetch_failed", error.message, "error"));
+        document.getElementById("overview").replaceChildren(row("fetch_failed", error.message, "error"));
       });
     loadProjectFiles();
     document.getElementById("document-rules-file-filter").addEventListener("input", renderProjectFiles);
