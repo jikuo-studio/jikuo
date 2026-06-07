@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-REL-READINESS-01: Pre-release User Usability
 
-> **Status**: Active pre-release work order; P0-01 through P0-06 accepted; P0-07 next.
+> **Status**: Active pre-release work order; P0-01 through P0-08 accepted; P0-09 next.
 > **Date**: 2026-06-06
 > **JIKUO layer**: release readiness / first-use configuration / user-facing governance.
 > **Business meaning**: before publishing JIKUO to GitHub, a new user should be able to install it, understand the initial configuration state, configure documents and starter policies, see known evidence limits, and complete a first governed workflow without relying on private local knowledge.
@@ -53,8 +53,8 @@ Stop rule for execution:
 | P0-04 | Policy configuration changes through guarded plan | Accepted | Users understand that policy metadata changes are governed configuration changes, not ad hoc UI toggles. | Scope/lifecycle/trigger/final-response-gate changes all use preview then guarded apply. |
 | P0-05 | First-run Document Rules and document-management guide | Accepted | Users understand which local documents JIKUO reads, which files are editable configuration, and how to add their own docs safely. | First-run project context, Document Rules UI, and `docs/user/document-management.md` show editable targets, defaults, local mount layering, and guarded add/remove flow. |
 | P0-06 | Evidence missing classification and trace guide | Accepted | Users can distinguish product limits from genuine missing work evidence instead of reading every `missing` as failure. | Missing evidence is classified by reason and surfaced in runtime / Studio read models; `docs/user/trace-and-evidence.md` explains Policy Trace, Document Trace, turn anchors, and missing classifications; README links or explicitly defers the trace guide entry. |
-| P0-07 | Current limitation disclosure | Not started | Users know what JIKUO does not yet prove, especially around semantic classification, mounted enforcement, report-only policy behavior, observed-read evidence, and why many `missing` reports are visible feature boundaries rather than hidden failures. | README / quickstart / Studio limitations and `docs/user/limitations.md` show the same limits in user-facing language, including missing-evidence causes and what the user should do with each class. |
-| P0-08 | Quickstart full flow | Not started | A user can complete one end-to-end flow without reconstructing private development history. | `docs/user/getting-started.md` and the main README rewrite cover install, configure, starter policy activation, document rules, task run, completion review, and receipt inspection. |
+| P0-07 | Current limitation disclosure | Accepted | Users know what JIKUO does not yet prove, especially around semantic classification, mounted enforcement, report-only policy behavior, observed-read evidence, and why many `missing` reports are visible feature boundaries rather than hidden failures. | README, Studio limitations, `docs/user/limitations.md`, and `docs/user/trace-and-evidence.md` show the same limits in user-facing language; quickstart integration is deferred to P0-08. |
+| P0-08 | Quickstart full flow | Accepted | A user can complete one end-to-end flow without reconstructing private development history. | `docs/user/getting-started.md` and the main README rewrite cover install, configure, starter policy activation, document rules, task run, completion review, and receipt inspection. |
 | P0-09 | Local path and runtime publication audit | Not started | Public release artifacts should not expose private machine paths or development-only runtime files as product defaults. | Release audit lists publish-safe files, ignored runtime paths, intentional local-only examples, README release readiness, and docs navigation readiness. |
 
 ## 3. P1 Release-support Checklist
@@ -276,12 +276,11 @@ or the absence of a comparable trace. This prevents the product from presenting
 every evidence gap as a generic failure while still keeping the underlying
 missing fact visible.
 
-## 11. Next Item: P0-07
+## 11. Accepted Item: P0-07
 
-P0-07 should expose current limitations consistently in README, quickstart,
-Studio, and `docs/user/limitations.md`.
+P0-07 is accepted as of 2026-06-07.
 
-Required behavior:
+Implemented behavior:
 
 - explain that a visible `missing` report is not automatically a product defect;
   many reports are deliberate feature-boundary disclosures where JIKUO cannot
@@ -297,7 +296,7 @@ Required behavior:
 - document why early projects may show many missing reports even when the
   product is operating as currently designed.
 
-Missing-evidence causes that must be documented:
+Documented missing-evidence causes:
 
 - host semantic intent is unavailable, not propagated to a lifecycle, or not
   associated with a turn anchor;
@@ -322,23 +321,93 @@ Documentation deliverables:
   boundaries and missing-evidence causes;
 - `docs/user/trace-and-evidence.md`: cross-link to limitations and clarify how
   missing classifications map to feature boundaries;
-- README and `docs/README.md`: public navigation to the limitations guide, or a
-  recorded deferral to P0-08/P0-09 with a reason;
-- Studio/read-model copy if needed so the thin frontend can show the same
-  limitation language from authoritative backend read models.
+- README and `docs/README.md`: public navigation to the limitations guide;
+- Studio read model `summaries.release_limitations`: authoritative backend
+  projection of current limitation categories and missing-evidence boundary
+  explanation;
+- thin Studio frontend `Current Limitations` panel: renders
+  `summaries.release_limitations` without frontend-owned governance logic.
 
-Acceptance signal:
+Acceptance evidence:
 
-- user-facing docs explain why many missing reports can be expected in the
-  current version;
-- docs distinguish feature boundary, required user configuration, missing host
-  semantic evidence, future product work, and genuine workflow evidence gaps;
-- Studio does not require the frontend to scrape scattered runtime files for
-  limitation explanations;
-- the release-readiness summary can state the business meaning and remaining
-  gaps without implying that JIKUO silently failed.
+- `python -m unittest tests.studio_global_status_tests tests.studio_web_server_tests`
+  passed with 47 tests;
+- `python -m unittest discover -s tests -p "*_tests.py"` passed with 389 tests;
+- `git diff --check` reported only existing line-ending normalization warnings
+  and no whitespace errors;
+- quickstart integration is explicitly deferred to P0-08 because
+  `docs/user/getting-started.md` is owned by that item.
 
-## 12. Known Limits To Expose Before Release
+Business meaning:
+
+P0-07 prevents a first-use trust failure. A user can now see that many
+`missing` reports are intentional current-version boundary disclosures: JIKUO
+cannot yet prove the fact, so it keeps the gap visible. The docs and Studio
+read model distinguish feature boundaries, required user configuration, missing
+host semantic evidence, future product work, and genuine workflow evidence gaps
+without hiding the raw missing state.
+
+Next item:
+
+P0-09 should audit private paths, runtime publication boundaries, README
+release posture, license language, and public documentation navigation before
+GitHub publication.
+
+## 12. Accepted Item: P0-08
+
+P0-08 is accepted as of 2026-06-07.
+
+Implemented behavior:
+
+- added `docs/user/getting-started.md` as the complete first-run guide;
+- rewrote README quickstart into a first-run entry point instead of a private
+  smoke-test-only command list;
+- covered install, CLI checks, Studio startup, first-run readiness, activation
+  settings, starter policy activation, Document Rules, one governed host-AI
+  work turn, completion review, runtime receipts, Policy Trace, Document Trace,
+  and missing-evidence boundaries;
+- stated the semantic boundary in the first-run path: host AI supplies compact
+  semantic intent; JIKUO records, merges, triggers policy, and displays
+  evidence;
+- added the getting-started guide to `docs/README.md`;
+- exposed the getting-started guide through the Studio `document_mounts` read
+  model as a stable user document reference and configuration-language term;
+- kept the thin frontend bound to backend read models. No browser-side scan of
+  scattered documentation or runtime files was added.
+
+Documentation deliverables:
+
+- `docs/user/getting-started.md`: first-run quickstart for install,
+  configuration, starter policies, Document Rules, governed work, completion
+  review, receipt inspection, and current limitations;
+- README: GitHub-facing first-run entry point with a pointer to the full guide;
+- `docs/README.md`: documentation index entry for the getting-started guide;
+- Studio read model `summaries.document_mounts.user_docs`: authoritative user
+  documentation list now includes the getting-started guide.
+
+Acceptance evidence:
+
+- `python -m unittest tests.studio_global_status_tests tests.studio_web_server_tests`
+  passed with 47 tests;
+- `python -m unittest discover -s tests -p "*_tests.py"` passed with 389 tests;
+- `git diff --check` reported only existing line-ending normalization warnings
+  and no whitespace errors.
+
+Business meaning:
+
+P0-08 gives a first-time user a single coherent product path. Instead of
+reverse-engineering private maintainer history, the user can install JIKUO,
+open Studio, understand required setup, configure policies and documents
+through guarded flows, run one host-AI governed turn, and inspect the resulting
+receipts and missing-evidence boundaries.
+
+Next item:
+
+P0-09 should audit the repository for publication safety: private local paths,
+runtime files, license and non-commercial-use language, public docs navigation,
+and release-facing README wording.
+
+## 13. Known Limits To Expose Before Release
 
 - JIKUO does not perform semantic judgment by itself. Host AI supplies compact
   semantic intent when available; JIKUO records, merges, triggers policies, and

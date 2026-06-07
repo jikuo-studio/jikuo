@@ -1,0 +1,73 @@
+schema: "jikuo.policy_evolution_plan.v0"
+schema_version: "jikuo.policy_evolution_plan.v0"
+report_only: true
+plan_id: "POLICYEVO-970bc932cc"
+operation: "refine_policy"
+status: "review"
+proposal_ref: ".jikuo/policies/proposals/POLICYEVOPROPOSAL-9a16f77705.yaml"
+decision_record_ref: ".jikuo/policies/decisions/POLICYDECISION-d646895a54.yaml"
+project_root: "D:\\personal_project\\Jikuo"
+policy_store_status: "active"
+target_policy_ref: "POLICY-jikuo-studio-frontend-authoritative-data-source"
+target_policy_snapshot:
+  policy_id: "POLICY-jikuo-studio-frontend-authoritative-data-source"
+  version: 1
+  path: ".jikuo/policies/approved/POLICY-jikuo-studio-frontend-authoritative-data-source.yaml"
+  title: "Studio Frontend Authoritative Data Source Boundary"
+  status: "active_report_only"
+target_trigger_profile:
+  work_profile:
+    schema: "jikuo.policy_work_profile_applicability.v0"
+    status: "declared"
+    lifecycle_events: ["conversation_turn", "task_start", "completion_review"]
+    policy_scopes: ["discussion", "editing", "progress_summary"]
+    intent_classes: []
+    operation_classes: []
+    output_classes: []
+    evaluator_effect: "consumed_by_POLTRIG_03_scope_filter"
+    warnings: []
+  declared_trigger_events: ["conversation_turn", "task_start", "completion_review"]
+  conditions: []
+proposed_trigger_profile:
+  trigger_mode: "event_anchored"
+  policy_scopes: ["discussion", "editing"]
+  lifecycle_events: ["conversation_turn", "task_start", "completion_review"]
+  declared_trigger_event: "conversation_turn"
+  conditions: []
+replacement_policy_ref: null
+replacement_policy_path: null
+replacement_policy: null
+write_set:
+  - path: ".jikuo/policies/proposals/POLICYEVOPROPOSAL-9a16f77705.yaml"
+    effect: "create policy evolution proposal snapshot"
+    operation: "create"
+  - path: ".jikuo/policies/approved/POLICY-jikuo-studio-frontend-authoritative-data-source.yaml"
+    effect: "update approved policy trigger profile"
+    operation: "update"
+  - path: ".jikuo/policies/decisions/POLICYDECISION-d646895a54.yaml"
+    effect: "create policy evolution decision record"
+    operation: "create"
+  - path: ".jikuo/policies/manifest.yaml"
+    effect: "update policy-store manifest lifecycle refs"
+    operation: "update"
+preflight:
+  replacement_policy_collision: false
+feedback:
+  feedback_type: null
+  summary: "Studio active-policy configuration change preview"
+  source_ref: "studio_policy_evolution_plan_preview"
+recommended_changes: ["review the feedback before changing durable policy configuration", "choose refine, deprecate, or supersede as a separate approved operation", "keep this plan no-write until the evolution target is explicit"]
+future_write_boundary:
+  requires_new_proposal: true
+  requires_decision_record: true
+  requires_guarded_writer: true
+  writer_implemented: true
+non_effects: ["does not write policy action, evidence, title, or status fields", "does not update manifest.yaml", "does not deprecate or supersede active policies", "does not execute policy actions", "does not promote gates"]
+write_allowed_by_command: false
+writes_performed: false
+guarded_apply_available: false
+refusal_reasons: []
+warnings: []
+source_refs: ["pkg://jikuo/governance/jikuo_policy_store_configuration_flow.md", "pkg://jikuo/governance/jikuo_configurable_rule_trigger_policy.md", "pkg://jikuo/governance/jikuo_rule_action_evidence_model.md", "pkg://jikuo/governance/jikuo_policy_aware_agent_flow_contract.md"]
+status_reason: "policy evolution plan is ready for desktop review; no durable write was performed"
+next_actions: ["review the proposed policy evolution path in chat", "if accepted, approve the generated guarded evolution write command"]

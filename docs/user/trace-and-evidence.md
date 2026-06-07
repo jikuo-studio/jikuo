@@ -75,6 +75,11 @@ Current categories:
 The classification does not satisfy the evidence. It does not change a policy
 result from missing to ok. It only makes the missing state easier to triage.
 
+For the release-boundary explanation of why many `missing` reports are expected
+in the current version, see `docs/user/limitations.md`. The short version is:
+JIKUO keeps unverifiable facts visible instead of silently treating them as
+proven or failed.
+
 ## 5. How To Inspect A Round
 
 1. Open Studio with `jikuo studio serve`.
@@ -102,3 +107,7 @@ host integration explicitly enforce that gate.
 
 Strict pre-turn behavior requires a host adapter. MCP tools and instruction
 files alone do not prove mounted execution before every user turn.
+
+The full current-boundary guide is `docs/user/limitations.md`. It explains how
+to distinguish feature boundaries, required user configuration, missing host
+semantic evidence, future product work, and genuine workflow evidence gaps.

@@ -1,6 +1,6 @@
 schema_version: "jikuo.configurable_rule_policy.v0"
 policy_id: "POLICY-jikuo-studio-frontend-authoritative-data-source"
-version: 1
+version: 2
 status: "active_report_only"
 title: "Studio Frontend Authoritative Data Source Boundary"
 final_response_gate: true
@@ -12,12 +12,6 @@ triggers:
   - trigger_id: "TRG-conversation-turn"
     type: "task_lifecycle_event"
     event: "conversation_turn"
-  - trigger_id: "TRG-task-start"
-    type: "task_lifecycle_event"
-    event: "task_start"
-  - trigger_id: "TRG-completion-review"
-    type: "task_lifecycle_event"
-    event: "completion_review"
 conditions: []
 required_actions:
   - action_id: "ACT-review-studio-frontend-authoritative-read-model-boundary"
@@ -32,7 +26,7 @@ enforcement:
   level: "review_required"
 applies_to_work_profile:
   - lifecycle_events: ["conversation_turn", "task_start", "completion_review"]
-    policy_scopes: ["discussion", "editing", "progress_summary"]
+    policy_scopes: ["discussion", "editing"]
 applicability_boundary:
   summary: "Applies when discussing, implementing, or summarizing Studio frontend state/data-source behavior."
   design_scope: "Includes design discussion before file edits so the host AI does not accept raw-storage-driven UI architecture."

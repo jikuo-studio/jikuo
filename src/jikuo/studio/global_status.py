@@ -49,8 +49,10 @@ else:
 GLOBAL_STATUS_SCHEMA = "jikuo.studio.global_status.v0"
 PROJECT_CONTEXT_REF = ".jikuo/project_context.yaml"
 USER_DOC_REFS = {
+    "getting_started": "docs/user/getting-started.md",
     "document_management": "docs/user/document-management.md",
     "trace_and_evidence": "docs/user/trace-and-evidence.md",
+    "limitations": "docs/user/limitations.md",
 }
 REGISTRY_REFS = {
     "work_orders": "docs/registry/work_orders.yaml",
@@ -175,11 +177,25 @@ def document_mount_configuration_terms(
             "stability_rule": "frontend says whether editing is available, not which implementation owns it",
         },
         {
+            "term_id": "getting_started_guide",
+            "user_label": "Getting started guide",
+            "user_description": "User-facing first-run path from install through Studio, starter policies, Document Rules, governed work, completion review, and receipt inspection.",
+            "internal_refs": [USER_DOC_REFS["getting_started"]],
+            "stability_rule": "frontend uses this stable guide term as the first-run entry point",
+        },
+        {
             "term_id": "document_management_guide",
             "user_label": "Document management guide",
             "user_description": "User-facing guide for first-run document configuration, local mount layering, and guarded Document Rules changes.",
             "internal_refs": [USER_DOC_REFS["document_management"]],
             "stability_rule": "user-facing documentation may be reorganized, but this term keeps the first-run help target explicit",
+        },
+        {
+            "term_id": "limitations_guide",
+            "user_label": "Limitations guide",
+            "user_description": "User-facing guide that explains current product boundaries, including why many missing reports are boundary disclosures rather than defects.",
+            "internal_refs": [USER_DOC_REFS["limitations"]],
+            "stability_rule": "frontend uses this stable guide term instead of scraping scattered runtime files for limitation explanations",
         },
     ]
 
@@ -861,6 +877,131 @@ MISSING_EVIDENCE_CATEGORY_DEFS = {
 }
 
 
+RELEASE_LIMITATION_DEFS = [
+    {
+        "limitation_id": "host_semantic_intent_boundary",
+        "title": "Semantic intent is host-supplied",
+        "boundary": (
+            "JIKUO records compact semantic intent supplied by the host AI; it "
+            "does not infer user intent or model intent by itself."
+        ),
+        "missing_meaning": (
+            "Missing or fallback-only semantic evidence means the host did not "
+            "provide retained host-AI semantic proof for that round."
+        ),
+        "user_action": (
+            "Configure the host adapter or workflow to pass host_semantic_intent "
+            "before governed work when semantic proof matters."
+        ),
+        "boundary_type": "feature_boundary",
+    },
+    {
+        "limitation_id": "report_only_policy_boundary",
+        "title": "Report-only policy gaps are review signals",
+        "boundary": (
+            "Many pre-release policies expose missing evidence without blocking "
+            "execution. They are visibility requirements unless a stronger gate "
+            "is explicitly configured."
+        ),
+        "missing_meaning": (
+            "A policy evidence missing report can mean a report-only policy has "
+            "surfaced a review requirement, not that the workflow failed."
+        ),
+        "user_action": (
+            "Review the policy scope, record evidence, mark it not applicable, "
+            "or narrow the policy before treating it as a blocking failure."
+        ),
+        "boundary_type": "feature_boundary",
+    },
+    {
+        "limitation_id": "runtime_history_boundary",
+        "title": "Runtime history is not the full event ledger yet",
+        "boundary": (
+            "Current trace views are built from retained runtime visibility "
+            "snapshots and history cards, not from the future DATA-01 event ledger."
+        ),
+        "missing_meaning": (
+            "Older or partial rounds may lack comparable structured state even "
+            "when useful runtime cards exist."
+        ),
+        "user_action": (
+            "Inspect adjacent lifecycle rounds and treat missing historical "
+            "structure as a current observability limit."
+        ),
+        "boundary_type": "feature_boundary",
+    },
+    {
+        "limitation_id": "observed_read_boundary",
+        "title": "Observed-read proof is limited",
+        "boundary": (
+            "Write-side evidence can be observed through explicit write records "
+            "and git status; read-side proof is less mature in this version."
+        ),
+        "missing_meaning": (
+            "A missing read observation can mean JIKUO did not capture proof, "
+            "not that the host AI definitely ignored the document."
+        ),
+        "user_action": (
+            "Capture explicit read evidence when read proof is required for the "
+            "workflow."
+        ),
+        "boundary_type": "feature_boundary",
+    },
+    {
+        "limitation_id": "document_trace_comparability_boundary",
+        "title": "Document Trace needs comparable round state",
+        "boundary": (
+            "Document Trace can only compare expected documents, observed "
+            "evidence, and gaps when the selected round contains structured "
+            "artifact assurance data."
+        ),
+        "missing_meaning": (
+            "No comparable trace means structured comparison is unavailable for "
+            "that round; it is not direct proof that no document was considered."
+        ),
+        "user_action": (
+            "Use a lifecycle that emits artifact assurance, or inspect the "
+            "runtime card and adjacent rounds."
+        ),
+        "boundary_type": "feature_boundary",
+    },
+    {
+        "limitation_id": "completion_evidence_backfill_boundary",
+        "title": "Completion and final-response evidence is still being backfilled",
+        "boundary": (
+            "Some completion-review, progress-summary, and final-response policy "
+            "obligations are declared before every evidence producer is automated."
+        ),
+        "missing_meaning": (
+            "A missing final/progress evidence item can mean the policy contract "
+            "is visible before the automated receipt is complete."
+        ),
+        "user_action": (
+            "Include the required business meaning in summaries and rely on the "
+            "visible missing report as backlog evidence until the producer exists."
+        ),
+        "boundary_type": "feature_boundary",
+    },
+    {
+        "limitation_id": "strict_mounted_boundary",
+        "title": "Strict mounted execution depends on a host adapter",
+        "boundary": (
+            "MCP tools and instruction files make JIKUO available, but strict "
+            "pre-turn execution requires a host adapter or hook to call JIKUO."
+        ),
+        "missing_meaning": (
+            "Missing mounted proof means the strict adapter path has not supplied "
+            "the expected lifecycle evidence."
+        ),
+        "user_action": (
+            "Use a mounted-capable adapter when strict pre-turn enforcement is "
+            "part of the product promise."
+        ),
+        "boundary_type": "configuration_boundary",
+    },
+]
+
+
 def missing_category_definition(category: str) -> dict[str, str]:
     return MISSING_EVIDENCE_CATEGORY_DEFS.get(
         category,
@@ -888,6 +1029,7 @@ def missing_evidence_classification(
         "basis": basis,
         "source_kind": source_kind,
         "guide_ref": USER_DOC_REFS["trace_and_evidence"],
+        "limitations_doc_ref": USER_DOC_REFS["limitations"],
         "non_effects": [
             "does_not_change_original_missing_status",
             "does_not_satisfy_policy_evidence",
@@ -918,10 +1060,64 @@ def missing_classification_summary(items: list[dict[str, Any]]) -> dict[str, Any
             for category, count in sorted(category_counts.items())
         ],
         "guide_ref": USER_DOC_REFS["trace_and_evidence"],
+        "limitations_doc_ref": USER_DOC_REFS["limitations"],
         "non_effects": [
             "does_not_change_original_missing_status",
             "does_not_satisfy_policy_evidence",
             "does_not_infer_semantic_intent",
+        ],
+    }
+
+
+def release_limitations_summary(project_root: Path) -> dict[str, Any]:
+    limitations_doc_ref = USER_DOC_REFS["limitations"]
+    categories = [
+        {
+            "schema": "jikuo.studio.release_limitation.v0",
+            "limitation_id": item["limitation_id"],
+            "title": item["title"],
+            "boundary": item["boundary"],
+            "missing_meaning": item["missing_meaning"],
+            "user_action": item["user_action"],
+            "boundary_type": item["boundary_type"],
+            "doc_ref": limitations_doc_ref,
+        }
+        for item in RELEASE_LIMITATION_DEFS
+    ]
+    return {
+        "schema": "jikuo.studio.release_limitations.v0",
+        "status": "available"
+        if (project_root / limitations_doc_ref).is_file()
+        else "degraded",
+        "summary": (
+            "Many visible missing reports are current feature-boundary disclosures: "
+            "JIKUO keeps unverifiable facts visible instead of silently treating "
+            "them as proven or failed."
+        ),
+        "doc_ref": limitations_doc_ref,
+        "category_count": len(categories),
+        "categories": categories,
+        "missing_evidence_boundary": {
+            "status": "feature_boundary_disclosure",
+            "raw_missing_preserved": True,
+            "not_defect_by_default": True,
+            "meaning": (
+                "Missing evidence means the current runtime did not provide a "
+                "matching proof item. The limitation category explains whether "
+                "that is expected current-version behavior, required user "
+                "configuration, future product work, or a workflow evidence gap."
+            ),
+        },
+        "source_refs": [
+            limitations_doc_ref,
+            USER_DOC_REFS["trace_and_evidence"],
+            "src/jikuo/studio/global_status.py",
+        ],
+        "non_effects": [
+            "does_not_change_original_missing_status",
+            "does_not_satisfy_policy_evidence",
+            "does_not_infer_semantic_intent",
+            "does_not_make_report_only_policies_blocking",
         ],
     }
 
@@ -2017,6 +2213,16 @@ def document_mounts_summary(
     rule_source_descriptors = classify_document_rule_sources(active_mount_authority)
     user_docs = [
         {
+            "doc_id": "getting_started",
+            "title": "Getting started",
+            "path": USER_DOC_REFS["getting_started"],
+            "status": "available"
+            if (project_root / USER_DOC_REFS["getting_started"]).is_file()
+            else "missing",
+            "purpose": "First-run guide for install, configuration, starter policies, Document Rules, governed work, completion review, and receipt inspection.",
+            "doc_type": "quickstart",
+        },
+        {
             "doc_id": "document_management",
             "title": "Document management",
             "path": USER_DOC_REFS["document_management"],
@@ -2035,7 +2241,17 @@ def document_mounts_summary(
             else "missing",
             "purpose": "Guide for Policy Trace, Document Trace, turn anchors, and missing-evidence classifications.",
             "doc_type": "concept_and_how_to",
-        }
+        },
+        {
+            "doc_id": "limitations",
+            "title": "Current limitations",
+            "path": USER_DOC_REFS["limitations"],
+            "status": "available"
+            if (project_root / USER_DOC_REFS["limitations"]).is_file()
+            else "missing",
+            "purpose": "Guide for current product boundaries and why many missing reports are visible boundary disclosures rather than hidden failures.",
+            "doc_type": "limitations",
+        },
     ]
     default_configuration = {
         "schema": "jikuo.studio.document_rules_default_configuration.v0",
@@ -2061,8 +2277,10 @@ def document_mounts_summary(
             mount_sets_ref=mount_sets_ref,
         ),
         "project_context_ref": PROJECT_CONTEXT_REF,
+        "getting_started_doc_ref": USER_DOC_REFS["getting_started"],
         "document_management_doc_ref": USER_DOC_REFS["document_management"],
         "trace_and_evidence_doc_ref": USER_DOC_REFS["trace_and_evidence"],
+        "limitations_doc_ref": USER_DOC_REFS["limitations"],
         "user_docs": user_docs,
         "user_doc_count": len(user_docs),
         "default_configuration": default_configuration,
@@ -2339,6 +2557,7 @@ def build_global_status(*, project_root: Path | None = None) -> dict[str, Any]:
         "activation": activation,
         "configuration": configuration,
         "document_mounts": document_mounts,
+        "release_limitations": release_limitations_summary(resolved_root),
         "artifact_assurance": artifact_assurance.build_summary_from_document_mounts(
             project_root=resolved_root,
             document_mounts=document_mounts,
@@ -2386,6 +2605,7 @@ def build_global_status(*, project_root: Path | None = None) -> dict[str, Any]:
         "card_links": runtime_links,
         "source_refs": [
             source_ref(PROJECT_CONTEXT_REF),
+            *(source_ref(ref) for ref in USER_DOC_REFS.values()),
             *(source_ref(ref) for ref in REGISTRY_REFS.values()),
             source_ref(runtime_visibility.STATE_SUMMARY_REF),
             source_ref(activation_settings.SETTINGS_REF),
@@ -2439,6 +2659,7 @@ def format_markdown(report: dict[str, Any]) -> str:
     completion_checks_label = completion_checks_term.get("user_label") or "Completion checks"
     rule_sources_label = rule_sources_term.get("user_label") or "Configuration sources and guidance"
     runtime = summaries.get("runtime") or {}
+    release_limitations = summaries.get("release_limitations") or {}
     assurance = summaries.get("artifact_assurance") or {}
     assurance_write = assurance.get("write_assurance") or {}
     assurance_gap = assurance.get("gap_report") or {}
@@ -2458,6 +2679,7 @@ def format_markdown(report: dict[str, Any]) -> str:
         f"- First run: `{first_run.get('status')}` / usable=`{str(first_run.get('user_usable')).lower()}` / blockers=`{first_run.get('blocker_count', 0)}`",
         f"- Runtime: `{runtime.get('status')}` / triggered_policies=`{(runtime.get('counts') or {}).get('triggered_policy_count', 0)}` / missing_evidence=`{(runtime.get('counts') or {}).get('missing_evidence_count', 0)}`",
         f"- {document_rules_label}: `{document_mounts.get('status')}` / configured roles=`{document_mounts.get('role_count', 0)}` / {completion_checks_label.lower()}=`{document_mounts.get('checked_document_count', 0)}`",
+        f"- Current limitations: `{release_limitations.get('status')}` / categories=`{release_limitations.get('category_count', 0)}` / doc=`{release_limitations.get('doc_ref')}`",
         f"- Artifact assurance: `{assurance.get('status')}` / required_writes=`{assurance_write.get('required_write_count', 0)}` / gaps=`{assurance_gap.get('gap_count', 0)}`",
         f"- Policies: active=`{policy_counts.get('active_policy_count', 0)}` / templates=`{policy_counts.get('package_template_count', 0)}` / starter_refs=`{policy_counts.get('starter_template_ref_count', 0)}`",
         f"- MCP tools: `{mcp.get('tool_count', 0)}` / sampling_probe=`{str(mcp.get('sampling_probe_exposed')).lower()}`",
@@ -2467,9 +2689,17 @@ def format_markdown(report: dict[str, Any]) -> str:
         f"## {document_rules_label}",
         "",
         f"- {rule_sources_label}: editable=`{len(document_mounts.get('editable_configuration_sources') or [])}` / guidance=`{len(document_mounts.get('governance_guidance_sources') or [])}`",
+        f"- Getting started: `{document_mounts.get('getting_started_doc_ref')}`",
         f"- User guide: `{document_mounts.get('document_management_doc_ref')}`",
         f"- Missing required roles: `{document_mounts.get('missing_required_role_count', 0)}`",
         f"- Rule sets: `{document_mounts.get('mount_set_count', 0)}` / Studio status=`{document_mounts.get('studio_mount_set_status')}`",
+        "",
+        "## Current Limitations",
+        "",
+        f"- Status: `{release_limitations.get('status')}`",
+        f"- Guide: `{release_limitations.get('doc_ref')}`",
+        f"- Missing evidence boundary: `{(release_limitations.get('missing_evidence_boundary') or {}).get('status')}`",
+        f"- Summary: {release_limitations.get('summary')}",
         "",
         "## Artifact Assurance",
         "",

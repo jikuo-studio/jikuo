@@ -1,0 +1,17 @@
+schema_version: "jikuo.policy_decision.v0"
+decision_id: "POLICYDECISION-d646895a54"
+proposal_ref: ".jikuo/policies/proposals/POLICYEVOPROPOSAL-9a16f77705.yaml"
+policy_ref: "POLICY-jikuo-studio-frontend-authoritative-data-source"
+decision: "refine_policy"
+target:
+  kind: "approved_policy"
+  ref: "POLICY-jikuo-studio-frontend-authoritative-data-source"
+effect: "refine trigger profile for POLICY-jikuo-studio-frontend-authoritative-data-source"
+non_effect: "does not execute policy actions, persist evidence, or promote gates"
+approval_phrase: "Approve Policy Evolution write"
+created_at: "2026-06-06T15:42:15Z"
+source_plan_ref: "POLICYEVO-970bc932cc"
+source_plan_schema: "jikuo.policy_evolution_plan.v0"
+storage:
+  path: ".jikuo/policies/decisions/POLICYDECISION-d646895a54.yaml"
+  policy_store_ref: ".jikuo/policies"

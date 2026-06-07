@@ -742,6 +742,14 @@ INDEX_HTML = """<!doctype html>
       <p class="subhead">Latest retained host AI semantic intent when available, plus the latest runtime round and remaining evidence limits.</p>
       <div class="list" id="semantic-evidence-list"></div>
     </section>
+    <section id="release-limitations-section">
+      <div class="section-title">
+        <h2>Current Limitations</h2>
+        <span id="release-limitations-status" class="status">Loading</span>
+      </div>
+      <p class="subhead">Current product boundaries projected from the Studio read model. Missing evidence remains visible; these explanations do not satisfy evidence or make report-only policies blocking.</p>
+      <div class="compact-list" id="release-limitations-list"></div>
+    </section>
     <section class="studio-area-heading" id="studio-trace-heading">
       <h2>Trace</h2>
       <p class="subhead">Read-only runtime evidence grouped by policy activation and document assurance. These views display recorded facts; they do not evaluate policy or infer semantic intent.</p>
@@ -3822,6 +3830,35 @@ INDEX_HTML = """<!doctype html>
           : [row("Evidence imperfections", "No additional imperfection is reported for this latest round projection.", "available")])
       );
     };
+    const renderReleaseLimitations = (summaries) => {
+      const limitations = (summaries || {}).release_limitations || {};
+      const status = document.getElementById("release-limitations-status");
+      status.className = statusClass(limitations.status || "unavailable");
+      status.textContent = limitations.status || "unavailable";
+      const boundary = limitations.missing_evidence_boundary || {};
+      const categories = limitations.categories || [];
+      const rows = [
+        compactItem(
+          "Missing evidence boundary",
+          `${boundary.status || "unknown"} / ${boundary.meaning || "Missing evidence boundary was not supplied."}`
+        ),
+        compactItem("Guide", limitations.doc_ref || "No limitations guide registered."),
+        ...categories.map((item) =>
+          compactItem(
+            item.title || item.limitation_id || "Current limitation",
+            [
+              item.boundary_type || "boundary",
+              item.boundary || "",
+              item.missing_meaning ? `Missing means: ${item.missing_meaning}` : "",
+              item.user_action ? `Next: ${item.user_action}` : "",
+            ].filter(Boolean).join(" / ")
+          )
+        ),
+      ];
+      document.getElementById("release-limitations-list").replaceChildren(
+        ...(rows.length ? rows : [compactItem("No limitations reported", "The Studio read model did not report current limitations.")])
+      );
+    };
     const render = (data) => {
       const global = document.getElementById("global-status");
       global.className = statusClass(data.status);
@@ -3859,6 +3896,7 @@ INDEX_HTML = """<!doctype html>
         metric((data.diagnostics || []).length, "Diagnostics")
         );
         renderSemanticEvidence(runtime);
+        renderReleaseLimitations(summaries);
         renderPolicyTrace(runtime);
         renderFirstRun(data);
         renderDocumentMounts(data);

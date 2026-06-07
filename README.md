@@ -41,19 +41,31 @@ gate are being decided.
 - Integration-neutral core APIs reserved for MCP, future Agent SDK wrappers,
   Studio, plugins, and client adapters.
 
-## Quickstart
+## First-run Quickstart
 
-For private GitHub preview proof:
+The complete first-run flow lives in
+[`docs/user/getting-started.md`](docs/user/getting-started.md). It covers
+install, Studio startup, first-run configuration, starter policy activation,
+Document Rules, one governed work turn, completion review, receipt inspection,
+and current missing-evidence limits.
+
+Install from the current source repository:
 
 ```powershell
-cd D:\personal_project
-git clone https://github.com/jikuo-studio/jikuo.git Jikuo_private_preview
-cd D:\personal_project\Jikuo_private_preview
+cd <workspace>
+git clone https://github.com/jikuo-studio/jikuo.git
+cd jikuo
 py -3 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -e ".[dev]"
 .\.venv\Scripts\jikuo.exe --help
 .\.venv\Scripts\jikuo-mcp.exe --help
+```
+
+Inspect first-run readiness and current runtime receipts:
+
+```powershell
 .\.venv\Scripts\jikuo.exe show
+.\.venv\Scripts\jikuo.exe configure status --format markdown
 .\.venv\Scripts\jikuo.exe studio status --format markdown
 ```
 
@@ -62,6 +74,22 @@ Run the local read-only Studio console:
 ```powershell
 .\.venv\Scripts\jikuo.exe studio serve --host 127.0.0.1 --port 8765
 ```
+
+Then complete these setup steps before treating the project as ready:
+
+- review required first-run blockers and recommended setup actions;
+- configure activation settings through preview and guarded apply;
+- activate starter policies through preview and guarded apply when baseline
+  policy coverage is needed;
+- review Document Rules and point them at the user's project documents;
+- run a small governed work turn through a host AI client that supplies compact
+  semantic intent when available;
+- inspect `jikuo show`, Policy Trace, Document Trace, Current Limitations, and
+  completion-review receipts.
+
+JIKUO does not perform semantic judgment by itself. The host AI supplies compact
+semantic intent; JIKUO records it, merges it with turn anchors and lifecycle
+events, triggers matching policies, and displays evidence.
 
 For local source-tree development without an editable install:
 
@@ -154,12 +182,18 @@ JIKUO before each user turn.
 - [`README.md`](README.md): product-facing private preview entry point.
 - [`docs/README.md`](docs/README.md): internal documentation layout and mount
   rules.
+- [`docs/user/getting-started.md`](docs/user/getting-started.md): first-run
+  quickstart covering install, configuration, starter policies, Document Rules,
+  governed work, completion review, and receipt inspection.
 - [`docs/user/document-management.md`](docs/user/document-management.md):
   first-use guide for Document Rules, local mount layering, and guarded
   document configuration changes.
 - [`docs/user/trace-and-evidence.md`](docs/user/trace-and-evidence.md):
   guide for Policy Trace, Document Trace, turn anchors, and missing evidence
   classifications.
+- [`docs/user/limitations.md`](docs/user/limitations.md): current product
+  boundaries, including why many `missing` reports are visible boundary
+  disclosures rather than hidden failures.
 - [`docs/governance/jikuo_productization_task_map.md`](docs/governance/jikuo_productization_task_map.md):
   legacy human-readable roadmap projection.
 - [`docs/registry/`](docs/registry/): draft structured registry shards for

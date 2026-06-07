@@ -981,8 +981,16 @@ class StudioGlobalStatusTests(unittest.TestCase):
         )
         self.assertIn("stability_rule", terms["edit_status"])
         self.assertEqual(
+            terms["getting_started_guide"]["internal_refs"],
+            ["docs/user/getting-started.md"],
+        )
+        self.assertEqual(
             terms["document_management_guide"]["internal_refs"],
             ["docs/user/document-management.md"],
+        )
+        self.assertEqual(
+            terms["limitations_guide"]["internal_refs"],
+            ["docs/user/limitations.md"],
         )
         editable_sources = document_mounts["editable_configuration_sources"]
         guidance_sources = document_mounts["governance_guidance_sources"]
@@ -998,6 +1006,10 @@ class StudioGlobalStatusTests(unittest.TestCase):
             ".jikuo/project_context.yaml",
         )
         self.assertEqual(
+            document_mounts["getting_started_doc_ref"],
+            "docs/user/getting-started.md",
+        )
+        self.assertEqual(
             document_mounts["document_management_doc_ref"],
             "docs/user/document-management.md",
         )
@@ -1005,10 +1017,16 @@ class StudioGlobalStatusTests(unittest.TestCase):
             document_mounts["trace_and_evidence_doc_ref"],
             "docs/user/trace-and-evidence.md",
         )
+        self.assertEqual(
+            document_mounts["limitations_doc_ref"],
+            "docs/user/limitations.md",
+        )
         user_docs = {item["doc_id"]: item for item in document_mounts["user_docs"]}
+        self.assertEqual(user_docs["getting_started"]["status"], "available")
         self.assertEqual(user_docs["document_management"]["status"], "available")
         self.assertEqual(user_docs["trace_and_evidence"]["status"], "available")
-        self.assertEqual(document_mounts["user_doc_count"], 2)
+        self.assertEqual(user_docs["limitations"]["status"], "available")
+        self.assertEqual(document_mounts["user_doc_count"], 4)
         self.assertEqual(
             document_mounts["default_configuration"]["editable_config_ref"],
             ".jikuo/project_context.yaml",
@@ -1018,6 +1036,40 @@ class StudioGlobalStatusTests(unittest.TestCase):
             "jikuo studio document-rules plan",
         )
         self.assertFalse(report["writes_performed"])
+
+    def test_release_limitations_explain_missing_as_boundary(self):
+        report = global_status.build_global_status(project_root=ROOT)
+
+        limitations = report["summaries"]["release_limitations"]
+        self.assertEqual(limitations["status"], "available")
+        self.assertEqual(limitations["doc_ref"], "docs/user/limitations.md")
+        self.assertTrue(
+            limitations["missing_evidence_boundary"]["raw_missing_preserved"]
+        )
+        self.assertTrue(
+            limitations["missing_evidence_boundary"]["not_defect_by_default"]
+        )
+        category_ids = {item["limitation_id"] for item in limitations["categories"]}
+        self.assertIn("host_semantic_intent_boundary", category_ids)
+        self.assertIn("report_only_policy_boundary", category_ids)
+        self.assertIn("observed_read_boundary", category_ids)
+        self.assertIn("strict_mounted_boundary", category_ids)
+        self.assertIn(
+            "docs/user/limitations.md",
+            {
+                ref["ref"]
+                for ref in report["source_refs"]
+                if isinstance(ref, dict)
+            },
+        )
+        self.assertIn(
+            "docs/user/getting-started.md",
+            {
+                ref["ref"]
+                for ref in report["source_refs"]
+                if isinstance(ref, dict)
+            },
+        )
 
     def test_missing_project_context_is_unavailable_without_writes(self):
         with tempfile.TemporaryDirectory() as tmp:
