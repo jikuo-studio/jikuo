@@ -1084,7 +1084,7 @@ entries:
     title: "SPRINT_050_WO-PER-JIKUO-REL-01: External Release License Decision"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-REL-01_external_release_license_decision.md"
     sprint: "SPRINT_050"
-    status: "Decision brief drafted; package metadata remains `Proprietary` until the user explicitly chooses a license"
+    status: "Noncommercial preview license selected and implemented; package metadata now uses `PolyForm-Noncommercial-1.0.0`"
     impact_tags: []
     implements_capabilities: []
     capability_extraction_status: "no_capability_refs_found"
@@ -1093,7 +1093,7 @@ entries:
     title: "SPRINT_050_WO-PER-JIKUO-REL-READINESS-01: Pre-release User Usability"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-REL-READINESS-01_pre_release_user_usability.md"
     sprint: "SPRINT_050"
-    status: "Active pre-release work order; P0-01 through P0-08 accepted; P0-09 in progress with local-path/runtime publication audit slice 1 implemented"
+    status: "Active pre-release work order; P0-01 through P0-08 accepted; P0-09 in progress with local-path/runtime publication audit, noncommercial license posture, and public documentation surface cleanup implemented"
     impact_tags:
       - "release_readiness"
       - "first_use"

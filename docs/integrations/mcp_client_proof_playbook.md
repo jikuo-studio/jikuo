@@ -1,7 +1,7 @@
 # JIKUO MCP Client Proof Playbook
 
-> **Status**: Manual proof playbook for desktop MCP clients.
-> **Product meaning**: this document is both a first-use configuration guide and the evidence checklist for saying a client actually supports JIKUO MCP, not merely that unit tests pass.
+> **Status**: Internal release-validation proof playbook for desktop MCP clients; not a first-run user onboarding document.
+> **Product meaning**: this document is the evidence checklist for saying a client actually supports JIKUO MCP, not merely that unit tests pass. First-run users should start with `docs/user/getting-started.md` and `docs/integrations/mcp_client_configuration_examples.md`.
 > **Scope**: local stdio MCP only; no remote hosted MCP, no strict pre-turn adapter implementation, and no screenshots committed unless the user explicitly approves.
 
 ## 1. User Entry Model

@@ -1,5 +1,10 @@
 # JIKUO Integration Proof Notes
 
+> **Publication boundary**: this directory contains retained release-validation
+> evidence. It is not a first-run user onboarding surface. Public docs should
+> link to sanitized configuration examples unless a specific proof note is
+> intentionally exported or redacted for review.
+
 This directory stores reviewed integration proof notes for client adapters,
 including accepted proofs and explicit not-accepted observations.
 

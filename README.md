@@ -7,15 +7,16 @@ It helps an AI-assisted project make its working state visible: which policies
 are active, which ones triggered, what evidence is missing, which task-session
 is being worked, and where the user can independently verify the runtime card.
 
-JIKUO is currently an early standalone package in private preview. The current
-MCP MVP exposes 24 local stdio tools across no-write status/cards/proposals,
-first-use configuration review, activation settings, conversation routing,
-policy suggestion review, MCP Sampling semantic-provider probing, and
-guarded-write apply paths.
+JIKUO is currently an early standalone package in source-available
+noncommercial preview. The current MCP MVP exposes 24 local stdio tools across
+no-write status/cards/proposals, first-use configuration review, activation
+settings, conversation routing, policy suggestion review, MCP Sampling
+semantic-provider probing, and guarded-write apply paths.
 
-This repository is not a public release yet. The package metadata remains
-`Proprietary` while the external source-available preview license and brand/IP
-gate are being decided.
+This repository is licensed for noncommercial use under the PolyForm
+Noncommercial License 1.0.0. Commercial use, commercial hosted service use,
+production business use, and brand/IP terms require a separate written
+agreement.
 
 ## What JIKUO Provides
 
@@ -36,8 +37,9 @@ gate are being decided.
   without scraping Markdown cards.
 - A local read-only Studio console exposed through `jikuo studio serve`, backed
   by the same Studio read models and not by frontend-owned governance logic.
-- Accepted private-preview MCP use in Codex and Claude, plus proof docs for
-  Cursor, VS Code + GitHub Copilot Agent mode, and regression checks.
+- Public MCP configuration examples for supported desktop clients. Internal
+  proof records exist for release validation, but they are not first-run user
+  onboarding documents.
 - Integration-neutral core APIs reserved for MCP, future Agent SDK wrappers,
   Studio, plugins, and client adapters.
 
@@ -159,8 +161,8 @@ must not silently create durable `.jikuo/` state without user approval.
 MCP configuration examples live in
 [`docs/integrations/mcp_client_configuration_examples.md`](docs/integrations/mcp_client_configuration_examples.md).
 
-Manual client proof steps live in
-[`docs/integrations/mcp_client_proof_playbook.md`](docs/integrations/mcp_client_proof_playbook.md).
+Maintainer proof steps and retained proof records live under `docs/integrations/`.
+They are release-validation evidence, not the first-run user path.
 
 ## Trigger Modes
 
@@ -179,7 +181,8 @@ JIKUO before each user turn.
 
 ## Documentation Map
 
-- [`README.md`](README.md): product-facing private preview entry point.
+- [`README.md`](README.md): product-facing source-available noncommercial
+  preview entry point.
 - [`docs/README.md`](docs/README.md): internal documentation layout and mount
   rules.
 - [`docs/user/getting-started.md`](docs/user/getting-started.md): first-run
@@ -205,12 +208,13 @@ JIKUO before each user turn.
   draft structured execution-event schema for future analytics.
 - [`docs/governance/jikuo_execution_mounts.md`](docs/governance/jikuo_execution_mounts.md):
   current execution mount set.
+- [`docs/integrations/mcp_client_configuration_examples.md`](docs/integrations/mcp_client_configuration_examples.md):
+  user-safe MCP configuration examples using placeholders instead of
+  maintainer-local paths.
 - [`docs/work_orders/`](docs/work_orders/): accepted and in-progress work
   orders.
 - [`docs/insights/`](docs/insights/): captured development insights and their
   registry.
-- [`docs/integrations/mcp_client_proof_playbook.md`](docs/integrations/mcp_client_proof_playbook.md):
-  fresh-clone proof workflow for supported desktop AI clients.
 
 ## Development
 
@@ -228,14 +232,13 @@ pytest
 
 ## License
 
-The current package metadata is `Proprietary`. The external release license is
-an explicit product decision and has not changed yet.
+JIKUO is distributed under the PolyForm Noncommercial License 1.0.0:
 
-This repository does not currently grant public, commercial, or non-commercial
-use rights. Before publishing a public GitHub preview, add an explicit
-source-available / non-commercial license or terms file and update package
-metadata to match that decision.
+- SPDX identifier: `PolyForm-Noncommercial-1.0.0`
+- License file: [`LICENSE.md`](LICENSE.md)
+- Canonical terms: <https://polyformproject.org/licenses/noncommercial/1.0.0/>
 
-Current product direction is a private GitHub preview followed by a possible
-source-available community preview. Public review should wait until the license,
-brand notice, contribution terms, privacy sweep, and IP gate are accepted.
+This is a source-available noncommercial preview, not an OSI open-source
+release. Commercial use, commercial hosted service use, production business
+use, brand/IP rights, and contribution terms require separate written approval
+or future project terms.

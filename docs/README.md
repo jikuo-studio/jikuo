@@ -20,7 +20,9 @@ JIKUO now uses this standalone repository as its active product-development home
   document management, policy management, trace inspection, and release
   limitations.
 - `docs/governance/`: JIKUO product maps, execution mounts, kernel/skeleton boundaries, policy contracts, and agent instruction contracts.
-- `docs/integrations/`: JIKUO integration examples, client configuration notes, and smoke-test companion artifacts.
+- `docs/integrations/`: JIKUO integration examples and client configuration
+  notes. Checked proof playbooks and proof notes in this tree are release
+  validation evidence, not first-run user onboarding documents.
 - `docs/schemas/`: JIKUO-owned schema and view-model contracts.
 - `docs/registry/`: draft machine-readable registries for work orders, capabilities, scenario chains, and mount sets.
 - `docs/insights/`: captured development insights and their registry.
@@ -47,14 +49,16 @@ Public release documentation is split into three surfaces:
   use placeholders instead of maintainer-local paths and avoid unexplained
   internal audit details.
 - Engineering governance documents: `docs/governance/**`, `docs/registry/**`,
-  active work orders, schemas, integrations, and insights. These can be public
-  implementation material when current setup instructions use placeholders and
-  historical/local-proof sections are clearly marked.
-- Historical audit material: runtime cards, local proof records, migration
-  handoffs, and `.jikuo/policies/proposals/**`. These are not user onboarding
-  documents. Publish them only through an explicit redaction/export decision;
-  use sanitized fixtures or examples when public docs need policy-proposal
-  examples.
+  active work orders, schemas, integration configuration examples, and insights.
+  These can be public implementation material when current setup instructions
+  use placeholders and historical/local-proof sections are clearly marked.
+- Historical audit material: runtime cards, local proof records,
+  `docs/integrations/mcp_client_proof_playbook.md`,
+  `docs/integrations/proofs/**`, migration handoffs, and
+  `.jikuo/policies/proposals/**`. These are not user onboarding documents.
+  Publish them only through an explicit redaction/export decision; use
+  sanitized fixtures or examples when public docs need policy-proposal or
+  client-proof examples.
 
 ---
 
@@ -105,12 +109,16 @@ Public release documentation is split into three surfaces:
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md`
 - `docs/insights/INSIGHT-2026-05-17-self-bootstrap-harness-workspace-boundary.md`
 - `docs/integrations/mcp_client_configuration_examples.md`
-- `docs/integrations/mcp_client_proof_playbook.md`
 - `docs/migration/NARRATIVESYSTEM_RESOURCE_POOL_HANDOFF.md`
 
-Current private GitHub preview remote for realistic clone/download proof:
-`https://github.com/jikuo-studio/jikuo.git`. Keep it private until the
-license, privacy sweep, and public-review IP gate are accepted.
+Internal release-validation entries, not user onboarding:
+
+- `docs/integrations/mcp_client_proof_playbook.md`
+- `docs/integrations/proofs/README.md`
+
+Current GitHub repository used for realistic clone/download proof:
+`https://github.com/jikuo-studio/jikuo.git`. Public availability remains gated
+by the privacy sweep, public-review IP gate, and owner publication decision.
 
 ---
 

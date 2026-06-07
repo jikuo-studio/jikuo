@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-REL-READINESS-01: Pre-release User Usability
 
-> **Status**: Active pre-release work order; P0-01 through P0-08 accepted; P0-09 in progress.
+> **Status**: Active pre-release work order; P0-01 through P0-08 accepted; P0-09 in progress with license posture and public documentation surface cleanup implemented.
 > **Date**: 2026-06-06
 > **JIKUO layer**: release readiness / first-use configuration / user-facing governance.
 > **Business meaning**: before publishing JIKUO to GitHub, a new user should be able to install it, understand the initial configuration state, configure documents and starter policies, see known evidence limits, and complete a first governed workflow without relying on private local knowledge.
@@ -444,8 +444,9 @@ Current audit findings:
   maintainer-local references. They need a release navigation decision:
   publish as historical local-proof material, redact, or keep out of the public
   documentation surface;
-- package metadata still says `Proprietary`, and no public non-commercial
-  license has been installed.
+- at the end of Slice 1, package metadata still said `Proprietary`, and no
+  public non-commercial license had been installed; Slice 4 resolves that
+  license-posture gap.
 
 Slice 2 implemented behavior:
 
@@ -484,13 +485,13 @@ Business meaning:
 
 P0-09 is protecting the first public GitHub impression. A user should not see
 the maintainer's machine layout as the default product path, should not receive
-local runtime/cache artifacts, and should not infer that non-commercial use is
-allowed before the repository contains explicit license terms. The condition
-composition disclosure also prevents users from assuming JIKUO can express OR
-policy routing when the current evaluator only supports conservative AND
-composition. The Slice 3 publication strategy prevents historical audit
-evidence from leaking into the public onboarding path while preserving the
-integrity of local governance records.
+local runtime/cache artifacts, and should see the explicit noncommercial
+license boundary instead of guessing usage rights from repository visibility.
+The condition composition disclosure also prevents users from assuming JIKUO
+can express OR policy routing when the current evaluator only supports
+conservative AND composition. The Slice 3 and Slice 5 publication strategy
+prevents historical audit evidence from leaking into the public onboarding path
+while preserving the integrity of local governance records.
 
 Acceptance evidence for this slice:
 
@@ -519,6 +520,18 @@ Acceptance evidence for this slice:
   `.jikuo/policies/proposals/*.yaml`, user entry documents, engineering
   governance documents, and historical audit material in this work order and
   `docs/README.md`.
+- Slice 4 implemented the source-available noncommercial preview license
+  posture: `LICENSE.md` was added, `pyproject.toml` now uses
+  `PolyForm-Noncommercial-1.0.0`, README license wording now grants
+  noncommercial preview use under that license, and
+  `JIKUO-REL-01` records the selected license posture.
+- Slice 5 cleaned up public documentation navigation: root README now points
+  users to `docs/user/**` and MCP configuration examples instead of presenting
+  the MCP proof playbook as a first-run path; `docs/README.md` classifies
+  `docs/integrations/mcp_client_proof_playbook.md` and
+  `docs/integrations/proofs/**` as internal release-validation / historical
+  audit material; the proof playbook and proof notes README now state that
+  boundary explicitly.
 
 ## 14. Known Limits To Expose Before Release
 
