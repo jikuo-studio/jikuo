@@ -822,10 +822,11 @@ INDEX_HTML = """<!doctype html>
       <a href="#document-trace-section">Document Trace</a>
     </div>
     <div class="studio-nav-group">
-      <span>Configuration</span>
+      <span>Setup</span>
       <a href="#first-run-section">First-run readiness</a>
-      <a href="#document-configuration-section">Document Rules</a>
-      <a href="#project-files-title">Add files to Document Rules</a>
+    </div>
+    <div class="studio-nav-group">
+      <span>Policy Configuration</span>
       <a href="#policy-configuration-section">Policy Configuration</a>
       <a href="#policy-starter-init-section">Starter policy pack</a>
       <a href="#policy-evolution-section">Active policy changes</a>
@@ -833,6 +834,11 @@ INDEX_HTML = """<!doctype html>
       <a href="#policy-template-activation-section">Template activation</a>
       <a href="#policy-candidate-activation-section">Pending policy activation</a>
       <a href="#policy-inventory-section">Policy inventory</a>
+    </div>
+    <div class="studio-nav-group">
+      <span>Document Configuration</span>
+      <a href="#document-configuration-section">Document Rules</a>
+      <a href="#project-files-title">Add files to Document Rules</a>
     </div>
   </nav>
   <main id="studio-main">
@@ -873,119 +879,6 @@ INDEX_HTML = """<!doctype html>
       <div class="compact-list trace-overview-grid" id="policy-trace-lifecycle-overview"></div>
       <div class="trace-layout" id="policy-trace-lifecycle"></div>
     </section>
-    <section class="studio-area-heading" id="studio-configuration-heading">
-      <h2>Configuration</h2>
-      <p class="subhead">Current policy and document configuration plus guarded preview/apply change paths. These panels are where future governance behavior is configured.</p>
-    </section>
-    <section class="studio-subsection" id="first-run-section">
-      <div class="section-title">
-        <h2>First-run readiness</h2>
-        <span id="first-run-status" class="status">Loading</span>
-      </div>
-      <div class="grid" id="first-run-metrics"></div>
-      <div class="rules-overview" aria-labelledby="first-run-required-title">
-        <div class="rules-groups">
-          <div class="rules-group">
-            <h3 id="first-run-required-title">Required setup</h3>
-            <div class="compact-list" id="first-run-required"></div>
-          </div>
-          <div class="rules-group">
-            <h3>Recommended checks</h3>
-            <div class="compact-list" id="first-run-recommended"></div>
-          </div>
-          <div class="rules-group">
-            <h3>Next actions</h3>
-            <div class="compact-list" id="first-run-next-actions"></div>
-          </div>
-        </div>
-      </div>
-    </section>
-    <section class="studio-subsection" id="document-configuration-section">
-      <div class="section-title">
-        <h2 id="document-rules-title">Document Rules</h2>
-        <span id="document-mounts-status" class="status">Loading</span>
-      </div>
-      <p class="subhead" id="document-rules-description"></p>
-      <div class="grid" id="document-mounts-metrics"></div>
-      <div class="rules-overview" aria-labelledby="document-rules-overview-title">
-        <h3 id="document-rules-overview-title">Current Document Rules</h3>
-        <p class="subhead">Each column is one Document Rules purpose. The rows inside that column are the documents currently configured for that purpose.</p>
-        <div class="rules-groups">
-          <div class="rules-group">
-            <h3>Context documents</h3>
-            <p class="subhead">Used before or during work as project context. Source: document roles.</p>
-            <div class="compact-list" id="document-rules-context-overview"></div>
-          </div>
-          <div class="rules-group">
-            <h3>Completion checks</h3>
-            <p class="subhead">Checked before claiming a governed slice is complete. Source: completion-check rules.</p>
-            <div class="compact-list" id="document-rules-completion-overview"></div>
-          </div>
-            <div class="rules-group">
-              <h3>Governance references</h3>
-              <p class="subhead">Explain boundaries and editable configuration. Source: rule-source references.</p>
-              <div class="compact-list" id="document-rules-guidance-overview"></div>
-            </div>
-            <div class="rules-group">
-              <h3>User guide</h3>
-              <p class="subhead">First-run documentation for defaults, local mount layering, and guarded changes.</p>
-              <div class="compact-list" id="document-rules-user-docs"></div>
-            </div>
-          </div>
-        </div>
-      <div class="plan-tool" aria-labelledby="document-rules-plan-title">
-        <h3 id="document-rules-plan-title">Preview a Document Rules change</h3>
-        <form id="document-rules-form">
-          <div class="form-grid">
-            <label>
-              Change type
-              <select id="document-rules-operation">
-                <option value="add_context_doc">Add context document</option>
-                <option value="add_completion_check">Add completion check</option>
-                <option value="add_governance_reference">Add rule source</option>
-                <option value="remove_context_doc">Remove context document</option>
-                <option value="remove_completion_check">Remove completion check</option>
-                <option value="remove_governance_reference">Remove rule source</option>
-              </select>
-            </label>
-            <label>
-              Project document path
-              <input id="document-rules-path" name="path" placeholder="docs/example.md" autocomplete="off">
-            </label>
-            <label>
-              Optional role name
-              <input id="document-rules-role" name="role" placeholder="project_brief" autocomplete="off">
-            </label>
-          </div>
-          <div class="plan-rule-row">
-            <label>
-              Completion check rule
-              <input id="document-rules-completion-rule" name="completion_rule" placeholder="review this document before declaring the governed slice complete" autocomplete="off">
-            </label>
-            <button id="document-rules-preview-button" type="submit">Preview plan</button>
-          </div>
-          <div class="file-picker" aria-labelledby="project-files-title">
-            <h3 id="project-files-title">Add files to Document Rules</h3>
-            <p class="subhead">Candidate local files. This is not the current mount set; each row shows current Document Rules membership.</p>
-            <div class="file-toolbar">
-              <label>
-                Filter available files
-                <input id="document-rules-file-filter" placeholder="path, role, membership..." autocomplete="off">
-              </label>
-              <button class="secondary-button" id="document-rules-clear-selection" type="button">Clear selection</button>
-            </div>
-            <div class="file-list" id="document-rules-file-list" aria-live="polite"></div>
-            <p class="subhead">Selected files</p>
-            <div class="selected-files" id="document-rules-selected-files"></div>
-          </div>
-        </form>
-        <div class="plan-result" id="document-rules-plan-result" aria-live="polite"></div>
-        <div class="plan-apply-row">
-          <p class="subhead" id="document-rules-apply-note">Preview and review a plan to enable approval.</p>
-          <button id="document-rules-apply-button" type="button" disabled>Approve and apply</button>
-        </div>
-      </div>
-    </section>
     <section class="studio-subsection" id="document-trace-section">
       <div class="section-title">
         <h2>Document Trace</h2>
@@ -1014,6 +907,49 @@ INDEX_HTML = """<!doctype html>
           <h3>Gaps</h3>
           <p class="subhead">Missing or mismatched read/write evidence that needs attention.</p>
           <div class="compact-list" id="round-trace-gaps"></div>
+        </div>
+      </div>
+    </section>
+    <section class="studio-area-heading" id="studio-configuration-heading">
+      <h2>Configuration</h2>
+      <p class="subhead">Current policy and document configuration plus guarded preview/apply change paths. These panels are where future governance behavior is configured.</p>
+    </section>
+    <section class="studio-subsection" id="first-run-section">
+      <div class="section-title">
+        <h2>First-run readiness</h2>
+        <span id="first-run-status" class="status">Loading</span>
+      </div>
+      <div class="grid" id="first-run-metrics"></div>
+      <div class="rules-overview" aria-labelledby="first-run-required-title">
+        <div class="rules-groups">
+          <div class="rules-group">
+            <h3 id="first-run-required-title">Required setup</h3>
+            <div class="compact-list" id="first-run-required"></div>
+          </div>
+          <div class="rules-group">
+            <h3>Recommended checks</h3>
+            <div class="compact-list" id="first-run-recommended"></div>
+          </div>
+          <div class="rules-group">
+            <h3>Configure in Studio</h3>
+            <p class="subhead">Setup gaps that have a current Studio panel path.</p>
+            <div class="compact-list" id="first-run-studio-actions"></div>
+          </div>
+          <div class="rules-group">
+            <h3>Run CLI command</h3>
+            <p class="subhead">Setup gaps that are visible here but must be handled outside Studio for now.</p>
+            <div class="compact-list" id="first-run-cli-actions"></div>
+          </div>
+          <div class="rules-group">
+            <h3>Manual file setup</h3>
+            <p class="subhead">Project files or client config that need direct user action.</p>
+            <div class="compact-list" id="first-run-manual-actions"></div>
+          </div>
+          <div class="rules-group">
+            <h3>Not supported in Studio</h3>
+            <p class="subhead">Detected setup gaps without a current Studio configuration path.</p>
+            <div class="compact-list" id="first-run-unsupported-actions"></div>
+          </div>
         </div>
       </div>
     </section>
@@ -1287,6 +1223,92 @@ INDEX_HTML = """<!doctype html>
         </div>
       </div>
     </section>
+    <section class="studio-subsection" id="document-configuration-section">
+      <div class="section-title">
+        <h2 id="document-rules-title">Document Rules</h2>
+        <span id="document-mounts-status" class="status">Loading</span>
+      </div>
+      <p class="subhead" id="document-rules-description"></p>
+      <div class="grid" id="document-mounts-metrics"></div>
+      <div class="rules-overview" aria-labelledby="document-rules-overview-title">
+        <h3 id="document-rules-overview-title">Current Document Rules</h3>
+        <p class="subhead">Each column is one Document Rules purpose. The rows inside that column are the documents currently configured for that purpose.</p>
+        <div class="rules-groups">
+          <div class="rules-group">
+            <h3>Context documents</h3>
+            <p class="subhead">Used before or during work as project context. Source: document roles.</p>
+            <div class="compact-list" id="document-rules-context-overview"></div>
+          </div>
+          <div class="rules-group">
+            <h3>Completion checks</h3>
+            <p class="subhead">Checked before claiming a governed slice is complete. Source: completion-check rules.</p>
+            <div class="compact-list" id="document-rules-completion-overview"></div>
+          </div>
+            <div class="rules-group">
+              <h3>Governance references</h3>
+              <p class="subhead">Explain boundaries and editable configuration. Source: rule-source references.</p>
+              <div class="compact-list" id="document-rules-guidance-overview"></div>
+            </div>
+            <div class="rules-group">
+              <h3>User guide</h3>
+              <p class="subhead">First-run documentation for defaults, local mount layering, and guarded changes.</p>
+              <div class="compact-list" id="document-rules-user-docs"></div>
+            </div>
+          </div>
+        </div>
+      <div class="plan-tool" aria-labelledby="document-rules-plan-title">
+        <h3 id="document-rules-plan-title">Preview a Document Rules change</h3>
+        <form id="document-rules-form">
+          <div class="form-grid">
+            <label>
+              Change type
+              <select id="document-rules-operation">
+                <option value="add_context_doc">Add context document</option>
+                <option value="add_completion_check">Add completion check</option>
+                <option value="add_governance_reference">Add rule source</option>
+                <option value="remove_context_doc">Remove context document</option>
+                <option value="remove_completion_check">Remove completion check</option>
+                <option value="remove_governance_reference">Remove rule source</option>
+              </select>
+            </label>
+            <label>
+              Project document path
+              <input id="document-rules-path" name="path" placeholder="docs/example.md" autocomplete="off">
+            </label>
+            <label>
+              Optional role name
+              <input id="document-rules-role" name="role" placeholder="project_brief" autocomplete="off">
+            </label>
+          </div>
+          <div class="plan-rule-row">
+            <label>
+              Completion check rule
+              <input id="document-rules-completion-rule" name="completion_rule" placeholder="review this document before declaring the governed slice complete" autocomplete="off">
+            </label>
+            <button id="document-rules-preview-button" type="submit">Preview plan</button>
+          </div>
+          <div class="file-picker" aria-labelledby="project-files-title">
+            <h3 id="project-files-title">Add files to Document Rules</h3>
+            <p class="subhead">Candidate local files. This is not the current mount set; each row shows current Document Rules membership.</p>
+            <div class="file-toolbar">
+              <label>
+                Filter available files
+                <input id="document-rules-file-filter" placeholder="path, role, membership..." autocomplete="off">
+              </label>
+              <button class="secondary-button" id="document-rules-clear-selection" type="button">Clear selection</button>
+            </div>
+            <div class="file-list" id="document-rules-file-list" aria-live="polite"></div>
+            <p class="subhead">Selected files</p>
+            <div class="selected-files" id="document-rules-selected-files"></div>
+          </div>
+        </form>
+        <div class="plan-result" id="document-rules-plan-result" aria-live="polite"></div>
+        <div class="plan-apply-row">
+          <p class="subhead" id="document-rules-apply-note">Preview and review a plan to enable approval.</p>
+          <button id="document-rules-apply-button" type="button" disabled>Approve and apply</button>
+        </div>
+      </div>
+    </section>
   </main>
   </div>
   <script>
@@ -1408,6 +1430,60 @@ INDEX_HTML = """<!doctype html>
           return "unavailable";
         }
         return "degraded";
+      };
+      const firstRunResolutionBucket = (step) => {
+        const record = step || {};
+        const key = text(record.key).toLowerCase();
+        const title = text(record.title).toLowerCase();
+        const action = text(record.next_action).toLowerCase();
+        const value = `${key} ${title} ${action}`;
+        if (key === "starter_policies" || value.includes("starter policy pack")) {
+          return "studio";
+        }
+        if (
+          key === "instruction_files"
+          || value.includes("jikuo install")
+          || value.includes("jikuo settings")
+          || value.includes("jikuo-agent-flow")
+          || value.includes("jikuo-mcp")
+        ) {
+          return "cli";
+        }
+        if (
+          value.includes("create `")
+          || value.includes("create .")
+          || value.includes("manual")
+          || value.includes("install project dependencies")
+        ) {
+          return "manual";
+        }
+        if (record.next_action) {
+          return "unsupported";
+        }
+        return "";
+      };
+      const firstRunResolutionRow = (step) => {
+        const action = step.next_action || "No concrete resolution path was supplied by the read model.";
+        const bucket = firstRunResolutionBucket(step);
+        const detail = [
+          step.current || "",
+          action,
+          bucket === "studio" ? "Open the matching Studio panel and use Preview/Apply." : "",
+          bucket === "cli" ? "Not handled by Studio in this version." : "",
+        ].filter(Boolean).join(" / ");
+        return row(step.title || step.key || "Setup gap", detail, firstRunStepStatus(step));
+      };
+      const firstRunResolutionRows = (steps, bucket) => {
+        const rows = (steps || [])
+          .filter((step) => firstRunResolutionBucket(step) === bucket)
+          .map(firstRunResolutionRow);
+        const emptyMessages = {
+          studio: "No first-run setup gaps currently require a Studio configuration path.",
+          cli: "No first-run setup gaps currently require CLI handling.",
+          manual: "No first-run setup gaps currently require manual file setup.",
+          unsupported: "No unsupported first-run setup gaps reported.",
+        };
+        return rows.length ? rows : [emptyRow(emptyMessages[bucket] || "No setup gaps reported.")];
       };
       const DOCUMENT_RULES_APPROVAL_PHRASE = "Approve Document Rules update";
     const POLICY_EVOLUTION_APPROVAL_PHRASE = "Approve Policy Evolution write";
@@ -3381,15 +3457,26 @@ INDEX_HTML = """<!doctype html>
         );
         const required = firstRun.required_steps || [];
         const recommended = firstRun.recommended_steps || [];
-        const actions = firstRun.next_actions || [];
+        const setupSteps = [...required, ...recommended].filter((step) =>
+          (step || {}).status !== "complete" || (step || {}).next_action
+        );
         document.getElementById("first-run-required").replaceChildren(
           ...(required.length ? required.map(stepRow) : [emptyRow("No required first-run setup items reported.")])
         );
         document.getElementById("first-run-recommended").replaceChildren(
           ...(recommended.length ? recommended.map(stepRow) : [emptyRow("No recommended first-run checks reported.")])
         );
-        document.getElementById("first-run-next-actions").replaceChildren(
-          ...(actions.length ? actions.slice(0, 6).map((action) => row("Next action", action, "degraded")) : [emptyRow("No next action reported.")])
+        document.getElementById("first-run-studio-actions").replaceChildren(
+          ...firstRunResolutionRows(setupSteps, "studio")
+        );
+        document.getElementById("first-run-cli-actions").replaceChildren(
+          ...firstRunResolutionRows(setupSteps, "cli")
+        );
+        document.getElementById("first-run-manual-actions").replaceChildren(
+          ...firstRunResolutionRows(setupSteps, "manual")
+        );
+        document.getElementById("first-run-unsupported-actions").replaceChildren(
+          ...firstRunResolutionRows(setupSteps, "unsupported")
         );
       };
       const artifactPath = (item) => text((item || {}).path || (item || {}).path_ref || (item || {}).ref || (item || {}).target || (item || {}).source_ref || "path not supplied");

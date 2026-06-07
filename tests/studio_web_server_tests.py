@@ -1087,6 +1087,26 @@ class StudioWebServerTests(unittest.TestCase):
         self.assertIn('href="#policy-inventory-section"', html)
         self.assertNotIn('href="#actions-section"', html)
         self.assertNotIn('href="#diagnostics-section"', html)
+        nav_order = [
+            "<span>Status</span>",
+            "<span>Trace</span>",
+            "<span>Setup</span>",
+            "<span>Policy Configuration</span>",
+            "<span>Document Configuration</span>",
+        ]
+        self.assertEqual([html.index(item) for item in nav_order], sorted(html.index(item) for item in nav_order))
+        section_order = [
+            '<section class="studio-subsection" id="policy-trace-section"',
+            '<section class="studio-subsection" id="document-trace-section"',
+            '<section class="studio-area-heading" id="studio-configuration-heading"',
+            '<section class="studio-subsection" id="first-run-section"',
+            '<section class="studio-subsection" id="policy-configuration-section"',
+            '<section class="studio-subsection" id="document-configuration-section"',
+        ]
+        self.assertEqual(
+            [html.index(item) for item in section_order],
+            sorted(html.index(item) for item in section_order),
+        )
         self.assertIn("/api/status", html)
         self.assertIn("/api/project-files", html)
         self.assertIn("/api/document-rules/plan", html)
@@ -1118,6 +1138,22 @@ class StudioWebServerTests(unittest.TestCase):
         self.assertIn("First-run readiness", html)
         self.assertIn("first-run-status", html)
         self.assertIn("renderFirstRun", html)
+        self.assertIn("Configure in Studio", html)
+        self.assertIn("Run CLI command", html)
+        self.assertIn("Manual file setup", html)
+        self.assertIn("Not supported in Studio", html)
+        self.assertIn("Setup gaps that have a current Studio panel path", html)
+        self.assertIn("Setup gaps that are visible here but must be handled outside Studio for now", html)
+        self.assertIn("Project files or client config that need direct user action", html)
+        self.assertIn("Detected setup gaps without a current Studio configuration path", html)
+        self.assertIn("first-run-studio-actions", html)
+        self.assertIn("first-run-cli-actions", html)
+        self.assertIn("first-run-manual-actions", html)
+        self.assertIn("first-run-unsupported-actions", html)
+        self.assertIn("firstRunResolutionBucket", html)
+        self.assertIn("firstRunResolutionRows", html)
+        self.assertIn("Not handled by Studio in this version", html)
+        self.assertNotIn("first-run-next-actions", html)
         self.assertIn("Policy Configuration", html)
         self.assertIn("Document Configuration", html)
         self.assertIn("/api/policy-management/status", html)
