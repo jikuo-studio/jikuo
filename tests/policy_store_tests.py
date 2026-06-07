@@ -161,6 +161,81 @@ def retarget_policy_trigger_event(policy_path: Path, event: str) -> None:
     policy_path.write_text(text, encoding="utf-8")
 
 
+def write_existing_replacement_policy(
+    project_root: Path,
+    *,
+    policy_id: str,
+    title: str,
+    event: str = "task_start",
+    task_type: str | None = None,
+    jikuo_layer: str | None = None,
+    changed_path_pattern: str | None = None,
+) -> Path:
+    approved = project_root / ".jikuo" / "policies" / "approved"
+    approved.mkdir(parents=True, exist_ok=True)
+    lines = [
+        'schema_version: "jikuo.configurable_rule_policy.v0"',
+        f'policy_id: "{policy_id}"',
+        "version: 1",
+        'status: "active_report_only"',
+        f'title: "{title}"',
+        'scenario_package: "engineering_governance"',
+        "source_refs:",
+        '  - type: "test_fixture"',
+        '    ref: "tests:existing_replacement_policy"',
+        "triggers:",
+        f'  - trigger_id: "TRG-{event.replace("_", "-")}"',
+        '    type: "task_lifecycle_event"',
+        f'    event: "{event}"',
+    ]
+    conditions: list[str] = []
+    if task_type:
+        conditions.extend(
+            [
+                '  - condition_id: "COND-task-type"',
+                '    type: "task_type_is"',
+                f'    value: "{task_type}"',
+            ]
+        )
+    if jikuo_layer:
+        conditions.extend(
+            [
+                '  - condition_id: "COND-jikuo-layer"',
+                '    type: "jikuo_layer_is"',
+                f'    value: "{jikuo_layer}"',
+            ]
+        )
+    if changed_path_pattern:
+        conditions.extend(
+            [
+                '  - condition_id: "COND-changed-path"',
+                '    type: "changed_path_matches"',
+                f'    pattern: "{changed_path_pattern}"',
+            ]
+        )
+    if conditions:
+        lines.append("conditions:")
+        lines.extend(conditions)
+    lines.extend(
+        [
+            "required_actions:",
+            '  - action_id: "ACT-render-pre-task-review"',
+            '    type: "render_pre_task_review"',
+            "required_evidence:",
+            '  - evidence_id: "EVD-card-rendered"',
+            '    type: "card_rendered"',
+            '    satisfies_action: "ACT-render-pre-task-review"',
+            "enforcement:",
+            '  phase: "report_only"',
+            '  level: "review_required"',
+            "",
+        ]
+    )
+    path = approved / f"{policy_id}.yaml"
+    path.write_text("\n".join(lines), encoding="utf-8")
+    return path
+
+
 class PolicyStoreStatusTests(unittest.TestCase):
     def test_missing_policy_store_reports_missing_without_write(self):
         completed = run_status(MISSING_PROJECT)
@@ -1449,6 +1524,14 @@ class PolicyStoreStatusTests(unittest.TestCase):
         with temp_project_dir() as temp_root:
             project_root = temp_root / "policy_store_active_project"
             shutil.copytree(ACTIVE_PROJECT, project_root)
+            write_existing_replacement_policy(
+                project_root,
+                policy_id="POLICY-three-phase-audit-v2",
+                title="Three-phase task audit v2",
+                event="task_start",
+                task_type="work_order_delivery",
+                jikuo_layer="testing_governance",
+            )
             completed = subprocess.run(
                 [
                     sys.executable,
@@ -1469,12 +1552,6 @@ class PolicyStoreStatusTests(unittest.TestCase):
                     "User asked to replace the broad three-phase audit policy with a narrower v2 policy.",
                     "--replacement-policy-id",
                     "POLICY-three-phase-audit-v2",
-                    "--replacement-title",
-                    "Three-phase task audit v2",
-                    "--replacement-task-type",
-                    "work_order_delivery",
-                    "--replacement-jikuo-layer",
-                    "testing_governance",
                     "--confirm-write-evolution",
                     "--approval-phrase",
                     "I approve superseding POLICY-three-phase-audit with POLICY-three-phase-audit-v2 in this temp project.",
@@ -1495,7 +1572,7 @@ class PolicyStoreStatusTests(unittest.TestCase):
             self.assertEqual(result["operation"], "supersede_policy")
             self.assertEqual(result["replacement_policy_ref"], "POLICY-three-phase-audit-v2")
             self.assertIn(result["proposal_ref"], result["written_paths"])
-            self.assertIn(
+            self.assertNotIn(
                 ".jikuo/policies/approved/POLICY-three-phase-audit-v2.yaml",
                 result["written_paths"],
             )

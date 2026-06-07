@@ -38,11 +38,32 @@ The following remain outside this repository's active documentation mount unless
 
 ---
 
-## 4. Current Entry Points
+## 4. Publication Surface
+
+Public release documentation is split into three surfaces:
+
+- User entry documents: `README.md`, `docs/README.md`, and `docs/user/**`.
+  These are public-facing onboarding and product-operation guides. They should
+  use placeholders instead of maintainer-local paths and avoid unexplained
+  internal audit details.
+- Engineering governance documents: `docs/governance/**`, `docs/registry/**`,
+  active work orders, schemas, integrations, and insights. These can be public
+  implementation material when current setup instructions use placeholders and
+  historical/local-proof sections are clearly marked.
+- Historical audit material: runtime cards, local proof records, migration
+  handoffs, and `.jikuo/policies/proposals/**`. These are not user onboarding
+  documents. Publish them only through an explicit redaction/export decision;
+  use sanitized fixtures or examples when public docs need policy-proposal
+  examples.
+
+---
+
+## 5. Current Entry Points
 
 - `README.md`
 - `docs/user/getting-started.md`
 - `docs/user/document-management.md`
+- `docs/user/policy-management.md`
 - `docs/user/trace-and-evidence.md`
 - `docs/user/limitations.md`
 - `docs/README.md`
@@ -93,7 +114,7 @@ license, privacy sweep, and public-review IP gate are accepted.
 
 ---
 
-## 5. Migration Rule
+## 6. Migration Rule
 
 When a future task creates JIKUO-owned docs:
 
@@ -110,7 +131,7 @@ When a future task creates JIKUO-owned docs:
 
 ---
 
-## 6. Slice Completion Main Document Check
+## 7. Slice Completion Main Document Check
 
 Before closing each JIKUO development slice, check whether these main documents need updates:
 

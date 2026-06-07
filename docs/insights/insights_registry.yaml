@@ -2,7 +2,7 @@ schema_version: "jikuo.development_insight_registry.v0"
 registry_id: "jikuo-development-insights"
 purpose: "Capture development ideas before deciding whether they become task-map work, policies, or deferred context."
 created_at: "2026-05-14"
-updated_at: "2026-06-06"
+updated_at: "2026-06-07"
 classification_values:
   - "task_candidate"
   - "policy_candidate"
@@ -281,3 +281,18 @@ entries:
       - ".jikuo/policies/approved/POLICY-jikuo-discussion-first-no-write-boundary.yaml"
       - ".jikuo/policies/approved/POLICY-jikuo-implementation-intent-routing-before-change.yaml"
     summary: "A discussion-framed request was handled as executable work because the host AI supplied editing intent before policy evidence could influence tool-use boundaries; the insight is deferred so future design can seek a more general discussion/execution separation mechanism instead of a brittle if/then gate."
+  - insight_id: "INSIGHT-2026-06-07-studio-frontend-data-source-drift"
+    title: "Studio frontend data source drift from authoritative read models"
+    classification: "task_candidate"
+    status: "open"
+    file: "docs/insights/INSIGHT-2026-06-07-studio-frontend-data-source-drift.md"
+    related_insight_refs:
+      - "docs/insights/INSIGHT-2026-05-16-studio-dashboard-frontend-architecture.md"
+    related_policy_refs:
+      - ".jikuo/policies/approved/POLICY-jikuo-studio-frontend-authoritative-data-source.yaml"
+    related_task_refs:
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md"
+      - "docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-TRACE-CONFIG-01_studio_trace_configuration_ia.md"
+      - "src/jikuo/studio/global_status.py"
+      - "src/jikuo/integrations/studio_web/server.py"
+    summary: "Studio trace work exposed a concrete data-source drift pattern: frontend panels can show missing-classification empty states while related runtime evidence exists elsewhere, creating pressure for browser-side fallback joins across state_summary, history, and panel projections; future work should normalize complete panel contracts in the backend Studio read model instead of letting the frontend become a second governance normalization layer."

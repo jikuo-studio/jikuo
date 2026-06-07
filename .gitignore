@@ -1,5 +1,6 @@
 # Local scratch output
 /tmp/
+/.tmp/
 /.jikuo/runtime/
 /.claude/
 /.mcp.json

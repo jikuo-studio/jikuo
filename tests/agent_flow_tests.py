@@ -596,6 +596,81 @@ def write_task_session_binding_policy_store(root: Path) -> None:
     )
 
 
+def write_existing_replacement_policy(
+    project_root: Path,
+    *,
+    policy_id: str,
+    title: str,
+    event: str = "task_start",
+    task_type: str | None = None,
+    jikuo_layer: str | None = None,
+    changed_path_pattern: str | None = None,
+) -> Path:
+    approved = project_root / ".jikuo" / "policies" / "approved"
+    approved.mkdir(parents=True, exist_ok=True)
+    lines = [
+        'schema_version: "jikuo.configurable_rule_policy.v0"',
+        f'policy_id: "{policy_id}"',
+        "version: 1",
+        'status: "active_report_only"',
+        f'title: "{title}"',
+        'scenario_package: "engineering_governance"',
+        "source_refs:",
+        '  - type: "test_fixture"',
+        '    ref: "tests:existing_replacement_policy"',
+        "triggers:",
+        f'  - trigger_id: "TRG-{event.replace("_", "-")}"',
+        '    type: "task_lifecycle_event"',
+        f'    event: "{event}"',
+    ]
+    conditions: list[str] = []
+    if task_type:
+        conditions.extend(
+            [
+                '  - condition_id: "COND-task-type"',
+                '    type: "task_type_is"',
+                f'    value: "{task_type}"',
+            ]
+        )
+    if jikuo_layer:
+        conditions.extend(
+            [
+                '  - condition_id: "COND-jikuo-layer"',
+                '    type: "jikuo_layer_is"',
+                f'    value: "{jikuo_layer}"',
+            ]
+        )
+    if changed_path_pattern:
+        conditions.extend(
+            [
+                '  - condition_id: "COND-changed-path"',
+                '    type: "changed_path_matches"',
+                f'    pattern: "{changed_path_pattern}"',
+            ]
+        )
+    if conditions:
+        lines.append("conditions:")
+        lines.extend(conditions)
+    lines.extend(
+        [
+            "required_actions:",
+            '  - action_id: "ACT-render-pre-task-review"',
+            '    type: "render_pre_task_review"',
+            "required_evidence:",
+            '  - evidence_id: "EVD-card-rendered"',
+            '    type: "card_rendered"',
+            '    satisfies_action: "ACT-render-pre-task-review"',
+            "enforcement:",
+            '  phase: "report_only"',
+            '  level: "review_required"',
+            "",
+        ]
+    )
+    path = approved / f"{policy_id}.yaml"
+    path.write_text("\n".join(lines), encoding="utf-8")
+    return path
+
+
 class AgentFlowProposalTests(unittest.TestCase):
     def test_task_start_propose_json_composes_no_write_atoms(self):
         completed = subprocess.run(
@@ -3019,6 +3094,15 @@ class AgentFlowProposalTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             project_copy = Path(tmp) / "policy_store_active_project"
             shutil.copytree(POLICY_ACTIVE_PROJECT, project_copy)
+            write_existing_replacement_policy(
+                project_copy,
+                policy_id="POLICY-three-phase-audit-agent-flow-v2",
+                title="Three-phase task audit agent-flow v2",
+                event="conversation_turn",
+                task_type="work_order_delivery",
+                jikuo_layer="testing_governance",
+                changed_path_pattern="docs/jikuo/**",
+            )
             manifest_file = project_copy / ".jikuo" / "policies" / "manifest.yaml"
             before_text = manifest_file.read_text(encoding="utf-8")
             completed = subprocess.run(
@@ -3043,14 +3127,6 @@ class AgentFlowProposalTests(unittest.TestCase):
                     "User asked agent_flow apply to supersede the broad three-phase policy.",
                     "--replacement-policy-ref",
                     "POLICY-three-phase-audit-agent-flow-v2",
-                    "--replacement-title",
-                    "Three-phase task audit agent-flow v2",
-                    "--replacement-trigger-event",
-                    "conversation_turn",
-                    "--replacement-task-type",
-                    "work_order_delivery",
-                    "--replacement-jikuo-layer",
-                    "testing_governance",
                     "--format",
                     "json",
                 ],
@@ -3083,6 +3159,15 @@ class AgentFlowProposalTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             project_copy = Path(tmp) / "policy_store_active_project"
             shutil.copytree(POLICY_ACTIVE_PROJECT, project_copy)
+            write_existing_replacement_policy(
+                project_copy,
+                policy_id="POLICY-three-phase-audit-agent-flow-v2",
+                title="Three-phase task audit agent-flow v2",
+                event="conversation_turn",
+                task_type="work_order_delivery",
+                jikuo_layer="testing_governance",
+                changed_path_pattern="docs/jikuo/**",
+            )
             manifest_file = project_copy / ".jikuo" / "policies" / "manifest.yaml"
             before_text = manifest_file.read_text(encoding="utf-8")
             completed = subprocess.run(
@@ -3109,16 +3194,6 @@ class AgentFlowProposalTests(unittest.TestCase):
                     "User approved agent_flow apply supersession for the broad three-phase policy.",
                     "--replacement-policy-ref",
                     "POLICY-three-phase-audit-agent-flow-v2",
-                    "--replacement-title",
-                    "Three-phase task audit agent-flow v2",
-                    "--replacement-trigger-event",
-                    "conversation_turn",
-                    "--replacement-task-type",
-                    "work_order_delivery",
-                    "--replacement-jikuo-layer",
-                    "testing_governance",
-                    "--replacement-changed-path-pattern",
-                    "docs/jikuo/**",
                     "--confirm-apply",
                     "--approval-phrase",
                     "I approve agent_flow applying this policy supersession.",
@@ -3157,6 +3232,15 @@ class AgentFlowProposalTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             project_copy = Path(tmp) / "policy_store_active_project"
             shutil.copytree(POLICY_ACTIVE_PROJECT, project_copy)
+            write_existing_replacement_policy(
+                project_copy,
+                policy_id="POLICY-three-phase-audit-agent-flow-v2",
+                title="Three-phase task audit agent-flow v2",
+                event="conversation_turn",
+                task_type="work_order_delivery",
+                jikuo_layer="testing_governance",
+                changed_path_pattern="docs/jikuo/**",
+            )
             plan = subprocess.run(
                 [
                     sys.executable,
@@ -3177,16 +3261,6 @@ class AgentFlowProposalTests(unittest.TestCase):
                     "User approved agent_flow apply supersession for the broad three-phase policy.",
                     "--replacement-policy-id",
                     "POLICY-three-phase-audit-agent-flow-v2",
-                    "--replacement-title",
-                    "Three-phase task audit agent-flow v2",
-                    "--replacement-trigger-event",
-                    "conversation_turn",
-                    "--replacement-task-type",
-                    "work_order_delivery",
-                    "--replacement-jikuo-layer",
-                    "testing_governance",
-                    "--replacement-changed-path-pattern",
-                    "docs/jikuo/**",
                     "--format",
                     "json",
                 ],
@@ -3222,16 +3296,6 @@ class AgentFlowProposalTests(unittest.TestCase):
                     "User approved agent_flow apply supersession for the broad three-phase policy.",
                     "--replacement-policy-ref",
                     "POLICY-three-phase-audit-agent-flow-v2",
-                    "--replacement-title",
-                    "Three-phase task audit agent-flow v2",
-                    "--replacement-trigger-event",
-                    "conversation_turn",
-                    "--replacement-task-type",
-                    "work_order_delivery",
-                    "--replacement-jikuo-layer",
-                    "testing_governance",
-                    "--replacement-changed-path-pattern",
-                    "docs/jikuo/**",
                     "--confirm-apply",
                     "--approval-phrase",
                     "I approve agent_flow applying this policy supersession.",
@@ -3263,7 +3327,7 @@ class AgentFlowProposalTests(unittest.TestCase):
                 target["replacement_policy_ref"],
                 "POLICY-three-phase-audit-agent-flow-v2",
             )
-            self.assertIn(
+            self.assertNotIn(
                 ".jikuo/policies/approved/POLICY-three-phase-audit-agent-flow-v2.yaml",
                 target["written_paths"],
             )
@@ -4801,47 +4865,49 @@ class AgentFlowProposalTests(unittest.TestCase):
         self.assertIn(".jikuo/policies/manifest.yaml", command["writes_if_approved"])
 
     def test_policy_evolution_plan_projects_supersession_command(self):
-        completed = subprocess.run(
-            [
-                sys.executable,
-                "-B",
-                str(TOOL),
-                "propose",
-                "--event",
-                "policy_evolution_plan",
-                "--policy-ref",
-                "POLICY-three-phase-audit",
-                "--policy-evolution-operation",
-                "supersede_policy",
-                "--feedback-type",
-                "needs_scope_narrowing",
-                "--summary",
-                "Policy should be replaced with narrower conditions.",
-                "--policy-source-ref",
-                "User asked to preview replacing the broad three-phase audit policy with a narrower v2 policy.",
-                "--replacement-policy-ref",
-                "POLICY-three-phase-audit-v2",
-                "--replacement-title",
-                "Three-phase task audit v2",
-                "--replacement-trigger-event",
-                "conversation_turn",
-                "--replacement-task-type",
-                "work_order_delivery",
-                "--replacement-jikuo-layer",
-                "testing_governance",
-                "--replacement-changed-path-pattern",
-                "docs/jikuo/**",
-                "--project-root",
-                str(POLICY_ACTIVE_PROJECT),
-                "--format",
-                "json",
-            ],
-            cwd=ROOT,
-            text=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            check=False,
-        )
+        with tempfile.TemporaryDirectory() as tmp:
+            project_copy = Path(tmp) / "policy_store_active_project"
+            shutil.copytree(POLICY_ACTIVE_PROJECT, project_copy)
+            write_existing_replacement_policy(
+                project_copy,
+                policy_id="POLICY-three-phase-audit-v2",
+                title="Three-phase task audit v2",
+                event="conversation_turn",
+                task_type="work_order_delivery",
+                jikuo_layer="testing_governance",
+                changed_path_pattern="docs/jikuo/**",
+            )
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "propose",
+                    "--event",
+                    "policy_evolution_plan",
+                    "--policy-ref",
+                    "POLICY-three-phase-audit",
+                    "--policy-evolution-operation",
+                    "supersede_policy",
+                    "--feedback-type",
+                    "needs_scope_narrowing",
+                    "--summary",
+                    "Policy should be replaced with narrower conditions.",
+                    "--policy-source-ref",
+                    "User asked to preview replacing the broad three-phase audit policy with a narrower v2 policy.",
+                    "--replacement-policy-ref",
+                    "POLICY-three-phase-audit-v2",
+                    "--project-root",
+                    str(project_copy),
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
 
         self.assertEqual(completed.returncode, 0, completed.stderr)
         proposal = json.loads(completed.stdout)
@@ -4850,12 +4916,14 @@ class AgentFlowProposalTests(unittest.TestCase):
         plan = card["policy_evolution_plan"]
         self.assertEqual(plan["operation"], "supersede_policy")
         self.assertEqual(plan["replacement_policy_ref"], "POLICY-three-phase-audit-v2")
-        self.assertEqual(
-            plan["replacement_policy"]["triggers"][0]["event"],
-            "conversation_turn",
-        )
-        self.assertTrue(plan["future_write_boundary"]["writer_implemented"])
         self.assertIn(
+            "conversation_turn",
+            plan["replacement_trigger_profile"]["declared_trigger_events"],
+        )
+        self.assertIsNone(plan["replacement_policy"])
+        self.assertTrue(plan["replacement_policy_will_be_activated"])
+        self.assertTrue(plan["future_write_boundary"]["writer_implemented"])
+        self.assertNotIn(
             ".jikuo/policies/approved/POLICY-three-phase-audit-v2.yaml",
             {item["path"] for item in plan["write_set"]},
         )
@@ -4867,10 +4935,10 @@ class AgentFlowProposalTests(unittest.TestCase):
         self.assertIn("write-evolution", command["command_preview"])
         self.assertIn("--operation \"supersede_policy\"", command["command_preview"])
         self.assertIn("--replacement-policy-id \"POLICY-three-phase-audit-v2\"", command["command_preview"])
-        self.assertIn("--replacement-title \"Three-phase task audit v2\"", command["command_preview"])
-        self.assertIn("--replacement-trigger-event \"conversation_turn\"", command["command_preview"])
+        self.assertNotIn("--replacement-title", command["command_preview"])
+        self.assertNotIn("--replacement-trigger-event", command["command_preview"])
         self.assertIn("--confirm-write-evolution", command["command_preview"])
-        self.assertIn(
+        self.assertNotIn(
             ".jikuo/policies/approved/POLICY-three-phase-audit-v2.yaml",
             command["writes_if_approved"],
         )

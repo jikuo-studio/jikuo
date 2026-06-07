@@ -330,10 +330,20 @@ INDEX_HTML = """<!doctype html>
     }
     .trace-round-selector {
       display: grid;
-      grid-template-columns: minmax(280px, 1.2fr) minmax(240px, 0.8fr);
-      gap: 10px;
-      margin: 10px 0;
+      grid-template-columns: minmax(280px, 1fr);
+      gap: 8px;
+      margin: 10px 0 8px;
       align-items: start;
+    }
+    .trace-overview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      column-gap: 24px;
+      margin: 0 0 14px;
+    }
+    .trace-overview-grid .compact-item:first-child {
+      border-top: 1px solid var(--line);
+      padding-top: 7px;
     }
     #round-trace-round-select option.round-option-modified,
     #policy-trace-round-select option.round-option-modified {
@@ -765,9 +775,9 @@ INDEX_HTML = """<!doctype html>
           Policy trace round
           <select id="policy-trace-round-select"></select>
         </label>
-        <div class="compact-list" id="policy-trace-overview"></div>
       </div>
-      <div class="compact-list" id="policy-trace-lifecycle-overview"></div>
+      <div class="compact-list trace-overview-grid" id="policy-trace-overview"></div>
+      <div class="compact-list trace-overview-grid" id="policy-trace-lifecycle-overview"></div>
       <div class="trace-layout" id="policy-trace-lifecycle"></div>
     </section>
     <section class="studio-area-heading" id="studio-configuration-heading">
@@ -894,8 +904,8 @@ INDEX_HTML = """<!doctype html>
           Runtime round
           <select id="round-trace-round-select"></select>
         </label>
-        <div class="compact-list" id="round-trace-round-overview"></div>
       </div>
+      <div class="compact-list trace-overview-grid" id="round-trace-round-overview"></div>
       <div class="trace-layout">
         <div class="trace-panel">
           <h3>Expected documents</h3>
@@ -1011,15 +1021,13 @@ INDEX_HTML = """<!doctype html>
               <label>Changed path pattern
                 <input id="policy-evolution-changed-path" placeholder="Optional scope pattern">
               </label>
+              <span class="subhead policy-editor-note" id="policy-trigger-mode-note">Scope and lifecycle values are selected from the project policy option set.</span>
             </div>
             <div class="policy-editor-grid" id="policy-evolution-replacement-grid">
-              <label>Replacement title
-                <input id="policy-evolution-replacement-title" placeholder="Required for supersession">
+              <label>Replacement policy
+                <select id="policy-evolution-replacement-ref"></select>
               </label>
-              <label>Replacement policy ref
-                <input id="policy-evolution-replacement-ref" placeholder="POLICY-new-policy-id">
-              </label>
-              <span class="subhead policy-editor-note" id="policy-trigger-mode-note">Scope and lifecycle values are selected from the project policy option set.</span>
+              <span class="subhead policy-editor-note" id="policy-supersede-note">Supersede links the target policy to an already existing policy. It does not create or edit replacement policy content.</span>
             </div>
             <div class="policy-editor-grid" id="policy-final-response-gate-fields" hidden>
               <label>Final-response gate
@@ -1706,11 +1714,14 @@ INDEX_HTML = """<!doctype html>
       }
     };
     const updatePolicyEvolutionOperationAffordance = () => {
+      const operation = document.getElementById("policy-evolution-operation").value;
       const isGateOperation = isFinalResponseGateOperation();
+      const isRefineOperation = operation === "refine_policy";
+      const isSupersedeOperation = operation === "supersede_policy";
       document.getElementById("policy-evolution-feedback-field").hidden = isGateOperation;
-      document.getElementById("policy-evolution-trigger-mode-field").hidden = isGateOperation;
-      document.getElementById("policy-evolution-scope-grid").hidden = isGateOperation;
-      document.getElementById("policy-evolution-replacement-grid").hidden = isGateOperation;
+      document.getElementById("policy-evolution-trigger-mode-field").hidden = !isRefineOperation;
+      document.getElementById("policy-evolution-scope-grid").hidden = !isRefineOperation;
+      document.getElementById("policy-evolution-replacement-grid").hidden = !isSupersedeOperation;
       document.getElementById("policy-final-response-gate-fields").hidden = !isGateOperation;
       refreshPolicyFinalResponseGateInputState();
     };
@@ -1808,6 +1819,32 @@ INDEX_HTML = """<!doctype html>
       updatePolicyTriggerModeAffordance();
       updatePolicyEvolutionOperationAffordance();
     };
+    const populatePolicySupersedeReplacementTargets = (report) => {
+      const select = document.getElementById("policy-evolution-replacement-ref");
+      const previousValue = select.value;
+      const targetPolicyRef = document.getElementById("policy-evolution-policy").value;
+      const details = activePolicyDetails(report || policyManagementReport || {});
+      const fallbackActive = ((report || {}).policy_store || {}).active_policies || [];
+      const source = details.length ? details : fallbackActive;
+      const options = source.map((item) => {
+        const policyId = item.policy_id || "";
+        if (!policyId || policyId === targetPolicyRef) return null;
+        const option = document.createElement("option");
+        option.value = policyId;
+        option.textContent = `${policyId}${item.title ? ` / ${item.title}` : ""}`;
+        return option;
+      }).filter(Boolean);
+      select.replaceChildren(...options);
+      if (!options.length) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "No other active policies";
+        select.replaceChildren(option);
+      }
+      if (previousValue && options.some((option) => option.value === previousValue)) {
+        select.value = previousValue;
+      }
+    };
     const renderSelectedPolicyDetail = (report) => {
       const detail = selectedPolicyDetail(report);
       const summary = document.getElementById("policy-selected-summary");
@@ -1819,6 +1856,7 @@ INDEX_HTML = """<!doctype html>
         config.replaceChildren(compactItem("No current configuration", "Policy detail is unavailable in the read model."));
         resetPolicyFinalResponseGateControls(null);
         populatePolicyTriggerOptions(report, null);
+        populatePolicySupersedeReplacementTargets(report);
         return;
       }
       const header = document.createElement("div");
@@ -1849,6 +1887,7 @@ INDEX_HTML = """<!doctype html>
       );
       resetPolicyFinalResponseGateControls(detail);
       populatePolicyTriggerOptions(report, detail);
+      populatePolicySupersedeReplacementTargets(report);
     };
     const populatePolicyEvolutionTargets = (report) => {
       const select = document.getElementById("policy-evolution-policy");
@@ -2768,8 +2807,24 @@ INDEX_HTML = """<!doctype html>
         };
       }
       const feedbackType = document.getElementById("policy-evolution-feedback").value;
-      const replacementTitle = document.getElementById("policy-evolution-replacement-title").value.trim();
       const replacementRef = document.getElementById("policy-evolution-replacement-ref").value.trim();
+      if (operation === "supersede_policy") {
+        return {
+          policy_ref: policyRef,
+          policy_evolution_operation: operation,
+          feedback_type: feedbackType || null,
+          summary: "Studio active-policy supersession preview",
+          replacement_policy_ref: replacementRef || null,
+        };
+      }
+      if (operation === "deprecate_policy") {
+        return {
+          policy_ref: policyRef,
+          policy_evolution_operation: operation,
+          feedback_type: feedbackType || null,
+          summary: "Studio active-policy deprecation preview",
+        };
+      }
       const triggerMode = document.getElementById("policy-evolution-trigger-mode").value;
       const selectedScopes = selectedOptionValues("policy_evolution_scope");
       const selectedEvents = selectedOptionValues("policy_evolution_lifecycle");
@@ -2784,8 +2839,6 @@ INDEX_HTML = """<!doctype html>
         policy_evolution_operation: operation,
         feedback_type: feedbackType || null,
         summary: "Studio active-policy configuration change preview",
-        replacement_policy_ref: replacementRef || null,
-        replacement_title: replacementTitle || null,
         replacement_trigger_event: replacementTrigger || "task_start",
         replacement_work_profile_policy_scopes: replacementScopes,
         replacement_work_profile_lifecycle_events: replacementEvents,
@@ -2810,6 +2863,9 @@ INDEX_HTML = """<!doctype html>
       const writeSet = (plan.write_set || []).map((item) =>
         compactItem(item.operation || "write", `${item.path || "path not supplied"} / ${item.effect || "effect not supplied"}`)
       );
+      const readSet = (plan.read_set || []).map((item) =>
+        compactItem("Read boundary", `${item.path || "path not supplied"} / ${item.purpose || "purpose not supplied"}`)
+      );
       const refusals = (plan.refusal_reasons || []).map((item) =>
         compactItem("Refusal", item)
       );
@@ -2831,6 +2887,18 @@ INDEX_HTML = """<!doctype html>
       const proposedProfile = plan.proposed_trigger_profile
         ? [compactItem("Proposed trigger profile", triggerProfileDetailText(plan.proposed_trigger_profile))]
         : [];
+      const replacementSnapshot = plan.replacement_policy_snapshot || {};
+      const lineage = plan.lineage || {};
+      const replacementRows = plan.operation === "supersede_policy"
+        ? [
+            compactItem("Replacement policy", `${replacementSnapshot.policy_id || plan.replacement_policy_ref || "replacement policy ref not supplied"} / ${replacementSnapshot.status || "status unknown"} / ${replacementSnapshot.path || plan.replacement_policy_path || "path not supplied"}`),
+            compactItem("Replacement trigger profile", plan.replacement_trigger_profile ? triggerProfileDetailText(plan.replacement_trigger_profile) : "Replacement trigger profile not available."),
+            compactItem("Replacement activation", `${plan.replacement_policy_already_active ? "already active" : "not currently active"} / ${plan.replacement_policy_will_be_activated ? "will be added to active refs" : "no new active ref needed"}`),
+            compactItem("Lineage", `${lineage.from || plan.target_policy_ref || "target"} -> ${lineage.relation || "superseded_by"} -> ${lineage.to || plan.replacement_policy_ref || "replacement"}`),
+            compactItem("Approval phrase", plan.approval_phrase || (writeBoundary.approval_phrase || "approval phrase not supplied")),
+            compactItem("Non-effect boundary", "Does not generate replacement policy content or modify the replacement policy body."),
+          ]
+        : [];
       const currentGate = plan.current_final_response_gate || {};
       const proposedGate = plan.proposed_final_response_gate || {};
       const gateRows = plan.operation === "update_final_response_gate"
@@ -2849,7 +2917,9 @@ INDEX_HTML = """<!doctype html>
         compactItem("Guarded writer", writeBoundary.writer_implemented ? "available in core after approval" : "not available for this operation"),
         ...targetProfile,
         ...proposedProfile,
+        ...replacementRows,
         ...gateRows,
+        ...(readSet.length ? readSet : []),
         ...(writeSet.length ? writeSet : [compactItem("Write set", "No future writes projected.")]),
         ...(refusals.length ? refusals : []),
         ...(warnings.length ? warnings : []),
@@ -2945,10 +3015,13 @@ INDEX_HTML = """<!doctype html>
       }
       const writeCount = (currentPolicyEvolutionPlan.write_set || []).length;
       const isGateOperation = currentPolicyEvolutionPlan.operation === "update_final_response_gate";
+      const isSupersedeOperation = currentPolicyEvolutionPlan.operation === "supersede_policy";
       const confirmed = window.confirm(
         isGateOperation
           ? `Apply this final-response gate configuration change?\n\nTarget: ${currentPolicyEvolutionPlan.target_policy_ref || "policy"}\nCurrent: ${String(Boolean((currentPolicyEvolutionPlan.current_final_response_gate || {}).enabled))}\nProposed: ${String(Boolean((currentPolicyEvolutionPlan.proposed_final_response_gate || {}).enabled))}\nPolicy file to write: ${currentPolicyEvolutionPlan.target_policy_path || "policy path"}\n\nThis uses the guarded writer for the selected active policy YAML field. It does not execute policy actions or alter trigger scopes.`
-          : `Apply this active-policy configuration change?\n\nTarget: ${currentPolicyEvolutionPlan.target_policy_ref || "policy"}\nOperation: ${currentPolicyEvolutionPlan.operation || "operation"}\nPolicy-store records/files to write: ${writeCount}\n\nThis persists policy-store proposal, decision, manifest, and target/replacement policy records through the guarded writer. It does not execute policy actions.`
+          : isSupersedeOperation
+            ? `Apply this active-policy supersession?\n\nTarget: ${currentPolicyEvolutionPlan.target_policy_ref || "policy"}\nReplacement: ${currentPolicyEvolutionPlan.replacement_policy_ref || "replacement policy"}\nPolicy-store records/files to write: ${writeCount}\n\nThis persists proposal, decision, and manifest lineage through the guarded writer. It reads the existing replacement policy, but does not create or modify replacement policy content.`
+            : `Apply this active-policy configuration change?\n\nTarget: ${currentPolicyEvolutionPlan.target_policy_ref || "policy"}\nOperation: ${currentPolicyEvolutionPlan.operation || "operation"}\nPolicy-store records/files to write: ${writeCount}\n\nThis persists policy-store proposal, decision, manifest, and target policy records through the guarded writer. It does not execute policy actions.`
             + `${currentPolicyEvolutionPlan.operation === "refine_policy" ? "\\nFor refinement, the target policy trigger profile is updated and reread for verification." : ""}`
       );
       if (!confirmed) {
@@ -3986,7 +4059,7 @@ INDEX_HTML = """<!doctype html>
     });
     document.getElementById("policy-evolution-preview-button").addEventListener("click", previewPolicyEvolutionPlan);
     document.getElementById("policy-evolution-apply-button").addEventListener("click", applyPolicyEvolutionPlan);
-    ["policy-evolution-operation", "policy-evolution-feedback", "policy-evolution-trigger-mode", "policy-evolution-changed-path", "policy-evolution-replacement-title", "policy-evolution-replacement-ref"].forEach((id) => {
+    ["policy-evolution-operation", "policy-evolution-feedback", "policy-evolution-trigger-mode", "policy-evolution-changed-path", "policy-evolution-replacement-ref"].forEach((id) => {
       document.getElementById(id).addEventListener("change", () => {
         if (id === "policy-evolution-operation") {
           updatePolicyEvolutionOperationAffordance();
@@ -4088,7 +4161,7 @@ def policy_evolution_args_from_payload(request_payload: dict[str, Any]) -> dict[
         "replacement_policy_id": optional_string(
             request_payload.get("replacement_policy_ref")
         ),
-        "replacement_title": optional_string(request_payload.get("replacement_title")),
+        "replacement_title": None,
         "replacement_trigger_event": replacement_trigger_event,
         "replacement_work_profile_lifecycle_events": optional_string_list(
             request_payload.get("replacement_work_profile_lifecycle_events")
@@ -4104,14 +4177,8 @@ def policy_evolution_args_from_payload(request_payload: dict[str, Any]) -> dict[
         "replacement_added_path_pattern": optional_string(
             request_payload.get("replacement_added_path_pattern")
         ),
-        "replacement_action_type": optional_string(
-            request_payload.get("replacement_action_type")
-        )
-        or "render_pre_task_review",
-        "replacement_evidence_type": optional_string(
-            request_payload.get("replacement_evidence_type")
-        )
-        or "card_rendered",
+        "replacement_action_type": "render_pre_task_review",
+        "replacement_evidence_type": "card_rendered",
     }
 
 

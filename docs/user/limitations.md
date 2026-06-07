@@ -50,6 +50,20 @@ scope. It is not automatically a failed workflow.
 User action: review the policy scope, record evidence, mark the policy not
 applicable, or narrow the policy before treating the report as blocking.
 
+### Policy Condition OR Groups
+
+Policy conditions currently compose as AND. Generic OR groups such as `any_of`,
+`one_of`, or "match any condition route" are not implemented yet.
+
+This is a product boundary, not a hidden semantic judgment. AND conditions mean
+each declared condition is required before the policy applies. OR support would
+need explicit condition groups so Policy Trace can show which alternative route
+matched and whether any missing context still requires review.
+
+User action: when alternative routes are needed, model them as separate
+policies for now, or keep the policy narrow enough that every declared
+condition should be required.
+
 ### Runtime History
 
 Runtime history is currently based on retained runtime visibility cards and

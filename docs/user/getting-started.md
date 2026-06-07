@@ -123,6 +123,11 @@ The first-use policy path is:
 Starter policies create baseline visibility. They do not make JIKUO infer
 semantic intent and do not make report-only policies blocking by themselves.
 
+After starter activation, use the same Policy Configuration area to preview and
+apply active policy changes such as trigger refinement, deprecation,
+supersession, and final-response gate updates. More detail:
+[`docs/user/policy-management.md`](policy-management.md).
+
 ## 7. Review Document Rules
 
 Open Document Rules in Studio before doing real work.

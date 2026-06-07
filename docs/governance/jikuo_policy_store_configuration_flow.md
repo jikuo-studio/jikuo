@@ -460,11 +460,27 @@ Implemented guarded evolution writer:
 - deprecation does not delete or rewrite the policy file
 - deprecation writes a proposal snapshot and a decision record
 - `supersede_policy` is supported as a narrow guarded writer
-- supersession creates a replacement approved policy file
+- supersession requires `replacement_policy_ref` to point at an already existing
+  replacement policy
+- supersession does not create or edit replacement policy content
 - supersession moves the target policy out of `active_policy_refs` and into `superseded_policy_refs`
+- if the existing replacement policy is approved but not active, supersession
+  may add it to `active_policy_refs`
+- if the existing replacement policy is already active, supersession must not
+  duplicate the active ref
 - supersession leaves the original policy file available for audit
 - supersession writes a proposal snapshot and a decision record
+- replacement policy creation, import, activation, or editing belongs to a
+  separate guarded workflow before supersession
 - `refine_policy`, in-place revision, and rollback remain plan-only until separate guarded writers exist
+
+Supersession non-effects:
+
+- does not generate replacement policy content
+- does not modify the replacement policy body
+- does not judge semantic equivalence between the old and replacement policies
+- does not use `replacement_title`, trigger, scope, action, or evidence fields
+  as hidden replacement-content creation inputs
 
 ---
 

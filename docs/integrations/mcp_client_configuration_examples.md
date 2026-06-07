@@ -31,8 +31,8 @@ For private GitHub preview proof, clone from the owner-controlled private repo
 first:
 
 ```powershell
-git clone https://github.com/jikuo-studio/jikuo.git Jikuo_private_preview
-cd Jikuo_private_preview
+git clone https://github.com/jikuo-studio/jikuo.git jikuo-private-preview
+cd jikuo-private-preview
 py -3 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -e .
 ```
@@ -53,8 +53,9 @@ Prefer an explicit Python executable from a project virtual environment when con
 
 ## Placeholders
 
-- `<PROJECT_ROOT>`: absolute path to the project using JIKUO, for example `D:\personal_project\Jikuo`
-- `<PYTHON_EXE>`: Python executable with `jikuo` and `mcp` installed, for example `<PROJECT_ROOT>\tmp\mcp-stage-a-venv\Scripts\python.exe`
+- `<PROJECT_ROOT>`: absolute path to the project using JIKUO, for example `C:\path\to\your-project`
+- `<PYTHON_EXE>`: Python executable with `jikuo` and `mcp` installed, for example `<JIKUO_HOME>\.venv\Scripts\python.exe`
+- `<JIKUO_HOME>`: local checkout or installed package workspace for JIKUO
 - `<JIKUO_REPO_URL>`: current private preview repository, `https://github.com/jikuo-studio/jikuo.git`
 
 ## Trigger Mode And Client Onboarding
@@ -349,8 +350,12 @@ For `jikuo.apply_policy_evolution_write`:
 1. Calling the tool without `confirm_apply=true` is refused.
 2. Calling the tool without `approval_phrase` is refused.
 3. Calling the tool without a matching `proposal_ref` is refused.
-4. Supersession smoke should include `replacement_trigger_event` when the replacement policy must move away from the default `task_start` trigger.
-5. Calling the tool with the proposal ref reviewed by the user, matching replacement fields, `confirm_apply=true`, and an approval phrase applies exactly one approved deprecation or supersession.
+4. Supersession smoke should prepare or activate the replacement policy first,
+   then pass only the existing `replacement_policy_ref` through the supersede
+   plan/apply path.
+5. Calling the tool with the proposal ref reviewed by the user, matching target
+   and replacement policy refs, `confirm_apply=true`, and an approval phrase
+   applies exactly one approved deprecation or supersession.
 6. The success path does not create `.jikuo/task_sessions/`.
 7. The response does not contain the raw approval phrase.
 8. The returned `card_markdown` and `.jikuo/runtime/last_card.md` surface the guarded apply result.

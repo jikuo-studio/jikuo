@@ -195,6 +195,37 @@ Condition rules:
 - conditions should not require the agent to infer user mood, product quality, or domain-content quality
 - ambiguous conditions should produce `review_required`, not automatic execution
 
+`changed_path_matches` and `added_path_matches` are deterministic path
+conditions. They are not semantic classification fields. The evaluator compares
+the explicit `changed_paths` or `added_paths` supplied by the host AI, CLI,
+lifecycle flow, git/status projection, or another named evidence source against
+the configured glob/path pattern.
+
+Path condition results:
+
+- `matched`: at least one supplied path matches the configured pattern.
+- `not_matched`: path context was supplied, but no path matched the configured
+  pattern.
+- `review_required`: the policy needs path context, but the evaluator did not
+  receive the relevant path list.
+
+Multiple conditions are ANDed. If a policy declares `task_type_is`,
+`jikuo_layer_is`, and `changed_path_matches`, all three must match before the
+policy triggers. A policy without `changed_path_matches` is not path-filtered.
+
+Current limitation: generic OR composition is not supported. The policy
+evaluator does not yet accept `any_of`, `one_of`, or condition-group syntax.
+When a policy needs alternative applicability routes, model those routes as
+separate policies for now, or keep the condition set narrow enough that every
+declared condition is required. Future OR support should be explicit, such as
+OR across condition groups with AND inside each group, so audit output can show
+which route matched and which missing context remains review-required.
+
+Business meaning: path filters are useful for policies with clear asset
+boundaries, such as `docs/**`, `src/jikuo/integrations/studio_web/**`, or
+`.jikuo/policies/**`. They reduce false triggers and missing-evidence noise
+without letting JIKUO infer work semantics from chat text.
+
 ---
 
 ## 9. Required Action Vocabulary
@@ -426,4 +457,3 @@ This contract is acceptable if it makes the following clear:
 - how required actions differ from evidence
 - why current skeleton work remains compatible with the future rule kernel
 - which later tasks must implement store, execution, evidence checking, projection, and UI
-

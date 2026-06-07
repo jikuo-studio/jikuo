@@ -390,7 +390,7 @@ entries:
           - "policy evolution non-effects"
       - step_id: "STUDIO-POLICY-CONFIG-07"
         user_action: "Apply a supported reviewed active-policy configuration change."
-        visible_result: "After a matching reviewed proposal ref and confirmation, Studio shows whether the guarded writer wrote the policy evolution proposal snapshot, decision record, manifest update, target policy trigger-profile update for refinement, and any replacement policy file for supersession."
+        visible_result: "After a matching reviewed proposal ref and confirmation, Studio shows whether the guarded writer wrote the policy evolution proposal snapshot, decision record, manifest update, target policy trigger-profile update for refinement, and supersession lineage to an existing replacement policy."
         operation_chain: "The frontend stores the exact request used for the preview, disables apply when fields change, asks for confirmation, then posts the stored request, reviewed proposal ref, confirm_apply, approval phrase, and approval source to /api/policy-management/evolution/apply; the web adapter verifies the proposal ref still matches the current payload and delegates to policy_store.write_policy_evolution_from_plan."
         atom_refs:
           - "CAP-STUDIO-POLICY-EVOLUTION-GUARDED-APPLY-01"

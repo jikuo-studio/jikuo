@@ -29,8 +29,8 @@ JIKUO proof uses two different local folders:
 
 | Folder | Meaning | Example |
 |---|---|---|
-| `JIKUO_HOME` | Where the JIKUO package / repository lives | `D:\personal_project\Jikuo` |
-| `PROJECT_ROOT` | The user's project being governed or tested | `D:\personal_project\Jikuo\tmp\client_proof_manual\cursor_project` |
+| `JIKUO_HOME` | Where the JIKUO package / repository lives | `C:\Users\you\src\jikuo` |
+| `PROJECT_ROOT` | The user's project being governed or tested | `C:\Users\you\work\sample-project` |
 
 For a real user, `PROJECT_ROOT` is their own app / product / writing project.
 For this proof, use empty temporary projects so no private project content is
@@ -72,31 +72,32 @@ posture, and public-review gates remain open. Use it to test the realistic
 The expected fresh-clone proof folder is:
 
 ```text
-D:\personal_project\Jikuo_private_preview
+<WORKSPACE>\jikuo-private-preview
 ```
 
 Users need GitHub access to the private repository before they can clone it.
 
 ### Current Development Proof
 
-In this repository, JIKUO already exists at:
+For maintainer-local or contributor development, JIKUO already exists at your
+current checkout:
 
 ```text
-D:\personal_project\Jikuo
+<JIKUO_HOME>
 ```
 
-The verified Python environment is:
+Use the Python environment from that checkout:
 
 ```text
-D:\personal_project\Jikuo\tmp\mcp-stage-a-venv\Scripts\python.exe
+<JIKUO_HOME>\.venv\Scripts\python.exe
 ```
 
 ### Fresh User From Git Repository
 
 ```powershell
-cd D:\personal_project
-git clone https://github.com/jikuo-studio/jikuo.git Jikuo_private_preview
-cd D:\personal_project\Jikuo_private_preview
+cd <WORKSPACE>
+git clone https://github.com/jikuo-studio/jikuo.git jikuo-private-preview
+cd <WORKSPACE>\jikuo-private-preview
 py -3 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -e .
 .\.venv\Scripts\jikuo.exe --help
@@ -139,7 +140,7 @@ Use these placeholders in client configs and proof prompts:
 
 - `<JIKUO_REPO_URL>`: `https://github.com/jikuo-studio/jikuo.git`
 - `<PROJECT_ROOT>`: the per-client temporary proof project, for example
-  `D:\personal_project\Jikuo\tmp\client_proof_manual\cursor_project`
+  `<JIKUO_HOME>\tmp\client_proof_manual\cursor_project`
 - `<JIKUO_HOME>`: where the JIKUO package/repository lives
 - `<PYTHON_EXE>`: Python executable from the environment where JIKUO is installed
 - `<JIKUO_CMD>`: `jikuo` command from the same environment
@@ -148,18 +149,18 @@ Use these placeholders in client configs and proof prompts:
 For the current repository proof:
 
 ```text
-<JIKUO_HOME> = D:\personal_project\Jikuo
+<JIKUO_HOME> = <WORKSPACE>\jikuo
 <JIKUO_REPO_URL> = https://github.com/jikuo-studio/jikuo.git
-<PYTHON_EXE> = D:\personal_project\Jikuo\tmp\mcp-stage-a-venv\Scripts\python.exe
-<JIKUO_CMD> = D:\personal_project\Jikuo\tmp\mcp-stage-a-venv\Scripts\jikuo.exe
+<PYTHON_EXE> = <JIKUO_HOME>\.venv\Scripts\python.exe
+<JIKUO_CMD> = <JIKUO_HOME>\.venv\Scripts\jikuo.exe
 ```
 
 For GitHub private preview proof, prefer a clean clone:
 
 ```text
-<JIKUO_HOME> = D:\personal_project\Jikuo_private_preview
-<PYTHON_EXE> = D:\personal_project\Jikuo_private_preview\.venv\Scripts\python.exe
-<JIKUO_CMD> = D:\personal_project\Jikuo_private_preview\.venv\Scripts\jikuo.exe
+<JIKUO_HOME> = <WORKSPACE>\jikuo-private-preview
+<PYTHON_EXE> = <JIKUO_HOME>\.venv\Scripts\python.exe
+<JIKUO_CMD> = <JIKUO_HOME>\.venv\Scripts\jikuo.exe
 ```
 
 MCP server config should use:
@@ -179,19 +180,19 @@ Use separate temporary projects so clients do not overwrite each other's runtime
 cards:
 
 ```text
-D:\personal_project\Jikuo\tmp\client_proof_manual\claude_code_gui_project
-D:\personal_project\Jikuo\tmp\client_proof_manual\codex_project
-D:\personal_project\Jikuo\tmp\client_proof_manual\cursor_project
-D:\personal_project\Jikuo\tmp\client_proof_manual\vscode_copilot_project
+<JIKUO_HOME>\tmp\client_proof_manual\claude_code_gui_project
+<JIKUO_HOME>\tmp\client_proof_manual\codex_project
+<JIKUO_HOME>\tmp\client_proof_manual\cursor_project
+<JIKUO_HOME>\tmp\client_proof_manual\vscode_copilot_project
 ```
 
 For the private GitHub clone proof, use the same layout under the clean clone:
 
 ```text
-D:\personal_project\Jikuo_private_preview\tmp\client_proof_manual\claude_code_gui_project
-D:\personal_project\Jikuo_private_preview\tmp\client_proof_manual\codex_project
-D:\personal_project\Jikuo_private_preview\tmp\client_proof_manual\cursor_project
-D:\personal_project\Jikuo_private_preview\tmp\client_proof_manual\vscode_copilot_project
+<JIKUO_HOME>\tmp\client_proof_manual\claude_code_gui_project
+<JIKUO_HOME>\tmp\client_proof_manual\codex_project
+<JIKUO_HOME>\tmp\client_proof_manual\cursor_project
+<JIKUO_HOME>\tmp\client_proof_manual\vscode_copilot_project
 ```
 
 These directories are intentionally under ignored `tmp/` paths. They are for
@@ -373,7 +374,7 @@ Recommended private/local setup:
 
 ```powershell
 cd <PROJECT_ROOT>
-claude mcp add --transport stdio --scope local jikuo -- "D:\personal_project\Jikuo\tmp\mcp-stage-a-venv\Scripts\python.exe" -B -m jikuo.integrations.mcp.server
+claude mcp add --transport stdio --scope local jikuo -- "<PYTHON_EXE>" -B -m jikuo.integrations.mcp.server
 claude mcp get jikuo
 ```
 
@@ -381,7 +382,7 @@ Project-shared setup, only if the team agrees to commit `.mcp.json`:
 
 ```powershell
 cd <PROJECT_ROOT>
-claude mcp add --transport stdio --scope project jikuo -- "D:\personal_project\Jikuo\tmp\mcp-stage-a-venv\Scripts\python.exe" -B -m jikuo.integrations.mcp.server
+claude mcp add --transport stdio --scope project jikuo -- "<PYTHON_EXE>" -B -m jikuo.integrations.mcp.server
 ```
 
 Restart Claude Code GUI or start a fresh session after changing MCP config.
@@ -398,7 +399,7 @@ The `/mcp` panel should show the `jikuo` server and its tool count.
 Use the standard prompt with:
 
 ```text
-<PROJECT_ROOT> = D:\personal_project\Jikuo\tmp\client_proof_manual\claude_code_gui_project
+<PROJECT_ROOT> = <JIKUO_HOME>\tmp\client_proof_manual\claude_code_gui_project
 ```
 
 ### Retain Proof
@@ -423,7 +424,7 @@ with:
 
 ```text
 name = jikuo
-command = D:\personal_project\Jikuo\tmp\mcp-stage-a-venv\Scripts\python.exe
+command = <PYTHON_EXE>
 args = ["-B", "-m", "jikuo.integrations.mcp.server"]
 cwd = <PROJECT_ROOT>
 ```
@@ -433,7 +434,7 @@ Codex config TOML used by your installation:
 
 ```toml
 [mcp_servers.jikuo]
-command = "D:\\personal_project\\Jikuo\\tmp\\mcp-stage-a-venv\\Scripts\\python.exe"
+command = "<PYTHON_EXE>"
 args = ["-B", "-m", "jikuo.integrations.mcp.server"]
 enabled = true
 ```
@@ -445,7 +446,7 @@ Restart Codex after changing MCP config so the server process is respawned.
 Use the standard prompt with:
 
 ```text
-<PROJECT_ROOT> = D:\personal_project\Jikuo\tmp\client_proof_manual\codex_project
+<PROJECT_ROOT> = <JIKUO_HOME>\tmp\client_proof_manual\codex_project
 ```
 
 If Codex exposes MCP tools in the tool namespace, the proof should call the
@@ -723,7 +724,7 @@ Use:
   "mcpServers": {
     "jikuo": {
       "type": "stdio",
-      "command": "D:\\personal_project\\Jikuo\\tmp\\mcp-stage-a-venv\\Scripts\\python.exe",
+      "command": "<PYTHON_EXE>",
       "args": ["-B", "-m", "jikuo.integrations.mcp.server"],
       "env": {}
     }
@@ -738,7 +739,7 @@ Instruction file preview:
 
 ```powershell
 cd <PROJECT_ROOT>
-D:\personal_project\Jikuo\tmp\mcp-stage-a-venv\Scripts\jikuo.exe install --client cursor --trigger-mode ask
+<JIKUO_CMD> install --client cursor --trigger-mode ask
 ```
 
 Review `.cursorrules` if generated.
@@ -748,7 +749,7 @@ Review `.cursorrules` if generated.
 Use the standard prompt with:
 
 ```text
-<PROJECT_ROOT> = D:\personal_project\Jikuo\tmp\client_proof_manual\cursor_project
+<PROJECT_ROOT> = <JIKUO_HOME>\tmp\client_proof_manual\cursor_project
 ```
 
 ### Retain Proof
@@ -786,7 +787,7 @@ Use:
   "servers": {
     "jikuo": {
       "type": "stdio",
-      "command": "D:\\personal_project\\Jikuo\\tmp\\mcp-stage-a-venv\\Scripts\\python.exe",
+      "command": "<PYTHON_EXE>",
       "args": ["-B", "-m", "jikuo.integrations.mcp.server"],
       "cwd": "${workspaceFolder}"
     }
@@ -810,7 +811,7 @@ Instruction file preview:
 
 ```powershell
 cd <PROJECT_ROOT>
-D:\personal_project\Jikuo\tmp\mcp-stage-a-venv\Scripts\jikuo.exe install --client vscode-copilot --trigger-mode ask
+<JIKUO_CMD> install --client vscode-copilot --trigger-mode ask
 ```
 
 Review `.github/copilot-instructions.md` if generated.
@@ -820,7 +821,7 @@ Review `.github/copilot-instructions.md` if generated.
 Use the standard prompt with:
 
 ```text
-<PROJECT_ROOT> = D:\personal_project\Jikuo\tmp\client_proof_manual\vscode_copilot_project
+<PROJECT_ROOT> = <JIKUO_HOME>\tmp\client_proof_manual\vscode_copilot_project
 ```
 
 Open GitHub Copilot Chat in Agent mode for the workspace and paste the prompt.

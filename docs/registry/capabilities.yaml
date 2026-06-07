@@ -19,8 +19,8 @@ entries:
     title: "Agent flow guarded policy evolution apply"
     status: "implemented guarded apply"
     metadata_status: "complete"
-    entry_point: "python -B -m jikuo.agent_flow apply --operation policy_evolution_write --proposal-ref <proposal-ref> ... --replacement-trigger-event ... --confirm-apply --approval-phrase ..."
-    write_effect: "policy proposal snapshot; decision record; approved replacement policy when superseding; manifest lifecycle refs"
+    entry_point: "python -B -m jikuo.agent_flow apply --operation policy_evolution_write --proposal-ref <proposal-ref> ... --replacement-policy-ref ... --confirm-apply --approval-phrase ..."
+    write_effect: "policy proposal snapshot; decision record; manifest lifecycle refs; supersession reads an existing replacement policy but does not create replacement policy content"
     approval: "proposal ref, approval phrase, and technical confirmation required"
     referenced_by_transitional_cache:
       - "docs/governance/jikuo_productization_task_map.md"
@@ -891,7 +891,7 @@ entries:
     title: "Policy evolution plan proposal"
     status: "implemented no-write proposal"
     metadata_status: "complete"
-    entry_point: "python -B -m jikuo.policy_store plan-evolution ...; python -B -m jikuo.agent_flow propose --event policy_evolution_plan ... --replacement-trigger-event ..."
+    entry_point: "python -B -m jikuo.policy_store plan-evolution ...; python -B -m jikuo.agent_flow propose --event policy_evolution_plan ...; refine uses trigger-profile fields, supersede uses an existing --replacement-policy-id/ref"
     write_effect: "none"
     approval: "N/A"
     referenced_by_transitional_cache:
@@ -1075,7 +1075,7 @@ entries:
     status: "implemented guarded write"
     metadata_status: "complete"
     entry_point: "python -B -m jikuo.policy_store write-evolution --operation supersede_policy ... --replacement-policy-id ... --confirm-write-evolution --approval-phrase ..."
-    write_effect: ".jikuo/policies/approved/<replacement>.yaml; .jikuo/policies/proposals/POLICYEVOPROPOSAL-*.yaml; .jikuo/policies/decisions/POLICYDECISION-*.yaml; .jikuo/policies/manifest.yaml"
+    write_effect: ".jikuo/policies/proposals/POLICYEVOPROPOSAL-*.yaml; .jikuo/policies/decisions/POLICYDECISION-*.yaml; .jikuo/policies/manifest.yaml; reads existing .jikuo/policies/approved/<replacement>.yaml"
     approval: "approval phrase and technical confirmation required"
     referenced_by_transitional_cache:
       - "docs/governance/jikuo_productization_task_map.md"
@@ -1994,7 +1994,7 @@ entries:
     status: "implemented guarded active-policy configuration change UX/API bridge including trigger-profile refinement by MVP-CONFIG-02"
     metadata_status: "complete"
     entry_point: "src/jikuo/integrations/studio_web/server.py POST /api/policy-management/evolution/apply; policy_store.write_policy_evolution_from_plan"
-    write_effect: "guarded; after a reviewed matching proposal ref, confirmation, and approval phrase, writes the existing policy evolution proposal snapshot, decision record, manifest update, replacement policy file for supersession, or target policy trigger-profile update for refinement when the core writer supports the selected operation"
+    write_effect: "guarded; after a reviewed matching proposal ref, confirmation, and approval phrase, writes the existing policy evolution proposal snapshot, decision record, manifest update, supersession lineage to an existing replacement policy, or target policy trigger-profile update for refinement when the core writer supports the selected operation"
     approval: "Studio confirmation supplies the guarded approval phrase; backend still requires confirm_apply, approval evidence, active policy-store preflight, supported operation, and proposal-ref consistency"
     non_effects:
       - "does_not_execute_policy_required_actions"

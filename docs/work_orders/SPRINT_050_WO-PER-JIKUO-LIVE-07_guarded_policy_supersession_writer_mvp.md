@@ -72,4 +72,10 @@ python -B tools/jikuo/agent_flow_tests.py
 
 ## Residual Risk
 
-Supersession currently creates a replacement policy from explicit CLI / agent-flow fields. It does not yet infer a narrower replacement from user prose, inspect existing policy semantics deeply, or provide a UI for comparing old and replacement policies side by side. Those remain later productization tasks.
+Current implementation note: supersession now links the target policy to an
+already existing replacement policy. Replacement policy content must be created,
+imported, activated, or edited through a separate guarded workflow before the
+supersede operation. Supersession does not infer a narrower replacement from
+user prose, inspect semantic equivalence, generate replacement content, or edit
+the replacement policy body. Side-by-side comparison remains later
+productization work.

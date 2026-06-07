@@ -1134,9 +1134,9 @@ def policy_evolution_recommendations(
         ]
     if operation == "supersede_policy":
         return [
-            "name the replacement policy and the policy/version it supersedes",
+            "select an existing replacement policy and the policy/version it supersedes",
             "review the guarded supersession write command before approval",
-            "keep the superseded policy available for audit instead of overwriting it",
+            "keep both policy bodies available for audit without generating replacement content",
         ]
     if feedback_type == "not_applicable":
         return [
@@ -1155,6 +1155,103 @@ def policy_evolution_recommendations(
         "choose refine, deprecate, or supersede as a separate approved operation",
         "keep this plan no-write until the evolution target is explicit",
     ]
+
+
+UNAVAILABLE_REPLACEMENT_POLICY_STATUSES = {"deprecated", "superseded"}
+
+
+def policy_ref_by_id(refs: Any, policy_id: str | None) -> dict[str, Any] | None:
+    if not policy_id or not isinstance(refs, list):
+        return None
+    for ref in refs:
+        if isinstance(ref, dict) and ref.get("policy_id") == policy_id:
+            return ref
+    return None
+
+
+def approved_policy_path_ref(policy_id: str) -> str:
+    return f"{POLICY_STORE_ROOT}/approved/{policy_id}.yaml"
+
+
+def policy_trigger_profile_from_record(record: dict[str, Any]) -> dict[str, Any]:
+    work_profile = normalize_work_profile_applicability(
+        record.get("applies_to_work_profile")
+    )
+    return {
+        "work_profile": work_profile,
+        "declared_trigger_events": [
+            str(trigger.get("event"))
+            for trigger in record.get("triggers", [])
+            if isinstance(trigger, dict) and trigger.get("event") is not None
+        ]
+        if isinstance(record.get("triggers"), list)
+        else [],
+        "conditions": record.get("conditions")
+        if isinstance(record.get("conditions"), list)
+        else [],
+    }
+
+
+def supersession_chain_reaches(
+    *,
+    status_report: dict[str, Any],
+    start_policy_id: str | None,
+    target_policy_id: str | None,
+) -> bool:
+    if not start_policy_id or not target_policy_id:
+        return False
+    superseded_by = {
+        str(ref.get("policy_id")): str(ref.get("superseded_by"))
+        for ref in status_report.get("superseded_policy_refs", [])
+        if isinstance(ref, dict)
+        and ref.get("policy_id") is not None
+        and ref.get("superseded_by") is not None
+    }
+    seen: set[str] = set()
+    current = start_policy_id
+    while current in superseded_by and current not in seen:
+        seen.add(current)
+        current = superseded_by[current]
+        if current == target_policy_id:
+            return True
+    return False
+
+
+def supersession_content_field_refusals(
+    *,
+    replacement_title: str | None,
+    replacement_trigger_event: str,
+    replacement_work_profile_lifecycle_events: list[str] | None,
+    replacement_work_profile_policy_scopes: list[str] | None,
+    replacement_task_type: str | None,
+    replacement_jikuo_layer: str | None,
+    replacement_changed_path_pattern: str | None,
+    replacement_added_path_pattern: str | None,
+    replacement_action_type: str,
+    replacement_evidence_type: str,
+) -> list[str]:
+    refusals: list[str] = []
+    if replacement_title:
+        refusals.append("replacement_title_not_allowed_for_supersession")
+    if replacement_trigger_event and replacement_trigger_event != "task_start":
+        refusals.append("replacement_trigger_event_not_allowed_for_supersession")
+    if ordered_nonempty_strings(replacement_work_profile_lifecycle_events):
+        refusals.append("replacement_lifecycle_events_not_allowed_for_supersession")
+    if ordered_nonempty_strings(replacement_work_profile_policy_scopes):
+        refusals.append("replacement_policy_scopes_not_allowed_for_supersession")
+    if replacement_task_type:
+        refusals.append("replacement_task_type_not_allowed_for_supersession")
+    if replacement_jikuo_layer:
+        refusals.append("replacement_jikuo_layer_not_allowed_for_supersession")
+    if replacement_changed_path_pattern:
+        refusals.append("replacement_changed_path_pattern_not_allowed_for_supersession")
+    if replacement_added_path_pattern:
+        refusals.append("replacement_added_path_pattern_not_allowed_for_supersession")
+    if replacement_action_type and replacement_action_type != "render_pre_task_review":
+        refusals.append("replacement_action_type_not_allowed_for_supersession")
+    if replacement_evidence_type and replacement_evidence_type != "card_rendered":
+        refusals.append("replacement_evidence_type_not_allowed_for_supersession")
+    return refusals
 
 
 def build_policy_evolution_plan(
@@ -1187,12 +1284,15 @@ def build_policy_evolution_plan(
     target_ref: dict[str, Any] | None = None
     policy_record: dict[str, Any] | None = None
     policy_path_ref: str | None = None
-    resolved_replacement_policy_id = normalize_policy_id(
-        replacement_policy_id,
-        replacement_title,
+    resolved_replacement_policy_id = (
+        replacement_policy_id.strip() if replacement_policy_id else None
     )
     replacement_policy_path_ref: str | None = None
-    replacement_collision = False
+    replacement_policy_record: dict[str, Any] | None = None
+    replacement_policy_snapshot: dict[str, Any] | None = None
+    replacement_trigger_profile: dict[str, Any] | None = None
+    replacement_policy_already_active = False
+    replacement_policy_will_be_activated = False
 
     if not policy_id:
         refusals.append("policy_id_required_for_policy_evolution_plan")
@@ -1203,31 +1303,101 @@ def build_policy_evolution_plan(
     if status_report["policy_store_status"] != "active":
         refusals.append("active_policy_store_required_for_policy_evolution_plan")
     if operation == "supersede_policy":
+        refusals.extend(
+            supersession_content_field_refusals(
+                replacement_title=replacement_title,
+                replacement_trigger_event=replacement_trigger_event,
+                replacement_work_profile_lifecycle_events=replacement_work_profile_lifecycle_events,
+                replacement_work_profile_policy_scopes=replacement_work_profile_policy_scopes,
+                replacement_task_type=replacement_task_type,
+                replacement_jikuo_layer=replacement_jikuo_layer,
+                replacement_changed_path_pattern=replacement_changed_path_pattern,
+                replacement_added_path_pattern=replacement_added_path_pattern,
+                replacement_action_type=replacement_action_type,
+                replacement_evidence_type=replacement_evidence_type,
+            )
+        )
         if not resolved_replacement_policy_id:
-            refusals.append("replacement_policy_id_or_title_required_for_supersession")
-            resolved_replacement_policy_id = "POLICY-replacement-unresolved"
-        if not replacement_title:
-            refusals.append("replacement_title_required_for_supersession")
-        if not replacement_action_type:
-            refusals.append("replacement_action_type_required_for_supersession")
-        if not replacement_evidence_type:
-            refusals.append("replacement_evidence_type_required_for_supersession")
+            refusals.append("replacement_policy_ref_required_for_supersession")
         if resolved_replacement_policy_id == policy_id:
             refusals.append("replacement_policy_must_differ_from_target_policy")
-        replacement_policy_path_ref = (
-            f"{POLICY_STORE_ROOT}/approved/{resolved_replacement_policy_id}.yaml"
-        )
-        active_policy_ids = {
-            str(ref.get("policy_id"))
-            for ref in status_report["active_policy_refs"]
-            if ref.get("policy_id") is not None
-        }
-        replacement_collision = (
-            (resolved_root / replacement_policy_path_ref).exists()
-            or resolved_replacement_policy_id in active_policy_ids
-        )
-        if replacement_collision:
-            refusals.append("replacement_policy_already_exists_or_active")
+        if supersession_chain_reaches(
+            status_report=status_report,
+            start_policy_id=resolved_replacement_policy_id,
+            target_policy_id=policy_id,
+        ):
+            refusals.append("replacement_policy_would_create_supersession_cycle")
+        if policy_ref_by_id(
+            status_report.get("deprecated_policy_refs"),
+            resolved_replacement_policy_id,
+        ):
+            refusals.append("replacement_policy_is_deprecated")
+        if policy_ref_by_id(
+            status_report.get("superseded_policy_refs"),
+            resolved_replacement_policy_id,
+        ):
+            refusals.append("replacement_policy_is_superseded")
+        if resolved_replacement_policy_id and status_report["policy_store_status"] == "active":
+            active_replacement_ref = policy_ref_by_id(
+                status_report.get("active_policy_refs"),
+                resolved_replacement_policy_id,
+            )
+            replacement_policy_already_active = active_replacement_ref is not None
+            if active_replacement_ref is not None:
+                raw_replacement_path = active_replacement_ref.get("path")
+                if isinstance(raw_replacement_path, str) and raw_replacement_path:
+                    replacement_policy_path_ref = raw_replacement_path.replace("\\", "/")
+                else:
+                    refusals.append("replacement_policy_active_path_missing")
+            else:
+                replacement_policy_path_ref = approved_policy_path_ref(
+                    resolved_replacement_policy_id
+                )
+                replacement_policy_will_be_activated = True
+            if replacement_policy_path_ref:
+                replacement_path, replacement_path_error = resolve_project_path(
+                    resolved_root,
+                    replacement_policy_path_ref,
+                )
+                approved_root = (resolved_root / POLICY_STORE_ROOT / "approved").resolve()
+                if replacement_path_error or replacement_path is None:
+                    refusals.append("replacement_policy_path_invalid")
+                    warnings.append(
+                        replacement_path_error or "replacement policy path invalid"
+                    )
+                else:
+                    try:
+                        replacement_path.resolve().relative_to(approved_root)
+                    except ValueError:
+                        refusals.append("replacement_policy_path_outside_approved_store")
+                    if not replacement_path.is_file():
+                        refusals.append("replacement_policy_not_found")
+                    else:
+                        replacement_policy_record, replacement_warnings = read_policy_record(
+                            replacement_path
+                        )
+                        warnings.extend(replacement_warnings)
+                        if replacement_warnings or replacement_policy_record is None:
+                            refusals.append("replacement_policy_record_not_readable")
+                        else:
+                            if (
+                                replacement_policy_record.get("policy_id")
+                                != resolved_replacement_policy_id
+                            ):
+                                refusals.append("replacement_policy_id_mismatch")
+                            replacement_status = replacement_policy_record.get("status")
+                            if replacement_status in UNAVAILABLE_REPLACEMENT_POLICY_STATUSES:
+                                refusals.append("replacement_policy_status_unavailable")
+                            replacement_policy_snapshot = {
+                                "policy_id": replacement_policy_record.get("policy_id"),
+                                "version": replacement_policy_record.get("version"),
+                                "path": replacement_policy_path_ref,
+                                "title": replacement_policy_record.get("title"),
+                                "status": replacement_status,
+                            }
+                            replacement_trigger_profile = policy_trigger_profile_from_record(
+                                replacement_policy_record
+                            )
 
     if policy_id and status_report["policy_store_status"] == "active":
         for item in status_report["active_policy_refs"]:
@@ -1280,117 +1450,38 @@ def build_policy_evolution_plan(
     )
     target_trigger_profile: dict[str, Any] | None = None
     if policy_record is not None:
-        target_work_profile = normalize_work_profile_applicability(
-            policy_record.get("applies_to_work_profile")
-        )
-        target_trigger_profile = {
-            "work_profile": target_work_profile,
-            "declared_trigger_events": [
-                str(trigger.get("event"))
-                for trigger in policy_record.get("triggers", [])
-                if isinstance(trigger, dict) and trigger.get("event") is not None
-            ]
-            if isinstance(policy_record.get("triggers"), list)
-            else [],
-            "conditions": policy_record.get("conditions")
-            if isinstance(policy_record.get("conditions"), list)
-            else [],
-        }
+        target_trigger_profile = policy_trigger_profile_from_record(policy_record)
     resolved_replacement_lifecycle_events = ordered_nonempty_strings(
         replacement_work_profile_lifecycle_events
     )
     resolved_replacement_policy_scopes = ordered_nonempty_strings(
         replacement_work_profile_policy_scopes
     )
-    replacement_work_profile_entries = build_work_profile_applicability_entries(
-        lifecycle_events=resolved_replacement_lifecycle_events,
-        policy_scopes=resolved_replacement_policy_scopes,
-    )
-    proposed_trigger_profile = {
-        "trigger_mode": (
-            "scope_first"
-            if resolved_replacement_policy_scopes
-            and not resolved_replacement_lifecycle_events
-            else "event_anchored"
-            if resolved_replacement_policy_scopes
-            and resolved_replacement_lifecycle_events
-            else "legacy_event_only"
-            if replacement_trigger_event
-            else "unconfigured"
-        ),
-        "policy_scopes": resolved_replacement_policy_scopes,
-        "lifecycle_events": resolved_replacement_lifecycle_events,
-        "declared_trigger_event": replacement_trigger_event,
-        "conditions": build_policy_conditions(
-            policy_id=resolved_replacement_policy_id or "POLICY-replacement-unresolved",
-            task_type=replacement_task_type,
-            jikuo_layer=replacement_jikuo_layer,
-            changed_path_pattern=replacement_changed_path_pattern,
-            added_path_pattern=replacement_added_path_pattern,
-        ),
-    }
-    replacement_policy: dict[str, Any] | None = None
-    if operation == "supersede_policy" and resolved_replacement_policy_id:
-        action_id = f"ACT-{slug_token(replacement_action_type)}"
-        evidence_id = f"EVD-{slug_token(replacement_evidence_type)}"
-        trigger_id = f"TRG-{slug_token(replacement_trigger_event)}"
-        replacement_policy = {
-            "schema_version": POLICY_SCHEMA,
-            "policy_id": resolved_replacement_policy_id,
-            "version": 1,
-            "status": "active_report_only",
-            "title": replacement_title,
-            "scenario_package": "engineering_governance",
-            "source_refs": [
-                {
-                    "type": "policy_supersession",
-                    "ref": source_ref or "<exact user phrase as spoken>",
-                }
-            ],
-            "triggers": [
-                {
-                    "trigger_id": trigger_id,
-                    "type": "task_lifecycle_event",
-                    "event": replacement_trigger_event,
-                }
-            ],
+    proposed_trigger_profile = None
+    if operation != "supersede_policy":
+        proposed_trigger_profile = {
+            "trigger_mode": (
+                "scope_first"
+                if resolved_replacement_policy_scopes
+                and not resolved_replacement_lifecycle_events
+                else "event_anchored"
+                if resolved_replacement_policy_scopes
+                and resolved_replacement_lifecycle_events
+                else "legacy_event_only"
+                if replacement_trigger_event
+                else "unconfigured"
+            ),
+            "policy_scopes": resolved_replacement_policy_scopes,
+            "lifecycle_events": resolved_replacement_lifecycle_events,
+            "declared_trigger_event": replacement_trigger_event,
             "conditions": build_policy_conditions(
-                policy_id=resolved_replacement_policy_id,
+                policy_id=policy_id or "POLICY-target-unresolved",
                 task_type=replacement_task_type,
                 jikuo_layer=replacement_jikuo_layer,
                 changed_path_pattern=replacement_changed_path_pattern,
                 added_path_pattern=replacement_added_path_pattern,
             ),
-            "required_actions": [
-                {
-                    "action_id": action_id,
-                    "type": replacement_action_type,
-                }
-            ],
-            "required_evidence": [
-                {
-                    "evidence_id": evidence_id,
-                    "type": replacement_evidence_type,
-                    "satisfies_action": action_id,
-                }
-            ],
-            "enforcement": {
-                "phase": "report_only",
-                "level": "review_required",
-            },
-            "revision": {
-                "version": 1,
-                "supersedes": [
-                    {
-                        "policy_id": policy_id,
-                        "version": current_version,
-                    }
-                ],
-                "superseded_by": None,
-            },
         }
-        if replacement_work_profile_entries:
-            replacement_policy["applies_to_work_profile"] = replacement_work_profile_entries
     write_set = [
         {
             "path": proposal_ref,
@@ -1417,15 +1508,30 @@ def build_policy_evolution_plan(
                 "operation": "update",
             },
         )
+    read_set = []
+    if policy_path_ref:
+        read_set.append({"path": policy_path_ref, "purpose": "read target policy body"})
     if operation == "supersede_policy" and replacement_policy_path_ref:
-        write_set.insert(
-            1,
+        read_set.append(
             {
                 "path": replacement_policy_path_ref,
-                "effect": "create replacement approved policy file",
-                "operation": "create",
-            },
+                "purpose": "read existing replacement policy body",
+            }
         )
+    non_effects = [
+        "does not update manifest.yaml",
+        "does not deprecate or supersede active policies",
+        "does not execute policy actions",
+        "does not promote gates",
+    ]
+    if operation == "refine_policy":
+        non_effects.insert(0, "does not write policy action, evidence, title, or status fields")
+    elif operation == "supersede_policy":
+        non_effects.insert(0, "does not create replacement policy content")
+        non_effects.insert(1, "does not modify replacement policy body")
+        non_effects.insert(2, "does not judge semantic equivalence between policies")
+    else:
+        non_effects.insert(0, "does not write policy files")
     return {
         "schema": POLICY_EVOLUTION_PLAN_SCHEMA,
         "schema_version": POLICY_EVOLUTION_PLAN_SCHEMA,
@@ -1449,10 +1555,25 @@ def build_policy_evolution_plan(
         "proposed_trigger_profile": proposed_trigger_profile,
         "replacement_policy_ref": resolved_replacement_policy_id,
         "replacement_policy_path": replacement_policy_path_ref,
-        "replacement_policy": replacement_policy,
+        "replacement_policy": None,
+        "replacement_policy_snapshot": replacement_policy_snapshot,
+        "replacement_trigger_profile": replacement_trigger_profile,
+        "replacement_policy_already_active": replacement_policy_already_active,
+        "replacement_policy_will_be_activated": replacement_policy_will_be_activated,
+        "lineage": {
+            "from": policy_id,
+            "relation": "superseded_by",
+            "to": resolved_replacement_policy_id,
+        }
+        if operation == "supersede_policy"
+        else None,
+        "read_set": read_set,
         "write_set": write_set,
         "preflight": {
-            "replacement_policy_collision": replacement_collision,
+            "replacement_policy_exists": replacement_policy_record is not None,
+            "replacement_policy_already_active": replacement_policy_already_active,
+            "replacement_policy_will_be_activated": replacement_policy_will_be_activated,
+            "replacement_policy_body_write_allowed": False,
         },
         "feedback": {
             "feedback_type": feedback_type,
@@ -1469,17 +1590,7 @@ def build_policy_evolution_plan(
             "requires_guarded_writer": True,
             "writer_implemented": operation in POLICY_EVOLUTION_WRITE_SUPPORTED_OPERATIONS,
         },
-        "non_effects": [
-            (
-                "does not write policy action, evidence, title, or status fields"
-                if operation == "refine_policy"
-                else "does not write policy files"
-            ),
-            "does not update manifest.yaml",
-            "does not deprecate or supersede active policies",
-            "does not execute policy actions",
-            "does not promote gates",
-        ],
+        "non_effects": non_effects,
         "write_allowed_by_command": False,
         "writes_performed": False,
         "guarded_apply_available": False,
@@ -1640,10 +1751,15 @@ def build_policy_evolution_decision_record(
     }
 
 
-def active_policy_ref_lines(*, policy_id: str, policy_path_ref: str) -> list[str]:
+def active_policy_ref_lines(
+    *,
+    policy_id: str,
+    policy_path_ref: str,
+    version: Any = 1,
+) -> list[str]:
     return [
         f"  - policy_id: {quote_yaml(policy_id)}",
-        "    version: 1",
+        f"    version: {quote_yaml(version if version is not None else 1)}",
         f"    path: {quote_yaml(policy_path_ref)}",
     ]
 
@@ -1826,6 +1942,8 @@ def append_superseded_policy_ref_to_manifest_text(
     version: Any,
     replacement_policy_id: str,
     replacement_policy_path_ref: str,
+    replacement_policy_version: Any = 1,
+    activate_replacement: bool = True,
     decision_ref: str,
 ) -> str:
     """Replace one active policy ref while preserving lifecycle history."""
@@ -1841,13 +1959,15 @@ def append_superseded_policy_ref_to_manifest_text(
     del lines[active_block[0]:active_block[1]]
     normalize_empty_list_field(lines, "active_policy_refs")
 
-    manifest_text = "\n".join(lines) + "\n"
-    manifest_text = append_active_policy_ref_to_manifest_text(
-        text=manifest_text,
-        policy_id=replacement_policy_id,
-        policy_path_ref=replacement_policy_path_ref,
-    )
-    lines = manifest_text.splitlines()
+    if activate_replacement:
+        manifest_text = "\n".join(lines) + "\n"
+        manifest_text = append_active_policy_ref_to_manifest_text(
+            text=manifest_text,
+            policy_id=replacement_policy_id,
+            policy_path_ref=replacement_policy_path_ref,
+            version=replacement_policy_version,
+        )
+        lines = manifest_text.splitlines()
 
     superseded_index = top_level_field_index(lines, "superseded_policy_refs")
     new_ref_lines = superseded_policy_ref_lines(
@@ -1889,6 +2009,7 @@ def append_active_policy_ref_to_manifest_text(
     text: str,
     policy_id: str,
     policy_path_ref: str,
+    version: Any = 1,
 ) -> str:
     """Append one active policy ref while preserving unrelated manifest text."""
 
@@ -1904,6 +2025,7 @@ def append_active_policy_ref_to_manifest_text(
     new_ref_lines = active_policy_ref_lines(
         policy_id=policy_id,
         policy_path_ref=policy_path_ref,
+        version=version,
     )
     active_line = lines[active_index].strip()
     if active_line == "active_policy_refs: []":
@@ -2315,17 +2437,11 @@ def write_policy_evolution_from_plan(
     temp_proposal_path = proposal_path.with_suffix(proposal_path.suffix + ".tmp")
     temp_decision_path = decision_path.with_suffix(decision_path.suffix + ".tmp")
     temp_manifest_path = manifest_path.with_suffix(manifest_path.suffix + ".tmp")
-    temp_replacement_policy_path = (
-        replacement_policy_path.with_suffix(replacement_policy_path.suffix + ".tmp")
-        if replacement_policy_path is not None
-        else None
-    )
     temp_target_policy_path: Path | None = None
     created_paths: list[str] = []
     written_paths: list[str] = []
     proposal_created = False
     decision_created = False
-    replacement_policy_created = False
     target_policy_updated = False
     manifest_updated = False
     original_target_policy_text: str | None = None
@@ -2369,11 +2485,11 @@ def write_policy_evolution_from_plan(
                     ),
                     2,
                 )
-            if replacement_policy_path.exists():
+            if not replacement_policy_path.is_file():
                 return (
                     build_policy_evolution_write_refusal_result(
                         plan=plan,
-                        refusal_reasons=["replacement_policy_already_exists_at_write_time"],
+                        refusal_reasons=["replacement_policy_missing_at_write_time"],
                         approval_phrase=approval_phrase,
                     ),
                     2,
@@ -2465,6 +2581,10 @@ def write_policy_evolution_from_plan(
                 version=target.get("version"),
                 replacement_policy_id=replacement_policy_ref,
                 replacement_policy_path_ref=replacement_policy_path_ref,
+                replacement_policy_version=(
+                    (plan.get("replacement_policy_snapshot") or {}).get("version")
+                ),
+                activate_replacement=not bool(plan.get("replacement_policy_already_active")),
                 decision_ref=decision_ref,
             )
         elif operation == "refine_policy":
@@ -2496,23 +2616,6 @@ def write_policy_evolution_from_plan(
             encoding="utf-8",
             newline="\n",
         )
-        if operation == "supersede_policy":
-            replacement_policy = plan.get("replacement_policy")
-            if not isinstance(replacement_policy, dict):
-                return (
-                    build_policy_evolution_write_refusal_result(
-                        plan=plan,
-                        refusal_reasons=["replacement_policy_missing_at_write_time"],
-                        approval_phrase=approval_phrase,
-                    ),
-                    2,
-                )
-            assert temp_replacement_policy_path is not None
-            temp_replacement_policy_path.write_text(
-                render_yaml_document(replacement_policy),
-                encoding="utf-8",
-                newline="\n",
-            )
         temp_decision_path.write_text(
             render_yaml_document(
                 build_policy_evolution_decision_record(
@@ -2538,19 +2641,6 @@ def write_policy_evolution_from_plan(
         temp_proposal_path.unlink(missing_ok=True)
         written_paths.append(proposal_ref)
 
-        if operation == "supersede_policy":
-            assert replacement_policy_path is not None
-            assert temp_replacement_policy_path is not None
-            try:
-                fd = os.open(replacement_policy_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-            except FileExistsError:
-                raise RuntimeError("replacement policy file already exists") from None
-            with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
-                handle.write(temp_replacement_policy_path.read_text(encoding="utf-8"))
-            replacement_policy_created = True
-            temp_replacement_policy_path.unlink(missing_ok=True)
-            written_paths.append(str(replacement_policy_path_ref))
-
         if operation == "refine_policy":
             if temp_target_policy_path is None or target_policy_path is None:
                 raise RuntimeError("refined policy temp path was not prepared")
@@ -2574,8 +2664,6 @@ def write_policy_evolution_from_plan(
         written_paths.append(manifest_ref)
     except Exception as exc:
         temp_paths = [temp_proposal_path, temp_decision_path, temp_manifest_path]
-        if temp_replacement_policy_path is not None:
-            temp_paths.append(temp_replacement_policy_path)
         if temp_target_policy_path is not None:
             temp_paths.append(temp_target_policy_path)
         for temp_path in temp_paths:
@@ -2583,13 +2671,6 @@ def write_policy_evolution_from_plan(
                 temp_path.unlink(missing_ok=True)
         if proposal_created and not manifest_updated and proposal_path.exists():
             proposal_path.unlink(missing_ok=True)
-        if (
-            replacement_policy_created
-            and not manifest_updated
-            and replacement_policy_path is not None
-            and replacement_policy_path.exists()
-        ):
-            replacement_policy_path.unlink(missing_ok=True)
         if (
             target_policy_updated
             and not manifest_updated

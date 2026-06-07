@@ -67,12 +67,82 @@ def policy_evolution_args(project_root: Path) -> dict[str, object]:
         "summary": "Replace with a narrower policy through MCP server B2.",
         "policy_source_ref": "User approved MCP server B2 supersession.",
         "replacement_policy_ref": "POLICY-three-phase-audit-server-v2",
-        "replacement_title": "Three-phase task audit server v2",
-        "replacement_trigger_event": "conversation_turn",
-        "replacement_task_type": "work_order_delivery",
-        "replacement_jikuo_layer": "testing_governance",
-        "replacement_changed_path_pattern": "docs/jikuo/**",
     }
+
+
+def write_existing_replacement_policy(
+    project_root: Path,
+    *,
+    policy_id: str,
+    title: str,
+    event: str = "task_start",
+    task_type: str | None = None,
+    jikuo_layer: str | None = None,
+    changed_path_pattern: str | None = None,
+) -> Path:
+    approved = project_root / ".jikuo" / "policies" / "approved"
+    approved.mkdir(parents=True, exist_ok=True)
+    lines = [
+        'schema_version: "jikuo.configurable_rule_policy.v0"',
+        f'policy_id: "{policy_id}"',
+        "version: 1",
+        'status: "active_report_only"',
+        f'title: "{title}"',
+        'scenario_package: "engineering_governance"',
+        "source_refs:",
+        '  - type: "test_fixture"',
+        '    ref: "tests:existing_replacement_policy"',
+        "triggers:",
+        f'  - trigger_id: "TRG-{event.replace("_", "-")}"',
+        '    type: "task_lifecycle_event"',
+        f'    event: "{event}"',
+    ]
+    conditions: list[str] = []
+    if task_type:
+        conditions.extend(
+            [
+                '  - condition_id: "COND-task-type"',
+                '    type: "task_type_is"',
+                f'    value: "{task_type}"',
+            ]
+        )
+    if jikuo_layer:
+        conditions.extend(
+            [
+                '  - condition_id: "COND-jikuo-layer"',
+                '    type: "jikuo_layer_is"',
+                f'    value: "{jikuo_layer}"',
+            ]
+        )
+    if changed_path_pattern:
+        conditions.extend(
+            [
+                '  - condition_id: "COND-changed-path"',
+                '    type: "changed_path_matches"',
+                f'    pattern: "{changed_path_pattern}"',
+            ]
+        )
+    if conditions:
+        lines.append("conditions:")
+        lines.extend(conditions)
+    lines.extend(
+        [
+            "required_actions:",
+            '  - action_id: "ACT-render-pre-task-review"',
+            '    type: "render_pre_task_review"',
+            "required_evidence:",
+            '  - evidence_id: "EVD-card-rendered"',
+            '    type: "card_rendered"',
+            '    satisfies_action: "ACT-render-pre-task-review"',
+            "enforcement:",
+            '  phase: "report_only"',
+            '  level: "review_required"',
+            "",
+        ]
+    )
+    path = approved / f"{policy_id}.yaml"
+    path.write_text("\n".join(lines), encoding="utf-8")
+    return path
 
 
 def policy_evolution_proposal_ref(response: dict[str, object]) -> str:
@@ -591,6 +661,15 @@ class MCPServerWrapperTests(unittest.TestCase):
     def test_stage_b2_registered_tool_delegates_guarded_apply(self):
         with tempfile.TemporaryDirectory() as tmp:
             project_root = copy_fixture(POLICY_ACTIVE_PROJECT, tmp)
+            write_existing_replacement_policy(
+                project_root,
+                policy_id="POLICY-three-phase-audit-server-v2",
+                title="Three-phase task audit server v2",
+                event="conversation_turn",
+                task_type="work_order_delivery",
+                jikuo_layer="testing_governance",
+                changed_path_pattern="docs/jikuo/**",
+            )
             fake = server.create_server(fastmcp_cls=FakeFastMCP)
             plan = fake.tools["jikuo.propose_policy_evolution_plan"]["function"](
                 **policy_evolution_args(project_root),
@@ -608,6 +687,10 @@ class MCPServerWrapperTests(unittest.TestCase):
             self.assertEqual(response["status"], "applied")
             self.assertTrue(response["write_performed"])
             self.assertEqual(response["proposal_binding"]["status"], "ok")
+            self.assertNotIn(
+                ".jikuo/policies/approved/POLICY-three-phase-audit-server-v2.yaml",
+                response["target_result"]["written_paths"],
+            )
             replacement_policy = (
                 project_root
                 / ".jikuo"

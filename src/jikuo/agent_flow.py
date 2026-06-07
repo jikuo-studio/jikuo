@@ -3438,6 +3438,20 @@ def build_policy_evolution_plan_cards(
         f"recommended_change: {item}"
         for item in plan["recommended_changes"]
     )
+    shown_inputs = [
+        f"policy_ref: {policy_ref}",
+        f"operation: {operation}",
+        f"feedback_type: {feedback_type}",
+        f"summary: {summary}",
+    ]
+    if operation == "supersede_policy":
+        shown_inputs.append(f"replacement_policy_ref: {replacement_policy_ref}")
+    else:
+        shown_inputs.extend([
+            f"replacement_trigger_event: {replacement_trigger_event}",
+            f"replacement_work_profile_lifecycle_events: {', '.join(replacement_work_profile_lifecycle_events or [])}",
+            f"replacement_work_profile_policy_scopes: {', '.join(replacement_work_profile_policy_scopes or [])}",
+        ])
     card = generic_card(
         card_kind="policy_evolution_plan",
         status=plan["status"],
@@ -3447,17 +3461,7 @@ def build_policy_evolution_plan_cards(
             if plan["status"] != "refused"
             else "Policy evolution plan could not be prepared safely."
         ),
-        shown_inputs=[
-            f"policy_ref: {policy_ref}",
-            f"operation: {operation}",
-            f"feedback_type: {feedback_type}",
-            f"summary: {summary}",
-            f"replacement_policy_ref: {replacement_policy_ref}",
-            f"replacement_title: {replacement_title}",
-            f"replacement_trigger_event: {replacement_trigger_event}",
-            f"replacement_work_profile_lifecycle_events: {', '.join(replacement_work_profile_lifecycle_events or [])}",
-            f"replacement_work_profile_policy_scopes: {', '.join(replacement_work_profile_policy_scopes or [])}",
-        ],
+        shown_inputs=shown_inputs,
         shown_outputs=outputs,
         refusal_reasons=plan["refusal_reasons"],
         next_actions=plan["next_actions"],
@@ -3489,7 +3493,7 @@ def build_policy_evolution_plan_cards(
             command_parts.extend(["--summary", command_arg(summary)])
         if source_ref:
             command_parts.extend(["--source-ref", command_arg(source_ref)])
-        if operation in {"refine_policy", "supersede_policy"}:
+        if operation == "refine_policy":
             if replacement_trigger_event:
                 command_parts.extend([
                     "--replacement-trigger-event",
@@ -3522,10 +3526,6 @@ def build_policy_evolution_plan_cards(
         if operation == "supersede_policy":
             if replacement_policy_ref:
                 command_parts.extend(["--replacement-policy-id", command_arg(replacement_policy_ref)])
-            if replacement_title:
-                command_parts.extend(["--replacement-title", command_arg(replacement_title)])
-            command_parts.extend(["--replacement-action-type", command_arg(replacement_action_type)])
-            command_parts.extend(["--replacement-evidence-type", command_arg(replacement_evidence_type)])
         card["command_proposal"] = {
             "command_preview": " ".join(command_parts),
             "approval_required": True,

@@ -232,7 +232,6 @@ def register_stage_a_tools(
         summary: str | None = None,
         policy_source_ref: str | None = None,
         replacement_policy_ref: str | None = None,
-        replacement_title: str | None = None,
         replacement_trigger_event: str | None = None,
         replacement_work_profile_lifecycle_events: list[str] | None = None,
         replacement_work_profile_policy_scopes: list[str] | None = None,
@@ -240,8 +239,6 @@ def register_stage_a_tools(
         replacement_jikuo_layer: str | None = None,
         replacement_changed_path_pattern: str | None = None,
         replacement_added_path_pattern: str | None = None,
-        replacement_action_type: str | None = None,
-        replacement_evidence_type: str | None = None,
         host_semantic_intent: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         return _call(
@@ -254,7 +251,6 @@ def register_stage_a_tools(
                 "summary": summary,
                 "policy_source_ref": policy_source_ref,
                 "replacement_policy_ref": replacement_policy_ref,
-                "replacement_title": replacement_title,
                 "replacement_trigger_event": replacement_trigger_event,
                 "replacement_work_profile_lifecycle_events": (
                     replacement_work_profile_lifecycle_events or []
@@ -266,8 +262,6 @@ def register_stage_a_tools(
                 "replacement_jikuo_layer": replacement_jikuo_layer,
                 "replacement_changed_path_pattern": replacement_changed_path_pattern,
                 "replacement_added_path_pattern": replacement_added_path_pattern,
-                "replacement_action_type": replacement_action_type,
-                "replacement_evidence_type": replacement_evidence_type,
                 "host_semantic_intent": host_semantic_intent,
             },
             default_transport=default_transport,
@@ -763,7 +757,6 @@ def register_stage_b2_tools(
         summary: str | None = None,
         policy_source_ref: str | None = None,
         replacement_policy_ref: str | None = None,
-        replacement_title: str | None = None,
         replacement_trigger_event: str | None = None,
         replacement_work_profile_lifecycle_events: list[str] | None = None,
         replacement_work_profile_policy_scopes: list[str] | None = None,
@@ -771,8 +764,6 @@ def register_stage_b2_tools(
         replacement_jikuo_layer: str | None = None,
         replacement_changed_path_pattern: str | None = None,
         replacement_added_path_pattern: str | None = None,
-        replacement_action_type: str | None = None,
-        replacement_evidence_type: str | None = None,
         owner_agent: str | None = None,
         confirm_apply: bool = False,
         approval_phrase: str | None = None,
@@ -788,7 +779,6 @@ def register_stage_b2_tools(
                 "summary": summary,
                 "policy_source_ref": policy_source_ref,
                 "replacement_policy_ref": replacement_policy_ref,
-                "replacement_title": replacement_title,
                 "replacement_trigger_event": replacement_trigger_event,
                 "replacement_work_profile_lifecycle_events": (
                     replacement_work_profile_lifecycle_events or []
@@ -800,8 +790,6 @@ def register_stage_b2_tools(
                 "replacement_jikuo_layer": replacement_jikuo_layer,
                 "replacement_changed_path_pattern": replacement_changed_path_pattern,
                 "replacement_added_path_pattern": replacement_added_path_pattern,
-                "replacement_action_type": replacement_action_type,
-                "replacement_evidence_type": replacement_evidence_type,
                 "owner_agent": owner_agent,
                 "confirm_apply": confirm_apply,
                 "approval_phrase": approval_phrase,

@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-REL-READINESS-01: Pre-release User Usability
 
-> **Status**: Active pre-release work order; P0-01 through P0-08 accepted; P0-09 next.
+> **Status**: Active pre-release work order; P0-01 through P0-08 accepted; P0-09 in progress.
 > **Date**: 2026-06-06
 > **JIKUO layer**: release readiness / first-use configuration / user-facing governance.
 > **Business meaning**: before publishing JIKUO to GitHub, a new user should be able to install it, understand the initial configuration state, configure documents and starter policies, see known evidence limits, and complete a first governed workflow without relying on private local knowledge.
@@ -55,7 +55,7 @@ Stop rule for execution:
 | P0-06 | Evidence missing classification and trace guide | Accepted | Users can distinguish product limits from genuine missing work evidence instead of reading every `missing` as failure. | Missing evidence is classified by reason and surfaced in runtime / Studio read models; `docs/user/trace-and-evidence.md` explains Policy Trace, Document Trace, turn anchors, and missing classifications; README links or explicitly defers the trace guide entry. |
 | P0-07 | Current limitation disclosure | Accepted | Users know what JIKUO does not yet prove, especially around semantic classification, mounted enforcement, report-only policy behavior, observed-read evidence, and why many `missing` reports are visible feature boundaries rather than hidden failures. | README, Studio limitations, `docs/user/limitations.md`, and `docs/user/trace-and-evidence.md` show the same limits in user-facing language; quickstart integration is deferred to P0-08. |
 | P0-08 | Quickstart full flow | Accepted | A user can complete one end-to-end flow without reconstructing private development history. | `docs/user/getting-started.md` and the main README rewrite cover install, configure, starter policy activation, document rules, task run, completion review, and receipt inspection. |
-| P0-09 | Local path and runtime publication audit | Not started | Public release artifacts should not expose private machine paths or development-only runtime files as product defaults. | Release audit lists publish-safe files, ignored runtime paths, intentional local-only examples, README release readiness, and docs navigation readiness. |
+| P0-09 | Local path and runtime publication audit | In progress | Public release artifacts should not expose private machine paths, development-only runtime files, or implied license rights as product defaults. | Release audit lists publish-safe files, ignored runtime paths, intentional local-only examples, README release readiness, license boundary, and docs navigation readiness. |
 
 ## 3. P1 Release-support Checklist
 
@@ -403,11 +403,124 @@ receipts and missing-evidence boundaries.
 
 Next item:
 
-P0-09 should audit the repository for publication safety: private local paths,
+P0-09 is auditing the repository for publication safety: private local paths,
 runtime files, license and non-commercial-use language, public docs navigation,
 and release-facing README wording.
 
-## 13. Known Limits To Expose Before Release
+## 13. In-progress Item: P0-09
+
+P0-09 is in progress as of 2026-06-07.
+
+Slice 1 implemented behavior:
+
+- added `/.tmp/` to `.gitignore` so local Studio/cache scratch output is not
+  accidentally staged for publication;
+- replaced maintainer-local absolute paths in MCP client configuration and
+  proof docs with user-safe placeholders such as `<JIKUO_HOME>`,
+  `<PROJECT_ROOT>`, `<WORKSPACE>`, `<PYTHON_EXE>`, and `<JIKUO_CMD>`;
+- clarified README license posture: the repository does not yet grant public,
+  commercial, or non-commercial use rights until an explicit license or terms
+  file and matching package metadata are accepted;
+- kept historical governance/audit records unchanged in this slice instead of
+  silently rewriting provenance.
+
+Current audit findings:
+
+- ignored runtime and local-only paths already include `.jikuo/runtime/`,
+  `.claude/`, `.mcp.json`, `tmp/`, Python caches, generated package metadata,
+  browser profiles, and dependency directories;
+- `.tmp/` was a publish-safety gap and is now ignored;
+- `test.md` was an untracked empty scratch file and was deleted after explicit
+  user approval;
+- `docs/registry/work_orders.yaml` now reflects P0-09 in-progress status for
+  the release-readiness work order;
+- tracked `.jikuo/policies/proposals/*.yaml` records contain local
+  `project_root` / policy-store provenance. Those files are governance audit
+  records, so they must not be linked from the public user documentation
+  surface or rewritten as part of public-doc cleanup. If public release later
+  needs policy-proposal examples, create sanitized fixtures or exported
+  examples instead of publishing live local provenance;
+- internal governance and handoff docs still contain some historical
+  maintainer-local references. They need a release navigation decision:
+  publish as historical local-proof material, redact, or keep out of the public
+  documentation surface;
+- package metadata still says `Proprietary`, and no public non-commercial
+  license has been installed.
+
+Slice 2 implemented behavior:
+
+- exposed the current policy condition composition limit in user and governance
+  documentation: multiple conditions are AND, and generic OR groups such as
+  `any_of` / `one_of` are not supported yet;
+- clarified that unsupported OR groups are a product boundary, not hidden
+  semantic judgment by JIKUO;
+- documented the current workaround: model alternative applicability routes as
+  separate policies until explicit OR condition groups exist;
+- kept the future design direction explicit: OR should be represented as
+  auditable condition groups, with AND inside each route and clear Policy Trace
+  output for the matched route and missing context.
+
+Slice 3 implemented behavior:
+
+- deleted the approved untracked scratch file `test.md`;
+- recorded that `.jikuo/policies/proposals/*.yaml` live policy-proposal
+  provenance is not part of the public documentation surface. Those records can
+  remain project-local audit material, but public examples should be sanitized
+  exports or fixtures rather than live local provenance;
+- classified internal documentation by publication strategy:
+  - user entry documents (`README.md`, `docs/README.md`, and `docs/user/**`)
+    are public-facing and should avoid maintainer-local paths, private runtime
+    references, and unexplained governance internals;
+  - engineering governance documents (`docs/governance/**`,
+    `docs/registry/**`, and active work orders) can be published as
+    implementation material when they use placeholders for current setup
+    instructions and clearly mark historical/local-proof content;
+  - historical audit material, runtime cards, `.jikuo/policies/proposals/**`,
+    handoffs, and local proof records should not be treated as user onboarding
+    documentation. Publish only if there is an explicit redaction/export
+    decision.
+
+Business meaning:
+
+P0-09 is protecting the first public GitHub impression. A user should not see
+the maintainer's machine layout as the default product path, should not receive
+local runtime/cache artifacts, and should not infer that non-commercial use is
+allowed before the repository contains explicit license terms. The condition
+composition disclosure also prevents users from assuming JIKUO can express OR
+policy routing when the current evaluator only supports conservative AND
+composition. The Slice 3 publication strategy prevents historical audit
+evidence from leaking into the public onboarding path while preserving the
+integrity of local governance records.
+
+Acceptance evidence for this slice:
+
+- scoped scan of README, MCP configuration examples, MCP proof playbook, and
+  this work order found no remaining `D:\personal_project`,
+  `D:/personal_project`, or `Jikuo_private_preview` references;
+- `git check-ignore -v .tmp .tmp\studio .tmp\openai-docs-cache tmp
+  tmp\mcp-stage-a-venv .jikuo\runtime .claude .mcp.json` confirmed `.tmp/`,
+  `tmp/`, `.jikuo/runtime/`, `.claude/`, and `.mcp.json` are ignored;
+- `git diff --check` reported no whitespace errors, only existing CRLF
+  normalization warnings;
+- `python -B -m unittest discover -s tests -p "*_tests.py"` passed with 389
+  tests after the initial document updates and again after the work-order
+  registry sync;
+- `completion_review` generated runtime history
+  `.jikuo/runtime/history/20260607T042525Z_proposal_def0d1ec68.md`; it
+  observed the work-order registry sync and still reports broader report-only
+  companion gaps for `docs/registry/capabilities.yaml` and
+  `docs/registry/scenario_chains.yaml`, which this slice intentionally did not
+  edit because it added no new capability or scenario-chain contract.
+- Slice 2 documentation update exposes the current lack of generic OR condition
+  groups in `docs/user/policy-management.md`,
+  `docs/user/limitations.md`, and
+  `docs/governance/jikuo_configurable_rule_trigger_policy.md`.
+- Slice 3 removed `test.md` and documented public-surface strategy for
+  `.jikuo/policies/proposals/*.yaml`, user entry documents, engineering
+  governance documents, and historical audit material in this work order and
+  `docs/README.md`.
+
+## 14. Known Limits To Expose Before Release
 
 - JIKUO does not perform semantic judgment by itself. Host AI supplies compact
   semantic intent when available; JIKUO records, merges, triggers policies, and
@@ -427,3 +540,6 @@ and release-facing README wording.
   still being backfilled across policies.
 - Strict mounted behavior depends on a host adapter. Instruction-only or MCP-only
   setup must not be presented as guaranteed pre-turn execution.
+- Policy conditions currently compose as AND. Generic OR condition groups such
+  as `any_of` or `one_of` are not implemented yet; use separate policies for
+  alternative applicability routes until explicit OR groups exist.

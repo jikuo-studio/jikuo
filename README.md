@@ -188,6 +188,9 @@ JIKUO before each user turn.
 - [`docs/user/document-management.md`](docs/user/document-management.md):
   first-use guide for Document Rules, local mount layering, and guarded
   document configuration changes.
+- [`docs/user/policy-management.md`](docs/user/policy-management.md):
+  first-use guide for starter policies, active policy configuration,
+  final-response gates, path filters, deprecation, and supersession.
 - [`docs/user/trace-and-evidence.md`](docs/user/trace-and-evidence.md):
   guide for Policy Trace, Document Trace, turn anchors, and missing evidence
   classifications.
@@ -227,6 +230,11 @@ pytest
 
 The current package metadata is `Proprietary`. The external release license is
 an explicit product decision and has not changed yet.
+
+This repository does not currently grant public, commercial, or non-commercial
+use rights. Before publishing a public GitHub preview, add an explicit
+source-available / non-commercial license or terms file and update package
+metadata to match that decision.
 
 Current product direction is a private GitHub preview followed by a possible
 source-available community preview. Public review should wait until the license,

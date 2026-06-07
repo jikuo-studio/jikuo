@@ -732,7 +732,7 @@ def _apply_policy_evolution_write_response(
         feedback_type=arguments.get("feedback_type"),
         policy_source_ref=arguments.get("policy_source_ref"),
         replacement_policy_ref=arguments.get("replacement_policy_ref"),
-        replacement_title=arguments.get("replacement_title"),
+        replacement_title=None,
         replacement_trigger_event=str(
             arguments.get("replacement_trigger_event") or "task_start"
         ),
@@ -748,12 +748,8 @@ def _apply_policy_evolution_write_response(
             "replacement_changed_path_pattern"
         ),
         replacement_added_path_pattern=arguments.get("replacement_added_path_pattern"),
-        replacement_action_type=str(
-            arguments.get("replacement_action_type") or "render_pre_task_review"
-        ),
-        replacement_evidence_type=str(
-            arguments.get("replacement_evidence_type") or "card_rendered"
-        ),
+        replacement_action_type="render_pre_task_review",
+        replacement_evidence_type="card_rendered",
         confirmed=_bool_arg(arguments.get("confirm_apply")),
         approval_phrase=arguments.get("approval_phrase"),
     )
@@ -1186,7 +1182,7 @@ def call_tool(
             summary=args.get("summary"),
             policy_source_ref=args.get("policy_source_ref"),
             replacement_policy_ref=args.get("replacement_policy_ref"),
-            replacement_title=args.get("replacement_title"),
+            replacement_title=None,
             replacement_trigger_event=str(
                 args.get("replacement_trigger_event") or "task_start"
             ),
@@ -1200,12 +1196,8 @@ def call_tool(
             replacement_jikuo_layer=args.get("replacement_jikuo_layer"),
             replacement_changed_path_pattern=args.get("replacement_changed_path_pattern"),
             replacement_added_path_pattern=args.get("replacement_added_path_pattern"),
-            replacement_action_type=str(
-                args.get("replacement_action_type") or "render_pre_task_review"
-            ),
-            replacement_evidence_type=str(
-                args.get("replacement_evidence_type") or "card_rendered"
-            ),
+            replacement_action_type="render_pre_task_review",
+            replacement_evidence_type="card_rendered",
         )
 
     if tool_name == "jikuo.propose_policy_distribution_review":
