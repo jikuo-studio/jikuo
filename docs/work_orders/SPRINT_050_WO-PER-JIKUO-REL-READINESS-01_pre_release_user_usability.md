@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-REL-READINESS-01: Pre-release User Usability
 
-> **Status**: Active pre-release work order; P0-01 through P0-08 accepted; P0-09 in progress with license posture and public documentation surface cleanup implemented.
+> **Status**: Active pre-release work order; P0-01 through P0-08 accepted; P0-09 in progress with license posture, public documentation surface cleanup, and public MCP configuration example cleanup implemented.
 > **Date**: 2026-06-06
 > **JIKUO layer**: release readiness / first-use configuration / user-facing governance.
 > **Business meaning**: before publishing JIKUO to GitHub, a new user should be able to install it, understand the initial configuration state, configure documents and starter policies, see known evidence limits, and complete a first governed workflow without relying on private local knowledge.
@@ -55,7 +55,7 @@ Stop rule for execution:
 | P0-06 | Evidence missing classification and trace guide | Accepted | Users can distinguish product limits from genuine missing work evidence instead of reading every `missing` as failure. | Missing evidence is classified by reason and surfaced in runtime / Studio read models; `docs/user/trace-and-evidence.md` explains Policy Trace, Document Trace, turn anchors, and missing classifications; README links or explicitly defers the trace guide entry. |
 | P0-07 | Current limitation disclosure | Accepted | Users know what JIKUO does not yet prove, especially around semantic classification, mounted enforcement, report-only policy behavior, observed-read evidence, and why many `missing` reports are visible feature boundaries rather than hidden failures. | README, Studio limitations, `docs/user/limitations.md`, and `docs/user/trace-and-evidence.md` show the same limits in user-facing language; quickstart integration is deferred to P0-08. |
 | P0-08 | Quickstart full flow | Accepted | A user can complete one end-to-end flow without reconstructing private development history. | `docs/user/getting-started.md` and the main README rewrite cover install, configure, starter policy activation, document rules, task run, completion review, and receipt inspection. |
-| P0-09 | Local path and runtime publication audit | In progress | Public release artifacts should not expose private machine paths, development-only runtime files, or implied license rights as product defaults. | Release audit lists publish-safe files, ignored runtime paths, intentional local-only examples, README release readiness, license boundary, and docs navigation readiness. |
+| P0-09 | Local path and runtime publication audit | In progress | Public release artifacts should not expose private machine paths, development-only runtime files, or implied license rights as product defaults. | Release audit lists publish-safe files, ignored runtime paths, intentional local-only examples, README release readiness, license boundary, public MCP configuration examples, and docs navigation readiness. |
 
 ## 3. P1 Release-support Checklist
 
@@ -81,7 +81,7 @@ P0-01 is accepted as of 2026-06-06.
 
 Acceptance evidence:
 
-- temporary virtual environment: `D:\tmp\jikuo-p0-smoke-venv`;
+- temporary virtual environment: `<TEMP_DIR>\jikuo-p0-smoke-venv`;
 - `pip install -e ".[dev]"` completed successfully;
 - `jikuo.exe --help` returned successfully;
 - `jikuo-mcp.exe --help` returned successfully;
@@ -444,9 +444,9 @@ Current audit findings:
   maintainer-local references. They need a release navigation decision:
   publish as historical local-proof material, redact, or keep out of the public
   documentation surface;
-- at the end of Slice 1, package metadata still said `Proprietary`, and no
-  public non-commercial license had been installed; Slice 4 resolves that
-  license-posture gap.
+- at the end of Slice 1, package metadata still used the old closed-source
+  license text, and no public non-commercial license had been installed; Slice
+  4 resolves that license-posture gap.
 
 Slice 2 implemented behavior:
 
@@ -496,8 +496,8 @@ while preserving the integrity of local governance records.
 Acceptance evidence for this slice:
 
 - scoped scan of README, MCP configuration examples, MCP proof playbook, and
-  this work order found no remaining `D:\personal_project`,
-  `D:/personal_project`, or `Jikuo_private_preview` references;
+  this work order found no remaining maintainer-local project path or private
+  preview checkout references in the targeted public surface;
 - `git check-ignore -v .tmp .tmp\studio .tmp\openai-docs-cache tmp
   tmp\mcp-stage-a-venv .jikuo\runtime .claude .mcp.json` confirmed `.tmp/`,
   `tmp/`, `.jikuo/runtime/`, `.claude/`, and `.mcp.json` are ignored;
@@ -532,6 +532,12 @@ Acceptance evidence for this slice:
   `docs/integrations/proofs/**` as internal release-validation / historical
   audit material; the proof playbook and proof notes README now state that
   boundary explicitly.
+- Slice 6 cleaned up the public MCP configuration example surface:
+  `docs/integrations/mcp_client_configuration_examples.md` no longer describes
+  the source checkout path as a private GitHub preview proof, uses
+  `<JIKUO_REPO_URL>` as the public repository placeholder, and separates
+  maintainer client proof artifacts / historical smoke notes from first-run MCP
+  setup instructions.
 
 ## 14. Known Limits To Expose Before Release
 

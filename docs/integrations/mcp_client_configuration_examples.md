@@ -1,6 +1,6 @@
 # JIKUO MCP Client Configuration Examples
 
-> Status: MCP MVP local stdio configuration examples and smoke-log companion.
+> Status: MCP MVP local stdio configuration examples and maintainer smoke-log companion.
 > Scope: local stdio MCP clients only. Current surface exposes 24 tools: 12 Stage A
 > no-write / card / proposal tools, three configuration / activation-settings read-plan tools, two no-write router tools, one no-write MCP Sampling semantic probe tool, one activation-settings guarded-write tool, plus Stage B1 / B2 / B3 / B4 / B5 guarded-write tools.
 
@@ -10,9 +10,9 @@ This file records reusable client configuration examples for the JIKUO MCP MVP
 server and the smoke checks needed to verify a desktop client is seeing the
 current tool surface.
 
-For a step-by-step, user-facing proof workflow across Claude Code GUI, Codex,
-Cursor, and VS Code + GitHub Copilot Agent mode, use
-`docs/integrations/mcp_client_proof_playbook.md`.
+Maintainer proof workflows and retained client-compatibility notes live under
+`docs/integrations/`. They are release-validation material, not the first-run
+user path.
 
 Source references:
 
@@ -27,17 +27,18 @@ Use these examples after installing JIKUO in the Python environment that will la
 python -m pip install -e .
 ```
 
-For private GitHub preview proof, clone from the owner-controlled private repo
-first:
+For source checkout installation, clone the published repository first:
 
 ```powershell
-git clone https://github.com/jikuo-studio/jikuo.git jikuo-private-preview
-cd jikuo-private-preview
+git clone <JIKUO_REPO_URL> jikuo
+cd jikuo
 py -3 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -e .
 ```
 
-This private repo is a realistic user-entry proof path, not a public release.
+This repository is source-available for noncommercial preview use under
+`LICENSE.md`. Commercial use, hosted service use, production business use, and
+brand/IP terms require a separate written agreement.
 
 JIKUO is distributed as a Python package, but normal users should start from
 CLI commands and client configuration rather than Python `import`. Python import
@@ -56,7 +57,7 @@ Prefer an explicit Python executable from a project virtual environment when con
 - `<PROJECT_ROOT>`: absolute path to the project using JIKUO, for example `C:\path\to\your-project`
 - `<PYTHON_EXE>`: Python executable with `jikuo` and `mcp` installed, for example `<JIKUO_HOME>\.venv\Scripts\python.exe`
 - `<JIKUO_HOME>`: local checkout or installed package workspace for JIKUO
-- `<JIKUO_REPO_URL>`: current private preview repository, `https://github.com/jikuo-studio/jikuo.git`
+- `<JIKUO_REPO_URL>`: published JIKUO source repository URL, for example `https://github.com/jikuo-studio/jikuo.git`
 
 ## Trigger Mode And Client Onboarding
 
@@ -247,7 +248,10 @@ For the current surface, tool discovery should list exactly 24 tools:
 If a GUI client shows fewer tools after updating JIKUO, start a new client
 session or restart the desktop application so it respawns the MCP server.
 
-## Client Proof Artifacts
+## Maintainer Client Proof Artifacts
+
+This section is for maintainers validating client compatibility. It is not a
+first-run user setup requirement.
 
 For each GUI client proof, keep enough evidence for a later user to trust the
 compatibility claim without reading source code:
@@ -379,13 +383,17 @@ For `jikuo.apply_policy_template_activation`:
 Run B3 apply-path smoke against a copied temporary fixture unless the user is
 intentionally approving a real project policy-template activation.
 
-## Verified So Far
+## Historical Smoke Notes
+
+These notes record historical release-validation observations. They are not
+first-run setup steps and may mention older tool counts or preview language from
+the date of the smoke.
 
 - Official Python MCP SDK `ClientSession` stdio smoke passed in a separate Codex window.
 - The server listed the 8 Stage A tools and successfully called `jikuo.get_runtime_status_card`.
 - User verified real desktop-client smoke from Codex Desktop on 2026-05-15.
 - User verified real desktop-client smoke from Claude Desktop on 2026-05-15.
-- Codex and Claude are accepted as active private-preview MCP clients; their remaining risk is strict pre-turn hook enforcement and policy dead-zone detection, not basic MCP availability.
+- Codex and Claude were accepted as active preview MCP clients; their remaining risk was strict pre-turn hook enforcement and policy dead-zone detection, not basic MCP availability.
 - Local client and test byproducts may remain under ignored project paths such as `.claude/` and `tmp/`; they are not Stage A source artifacts.
 - Stage B1 `jikuo.apply_task_session_evidence_update` was implemented after explicit user approval.
 - Official Python MCP SDK `ClientSession` stdio smoke listed 9 tools, called the Stage B1 tool successfully, and confirmed Stage B2 / B3 tools were not exposed.
