@@ -59,6 +59,9 @@ Prefer an explicit Python executable from a project virtual environment when con
 - `<JIKUO_HOME>`: local checkout or installed package workspace for JIKUO
 - `<JIKUO_REPO_URL>`: published JIKUO source repository URL, for example `https://github.com/jikuo-studio/jikuo.git`
 
+<a id="first-run.instruction-files"></a>
+<a id="first-run.mcp-server"></a>
+
 ## Trigger Mode And Client Onboarding
 
 JIKUO has two trigger modes:

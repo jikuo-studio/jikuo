@@ -102,6 +102,8 @@ def build_first_run_step(
             or "This setup concern affects first-run usability."
         ),
         "next_action": next_actions[0] if next_actions else None,
+        "details": dict((entry or {}).get("details") or {}),
+        "evidence_refs": list((entry or {}).get("evidence_refs") or []),
     }
 
 

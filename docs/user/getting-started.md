@@ -87,6 +87,8 @@ Open `http://127.0.0.1:8765/`.
 Studio is intentionally thin. It should render the backend Studio read models
 instead of reconstructing governance meaning in browser code.
 
+<a id="first-run.activation-settings"></a>
+
 ## 5. Configure Activation Settings
 
 Activation settings define how JIKUO should be invoked by a host:

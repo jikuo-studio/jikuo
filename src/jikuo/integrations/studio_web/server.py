@@ -19,7 +19,12 @@ if __package__:
         project_state,
         starter_policies,
     )
-    from ...studio import document_rules, global_status, project_files
+    from ...studio import (
+        document_rules,
+        global_status,
+        guidance as studio_guidance,
+        project_files,
+    )
 else:  # pragma: no cover - direct module execution fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
     from jikuo import (
@@ -29,7 +34,12 @@ else:  # pragma: no cover - direct module execution fallback
         project_state,
         starter_policies,
     )
-    from jikuo.studio import document_rules, global_status, project_files
+    from jikuo.studio import (
+        document_rules,
+        global_status,
+        guidance as studio_guidance,
+        project_files,
+    )
 
 
 STUDIO_WEB_SCHEMA = "jikuo.studio.web_console.v0"
@@ -214,6 +224,9 @@ INDEX_HTML = """<!doctype html>
       color: var(--muted);
       font-size: 13px;
       line-height: 1.45;
+      min-width: 0;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
     .list {
       display: grid;
@@ -232,10 +245,14 @@ INDEX_HTML = """<!doctype html>
       gap: 12px;
       align-items: start;
     }
+    .row > div {
+      min-width: 0;
+    }
     .row h3 {
       margin: 0 0 4px;
       font-size: 15px;
       line-height: 1.3;
+      overflow-wrap: anywhere;
     }
     .section-title {
       display: flex;
@@ -263,6 +280,15 @@ INDEX_HTML = """<!doctype html>
     }
     a { color: #1d5f8a; }
     .mono { font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace; }
+    .breakable-text {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    .guidance-meta {
+      color: var(--muted);
+      font-size: 12px;
+    }
     .plan-tool {
       background: var(--panel);
       border: 1px solid var(--line);
@@ -602,13 +628,15 @@ INDEX_HTML = """<!doctype html>
       overflow-wrap: anywhere;
       font-size: 13px;
     }
-    .compact-item span {
+    .compact-item span,
+    .compact-detail {
       color: var(--muted);
       display: block;
       font-size: 12px;
       line-height: 1.4;
       margin-top: 2px;
       overflow-wrap: anywhere;
+      word-break: break-word;
     }
     .compact-expander {
       min-width: 0;
@@ -1314,13 +1342,31 @@ INDEX_HTML = """<!doctype html>
   <script>
     const text = (value) => value === null || value === undefined ? "" : String(value);
     const statusClass = (value) => `status ${text(value).replace(/[^a-z_]/g, "")}`;
+    const appendContent = (target, content) => {
+      target.replaceChildren();
+      const appendOne = (value) => {
+        if (value === null || value === undefined) {
+          return;
+        }
+        if (Array.isArray(value)) {
+          value.forEach(appendOne);
+          return;
+        }
+        if (value instanceof Node) {
+          target.append(value);
+          return;
+        }
+        target.append(document.createTextNode(text(value)));
+      };
+      appendOne(content);
+    };
     const row = (title, detail, status) => {
       const item = document.createElement("div");
       item.className = "row";
-      item.innerHTML = `<div><h3></h3><p></p></div><span></span>`;
+      item.innerHTML = `<div class="row-text"><h3></h3><p class="breakable-text"></p></div><span class="row-status"></span>`;
       item.querySelector("h3").textContent = title;
-      item.querySelector("p").textContent = detail;
-      const badge = item.querySelector("span");
+      appendContent(item.querySelector("p"), detail);
+      const badge = item.querySelector(".row-status");
       badge.className = statusClass(status || "available");
       badge.textContent = status || "available";
       return item;
@@ -1337,9 +1383,9 @@ INDEX_HTML = """<!doctype html>
     const compactItem = (title, detail) => {
       const item = document.createElement("div");
       item.className = "compact-item";
-      item.innerHTML = `<strong></strong><span></span>`;
+      item.innerHTML = `<strong></strong><span class="compact-detail breakable-text"></span>`;
       item.querySelector("strong").textContent = title;
-      item.querySelector("span").textContent = detail || "";
+      appendContent(item.querySelector(".compact-detail"), detail || "");
       return item;
     };
     const traceGroup = (title, detail, rows) => {
@@ -1431,6 +1477,32 @@ INDEX_HTML = """<!doctype html>
         }
         return "degraded";
       };
+      const firstRunGuidanceContent = (step) => {
+        const guidance = (step || {}).guidance || {};
+        const label = guidance.guidance_label || "Guidance not documented yet";
+        const coverage = guidance.coverage_status || "missing";
+        const linkStatus = guidance.link_status || "missing";
+        const meta = document.createElement("span");
+        meta.className = "guidance-meta";
+        meta.textContent = coverage === "exact"
+          ? "exact guidance"
+          : coverage === "partial"
+            ? "related guide"
+            : linkStatus === "broken"
+              ? "guidance link needs update"
+              : "guidance not documented yet";
+        if (linkStatus === "ok" && guidance.href) {
+          const link = document.createElement("a");
+          link.href = guidance.href;
+          link.textContent = label;
+          link.target = "_blank";
+          link.rel = "noopener";
+          return [link, " ", meta];
+        }
+        const fallback = document.createElement("span");
+        fallback.textContent = label;
+        return [fallback, " ", meta];
+      };
       const firstRunResolutionBucket = (step) => {
         const record = step || {};
         const key = text(record.key).toLowerCase();
@@ -1463,15 +1535,11 @@ INDEX_HTML = """<!doctype html>
         return "";
       };
       const firstRunResolutionRow = (step) => {
-        const action = step.next_action || "No concrete resolution path was supplied by the read model.";
-        const bucket = firstRunResolutionBucket(step);
-        const detail = [
-          step.current || "",
-          action,
-          bucket === "studio" ? "Open the matching Studio panel and use Preview/Apply." : "",
-          bucket === "cli" ? "Not handled by Studio in this version." : "",
-        ].filter(Boolean).join(" / ");
-        return row(step.title || step.key || "Setup gap", detail, firstRunStepStatus(step));
+        return row(
+          step.title || step.key || "Setup gap",
+          firstRunGuidanceContent(step),
+          firstRunStepStatus(step)
+        );
       };
       const firstRunResolutionRows = (steps, bucket) => {
         const rows = (steps || [])
@@ -3452,7 +3520,7 @@ INDEX_HTML = """<!doctype html>
         );
         const stepRow = (step) => row(
           step.title || step.key || "setup item",
-          [step.current || "", step.next_action ? `next: ${step.next_action}` : ""].filter(Boolean).join(" / "),
+          firstRunGuidanceContent(step),
           firstRunStepStatus(step)
         );
         const required = firstRun.required_steps || [];
@@ -4307,6 +4375,72 @@ def optional_string_list(value: Any) -> list[str] | None:
     if value is None:
         return None
     return string_list(value)
+
+
+def docs_response_for_path(
+    path: str,
+    *,
+    project_root: Path | None = None,
+) -> tuple[int, bytes, str]:
+    parsed = urlparse(path)
+    route = parsed.path.lstrip("/")
+    if not route.startswith("docs/") or not route.endswith(".md"):
+        return (
+            HTTPStatus.NOT_FOUND,
+            json_bytes(
+                {
+                    "schema": STUDIO_WEB_SCHEMA,
+                    "status": "not_found",
+                    "path": parsed.path,
+                    "writes_performed": False,
+                    "write_allowed_by_command": False,
+                }
+            ),
+            "application/json; charset=utf-8",
+        )
+    resolved_root = project_state.discover_project_root(project_root=project_root)
+    authority_root, authority_kind = studio_guidance.guidance_authority_root(
+        resolved_root
+    )
+    docs_root = (authority_root / "docs").resolve()
+    doc_path = (authority_root / route).resolve()
+    try:
+        doc_path.relative_to(docs_root)
+    except ValueError:
+        return (
+            HTTPStatus.NOT_FOUND,
+            json_bytes(
+                {
+                    "schema": STUDIO_WEB_SCHEMA,
+                    "status": "refused",
+                    "path": parsed.path,
+                    "reason": "doc_path_outside_guidance_docs_root",
+                    "writes_performed": False,
+                    "write_allowed_by_command": False,
+                }
+            ),
+            "application/json; charset=utf-8",
+        )
+    if not doc_path.is_file():
+        return (
+            HTTPStatus.NOT_FOUND,
+            json_bytes(
+                {
+                    "schema": STUDIO_WEB_SCHEMA,
+                    "status": "not_found",
+                    "path": parsed.path,
+                    "authority_root_kind": authority_kind,
+                    "writes_performed": False,
+                    "write_allowed_by_command": False,
+                }
+            ),
+            "application/json; charset=utf-8",
+        )
+    return (
+        HTTPStatus.OK,
+        doc_path.read_bytes(),
+        "text/markdown; charset=utf-8",
+    )
 
 
 def policy_evolution_args_from_payload(request_payload: dict[str, Any]) -> dict[str, Any]:
@@ -5209,6 +5343,17 @@ def make_handler(project_root: Path | None = None) -> type[BaseHTTPRequestHandle
                     status=HTTPStatus.OK,
                     body=render_index_html().encode("utf-8"),
                     content_type="text/html; charset=utf-8",
+                )
+                return
+            if route.startswith("/docs/"):
+                status, body, content_type = docs_response_for_path(
+                    self.path,
+                    project_root=project_root,
+                )
+                self._send(
+                    status=status,
+                    body=body,
+                    content_type=content_type,
                 )
                 return
             if route.startswith("/api"):

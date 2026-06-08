@@ -80,6 +80,8 @@ in the current version, see `docs/user/limitations.md`. The short version is:
 JIKUO keeps unverifiable facts visible instead of silently treating them as
 proven or failed.
 
+<a id="first-run.runtime-visibility"></a>
+
 ## 5. How To Inspect A Round
 
 1. Open Studio with `jikuo studio serve`.

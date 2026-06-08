@@ -21,6 +21,8 @@ host-provided evidence plus deterministic context such as turn anchors,
 lifecycle events, changed paths, and policy files. JIKUO does not infer hidden
 user intent from raw chat text.
 
+<a id="first-run.starter-policies"></a>
+
 ## 2. First-use Policy Setup
 
 For a new project, start with Studio Policy Configuration:

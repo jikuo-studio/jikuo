@@ -246,6 +246,20 @@ class StudioWebServerTests(unittest.TestCase):
         self.assertEqual(status["schema"], "jikuo.studio.global_status.v0")
         self.assertIn("artifact_assurance", status["summaries"])
         self.assertIn("artifact_assurance", status["summaries"]["runtime"])
+        first_run = status["summaries"]["configuration"]["first_run"]
+        self.assertEqual(
+            first_run["guidance_registry"]["registry_ref"],
+            "docs/registry/guidance_links.yaml",
+        )
+        activation_step = next(
+            item for item in first_run["required_steps"] if item["key"] == "activation_settings"
+        )
+        self.assertEqual(activation_step["guidance"]["link_status"], "ok")
+        self.assertEqual(activation_step["guidance"]["coverage_status"], "exact")
+        instruction_step = next(
+            item for item in first_run["recommended_steps"] if item["key"] == "instruction_files"
+        )
+        self.assertEqual(instruction_step["guidance"]["coverage_status"], "partial")
         self.assertEqual(panels["schema"], "jikuo.studio.panel_registry.v0")
         self.assertEqual(actions["schema"], "jikuo.studio.action_registry.v0")
         self.assertEqual(files["schema"], "jikuo.studio.project_file_inventory.v0")
@@ -1152,7 +1166,30 @@ class StudioWebServerTests(unittest.TestCase):
         self.assertIn("first-run-unsupported-actions", html)
         self.assertIn("firstRunResolutionBucket", html)
         self.assertIn("firstRunResolutionRows", html)
-        self.assertIn("Not handled by Studio in this version", html)
+        self.assertIn("firstRunGuidanceContent", html)
+        self.assertIn("guidance.guidance_label", html)
+        self.assertIn("guidance.href", html)
+        self.assertIn("guidance-meta", html)
+        self.assertIn("exact guidance", html)
+        self.assertIn("related guide", html)
+        self.assertIn("guidance link needs update", html)
+        self.assertNotIn("firstRunStructuredFields", html)
+        self.assertNotIn("firstRunStepDetail", html)
+        self.assertNotIn("strict_mount_status", html)
+        self.assertNotIn("python_mcp_sdk_importable", html)
+        self.assertNotIn("managed_targets", html)
+        self.assertNotIn("kv-list", html)
+        self.assertNotIn("kv-row", html)
+        self.assertIn("row-status", html)
+        self.assertIn('item.querySelector(".row-status")', html)
+        self.assertNotIn('const badge = item.querySelector("span");', html)
+        self.assertIn("breakable-text", html)
+        self.assertIn("compact-detail", html)
+        self.assertIn("row-text", html)
+        self.assertNotIn("business_meaning", html)
+        self.assertNotIn("evidence_refs", html)
+        self.assertNotIn("missing_note", html)
+        self.assertNotIn("Not handled by Studio in this version", html)
         self.assertNotIn("first-run-next-actions", html)
         self.assertIn("Policy Configuration", html)
         self.assertIn("Document Configuration", html)
@@ -1446,6 +1483,11 @@ class StudioWebServerTests(unittest.TestCase):
                 timeout=10,
             ) as response:
                 policy_status = json.loads(response.read().decode("utf-8"))
+            with urlopen(
+                f"{base_url}/docs/user/getting-started.md",
+                timeout=10,
+            ) as response:
+                getting_started_doc = response.read().decode("utf-8")
 
             self.assertIn("JIKUO Studio", html)
             self.assertIn("Document Rules", html)
@@ -1478,6 +1520,7 @@ class StudioWebServerTests(unittest.TestCase):
             self.assertEqual(files["schema"], "jikuo.studio.project_file_inventory.v0")
             self.assertEqual(policy_status["schema"], "jikuo.policy_management_status.v0")
             self.assertIn("package_templates", policy_status)
+            self.assertIn('id="first-run.activation-settings"', getting_started_doc)
             self.assertFalse(files["writes_performed"])
             self.assertFalse(policy_status["writes_performed"])
         finally:

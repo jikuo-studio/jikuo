@@ -18,6 +18,7 @@ from typing import Any, Callable
 if __package__:
     from . import artifact_assurance
     from . import actions as studio_actions
+    from . import guidance as studio_guidance
     from . import panels as studio_panels
     from .. import (
         activation_settings,
@@ -33,6 +34,7 @@ else:
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
     from jikuo.studio import artifact_assurance
     from jikuo.studio import actions as studio_actions
+    from jikuo.studio import guidance as studio_guidance
     from jikuo.studio import panels as studio_panels
     from jikuo import (
         activation_settings,
@@ -58,6 +60,7 @@ REGISTRY_REFS = {
     "work_orders": "docs/registry/work_orders.yaml",
     "capabilities": "docs/registry/capabilities.yaml",
     "mount_sets": "docs/registry/mount_sets.yaml",
+    "guidance_links": "docs/registry/guidance_links.yaml",
     "registry_index": "docs/registry/registry_index.yaml",
 }
 CONFIGURATION_LANGUAGE_SCHEMA = "jikuo.studio.configuration_language.v0"
@@ -2034,7 +2037,34 @@ def configuration_summary(
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     report = configuration_review.build_configuration_review(project_root=project_root)
     status = "available" if report.get("status") == "ok" else "degraded"
-    first_run = report.get("first_run") or {}
+    first_run = studio_guidance.attach_first_run_guidance(
+        report.get("first_run") or {},
+        project_root=project_root,
+    )
+    guidance_registry = first_run.get("guidance_registry") or {}
+    if guidance_registry.get("broken_count"):
+        diagnostics.append(
+            diagnostic(
+                "first_run_guidance_links_broken",
+                severity="warning",
+                message=(
+                    "first-run guidance registry has broken links: "
+                    f"{guidance_registry.get('broken_count')}"
+                ),
+                source_ref=guidance_registry.get("registry_ref"),
+                next_action="repair docs/registry/guidance_links.yaml or restore stable anchors",
+            )
+        )
+    if guidance_registry.get("status") == "missing":
+        diagnostics.append(
+            diagnostic(
+                "first_run_guidance_registry_missing",
+                severity="warning",
+                message="first-run guidance registry is missing",
+                source_ref=guidance_registry.get("registry_ref"),
+                next_action="add docs/registry/guidance_links.yaml before linking Studio guidance",
+            )
+        )
     review_items = [
         item
         for item in report.get("items") or []
@@ -2068,17 +2098,18 @@ def configuration_summary(
             "source_status": report.get("status"),
             "summary": report.get("summary") or {},
             "first_run": first_run,
+            "guidance_registry": guidance_registry,
             "review_item_count": len(review_items),
-              "review_items": [
-                  {
-                      "key": item.get("key"),
-                      "title": item.get("title"),
-                      "status": item.get("status"),
-                      "current": item.get("current"),
-                      "next_action": (item.get("next_actions") or [None])[0],
-                  }
-                  for item in review_items
-              ],
+            "review_items": [
+                {
+                    "key": item.get("key"),
+                    "title": item.get("title"),
+                    "status": item.get("status"),
+                    "current": item.get("current"),
+                    "next_action": (item.get("next_actions") or [None])[0],
+                }
+                for item in review_items
+            ],
             "next_actions": report.get("next_actions") or [],
         },
         [

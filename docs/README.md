@@ -76,6 +76,7 @@ Public release documentation is split into three surfaces:
   human-readable projection only; structured task and capability authority
   lives in `docs/registry/`
 - `docs/governance/jikuo_policy_governance_authority.md`
+- `docs/governance/studio_guidance_registry_maintenance.md`
 - `docs/governance/jikuo_scenario_chain_and_atom_registration_guide.md`
 - `docs/governance/jikuo_document_evidence_chain_design.md`
 - `docs/governance/jikuo_trust_privacy_provenance_baseline.md`

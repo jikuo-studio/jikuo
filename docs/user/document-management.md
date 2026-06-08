@@ -50,6 +50,8 @@ JIKUO separates document sources by role:
 Only project-relative paths inside the project root should be configured. Local
 absolute paths from a maintainer machine should not become release defaults.
 
+<a id="first-run.project-context"></a>
+
 ## 4. First-Run Checklist
 
 For a new project:

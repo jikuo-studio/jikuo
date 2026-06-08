@@ -32,6 +32,10 @@ shards:
   - id: "mount_sets"
     path: "docs/registry/mount_sets.yaml"
     authority: "source_of_truth_draft"
+  - id: "guidance_links"
+    path: "docs/registry/guidance_links.yaml"
+    authority: "source_of_truth_draft"
+    registration_contract_ref: "docs/governance/studio_guidance_registry_maintenance.md"
 external_registries:
   - id: "policy_store"
     path: ".jikuo/policies/manifest.yaml"

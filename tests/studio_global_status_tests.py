@@ -9,7 +9,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from jikuo.studio import global_status  # noqa: E402
+from jikuo import policy_templates  # noqa: E402
+from jikuo.studio import global_status, guidance  # noqa: E402
 
 
 class StudioGlobalStatusTests(unittest.TestCase):
@@ -29,6 +30,10 @@ class StudioGlobalStatusTests(unittest.TestCase):
         self.assertIn("registry", report["summaries"])
         self.assertIn("integrations", report["summaries"])
         self.assertIn("project_context", report["summaries"])
+        self.assertIn(
+            "guidance_links",
+            report["summaries"]["registry"]["registries"],
+        )
         self.assertEqual(report["panel_registry"]["schema"], "jikuo.studio.panel_registry.v0")
         self.assertEqual(report["action_registry"]["schema"], "jikuo.studio.action_registry.v0")
         self.assertGreaterEqual(len(report["panels"]), 6)
@@ -62,10 +67,118 @@ class StudioGlobalStatusTests(unittest.TestCase):
             self.assertEqual(first_run["status"], "needs_configuration")
             self.assertFalse(first_run["user_usable"])
             self.assertEqual(first_run["blocker_count"], 3)
+            activation_step = next(
+                item
+                for item in first_run["required_steps"]
+                if item["key"] == "activation_settings"
+            )
+            self.assertIn("details", activation_step)
+            self.assertIn("strict_mount_status", activation_step["details"])
+            self.assertEqual(
+                activation_step["guidance"]["schema"],
+                "jikuo.studio.guidance_link.v0",
+            )
+            self.assertEqual(
+                activation_step["guidance"]["guidance_id"],
+                "first_run.activation_settings",
+            )
+            self.assertEqual(activation_step["guidance"]["coverage_status"], "exact")
+            self.assertEqual(activation_step["guidance"]["link_status"], "ok")
+            self.assertEqual(
+                first_run["guidance_registry"]["registry_ref"],
+                "docs/registry/guidance_links.yaml",
+            )
+            instruction_step = next(
+                item
+                for item in first_run["recommended_steps"]
+                if item["key"] == "instruction_files"
+            )
+            self.assertEqual(
+                instruction_step["guidance"]["coverage_status"],
+                "partial",
+            )
+            self.assertEqual(instruction_step["guidance"]["link_status"], "ok")
             diagnostic_codes = {item["code"] for item in report["diagnostics"]}
             self.assertIn("first_run_configuration_incomplete", diagnostic_codes)
             markdown = global_status.format_markdown(report)
             self.assertIn("First run: `needs_configuration`", markdown)
+
+    def test_guidance_registry_declares_maintenance_contract(self):
+        registry = policy_templates.read_yaml_subset(
+            ROOT / "docs" / "registry" / "guidance_links.yaml"
+        )
+        index = policy_templates.read_yaml_subset(
+            ROOT / "docs" / "registry" / "registry_index.yaml"
+        )
+
+        contract_ref = registry["maintenance_contract_ref"]
+        self.assertEqual(
+            contract_ref,
+            "docs/governance/studio_guidance_registry_maintenance.md",
+        )
+        contract_path = ROOT / contract_ref
+        self.assertTrue(contract_path.is_file())
+        contract_text = contract_path.read_text(encoding="utf-8")
+        for required_term in [
+            "coverage_status",
+            "Stable Anchor Rules",
+            "Studio frontend authoritative data-source boundary",
+            "JIKUO does not classify the meaning of a document link",
+        ]:
+            self.assertIn(required_term, contract_text)
+
+        guidance_shard = next(
+            item for item in index["shards"] if item["id"] == "guidance_links"
+        )
+        self.assertEqual(
+            guidance_shard["registration_contract_ref"],
+            contract_ref,
+        )
+
+        allowed_coverage = {"exact", "partial", "missing"}
+        for entry in registry["entries"]:
+            self.assertIn(entry["coverage_status"], allowed_coverage)
+            self.assertTrue(entry["guidance_id"])
+            self.assertTrue(entry["readiness_key"])
+            self.assertTrue(entry["doc_path"].startswith("docs/"))
+
+    def test_guidance_registry_marks_missing_anchor_as_broken(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            (project_root / "docs" / "registry").mkdir(parents=True)
+            (project_root / "docs" / "user").mkdir(parents=True)
+            (project_root / "docs" / "user" / "guide.md").write_text(
+                "# Guide\n\n## Existing Heading\n",
+                encoding="utf-8",
+            )
+            (project_root / "docs" / "registry" / "guidance_links.yaml").write_text(
+                "\n".join(
+                    [
+                        'schema_version: "jikuo.studio.guidance_registry.v0"',
+                        "entries:",
+                        '  - guidance_id: "first_run.activation_settings"',
+                        '    readiness_key: "activation_settings"',
+                        '    title: "Activation Settings"',
+                        '    guidance_label: "Configure activation settings"',
+                        '    doc_path: "docs/user/guide.md"',
+                        '    anchor_id: "first-run.activation-settings"',
+                        '    doc_title: "Fixture"',
+                        '    coverage_status: "exact"',
+                        '    reason: "fixture"',
+                        '    missing_note: ""',
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            registry = guidance.build_guidance_registry(project_root=project_root)
+
+            self.assertEqual(registry["status"], "degraded")
+            self.assertEqual(registry["broken_count"], 1)
+            self.assertEqual(registry["entries"][0]["link_status"], "broken")
+            self.assertEqual(registry["entries"][0]["broken_reason"], "anchor_missing")
+            self.assertIsNone(registry["entries"][0]["href"])
 
     def test_runtime_summary_exposes_latest_task_artifact_assurance(self):
         with tempfile.TemporaryDirectory() as tmp:
