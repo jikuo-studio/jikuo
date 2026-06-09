@@ -85,6 +85,27 @@ class StudioGlobalStatusTests(unittest.TestCase):
             self.assertEqual(activation_step["guidance"]["coverage_status"], "exact")
             self.assertEqual(activation_step["guidance"]["link_status"], "ok")
             self.assertEqual(
+                activation_step["resolution"]["schema"],
+                "jikuo.studio.first_run_resolution.v0",
+            )
+            self.assertEqual(activation_step["resolution"]["bucket"], "cli")
+            self.assertEqual(
+                activation_step["resolution"]["action_boundary"],
+                "outside_studio_guarded_cli_or_mcp",
+            )
+            project_context_step = next(
+                item
+                for item in first_run["required_steps"]
+                if item["key"] == "project_context"
+            )
+            starter_step = next(
+                item
+                for item in first_run["required_steps"]
+                if item["key"] == "starter_policies"
+            )
+            self.assertEqual(project_context_step["resolution"]["bucket"], "studio")
+            self.assertEqual(starter_step["resolution"]["bucket"], "studio")
+            self.assertEqual(
                 first_run["guidance_registry"]["registry_ref"],
                 "docs/registry/guidance_links.yaml",
             )
@@ -98,6 +119,26 @@ class StudioGlobalStatusTests(unittest.TestCase):
                 "exact",
             )
             self.assertEqual(instruction_step["guidance"]["link_status"], "ok")
+            self.assertEqual(instruction_step["resolution"]["bucket"], "cli")
+            runtime_step = next(
+                item
+                for item in first_run["recommended_steps"]
+                if item["key"] == "runtime_visibility"
+            )
+            self.assertEqual(runtime_step["resolution"]["bucket"], "cli")
+            self.assertEqual(
+                first_run["resolution_buckets"]["schema"],
+                "jikuo.studio.first_run_resolution_buckets.v0",
+            )
+            self.assertEqual(
+                first_run["resolution_buckets"]["bucket_counts"],
+                {
+                    "studio": 2,
+                    "cli": 3,
+                    "manual": 0,
+                    "unsupported": 0,
+                },
+            )
             diagnostic_codes = {item["code"] for item in report["diagnostics"]}
             self.assertIn("first_run_configuration_incomplete", diagnostic_codes)
             markdown = global_status.format_markdown(report)

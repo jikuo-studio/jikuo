@@ -1508,39 +1508,19 @@ INDEX_HTML = """<!doctype html>
       };
       const firstRunResolutionBucket = (step) => {
         const record = step || {};
-        const key = text(record.key).toLowerCase();
-        const title = text(record.title).toLowerCase();
-        const action = text(record.next_action).toLowerCase();
-        const value = `${key} ${title} ${action}`;
-        if (key === "starter_policies" || value.includes("starter policy pack")) {
-          return "studio";
-        }
-        if (
-          key === "instruction_files"
-          || value.includes("jikuo install")
-          || value.includes("jikuo settings")
-          || value.includes("jikuo-agent-flow")
-          || value.includes("jikuo-mcp")
-        ) {
-          return "cli";
-        }
-        if (
-          value.includes("create `")
-          || value.includes("create .")
-          || value.includes("manual")
-          || value.includes("install project dependencies")
-        ) {
-          return "manual";
-        }
-        if (record.next_action) {
-          return "unsupported";
-        }
-        return "";
+        const resolution = record.resolution || {};
+        return text(resolution.bucket || record.resolution_bucket).toLowerCase();
       };
       const firstRunResolutionRow = (step) => {
+        const resolution = (step || {}).resolution || {};
+        const detail = [
+          resolution.label || "Resolution path not supplied by read model.",
+          resolution.action_boundary || "",
+          resolution.reason || "",
+        ].filter(Boolean).join(" / ");
         return row(
           step.title || step.key || "Setup gap",
-          firstRunGuidanceContent(step),
+          [detail, " ", ...firstRunGuidanceContent(step)],
           firstRunStepStatus(step)
         );
       };

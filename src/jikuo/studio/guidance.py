@@ -16,9 +16,75 @@ from .. import policy_templates
 GUIDANCE_REGISTRY_SCHEMA = "jikuo.studio.guidance_registry.v0"
 GUIDANCE_LINK_SCHEMA = "jikuo.studio.guidance_link.v0"
 FIRST_RUN_GUIDANCE_SCHEMA = "jikuo.studio.first_run_guidance.v0"
+FIRST_RUN_RESOLUTION_SCHEMA = "jikuo.studio.first_run_resolution.v0"
 GUIDANCE_REGISTRY_REF = "docs/registry/guidance_links.yaml"
 VALID_COVERAGE_STATUS = {"exact", "partial", "missing"}
 VALID_LINK_STATUS = {"ok", "missing", "broken"}
+
+FIRST_RUN_RESOLUTION_BY_KEY: dict[str, dict[str, str | None]] = {
+    "activation_settings": {
+        "bucket": "cli",
+        "label": "Review activation settings through CLI or MCP",
+        "action_boundary": "outside_studio_guarded_cli_or_mcp",
+        "studio_anchor": None,
+        "reason": (
+            "Activation settings affect host invocation posture; the current "
+            "Studio page displays the gap but does not provide its own "
+            "activation-settings writer."
+        ),
+    },
+    "project_context": {
+        "bucket": "studio",
+        "label": "Configure Document Rules in Studio",
+        "action_boundary": "studio_guarded_preview_apply",
+        "studio_anchor": "#document-configuration-section",
+        "reason": (
+            "Project context is the Document Rules write target and has a "
+            "current Studio preview/apply path."
+        ),
+    },
+    "starter_policies": {
+        "bucket": "studio",
+        "label": "Activate starter policy pack in Studio",
+        "action_boundary": "studio_guarded_preview_apply",
+        "studio_anchor": "#policy-starter-init-section",
+        "reason": (
+            "Starter policy activation has a current Studio preview/apply path "
+            "backed by the guarded starter-pack writer."
+        ),
+    },
+    "instruction_files": {
+        "bucket": "cli",
+        "label": "Install client instruction files with CLI",
+        "action_boundary": "outside_studio_cli_install",
+        "studio_anchor": None,
+        "reason": (
+            "Instruction files live in client/project files and are installed "
+            "through the guarded CLI install flow, not by the thin Studio page."
+        ),
+    },
+    "runtime_visibility": {
+        "bucket": "cli",
+        "label": "Run a card-producing JIKUO command or host turn",
+        "action_boundary": "outside_studio_runtime_producer",
+        "studio_anchor": None,
+        "reason": (
+            "Runtime visibility is produced by JIKUO proposals or host adapter "
+            "turns; Studio reads receipts after they exist."
+        ),
+    },
+    "mcp_server": {
+        "bucket": "manual",
+        "label": "Configure the MCP client/server outside Studio",
+        "action_boundary": "manual_client_configuration",
+        "studio_anchor": None,
+        "reason": (
+            "MCP availability depends on the installed package and the user's "
+            "desktop client configuration, which Studio can display but not "
+            "write safely in this version."
+        ),
+    },
+}
 
 
 def product_source_root() -> Path:
@@ -70,6 +136,43 @@ def missing_guidance(readiness_key: str) -> dict[str, Any]:
             "does_not_infer_document_semantics",
             "does_not_scrape_docs_in_the_frontend",
             "does_not_write_guidance_registry",
+        ],
+    }
+
+
+def first_run_resolution(readiness_key: str) -> dict[str, Any]:
+    record = FIRST_RUN_RESOLUTION_BY_KEY.get(readiness_key)
+    if record is None:
+        title = readiness_key.replace("_", " ").title()
+        return {
+            "schema": FIRST_RUN_RESOLUTION_SCHEMA,
+            "readiness_key": readiness_key,
+            "bucket": "unsupported",
+            "label": f"No current Studio path for {title}",
+            "action_boundary": "not_supported_in_studio",
+            "studio_anchor": None,
+            "reason": (
+                "No maintainer-authored first-run resolution mapping is "
+                "available for this readiness key."
+            ),
+            "non_effects": [
+                "does_not_infer_user_intent",
+                "does_not_create_a_frontend_owned_action_path",
+                "does_not_write_project_files",
+            ],
+        }
+    return {
+        "schema": FIRST_RUN_RESOLUTION_SCHEMA,
+        "readiness_key": readiness_key,
+        "bucket": record["bucket"],
+        "label": record["label"],
+        "action_boundary": record["action_boundary"],
+        "studio_anchor": record["studio_anchor"],
+        "reason": record["reason"],
+        "non_effects": [
+            "does_not_infer_user_intent",
+            "does_not_create_a_frontend_owned_action_path",
+            "does_not_write_project_files",
         ],
     }
 
@@ -245,6 +348,9 @@ def attach_first_run_guidance(
         record = dict(step)
         key = str(record.get("key") or "")
         record["guidance"] = dict(by_key.get(key) or missing_guidance(key))
+        resolution = first_run_resolution(key)
+        record["resolution"] = resolution
+        record["resolution_bucket"] = resolution["bucket"]
         return record
 
     enriched = dict(first_run)
@@ -273,4 +379,28 @@ def attach_first_run_guidance(
         for step in first_run.get("blockers") or []
         if isinstance(step, dict)
     ]
+    attention_steps = [
+        step
+        for step in enriched["required_steps"] + enriched["recommended_steps"]
+        if step.get("status") != "complete" or step.get("next_action")
+    ]
+    bucket_counts = {
+        bucket: sum(
+            1
+            for step in attention_steps
+            if (step.get("resolution") or {}).get("bucket") == bucket
+        )
+        for bucket in ("studio", "cli", "manual", "unsupported")
+    }
+    enriched["resolution_buckets"] = {
+        "schema": "jikuo.studio.first_run_resolution_buckets.v0",
+        "status": "available",
+        "attention_step_count": len(attention_steps),
+        "bucket_counts": bucket_counts,
+        "non_effects": [
+            "does_not_infer_user_intent",
+            "does_not_scrape_docs_in_the_frontend",
+            "does_not_write_project_files",
+        ],
+    }
     return enriched

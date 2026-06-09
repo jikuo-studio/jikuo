@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-REL-READINESS-01: Pre-release User Usability
 
-> **Status**: Active pre-release work order; P0-01 through P0-09 accepted; P1 release-support work remains planned.
+> **Status**: Active pre-release work order; P0-01 through P0-09 and P1-01 accepted; P1-02 through P1-05 remain planned.
 > **Date**: 2026-06-06
 > **JIKUO layer**: release readiness / first-use configuration / user-facing governance.
 > **Business meaning**: before publishing JIKUO to GitHub, a new user should be able to install it, understand the initial configuration state, configure documents and starter policies, see known evidence limits, and complete a first governed workflow without relying on private local knowledge.
@@ -61,7 +61,7 @@ Stop rule for execution:
 
 | ID | Item | Status | Business meaning |
 |---|---|---|---|
-| P1-01 | Studio empty-state and diagnostics panel | Not started | First-run users need visible next actions when project-local state is missing. |
+| P1-01 | Studio empty-state and diagnostics panel | Accepted | First-run users need visible next actions when project-local state is missing. |
 | P1-02 | `jikuo doctor` or equivalent diagnostics | Not started | Terminal users need one command that explains install, config, MCP, Studio, and runtime readiness. |
 | P1-03 | Demo starter project | Not started | Users need a non-private example project to learn the product loop. |
 | P1-04 | Policy template compatibility state | Not started | Older starter packs should remain readable while migrations stay explicit and guarded. |
@@ -545,7 +545,47 @@ Acceptance evidence for this slice:
   public-surface scan for local paths, private-preview wording, ignored
   runtime/cache paths, and noncommercial license consistency.
 
-## 14. Known Limits To Expose Before Release
+## 14. Accepted Item: P1-01
+
+P1-01 is accepted as of 2026-06-09.
+
+Implemented behavior:
+
+- first-run setup steps now carry a backend-authored `resolution` record with a
+  deterministic bucket, action boundary, label, reason, and optional Studio
+  anchor;
+- first-run readiness now includes `resolution_buckets` counts for setup gaps
+  that still need attention;
+- the thin Studio frontend groups first-run setup gaps by
+  `resolution.bucket` / `resolution_bucket` from the Studio read model instead
+  of deriving buckets from browser-side key, title, or next-action string
+  heuristics;
+- current Studio-configurable gaps are separated from CLI/MCP, manual
+  client-file setup, and unsupported-in-Studio gaps without reintroducing the
+  removed global `Available Actions` or `Diagnostics` panels;
+- the frontend still links to guidance through the existing guidance registry
+  and does not scrape scattered docs or runtime files.
+
+Acceptance evidence:
+
+- `python -m unittest tests.studio_global_status_tests tests.studio_web_server_tests`
+  passed with 50 tests;
+- `tests.studio_global_status_tests` now asserts first-run resolution records
+  for activation settings, Document Rules/project context, starter policies,
+  instruction files, and runtime visibility;
+- `tests.studio_web_server_tests` now asserts that the frontend consumes
+  `record.resolution` / `record.resolution_bucket` and no longer contains the
+  old browser-side `value.includes(...)` classification rules.
+
+Business meaning:
+
+P1-01 makes first-run guidance more trustworthy. A user can see which setup
+gaps are currently resolvable in Studio and which must be handled by CLI/MCP,
+manual client configuration, or future product work. The important governance
+boundary is that Studio displays backend read-model classifications; the
+frontend no longer invents its own interpretation of setup gaps.
+
+## 15. Known Limits To Expose Before Release
 
 - JIKUO does not perform semantic judgment by itself. Host AI supplies compact
   semantic intent when available; JIKUO records, merges, triggers policies, and
