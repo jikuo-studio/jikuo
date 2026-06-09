@@ -1,0 +1,49 @@
+schema_version: "jikuo.project_context.v0"
+project:
+  project_id: "jikuo_demo_project"
+  project_type: "demo_starter_project"
+  project_root_policy: "bindings_must_resolve_inside_project_root"
+document_roles:
+  project_context:
+    path: ".jikuo/project_context.yaml"
+    required: true
+    note: "Project-local Document Rules source for this demo."
+  demo_readme:
+    path: "README.md"
+    required: true
+    note: "Demo entry point and command guide."
+  product_brief:
+    path: "docs/project-brief.md"
+    required: true
+    note: "Small product context used as ordinary project documentation."
+  decision_log:
+    path: "docs/decision-log.md"
+    required: true
+    note: "Completion check and governance reference for demo decisions."
+  release_checklist:
+    path: "docs/release-checklist.md"
+    required: true
+    note: "Completion check for the demo governed workflow."
+main_document_mounts:
+  canonical_path_root: "."
+  path_policy: "standalone_repo_paths_only"
+  active_mount_authority:
+    - ".jikuo/project_context.yaml"
+    - "README.md"
+    - "docs/project-brief.md"
+    - "docs/decision-log.md"
+  checked_before_slice_completion:
+    - path: "docs/release-checklist.md"
+      update_required_when: "the demo workflow changes expected completion behavior"
+    - path: "docs/decision-log.md"
+      update_required_when: "the demo workflow makes or changes a project decision"
+directory_roles:
+  demo_docs:
+    path: "docs"
+    required: true
+  jikuo_state:
+    path: ".jikuo"
+    required: true
+compatibility:
+  unknown_fields: "preserve"
+  writer: "demo_starter_project"

@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-REL-READINESS-01: Pre-release User Usability
 
-> **Status**: Active pre-release work order; P0-01 through P0-09 and P1-01 through P1-02 accepted; P1-03 through P1-05 remain planned.
+> **Status**: Active pre-release work order; P0-01 through P0-09 and P1-01 through P1-03 accepted; P1-04 through P1-05 remain planned.
 > **Date**: 2026-06-06
 > **JIKUO layer**: release readiness / first-use configuration / user-facing governance.
 > **Business meaning**: before publishing JIKUO to GitHub, a new user should be able to install it, understand the initial configuration state, configure documents and starter policies, see known evidence limits, and complete a first governed workflow without relying on private local knowledge.
@@ -63,7 +63,7 @@ Stop rule for execution:
 |---|---|---|---|
 | P1-01 | Studio empty-state and diagnostics panel | Accepted | First-run users need visible next actions when project-local state is missing. |
 | P1-02 | `jikuo doctor` or equivalent diagnostics | Accepted | Terminal users need one command that explains install, config, MCP, Studio, and runtime readiness. |
-| P1-03 | Demo starter project | Not started | Users need a non-private example project to learn the product loop. |
+| P1-03 | Demo starter project | Accepted | Users need a non-private example project to learn the product loop. |
 | P1-04 | Policy template compatibility state | Not started | Older starter packs should remain readable while migrations stay explicit and guarded. |
 | P1-05 | Final / summary evidence backfill | Not started | Completion summaries should satisfy final-response and progress-summary policies more consistently. |
 
@@ -632,7 +632,65 @@ Next item:
 
 The next release-support item is P1-03 demo starter project.
 
-## 16. Known Limits To Expose Before Release
+## 16. Accepted Item: P1-03
+
+P1-03 is accepted as of 2026-06-09.
+
+Implemented behavior:
+
+- added `examples/demo_project/` as a non-private starter project;
+- included a demo project brief, decision log, release checklist, optional
+  workflow notes, and a project-local `.jikuo/project_context.yaml`;
+- left activation settings, instruction files, runtime receipts, and active
+  starter policies intentionally incomplete so first-run diagnostics still teach
+  the setup path;
+- documented commands for `jikuo doctor`, `jikuo configure status`,
+  `jikuo studio status`, starter policy preview, Document Rules preview, and
+  Studio serving against the demo project;
+- linked the demo from README, `docs/user/getting-started.md`, and
+  `docs/README.md`;
+- registered `examples/` as a project directory role in
+  `.jikuo/project_context.yaml`;
+- adjusted `jikuo doctor` runtime readiness so missing runtime receipts show as
+  `review` even when no policy missing-evidence count exists yet.
+
+Acceptance evidence:
+
+- `python -m unittest tests.demo_project_tests tests.doctor_tests tests.studio_global_status_tests`
+  passed with 25 tests;
+- `python -m unittest discover -s tests -p "*_tests.py"` passed with 399
+  tests;
+- `git diff --check` reported no whitespace errors, only existing LF/CRLF
+  normalization warnings;
+- `python -B -m jikuo doctor --project-root examples/demo_project --format markdown`
+  rendered a no-write report with project context complete, Document Rules ok,
+  activation/starter-policy blockers visible, and runtime receipts in review;
+- `python -B -m jikuo doctor --project-root examples/demo_project --format json`
+  returned `schema=jikuo.doctor_report.v0`, `writes_performed=false`, and
+  `source_read_model.schema=jikuo.studio.global_status.v0`;
+- `python -B -m jikuo studio status --project-root examples/demo_project --format json`
+  returned the Studio global status read model for the demo project;
+- `python -B -m jikuo.starter_policies plan-init --project-root examples/demo_project --format text`
+  returned a review plan showing starter policies and guarded write targets;
+- `python -B -m jikuo studio document-rules plan --project-root examples/demo_project --add-context-doc docs/workflow-notes.md --format markdown`
+  returned a review plan with one proposed Document Rules change and
+  `writes_performed=false`.
+
+Business meaning:
+
+P1-03 gives new users a safe project to inspect before they connect JIKUO to
+their own documents. It demonstrates the real product loop: first-run readiness
+is not hidden, Document Rules can read project documents, starter policy
+activation is previewed before guarded apply, and runtime receipts are clearly
+absent until a JIKUO-producing flow creates them. The demo also keeps the
+frontend/read-model boundary intact because all acceptance checks use existing
+CLI and Studio read models, not handwritten expectations in the frontend.
+
+Next item:
+
+The next release-support item is P1-04 policy template compatibility state.
+
+## 17. Known Limits To Expose Before Release
 
 - JIKUO does not perform semantic judgment by itself. Host AI supplies compact
   semantic intent when available; JIKUO records, merges, triggers policies, and

@@ -49,7 +49,26 @@ $env:PYTHONPATH='src'
 python -B -m unittest discover -s tests -p "*_tests.py"
 ```
 
-## 3. Inspect First-run Readiness
+## 3. Try The Demo Starter Project
+
+Before pointing JIKUO at your own documents, you can run the first-run checks
+against the committed demo project:
+
+```powershell
+.\.venv\Scripts\jikuo.exe doctor --project-root examples/demo_project --format markdown
+.\.venv\Scripts\jikuo.exe studio status --project-root examples/demo_project --format markdown
+```
+
+The demo includes public project documents and `.jikuo/project_context.yaml`.
+It intentionally leaves activation settings, instruction files, active starter
+policies, and runtime receipts incomplete so you can see how JIKUO explains
+first-run gaps.
+Some registry diagnostics are expected because the demo is a small user project,
+not JIKUO's full product-development repository.
+
+The demo guide is [`examples/demo_project/README.md`](../../examples/demo_project/README.md).
+
+## 4. Inspect First-run Readiness
 
 Run the first-use configuration review:
 
@@ -80,7 +99,7 @@ status read model as the frontend and reports install, first-run, activation,
 policy, Document Rules, Studio, MCP, and runtime readiness without writing
 project state.
 
-## 4. Open Studio
+## 5. Open Studio
 
 Start the local read-only Studio console:
 
@@ -95,7 +114,7 @@ instead of reconstructing governance meaning in browser code.
 
 <a id="first-run.activation-settings"></a>
 
-## 5. Configure Activation Settings
+## 6. Configure Activation Settings
 
 Activation settings define how JIKUO should be invoked by a host:
 
@@ -114,7 +133,7 @@ Preview the activation settings update first, review the expected write path
 and approval phrase, then apply the guarded change. MCP availability or
 instruction files alone do not prove strict mounted execution.
 
-## 6. Activate Starter Policies
+## 7. Activate Starter Policies
 
 Open the Policy Configuration area in Studio and review the starter policy
 pack status.
@@ -136,7 +155,7 @@ apply active policy changes such as trigger refinement, deprecation,
 supersession, and final-response gate updates. More detail:
 [`docs/user/policy-management.md`](policy-management.md).
 
-## 7. Review Document Rules
+## 8. Review Document Rules
 
 Open Document Rules in Studio before doing real work.
 
@@ -162,7 +181,7 @@ expected write path, and approval phrase.
 
 More detail: [`docs/user/document-management.md`](document-management.md).
 
-## 8. Run One Governed Work Turn
+## 9. Run One Governed Work Turn
 
 Use an AI host or MCP client that has access to the JIKUO tools. Ask for a
 small, easy-to-verify change.
@@ -176,7 +195,7 @@ JIKUO records the host-provided semantic intent and turn anchor. It does not
 store raw prompts or transcripts, and it does not decide the semantics by
 itself.
 
-## 9. Run Completion Review And Inspect Receipts
+## 10. Run Completion Review And Inspect Receipts
 
 After the work turn, inspect runtime receipts:
 
@@ -202,7 +221,7 @@ In Studio, review:
 - Current Limitations: why many visible `missing` reports are current product
   boundaries instead of hidden failures.
 
-## 10. Understand Missing Evidence
+## 11. Understand Missing Evidence
 
 The current version intentionally keeps missing evidence visible.
 
@@ -223,7 +242,7 @@ More detail:
 - [`docs/user/trace-and-evidence.md`](trace-and-evidence.md)
 - [`docs/user/limitations.md`](limitations.md)
 
-## 11. Done Criteria
+## 12. Done Criteria
 
 A first-run project is ready for normal pre-release use when:
 

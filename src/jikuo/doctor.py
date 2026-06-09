@@ -281,7 +281,8 @@ def build_runtime_check(runtime: dict[str, Any], release_limitations: dict[str, 
     counts = runtime.get("counts") or {}
     card_links = runtime.get("card_links") or {}
     missing_count = count_value(counts.get("missing_evidence_count"))
-    status = "review" if missing_count else "ok"
+    runtime_status = str(runtime.get("status") or "unavailable")
+    status = "review" if missing_count or runtime_status != "available" else "ok"
     return check(
         "runtime_visibility",
         title="Runtime Visibility",

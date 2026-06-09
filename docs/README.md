@@ -23,6 +23,8 @@ JIKUO now uses this standalone repository as its active product-development home
 - `docs/integrations/`: JIKUO integration examples and client configuration
   notes. Checked proof playbooks and proof notes in this tree are release
   validation evidence, not first-run user onboarding documents.
+- `examples/`: public, non-private demo projects for first-run practice and
+  documentation-backed product walkthroughs.
 - `docs/schemas/`: JIKUO-owned schema and view-model contracts.
 - `docs/registry/`: draft machine-readable registries for work orders, capabilities, scenario chains, and mount sets.
 - `docs/insights/`: captured development insights and their registry.
@@ -70,6 +72,7 @@ Public release documentation is split into three surfaces:
 - `docs/user/policy-management.md`
 - `docs/user/trace-and-evidence.md`
 - `docs/user/limitations.md`
+- `examples/demo_project/README.md`
 - `docs/README.md`
 - `docs/governance/jikuo_execution_mounts.md`
 - `docs/governance/jikuo_productization_task_map.md` as a legacy

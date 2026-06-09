@@ -246,6 +246,10 @@ directory_roles:
     path: "docs/migration"
     required: false
     note: "Source-project archive and migration handoff records. These are not runtime authority unless a work order explicitly mounts them."
+  examples:
+    path: "examples"
+    required: false
+    note: "Public non-private demo projects for first-run practice and release-readiness examples."
   document_registry:
     path: "docs/registry"
     required: true

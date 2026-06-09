@@ -72,6 +72,14 @@ Inspect first-run readiness and current runtime receipts:
 .\.venv\Scripts\jikuo.exe studio status --format markdown
 ```
 
+Try the non-private demo starter project before pointing JIKUO at your own
+documents:
+
+```powershell
+.\.venv\Scripts\jikuo.exe doctor --project-root examples/demo_project --format markdown
+.\.venv\Scripts\jikuo.exe studio status --project-root examples/demo_project --format markdown
+```
+
 Run the local read-only Studio console:
 
 ```powershell
@@ -201,6 +209,9 @@ JIKUO before each user turn.
 - [`docs/user/limitations.md`](docs/user/limitations.md): current product
   boundaries, including why many `missing` reports are visible boundary
   disclosures rather than hidden failures.
+- [`examples/demo_project/`](examples/demo_project/): non-private starter
+  project for learning first-run readiness, starter policy preview, Document
+  Rules, and Studio status without maintainer-local documents.
 - [`docs/governance/jikuo_productization_task_map.md`](docs/governance/jikuo_productization_task_map.md):
   legacy human-readable roadmap projection.
 - [`docs/registry/`](docs/registry/): draft structured registry shards for
