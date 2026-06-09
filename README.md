@@ -66,6 +66,7 @@ py -3 -m venv .venv
 Inspect first-run readiness and current runtime receipts:
 
 ```powershell
+.\.venv\Scripts\jikuo.exe doctor --format markdown
 .\.venv\Scripts\jikuo.exe show
 .\.venv\Scripts\jikuo.exe configure status --format markdown
 .\.venv\Scripts\jikuo.exe studio status --format markdown

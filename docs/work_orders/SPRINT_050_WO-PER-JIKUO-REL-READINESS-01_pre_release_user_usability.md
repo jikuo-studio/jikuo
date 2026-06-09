@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-REL-READINESS-01: Pre-release User Usability
 
-> **Status**: Active pre-release work order; P0-01 through P0-09 and P1-01 accepted; P1-02 through P1-05 remain planned.
+> **Status**: Active pre-release work order; P0-01 through P0-09 and P1-01 through P1-02 accepted; P1-03 through P1-05 remain planned.
 > **Date**: 2026-06-06
 > **JIKUO layer**: release readiness / first-use configuration / user-facing governance.
 > **Business meaning**: before publishing JIKUO to GitHub, a new user should be able to install it, understand the initial configuration state, configure documents and starter policies, see known evidence limits, and complete a first governed workflow without relying on private local knowledge.
@@ -62,7 +62,7 @@ Stop rule for execution:
 | ID | Item | Status | Business meaning |
 |---|---|---|---|
 | P1-01 | Studio empty-state and diagnostics panel | Accepted | First-run users need visible next actions when project-local state is missing. |
-| P1-02 | `jikuo doctor` or equivalent diagnostics | Not started | Terminal users need one command that explains install, config, MCP, Studio, and runtime readiness. |
+| P1-02 | `jikuo doctor` or equivalent diagnostics | Accepted | Terminal users need one command that explains install, config, MCP, Studio, and runtime readiness. |
 | P1-03 | Demo starter project | Not started | Users need a non-private example project to learn the product loop. |
 | P1-04 | Policy template compatibility state | Not started | Older starter packs should remain readable while migrations stay explicit and guarded. |
 | P1-05 | Final / summary evidence backfill | Not started | Completion summaries should satisfy final-response and progress-summary policies more consistently. |
@@ -585,7 +585,54 @@ manual client configuration, or future product work. The important governance
 boundary is that Studio displays backend read-model classifications; the
 frontend no longer invents its own interpretation of setup gaps.
 
-## 15. Known Limits To Expose Before Release
+## 15. Accepted Item: P1-02
+
+P1-02 is accepted as of 2026-06-09.
+
+Implemented behavior:
+
+- added `jikuo doctor` as a terminal-first diagnostic command;
+- added `jikuo-doctor` as a direct script entry point for installed
+  environments;
+- kept the command read-only and backed by
+  `jikuo.studio.global_status.build_global_status` as the authoritative source;
+- reports install / CLI availability, first-run readiness, activation settings,
+  policy management, Document Rules, Studio, MCP server, runtime visibility,
+  diagnostics, pending user decisions, card links, privacy posture, and
+  non-effects;
+- exposes both markdown and JSON output for humans and automation;
+- keeps first-run blockers visible without writing `.jikuo/` state;
+- adds the command to README and the first-run getting-started guide.
+
+Acceptance evidence:
+
+- `python -m unittest tests.doctor_tests` passed with 3 tests;
+- `python -m unittest tests.doctor_tests tests.studio_global_status_tests tests.studio_web_server_tests`
+  passed with 53 tests;
+- `python -m unittest discover -s tests -p "*_tests.py"` passed with 395
+  tests;
+- `git diff --check` reported no whitespace errors, only existing LF/CRLF
+  normalization warnings;
+- `python -B -m jikuo doctor --format markdown` rendered the terminal report
+  with `writes_performed=false`, Studio global status as the source read model,
+  first-run blockers, MCP review status, runtime links, and non-effects;
+- `python -B -m jikuo doctor --format json` returned
+  `schema=jikuo.doctor_report.v0`, `source_read_model.schema=jikuo.studio.global_status.v0`,
+  `checks[*].schema=jikuo.doctor_check.v0`, and `writes_performed=false`.
+
+Business meaning:
+
+P1-02 gives terminal users a single readiness command instead of forcing them
+to know which lower-level status command to run first. The important governance
+boundary is that `doctor` does not become a second authority: it projects the
+Studio global status read model, so CLI diagnostics, Studio readiness, and
+first-run guidance stay aligned.
+
+Next item:
+
+The next release-support item is P1-03 demo starter project.
+
+## 16. Known Limits To Expose Before Release
 
 - JIKUO does not perform semantic judgment by itself. Host AI supplies compact
   semantic intent when available; JIKUO records, merges, triggers policies, and

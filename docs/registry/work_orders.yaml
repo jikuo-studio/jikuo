@@ -1093,7 +1093,7 @@ entries:
     title: "SPRINT_050_WO-PER-JIKUO-REL-READINESS-01: Pre-release User Usability"
     path: "docs/work_orders/SPRINT_050_WO-PER-JIKUO-REL-READINESS-01_pre_release_user_usability.md"
     sprint: "SPRINT_050"
-    status: "Active pre-release work order; P0-01 through P0-09 and P1-01 accepted; P1-02 through P1-05 remain planned"
+    status: "Active pre-release work order; P0-01 through P0-09 and P1-01 through P1-02 accepted; P1-03 through P1-05 remain planned"
     impact_tags:
       - "release_readiness"
       - "first_use"

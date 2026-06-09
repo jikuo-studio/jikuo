@@ -54,6 +54,7 @@ python -B -m unittest discover -s tests -p "*_tests.py"
 Run the first-use configuration review:
 
 ```powershell
+.\.venv\Scripts\jikuo.exe doctor --format markdown
 .\.venv\Scripts\jikuo.exe configure status --format markdown
 ```
 
@@ -73,6 +74,11 @@ The important first-run fields are:
 
 If a required blocker is visible, complete that guarded setup step before
 claiming the project is ready.
+
+`jikuo doctor` is the terminal-first summary. It uses the same Studio global
+status read model as the frontend and reports install, first-run, activation,
+policy, Document Rules, Studio, MCP, and runtime readiness without writing
+project state.
 
 ## 4. Open Studio
 

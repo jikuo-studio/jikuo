@@ -10,6 +10,7 @@ if __package__:
     from . import (
         activation_settings,
         configuration_review,
+        doctor,
         policy_management_status,
         private_turn_input_index,
         runtime_visibility,
@@ -22,6 +23,7 @@ else:
     from jikuo import (
         activation_settings,
         configuration_review,
+        doctor,
         policy_management_status,
         private_turn_input_index,
         runtime_visibility,
@@ -39,6 +41,16 @@ def build_parser() -> argparse.ArgumentParser:
     show.add_argument("--project-root", type=Path, default=None)
     show.add_argument("--last-card", action="store_true")
     show.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    doctor_parser = subparsers.add_parser(
+        "doctor",
+        help="Run terminal diagnostics for install, configuration, MCP, Studio, and runtime readiness.",
+    )
+    doctor_parser.add_argument("--project-root", type=Path, default=None)
+    doctor_parser.add_argument(
+        "--format",
+        choices=("markdown", "json"),
+        default="markdown",
+    )
     install = subparsers.add_parser(
         "install",
         help="Install JIKUO project instruction files.",
@@ -168,6 +180,12 @@ def main(argv: list[str] | None = None) -> int:
             runtime_args.append("--last-card")
         runtime_args.extend(["--format", args.format])
         return runtime_visibility.main(runtime_args)
+    if args.command == "doctor":
+        doctor_args = []
+        if args.project_root is not None:
+            doctor_args.extend(["--project-root", str(args.project_root)])
+        doctor_args.extend(["--format", args.format])
+        return doctor.main(doctor_args)
     if args.command == "install":
         install_args = []
         if args.project_root is not None:
