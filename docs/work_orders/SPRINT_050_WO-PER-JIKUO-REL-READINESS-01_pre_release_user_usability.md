@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-REL-READINESS-01: Pre-release User Usability
 
-> **Status**: Active pre-release work order; P0-01 through P0-08 accepted; P0-09 in progress with license posture, public documentation surface cleanup, and public MCP configuration example cleanup implemented.
+> **Status**: Active pre-release work order; P0-01 through P0-09 accepted; P1 release-support work remains planned.
 > **Date**: 2026-06-06
 > **JIKUO layer**: release readiness / first-use configuration / user-facing governance.
 > **Business meaning**: before publishing JIKUO to GitHub, a new user should be able to install it, understand the initial configuration state, configure documents and starter policies, see known evidence limits, and complete a first governed workflow without relying on private local knowledge.
@@ -55,7 +55,7 @@ Stop rule for execution:
 | P0-06 | Evidence missing classification and trace guide | Accepted | Users can distinguish product limits from genuine missing work evidence instead of reading every `missing` as failure. | Missing evidence is classified by reason and surfaced in runtime / Studio read models; `docs/user/trace-and-evidence.md` explains Policy Trace, Document Trace, turn anchors, and missing classifications; README links or explicitly defers the trace guide entry. |
 | P0-07 | Current limitation disclosure | Accepted | Users know what JIKUO does not yet prove, especially around semantic classification, mounted enforcement, report-only policy behavior, observed-read evidence, and why many `missing` reports are visible feature boundaries rather than hidden failures. | README, Studio limitations, `docs/user/limitations.md`, and `docs/user/trace-and-evidence.md` show the same limits in user-facing language; quickstart integration is deferred to P0-08. |
 | P0-08 | Quickstart full flow | Accepted | A user can complete one end-to-end flow without reconstructing private development history. | `docs/user/getting-started.md` and the main README rewrite cover install, configure, starter policy activation, document rules, task run, completion review, and receipt inspection. |
-| P0-09 | Local path and runtime publication audit | In progress | Public release artifacts should not expose private machine paths, development-only runtime files, or implied license rights as product defaults. | Release audit lists publish-safe files, ignored runtime paths, intentional local-only examples, README release readiness, license boundary, public MCP configuration examples, and docs navigation readiness. |
+| P0-09 | Local path and runtime publication audit | Accepted | Public release artifacts should not expose private machine paths, development-only runtime files, or implied license rights as product defaults. | Release audit lists publish-safe files, ignored runtime paths, intentional local-only examples, README release readiness, license boundary, public MCP configuration examples, and docs navigation readiness. |
 
 ## 3. P1 Release-support Checklist
 
@@ -349,9 +349,10 @@ without hiding the raw missing state.
 
 Next item:
 
-P0-09 should audit private paths, runtime publication boundaries, README
-release posture, license language, and public documentation navigation before
-GitHub publication.
+P0-09 has now accepted the private-path, runtime-publication, README release
+posture, license-language, and public-navigation audit before GitHub
+publication. The next release-support item is P1-01 Studio empty-state and
+diagnostics panel refinement.
 
 ## 12. Accepted Item: P0-08
 
@@ -403,13 +404,13 @@ receipts and missing-evidence boundaries.
 
 Next item:
 
-P0-09 is auditing the repository for publication safety: private local paths,
-runtime files, license and non-commercial-use language, public docs navigation,
-and release-facing README wording.
+P0-09 has now accepted the repository publication-safety audit for private
+local paths, runtime files, license and non-commercial-use language, public
+docs navigation, and release-facing README wording.
 
-## 13. In-progress Item: P0-09
+## 13. Accepted Item: P0-09
 
-P0-09 is in progress as of 2026-06-07.
+P0-09 is accepted as of 2026-06-09.
 
 Slice 1 implemented behavior:
 
@@ -432,8 +433,8 @@ Current audit findings:
 - `.tmp/` was a publish-safety gap and is now ignored;
 - `test.md` was an untracked empty scratch file and was deleted after explicit
   user approval;
-- `docs/registry/work_orders.yaml` now reflects P0-09 in-progress status for
-  the release-readiness work order;
+- `docs/registry/work_orders.yaml` now reflects P0-09 accepted status for the
+  release-readiness work order;
 - tracked `.jikuo/policies/proposals/*.yaml` records contain local
   `project_root` / policy-store provenance. Those files are governance audit
   records, so they must not be linked from the public user documentation
@@ -489,9 +490,9 @@ local runtime/cache artifacts, and should see the explicit noncommercial
 license boundary instead of guessing usage rights from repository visibility.
 The condition composition disclosure also prevents users from assuming JIKUO
 can express OR policy routing when the current evaluator only supports
-conservative AND composition. The Slice 3 and Slice 5 publication strategy
-prevents historical audit evidence from leaking into the public onboarding path
-while preserving the integrity of local governance records.
+conservative AND composition. The Slice 3, Slice 5, and Slice 7 publication
+strategies prevent historical audit evidence from leaking into the public
+onboarding path while preserving the integrity of local governance records.
 
 Acceptance evidence for this slice:
 
@@ -538,6 +539,11 @@ Acceptance evidence for this slice:
   `<JIKUO_REPO_URL>` as the public repository placeholder, and separates
   maintainer client proof artifacts / historical smoke notes from first-run MCP
   setup instructions.
+- Slice 7 removed `docs/migration/NARRATIVESYSTEM_RESOURCE_POOL_HANDOFF.md`
+  from the `docs/README.md` current entry-point list, kept `docs/migration/**`
+  under the internal / historical-audit boundary, and completed the scoped
+  public-surface scan for local paths, private-preview wording, ignored
+  runtime/cache paths, and noncommercial license consistency.
 
 ## 14. Known Limits To Expose Before Release
 

@@ -110,12 +110,12 @@ Public release documentation is split into three surfaces:
 - `docs/work_orders/SPRINT_050_WO-PER-JIKUO-STUDIO-01_global_console_and_configuration_shell.md`
 - `docs/insights/INSIGHT-2026-05-17-self-bootstrap-harness-workspace-boundary.md`
 - `docs/integrations/mcp_client_configuration_examples.md`
-- `docs/migration/NARRATIVESYSTEM_RESOURCE_POOL_HANDOFF.md`
 
 Internal release-validation entries, not user onboarding:
 
 - `docs/integrations/mcp_client_proof_playbook.md`
 - `docs/integrations/proofs/README.md`
+- `docs/migration/**`
 
 Current GitHub repository used for realistic clone/download proof:
 `https://github.com/jikuo-studio/jikuo.git`. Public availability remains gated
