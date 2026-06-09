@@ -870,7 +870,10 @@ INDEX_HTML = """<!doctype html>
     </div>
   </nav>
   <main id="studio-main">
-    <section class="grid" id="overview"></section>
+    <section id="overview" aria-labelledby="overview-title">
+      <h2 id="overview-title">Overview</h2>
+      <div class="grid" id="overview-metrics"></div>
+    </section>
     <section id="semantic-classification-section">
       <div class="section-title">
         <h2>Latest Semantic Classification</h2>
@@ -4194,7 +4197,7 @@ INDEX_HTML = """<!doctype html>
       const semanticAnchorOverviewValue = semanticAnchor.status === "available"
         ? (semanticAnchor.anchor_id || "available")
         : (semanticAnchor.status || "missing");
-        const overview = document.getElementById("overview");
+        const overview = document.getElementById("overview-metrics");
         const configuration = summaries.configuration || {};
         const firstRun = configuration.first_run || {};
         overview.replaceChildren(
@@ -4223,7 +4226,7 @@ INDEX_HTML = """<!doctype html>
         const global = document.getElementById("global-status");
         global.className = "status unavailable";
         global.textContent = "unavailable";
-        document.getElementById("overview").replaceChildren(row("fetch_failed", error.message, "error"));
+        document.getElementById("overview-metrics").replaceChildren(row("fetch_failed", error.message, "error"));
       });
     loadProjectFiles();
     document.getElementById("document-rules-file-filter").addEventListener("input", renderProjectFiles);

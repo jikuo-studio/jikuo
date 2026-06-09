@@ -59,8 +59,90 @@ Prefer an explicit Python executable from a project virtual environment when con
 - `<JIKUO_HOME>`: local checkout or installed package workspace for JIKUO
 - `<JIKUO_REPO_URL>`: published JIKUO source repository URL, for example `https://github.com/jikuo-studio/jikuo.git`
 
-<a id="first-run.instruction-files"></a>
 <a id="first-run.mcp-server"></a>
+
+## MCP Server Setup And Verification
+
+First-run MCP setup has three separate parts:
+
+1. Install JIKUO in the Python environment that will launch the MCP server.
+2. Register the JIKUO stdio server in the chosen client.
+3. Verify that the client can discover and call JIKUO tools.
+
+Use an explicit Python executable in the client configuration. The command
+shape is:
+
+```text
+command = "<PYTHON_EXE>"
+args = ["-B", "-m", "jikuo.integrations.mcp.server"]
+cwd = "<PROJECT_ROOT>"
+```
+
+The server is local stdio. It does not expose a network listener. The client
+starts the Python process and talks to it through MCP stdio.
+
+After registering the server, restart the client if it caches MCP tool lists.
+Then verify the connection with a no-write call:
+
+```text
+jikuo.get_runtime_status_card
+```
+
+Expected result:
+
+- the response includes `card_markdown`;
+- `.jikuo/runtime/last_card.md` is updated with the same latest card;
+- no `.jikuo/policies/`, `.jikuo/task_sessions/`, or
+  `.jikuo/project_state.yaml` durable write is caused by the no-write call.
+
+If tool discovery is missing JIKUO tools, check the configured Python path,
+working directory, package installation, and whether the desktop client needs a
+full restart.
+
+<a id="first-run.instruction-files"></a>
+
+## Client Instruction Files
+
+Instruction files tell the host AI how to call JIKUO during normal work. They
+are separate from MCP server registration:
+
+- MCP server configuration makes JIKUO tools available to the client.
+- Instruction files tell the AI when and how to use those tools.
+- Activation settings record the project-level desired trigger mode.
+
+Generate or update instruction files with `jikuo install` after reviewing the
+project activation settings:
+
+```powershell
+jikuo configure status
+jikuo settings plan --trigger-mode ask --client codex
+jikuo settings apply --trigger-mode ask --client codex --confirm-apply --approval-phrase "<exact user phrase>"
+jikuo install --client codex
+```
+
+Supported first-run targets are:
+
+- `codex`: updates `AGENTS.md`
+- `claude-code`: updates Claude Code instruction material
+- `cursor`: updates `.cursorrules`
+- `vscode-copilot`: updates `.github/copilot-instructions.md`
+
+Review the resulting instruction file before committing it. The install path is
+intended to preserve user-owned content and update the JIKUO-managed block, but
+the user remains responsible for reviewing the visible instruction change.
+
+Instruction file verification:
+
+1. Confirm the target file exists.
+2. Confirm the JIKUO managed block or equivalent client instruction is present.
+3. Confirm the trigger mode matches `.jikuo/activation_settings.yaml` or the
+   explicitly supplied install option.
+4. Ask the client to call `jikuo.get_runtime_status_card` or
+   `jikuo.route_user_request` for a no-write setup check.
+
+Instruction files do not prove strict mounted execution by themselves. Strict
+mounted behavior requires a host pre-turn adapter, plugin, hook, Studio entry,
+or local proxy that calls JIKUO before each user turn.
 
 ## Trigger Mode And Client Onboarding
 

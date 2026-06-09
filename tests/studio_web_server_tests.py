@@ -259,7 +259,7 @@ class StudioWebServerTests(unittest.TestCase):
         instruction_step = next(
             item for item in first_run["recommended_steps"] if item["key"] == "instruction_files"
         )
-        self.assertEqual(instruction_step["guidance"]["coverage_status"], "partial")
+        self.assertEqual(instruction_step["guidance"]["coverage_status"], "exact")
         self.assertEqual(panels["schema"], "jikuo.studio.panel_registry.v0")
         self.assertEqual(actions["schema"], "jikuo.studio.action_registry.v0")
         self.assertEqual(files["schema"], "jikuo.studio.project_file_inventory.v0")
@@ -1131,6 +1131,9 @@ class StudioWebServerTests(unittest.TestCase):
         self.assertIn("release-limitations-list", html)
         self.assertIn("renderReleaseLimitations", html)
         self.assertIn("release_limitations", html)
+        self.assertIn('id="overview-title">Overview</h2>', html)
+        self.assertIn('id="overview-metrics"', html)
+        self.assertIn('document.getElementById("overview-metrics")', html)
         self.assertIn("Trace", html)
         self.assertIn("Policy Trace", html)
         self.assertIn("policy-trace-status", html)

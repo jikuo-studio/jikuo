@@ -95,7 +95,7 @@ class StudioGlobalStatusTests(unittest.TestCase):
             )
             self.assertEqual(
                 instruction_step["guidance"]["coverage_status"],
-                "partial",
+                "exact",
             )
             self.assertEqual(instruction_step["guidance"]["link_status"], "ok")
             diagnostic_codes = {item["code"] for item in report["diagnostics"]}
@@ -141,6 +141,27 @@ class StudioGlobalStatusTests(unittest.TestCase):
             self.assertTrue(entry["guidance_id"])
             self.assertTrue(entry["readiness_key"])
             self.assertTrue(entry["doc_path"].startswith("docs/"))
+
+    def test_release_first_run_guidance_entries_are_exact(self):
+        registry = policy_templates.read_yaml_subset(
+            ROOT / "docs" / "registry" / "guidance_links.yaml"
+        )
+        expected_readiness_keys = {
+            "activation_settings",
+            "instruction_files",
+            "project_context",
+            "starter_policies",
+            "runtime_visibility",
+            "mcp_server",
+        }
+        entries_by_key = {
+            item["readiness_key"]: item for item in registry["entries"]
+        }
+
+        self.assertEqual(set(entries_by_key), expected_readiness_keys)
+        for key in expected_readiness_keys:
+            self.assertEqual(entries_by_key[key]["coverage_status"], "exact", key)
+            self.assertEqual(entries_by_key[key]["missing_note"], "", key)
 
     def test_guidance_registry_marks_missing_anchor_as_broken(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -82,7 +82,45 @@ proven or failed.
 
 <a id="first-run.runtime-visibility"></a>
 
-## 5. How To Inspect A Round
+## 5. Runtime Visibility Readiness
+
+Runtime visibility is ready when the project can produce and retain the latest
+JIKUO runtime card and state summary for a no-write check.
+
+The minimum expected files are:
+
+- `.jikuo/runtime/last_card.md`: latest display card rendered by JIKUO.
+- `.jikuo/runtime/state_summary.json`: structured state summary used by
+  Studio.
+- `.jikuo/runtime/history/*.md` and matching `.json` files: retained rounds
+  used by Policy Trace and Document Trace when available.
+
+To initialize or refresh runtime visibility, run any no-write status call from a
+configured surface:
+
+```powershell
+jikuo show --last-card
+jikuo studio status --format json
+```
+
+From MCP or a GUI client, call:
+
+```text
+jikuo.get_runtime_status_card
+jikuo.get_runtime_status
+```
+
+Studio reads the backend read model and should not infer runtime meaning from
+the browser. If Studio shows `available`, the latest runtime files are present.
+If it shows `degraded`, inspect the displayed reason: common first-run causes
+are missing activation settings, missing host semantic intent, missing turn
+anchor evidence, or report-only policies that still expose unsatisfied evidence
+items.
+
+A degraded runtime visibility state is still useful. It means JIKUO can show the
+boundary it cannot prove yet, rather than silently treating it as success.
+
+## 6. How To Inspect A Round
 
 1. Open Studio with `jikuo studio serve`.
 2. In Policy Trace, choose a runtime round from the dropdown.
@@ -95,7 +133,7 @@ proven or failed.
    as a known limitation to disclose. If it is classified as missing policy or
    write evidence, record the evidence or update the governed work.
 
-## 6. Current Limits
+## 7. Current Limits
 
 Runtime history is not yet a full DATA-01 event ledger.
 
