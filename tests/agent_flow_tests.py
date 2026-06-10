@@ -1410,6 +1410,86 @@ class AgentFlowProposalTests(unittest.TestCase):
                 proposal["chat_ready_markdown"],
             )
 
+    def test_completion_review_backfills_progress_summary_business_meaning_evidence(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            create_agent_flow_ready_project(project_root)
+            write_progress_summary_policy_store(project_root)
+            semantic_intent = {
+                "schema": "jikuo.host_semantic_intent.v0",
+                "provider": "host_ai",
+                "confidence": "high",
+                "policy_scopes": ["progress_summary"],
+                "requested_outcome": (
+                    "summarize the completed item with business meaning, "
+                    "acceptance result, tests, and commit"
+                ),
+                "execution_boundary": "completion summary only",
+                "response_contract": [
+                    "include business meaning for the completed release item",
+                    "report acceptance result, test result, and commit id",
+                ],
+            }
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(TOOL),
+                    "propose",
+                    "--event",
+                    "completion_review",
+                    "--task-title",
+                    "Progress Summary Evidence Probe",
+                    "--summary",
+                    "Completion summary includes business meaning and acceptance evidence.",
+                    "--host-semantic-intent-json",
+                    json.dumps(semantic_intent),
+                    "--project-root",
+                    str(project_root),
+                    "--format",
+                    "json",
+                ],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            proposal = json.loads(completed.stdout)
+            self.assertEqual(
+                [policy["policy_ref"] for policy in proposal["triggered_policies"]],
+                ["POLICY-jikuo-progress-summary-business-meaning"],
+            )
+            self.assertEqual(proposal["missing_evidence_reports"], [])
+            self.assertEqual(len(proposal["evidence_status"]), 1)
+            evidence = proposal["evidence_status"][0]
+            self.assertEqual(
+                evidence["required_type"],
+                "progress_summary_business_meaning_evidence",
+            )
+            self.assertEqual(evidence["current_status"], "ok")
+            self.assertIn(
+                "host semantic intent declares",
+                evidence["summary"],
+            )
+            runtime_cards = [
+                card
+                for card in proposal["cards"]
+                if card["card_kind"] == "policy_runtime_status"
+            ]
+            self.assertEqual(len(runtime_cards), 1)
+            self.assertEqual(
+                runtime_cards[0]["policy_runtime_status"]["missing_evidence_count"],
+                0,
+            )
+            self.assertIn(
+                "progress_summary_business_meaning_evidence",
+                proposal["chat_ready_markdown"],
+            )
+
     def test_work_profile_does_not_treat_no_write_as_editing(self):
         completed = subprocess.run(
             [

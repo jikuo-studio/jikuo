@@ -102,15 +102,23 @@ workflow that emits artifact assurance for the relevant lifecycle.
 
 ### Completion And Final Evidence
 
-Some completion-review, progress-summary, and final-response policy
-obligations are declared before every evidence producer is fully automated.
+Some completion-review, progress-summary, and final-response policy obligations
+are still being automated policy by policy.
 
-This can make missing evidence visible even when the human-facing answer
-contains the required business meaning. The missing report remains useful: it
-records the automation gap that still needs product work.
+For progress summaries, JIKUO can now backfill
+`progress_summary_business_meaning_evidence` during `completion_review` when
+host semantic intent explicitly declares a `progress_summary` scope and a
+response contract that includes business or product meaning. This satisfies the
+starter progress-summary business-meaning policy for that runtime round.
 
-User action: include the required business meaning in summaries and keep the
-visible missing report as backlog evidence until the producer exists.
+This is evidence of the declared final-response contract, not independent
+semantic proof of every word in the human-facing answer. Other final-response
+or completion policies can still show missing evidence until their specific
+producer exists.
+
+User action: keep passing compact host semantic intent for governed completion
+summaries, and review any remaining visible missing report as policy-specific
+evidence backlog.
 
 ### Strict Mounted Execution
 

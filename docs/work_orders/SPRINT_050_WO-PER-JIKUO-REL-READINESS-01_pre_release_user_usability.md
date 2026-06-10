@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-REL-READINESS-01: Pre-release User Usability
 
-> **Status**: Active pre-release work order; P0-01 through P0-09 and P1-01 through P1-04 accepted; P1-05 remains planned.
+> **Status**: Active pre-release work order; P0-01 through P0-09 and P1-01 through P1-05 accepted.
 > **Date**: 2026-06-06
 > **JIKUO layer**: release readiness / first-use configuration / user-facing governance.
 > **Business meaning**: before publishing JIKUO to GitHub, a new user should be able to install it, understand the initial configuration state, configure documents and starter policies, see known evidence limits, and complete a first governed workflow without relying on private local knowledge.
@@ -65,7 +65,7 @@ Stop rule for execution:
 | P1-02 | `jikuo doctor` or equivalent diagnostics | Accepted | Terminal users need one command that explains install, config, MCP, Studio, and runtime readiness. |
 | P1-03 | Demo starter project | Accepted | Users need a non-private example project to learn the product loop. |
 | P1-04 | Policy template compatibility state | Accepted | Older starter packs should remain readable while migrations stay explicit and guarded. |
-| P1-05 | Final / summary evidence backfill | Not started | Completion summaries should satisfy final-response and progress-summary policies more consistently. |
+| P1-05 | Final / summary evidence backfill | Accepted | Completion summaries should satisfy final-response and progress-summary policies more consistently. |
 
 ## 4. P2 Later Productization
 
@@ -742,9 +742,55 @@ policy behavior such as final-response gates or broader lifecycle scope.
 
 Next item:
 
-The next release-support item is P1-05 final / summary evidence backfill.
+P1-05 has now accepted progress-summary business-meaning evidence backfill for
+completion review.
 
-## 18. Known Limits To Expose Before Release
+## 18. Accepted Item: P1-05
+
+P1-05 is accepted as of 2026-06-10.
+
+Implemented behavior:
+
+- `completion_review` now auto-produces
+  `progress_summary_business_meaning_evidence` when the work profile has
+  `progress_summary` scope and host semantic intent explicitly declares a
+  response contract or requested outcome that includes business or product
+  meaning;
+- the produced evidence uses the existing policy action type
+  `include_business_meaning_in_progress_todo_summary`, so it satisfies
+  `POLICY-jikuo-progress-summary-business-meaning` without manual CLI evidence
+  injection;
+- the backfill remains contract-bound: it proves that the governed completion
+  round carries an explicit final-summary response contract, not that JIKUO has
+  become a semantic judge of arbitrary final answer text;
+- `docs/user/limitations.md` now explains the supported progress-summary
+  backfill and the remaining final-response evidence boundary.
+
+Acceptance evidence:
+
+- `python -B -m unittest tests.agent_flow_tests.AgentFlowProposalTests.test_completion_review_backfills_progress_summary_business_meaning_evidence`
+  passed;
+- `python -B -m unittest tests.agent_flow_tests`
+  passed;
+- `python -B -m unittest discover -s tests -p "*_tests.py"`
+  passed with 400 tests;
+- `git diff --check` reported no whitespace errors, only existing LF/CRLF
+  normalization warnings.
+
+Business meaning:
+
+P1-05 reduces a first-use trust gap at the end of governed work. When the host
+AI explicitly promises that a completion summary will include the business
+meaning of the completed item, JIKUO can now show matching policy evidence
+instead of leaving the starter progress-summary final-response policy in a
+false-looking missing state. Remaining missing reports stay useful because they
+now point to specific final-response evidence producers that still do not exist.
+
+Next item:
+
+No further P1 release-support item is currently listed in this work order.
+
+## 19. Known Limits To Expose Before Release
 
 - JIKUO does not perform semantic judgment by itself. Host AI supplies compact
   semantic intent when available; JIKUO records, merges, triggers policies, and
@@ -760,8 +806,10 @@ The next release-support item is P1-05 final / summary evidence backfill.
   mature than read-side proof.
 - Document Trace can report no comparable trace for a round when structured
   round-level evidence is unavailable.
-- Final-response, progress-summary, and completion applicability evidence are
-  still being backfilled across policies.
+- Progress-summary business-meaning evidence is backfilled for completion
+  review when compact host semantic intent explicitly declares the summary
+  contract. Other final-response and completion applicability evidence remains
+  policy-specific backlog.
 - Strict mounted behavior depends on a host adapter. Instruction-only or MCP-only
   setup must not be presented as guaranteed pre-turn execution.
 - Policy conditions currently compose as AND. Generic OR condition groups such

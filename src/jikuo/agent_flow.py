@@ -1294,13 +1294,77 @@ def proactive_policy_suggestion_evidence_for(
     }
 
 
+def progress_summary_business_meaning_evidence_for(
+    *,
+    event: str,
+    work_profile_projection: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    if event != "completion_review" or not isinstance(work_profile_projection, dict):
+        return None
+
+    scopes = work_profile_projection.get("policy_scopes") or []
+    if "progress_summary" not in scopes:
+        return None
+
+    contract = work_profile_projection.get("policy_contract") or {}
+    response_contract = contract.get("response_contract") or []
+    requested_outcome = contract.get("requested_outcome")
+    text_parts = [str(requested_outcome or "")]
+    text_parts.extend(str(item) for item in response_contract)
+    contract_text = " ".join(text_parts).lower()
+    business_terms = (
+        "business meaning",
+        "business value",
+        "product meaning",
+        "product value",
+        "\u4e1a\u52a1\u610f\u4e49",
+        "\u4ea7\u54c1\u610f\u4e49",
+    )
+    if not any(term in contract_text for term in business_terms):
+        return None
+
+    return {
+        "evidence_id": stable_id(
+            "evidence",
+            "|".join(
+                [
+                    event,
+                    "progress_summary",
+                    "include_business_meaning_in_progress_todo_summary",
+                ]
+            ),
+        ),
+        "evidence_type": "progress_summary_business_meaning_evidence",
+        "action_type": "include_business_meaning_in_progress_todo_summary",
+        "source": {
+            "kind": "host_semantic_intent_policy_contract",
+            "ref": "response_contract",
+        },
+        "producer": {
+            "actor": "agent",
+            "tool": "python -B -m jikuo.agent_flow",
+        },
+        "status": "ok",
+        "summary": (
+            "host semantic intent declares a completion progress-summary "
+            "response contract that includes business or product meaning"
+        ),
+    }
+
+
 def produced_policy_evidence_for(
     *,
     event: str | None,
     cards: list[dict[str, Any]],
     work_routing: dict[str, Any] | None = None,
     governance_path: str | None = None,
+    work_profile_projection: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
+    summary_evidence = progress_summary_business_meaning_evidence_for(
+        event=event or "",
+        work_profile_projection=work_profile_projection,
+    )
+
     if event == "conversation_turn":
         evidence: list[dict[str, Any]] = []
         for card in cards:
@@ -1316,9 +1380,11 @@ def produced_policy_evidence_for(
         return evidence
 
     if event != "task_start":
-        return []
+        return [summary_evidence] if summary_evidence else []
 
     evidence: list[dict[str, Any]] = []
+    if summary_evidence:
+        evidence.append(summary_evidence)
     normalized_governance_path = (
         governance_path.strip().lower().replace("-", "_")
         if isinstance(governance_path, str)
@@ -4698,6 +4764,7 @@ def build_proposal(
             cards=cards,
             work_routing=work_routing,
             governance_path=governance_path,
+            work_profile_projection=work_profile_projection,
         )
         inline_produced_evidence.extend(produced_evidence or [])
         artifact_assurance_report = build_runtime_artifact_assurance_report(
