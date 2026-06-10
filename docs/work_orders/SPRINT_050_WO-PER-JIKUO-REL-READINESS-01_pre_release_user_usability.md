@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-REL-READINESS-01: Pre-release User Usability
 
-> **Status**: Active pre-release work order; P0-01 through P0-09, P1-01 through P1-05, and RC-01 accepted.
+> **Status**: Active pre-release work order; P0-01 through P0-09, P1-01 through P1-05, and RC-01 through RC-02 accepted.
 > **Date**: 2026-06-06
 > **JIKUO layer**: release readiness / first-use configuration / user-facing governance.
 > **Business meaning**: before publishing JIKUO to GitHub, a new user should be able to install it, understand the initial configuration state, configure documents and starter policies, see known evidence limits, and complete a first governed workflow without relying on private local knowledge.
@@ -72,7 +72,7 @@ Stop rule for execution:
 | ID | Item | Status | Business meaning |
 |---|---|---|---|
 | RC-01 | Public entry-point links to limitations guide | Accepted | Users should find the single limitations guide from release entry points instead of reading duplicated or divergent limitation summaries. |
-| RC-02 | Release readiness go/no-go audit | Planned | Before publication, verify install, quickstart, demo project, diagnostics, Studio, starter policy preview, and known release boundaries as one final acceptance pass. |
+| RC-02 | Release readiness go/no-go audit | Accepted | Before publication, verify install, quickstart, demo project, diagnostics, Studio, starter policy preview, and known release boundaries as one final acceptance pass. |
 
 ## 4. P2 Later Productization
 
@@ -835,7 +835,89 @@ Next item:
 
 The next release-closeout item is RC-02 release readiness go/no-go audit.
 
-## 20. Known Limits To Expose Before Release
+## 20. Accepted Item: RC-02
+
+RC-02 is accepted as of 2026-06-10.
+
+Accepted release decision:
+
+- documentation readiness is accepted for the current source-available
+  noncommercial preview release surface;
+- no second limitations summary was created. `docs/user/limitations.md` remains
+  the user-facing limitation authority, and release closeout verifies links to
+  that document;
+- current `action_required` / `degraded` diagnostics are accepted where they
+  represent intentional first-run setup gaps, especially missing activation
+  settings, unactivated starter policies in the demo project, and absent demo
+  runtime receipts;
+- publication can proceed from the documentation-readiness perspective once the
+  repository owner completes the separate publication / distribution decision.
+
+Acceptance evidence:
+
+- `git log -1 --oneline` showed `84ac58e Add release closeout checklist` before
+  RC-02 work began, and `git status --short` was clean;
+- public documentation surface scan of `README.md`, `docs/README.md`,
+  `docs/user/*.md`, `examples/demo_project/README.md`, and
+  `docs/integrations/mcp_client_configuration_examples.md` found no targeted
+  maintainer-local path, private preview checkout, or local cache references;
+- limitations-link scan verified that README, `docs/README.md`,
+  `docs/user/getting-started.md`, and `docs/user/trace-and-evidence.md` link to
+  or name `docs/user/limitations.md` / Current Limitations;
+- known-limit keyword scan verified public coverage for strict mounted setup,
+  report-only policy behavior, observed-read evidence, DATA-01 ledger limits,
+  OR condition groups, and remaining final-response / progress-summary evidence
+  backlog;
+- `python -B -m jikuo --help` returned successfully and exposed the expected
+  top-level commands;
+- `python -B -m jikuo.integrations.mcp.server --help` returned successfully and
+  exposed stdio / streamable-http transport options;
+- `python -B -m jikuo doctor --format markdown` and
+  `python -B -m jikuo doctor --format json` returned read-only reports with
+  `writes_performed=false`;
+- `python -B -m jikuo configure status --format markdown` returned the
+  first-run configuration report with expected missing activation settings;
+- `python -B -m jikuo studio status --format markdown` returned the Studio
+  global status read model, including the Current Limitations surface;
+- `python -B -m jikuo show` returned runtime status with expected current
+  project review gaps;
+- `python -B -m jikuo policy-management status --format markdown` returned
+  policy-management status with active policies, package templates, starter
+  packs, legacy-compatible template counts, and no blocked templates;
+- `python -B -m jikuo doctor --project-root examples/demo_project --format markdown`
+  and `python -B -m jikuo doctor --project-root examples/demo_project --format json`
+  returned no-write reports with expected demo first-run gaps;
+- `python -B -m jikuo studio status --project-root examples/demo_project --format markdown`
+  returned demo Studio status with expected degraded setup state and
+  limitations visibility;
+- `python -B -m jikuo.starter_policies plan-init --project-root examples/demo_project --format text`
+  returned a review plan for guarded starter policy activation;
+- `python -B -m jikuo studio document-rules plan --project-root examples/demo_project --add-context-doc docs/workflow-notes.md --format markdown`
+  returned a review plan with one proposed Document Rules change,
+  `writes_performed=false`, and validation status `ok`;
+- local Studio HTTP smoke passed: `jikuo studio serve` on `127.0.0.1:8772`
+  served `/` with HTTP 200 and JIKUO page content.
+
+Test evidence:
+
+- `python -B -m unittest discover -s tests -p "*_tests.py"` passed with 400
+  tests.
+
+Business meaning:
+
+RC-02 checks the release docs as a user would encounter them instead of only
+checking that links exist. The public entry points do not expose private local
+paths, the documented commands are runnable, the demo project demonstrates
+intentional first-run gaps without hiding them, and known limitations route to
+one authoritative user-facing guide. This makes the remaining publication
+decision a product / owner decision rather than an unresolved documentation
+readiness blocker.
+
+Next item:
+
+No further RC release-closeout item is currently listed in this work order.
+
+## 21. Known Limits To Expose Before Release
 
 - JIKUO does not perform semantic judgment by itself. Host AI supplies compact
   semantic intent when available; JIKUO records, merges, triggers policies, and
