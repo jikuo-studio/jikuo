@@ -36,7 +36,33 @@ For a new project, start with Studio Policy Configuration:
 Starter policies are report-only baseline coverage. They do not make policies
 blocking by themselves and do not turn JIKUO into a semantic classifier.
 
-## 3. Active Policy Configuration
+## 3. Template Compatibility And Migration State
+
+Older starter packs and policy templates remain readable when their migration
+is deterministic format-only. Policy Management surfaces that state instead of
+hiding it:
+
+- `compatible`: the package template already matches the current policy
+  template shape.
+- `legacy_compatible`: JIKUO can read the older template and normalize its
+  policy body into the current active-policy schema during preview or guarded
+  activation.
+- `blocked`: the template cannot be safely normalized and must be updated by a
+  maintainer before activation.
+
+For `legacy_compatible` templates, migration is explicit and guarded. Preview
+shows the compatibility record, migration kind, notes, and default fields. The
+template file is not rewritten. If the user approves activation, JIKUO writes
+the project-local approved policy in the current active-policy format and keeps
+the package template as the source reference.
+
+Format normalization is deliberately non-semantic. JIKUO may default missing
+current-format fields such as `schema_version`, `final_response_gate: false`,
+or an empty `applies_to_work_profile`; it does not infer that a legacy policy
+should become a final-response gate, add policy scopes, or change lifecycle
+applicability.
+
+## 4. Active Policy Configuration
 
 The current Studio `Proposed change` panel supports guarded changes for active
 policies:
@@ -60,7 +86,7 @@ All durable changes follow the same review shape:
 
 Preview is no-write. Apply requires explicit confirmation and approval evidence.
 
-## 4. Path Filters
+## 5. Path Filters
 
 `changed_path_pattern` narrows a policy to explicit changed paths. It is useful
 when a policy has a real asset boundary:
@@ -87,7 +113,7 @@ should not write files" or "progress summaries should explain business meaning"
 may intentionally stay global because their trigger is workflow behavior rather
 than a file ownership boundary.
 
-## 5. Supersede Policy
+## 6. Supersede Policy
 
 `Deprecate` is termination. `Supersede` is replacement with lineage.
 
@@ -114,7 +140,7 @@ The preview should show:
 - non-effects, especially that replacement policy content is not created or
   edited.
 
-## 6. Missing Evidence And Scope Review
+## 7. Missing Evidence And Scope Review
 
 Broad policies can produce many missing evidence reports. That can mean a real
 workflow gap, but it can also mean the current policy is too broad or lacks a

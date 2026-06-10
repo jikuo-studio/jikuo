@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-REL-READINESS-01: Pre-release User Usability
 
-> **Status**: Active pre-release work order; P0-01 through P0-09 and P1-01 through P1-03 accepted; P1-04 through P1-05 remain planned.
+> **Status**: Active pre-release work order; P0-01 through P0-09 and P1-01 through P1-04 accepted; P1-05 remains planned.
 > **Date**: 2026-06-06
 > **JIKUO layer**: release readiness / first-use configuration / user-facing governance.
 > **Business meaning**: before publishing JIKUO to GitHub, a new user should be able to install it, understand the initial configuration state, configure documents and starter policies, see known evidence limits, and complete a first governed workflow without relying on private local knowledge.
@@ -64,7 +64,7 @@ Stop rule for execution:
 | P1-01 | Studio empty-state and diagnostics panel | Accepted | First-run users need visible next actions when project-local state is missing. |
 | P1-02 | `jikuo doctor` or equivalent diagnostics | Accepted | Terminal users need one command that explains install, config, MCP, Studio, and runtime readiness. |
 | P1-03 | Demo starter project | Accepted | Users need a non-private example project to learn the product loop. |
-| P1-04 | Policy template compatibility state | Not started | Older starter packs should remain readable while migrations stay explicit and guarded. |
+| P1-04 | Policy template compatibility state | Accepted | Older starter packs should remain readable while migrations stay explicit and guarded. |
 | P1-05 | Final / summary evidence backfill | Not started | Completion summaries should satisfy final-response and progress-summary policies more consistently. |
 
 ## 4. P2 Later Productization
@@ -688,9 +688,63 @@ CLI and Studio read models, not handwritten expectations in the frontend.
 
 Next item:
 
-The next release-support item is P1-04 policy template compatibility state.
+The next release-support item is P1-05 final / summary evidence backfill.
 
-## 17. Known Limits To Expose Before Release
+## 17. Accepted Item: P1-04
+
+P1-04 is accepted as of 2026-06-10.
+
+Implemented behavior:
+
+- package policy templates expose compatibility state in the policy-management
+  read model, including `compatible`, `legacy_compatible`, and `blocked`;
+- legacy policy-template records remain readable when their migration is
+  deterministic format-only;
+- import preview and starter-pack initialization normalize legacy template
+  policy bodies into the current active-policy schema without rewriting the
+  source template file;
+- guarded template activation and guarded starter-pack initialization write
+  project-local approved policies in the current
+  `jikuo.configurable_rule_policy.v0` shape;
+- migration status is visible in JSON and markdown policy-management output,
+  including legacy-compatible counts, migration-available counts, blocked
+  counts, per-template compatibility, and migration kind;
+- `docs/user/policy-management.md` explains the compatibility states,
+  deterministic migration boundary, non-effects, and the fact that JIKUO does
+  not infer final-response gates, policy scopes, or lifecycle applicability
+  from old template format alone.
+
+Acceptance evidence:
+
+- `python -B -m unittest tests.policy_templates_tests tests.starter_policies_tests tests.policy_management_status_tests`
+  passed with 45 tests;
+- `python -B -m jikuo.policy_management_status status --format markdown`
+  rendered policy-management status with package templates, starter-pack
+  membership, legacy-compatible template count, migration-available template
+  count, blocked template count, and per-template migration kind;
+- existing tests cover no-write import preview for a legacy template, guarded
+  activation writing the current active-policy schema, starter-pack init
+  normalizing legacy package templates without rewriting them, and read-model
+  projection of legacy compatibility into starter pack entries;
+- `python -B -m unittest discover -s tests -p "*_tests.py"` passed with 399
+  tests;
+- `git diff --check` reported no whitespace errors, only existing LF/CRLF
+  normalization warnings.
+
+Business meaning:
+
+P1-04 prevents old starter packs from becoming a first-use dead end. A user can
+still preview and activate older official starter templates, but the migration
+remains visible and bounded: JIKUO performs deterministic format normalization,
+writes the activated project policy in the current schema, preserves the
+package template as source provenance, and does not silently add semantic
+policy behavior such as final-response gates or broader lifecycle scope.
+
+Next item:
+
+The next release-support item is P1-05 final / summary evidence backfill.
+
+## 18. Known Limits To Expose Before Release
 
 - JIKUO does not perform semantic judgment by itself. Host AI supplies compact
   semantic intent when available; JIKUO records, merges, triggers policies, and

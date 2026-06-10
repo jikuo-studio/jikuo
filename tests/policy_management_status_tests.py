@@ -450,6 +450,10 @@ class PolicyManagementStatusTests(unittest.TestCase):
         self.assertEqual(markdown_completed.returncode, 0, markdown_completed.stderr)
         self.assertIn("# JIKUO Policy Management Status", markdown_completed.stdout)
         self.assertIn("starter_pack_available", markdown_completed.stdout)
+        self.assertIn("Legacy-compatible templates:", markdown_completed.stdout)
+        self.assertIn("Templates with migration available:", markdown_completed.stdout)
+        self.assertIn("Blocked templates:", markdown_completed.stdout)
+        self.assertIn("migration=`deterministic_format_only`", markdown_completed.stdout)
 
     def test_status_read_model_loads_policy_proposal_details(self):
         with temp_project_dir() as project_root:

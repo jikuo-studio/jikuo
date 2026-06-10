@@ -986,6 +986,9 @@ def format_markdown(report: dict[str, Any]) -> str:
         f"- Starter template refs: `{counts.get('starter_template_ref_count')}`",
         f"- Active policies with package templates: `{counts.get('active_policy_with_package_template_count')}`",
         f"- Active policies without package templates: `{counts.get('active_policy_without_package_template_count')}`",
+        f"- Legacy-compatible templates: `{counts.get('legacy_compatible_template_count')}`",
+        f"- Templates with migration available: `{counts.get('migration_available_template_count')}`",
+        f"- Blocked templates: `{counts.get('blocked_template_count')}`",
         "",
         "## Active Policy Distribution",
     ]
@@ -1001,6 +1004,7 @@ def format_markdown(report: dict[str, Any]) -> str:
         lines.append(
             f"- `{item.get('template_ref')}` / policy=`{item.get('template_policy_id')}` / "
             f"compatibility=`{item.get('compatibility_status') or 'unknown'}` / "
+            f"migration=`{item.get('migration_kind') or 'none'}` / "
             f"starter_packs=`{pack_text}`"
         )
     lines.extend(["", "## Starter Packs"])
