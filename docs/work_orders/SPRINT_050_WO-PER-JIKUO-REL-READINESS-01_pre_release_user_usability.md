@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-REL-READINESS-01: Pre-release User Usability
 
-> **Status**: Active pre-release work order; P0-01 through P0-09 and P1-01 through P1-05 accepted.
+> **Status**: Active pre-release work order; P0-01 through P0-09, P1-01 through P1-05, and RC-01 accepted.
 > **Date**: 2026-06-06
 > **JIKUO layer**: release readiness / first-use configuration / user-facing governance.
 > **Business meaning**: before publishing JIKUO to GitHub, a new user should be able to install it, understand the initial configuration state, configure documents and starter policies, see known evidence limits, and complete a first governed workflow without relying on private local knowledge.
@@ -66,6 +66,13 @@ Stop rule for execution:
 | P1-03 | Demo starter project | Accepted | Users need a non-private example project to learn the product loop. |
 | P1-04 | Policy template compatibility state | Accepted | Older starter packs should remain readable while migrations stay explicit and guarded. |
 | P1-05 | Final / summary evidence backfill | Accepted | Completion summaries should satisfy final-response and progress-summary policies more consistently. |
+
+## 3.1 RC Release-closeout Checklist
+
+| ID | Item | Status | Business meaning |
+|---|---|---|---|
+| RC-01 | Public entry-point links to limitations guide | Accepted | Users should find the single limitations guide from release entry points instead of reading duplicated or divergent limitation summaries. |
+| RC-02 | Release readiness go/no-go audit | Planned | Before publication, verify install, quickstart, demo project, diagnostics, Studio, starter policy preview, and known release boundaries as one final acceptance pass. |
 
 ## 4. P2 Later Productization
 
@@ -790,7 +797,45 @@ Next item:
 
 No further P1 release-support item is currently listed in this work order.
 
-## 19. Known Limits To Expose Before Release
+## 19. Accepted Item: RC-01
+
+RC-01 is accepted as of 2026-06-10.
+
+Implemented behavior:
+
+- added the RC release-closeout checklist to this work order so post-P1 work is
+  tracked separately from completed P0/P1 usability items;
+- confirmed that the dedicated limitations guide remains
+  `docs/user/limitations.md`; release closeout should verify and link this
+  document, not create a second limitations summary;
+- verified that the public entry chain already exposes the limitations guide:
+  README links `docs/user/limitations.md` in the documentation map,
+  `docs/README.md` lists `docs/user/limitations.md` as a current entry point,
+  and `docs/user/getting-started.md` links limitations from the missing
+  evidence section;
+- recorded RC-02 as the next planned release-readiness go/no-go audit.
+
+Acceptance evidence:
+
+- read `README.md`, `docs/README.md`, `docs/user/getting-started.md`, and
+  `docs/user/limitations.md` to verify the limitations entry chain;
+- `git diff --check` reported no whitespace errors, only existing LF/CRLF
+  normalization warnings;
+- `python -B -m unittest tests.doctor_tests tests.demo_project_tests tests.studio_global_status_tests`
+  passed with 25 tests.
+
+Business meaning:
+
+RC-01 prevents release docs from drifting into two competing limitation lists.
+Users should be routed to one authoritative user-facing limitations guide,
+while the release closeout only checks that README, docs index, and quickstart
+actually lead there.
+
+Next item:
+
+The next release-closeout item is RC-02 release readiness go/no-go audit.
+
+## 20. Known Limits To Expose Before Release
 
 - JIKUO does not perform semantic judgment by itself. Host AI supplies compact
   semantic intent when available; JIKUO records, merges, triggers policies, and
