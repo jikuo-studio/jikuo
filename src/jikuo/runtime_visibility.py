@@ -28,6 +28,7 @@ SEMANTIC_INTENT_EVIDENCE_SCHEMA = "jikuo.semantic_intent_evidence.v0"
 CLIENT_DISPLAY_LINKS_SCHEMA = "jikuo.client_display_links.v0"
 TASK_SESSION_INDEX_STATUS_SCHEMA = "jikuo.task_session_index_status.v0"
 OBSERVED_LIFECYCLE_SCHEMA = "jikuo.observed_lifecycle.v0"
+WORK_RECEIPT_CHECKPOINTS_SCHEMA = "jikuo.work_receipt_checkpoints.v0"
 RUNTIME_DIR_REF = ".jikuo/runtime"
 LAST_CARD_REF = ".jikuo/runtime/last_card.md"
 STATE_SUMMARY_REF = ".jikuo/runtime/state_summary.json"
@@ -342,6 +343,9 @@ def build_state_summary(
     observed_lifecycle = runtime_report.get("observed_lifecycle") or observed_lifecycle_for_links(
         runtime_report.get("lifecycle_card_links", [])
     )
+    work_receipt_checkpoints = work_receipt_checkpoints_for_observed_lifecycle(
+        observed_lifecycle
+    )
     return {
         "schema": RUNTIME_STATE_SUMMARY_SCHEMA,
         "updated_at_utc": updated_at_utc,
@@ -366,6 +370,7 @@ def build_state_summary(
         "client_display_links": build_client_display_links(runtime_report),
         "lifecycle_card_links": runtime_report.get("lifecycle_card_links", []),
         "observed_lifecycle": observed_lifecycle,
+        "work_receipt_checkpoints": work_receipt_checkpoints,
         "policy_runtime_status": policy_runtime_status,
         "work_profile": work_profile_for_proposal(proposal),
         "semantic_intent_coverage": semantic_intent_coverage_for(proposal),
@@ -492,6 +497,83 @@ def observed_lifecycle_for_links(items: list[dict[str, Any]]) -> dict[str, Any]:
             "does_not_create_task_session_or_work_order_binding",
             "does_not_write_data01_event_ledger",
             "does_not_satisfy_policy_evidence_by_itself",
+        ],
+    }
+
+
+def work_receipt_checkpoints_for_observed_lifecycle(
+    observed_lifecycle: dict[str, Any] | None,
+) -> dict[str, Any]:
+    lifecycle = observed_lifecycle or {}
+    observed_events = set(string_items(lifecycle.get("observed_events")))
+
+    checkpoint_specs = [
+        {
+            "checkpoint": "pre_work",
+            "label": "Pre-work check",
+            "expected_events": ["conversation_turn"],
+            "user_meaning": "JIKUO saw the turn and produced routing/policy context before work continued.",
+        },
+        {
+            "checkpoint": "governed_work",
+            "label": "Governed-work check",
+            "expected_events": ["task_start"],
+            "user_meaning": "JIKUO recorded a governed work-start receipt for this slice.",
+        },
+        {
+            "checkpoint": "pre_final",
+            "label": "Pre-final check",
+            "expected_events": ["completion_review"],
+            "user_meaning": "JIKUO produced a completion-review receipt before final delivery.",
+        },
+    ]
+    checkpoints: list[dict[str, Any]] = []
+    missing: list[str] = []
+    for spec in checkpoint_specs:
+        expected = spec["expected_events"]
+        observed = [event for event in expected if event in observed_events]
+        status = "observed" if len(observed) == len(expected) else "missing_observation"
+        if status != "observed":
+            missing.append(spec["checkpoint"])
+        checkpoints.append(
+            {
+                "checkpoint": spec["checkpoint"],
+                "label": spec["label"],
+                "status": status,
+                "expected_events": expected,
+                "observed_events": observed,
+                "missing_events": [
+                    event for event in expected if event not in observed_events
+                ],
+                "user_meaning": spec["user_meaning"],
+            }
+        )
+    if lifecycle.get("status") == "empty":
+        status = "not_evaluated"
+    elif missing:
+        status = "partial"
+    else:
+        status = "complete"
+    return {
+        "schema": WORK_RECEIPT_CHECKPOINTS_SCHEMA,
+        "status": status,
+        "guarantee": "observed_receipt_projection_only",
+        "source": "observed_lifecycle",
+        "checkpoints": checkpoints,
+        "missing_checkpoints": missing,
+        "user_summary": (
+            "All recommended work receipt checkpoints have observed runtime cards."
+            if status == "complete"
+            else "Some recommended work receipt checkpoints were not observed in runtime history."
+            if status == "partial"
+            else "No runtime lifecycle cards were available to evaluate work receipt checkpoints."
+        ),
+        "non_effects": [
+            "does_not_force_lifecycle_node_execution",
+            "does_not_create_lifecycle_runner",
+            "does_not_write_data01_event_ledger",
+            "does_not_create_task_session_or_work_order_binding",
+            "does_not_prove_model_reasoning_or_file_reads",
         ],
     }
 
@@ -1151,6 +1233,26 @@ def format_state_summary(summary: dict[str, Any]) -> str:
                 f"- Gap count: `{gaps.get('gap_count', 0)}`",
             ]
         )
+    checkpoints = summary.get("work_receipt_checkpoints") or {}
+    if checkpoints:
+        lines.extend(
+            [
+                "",
+                "## Work Receipt Checkpoints",
+                "",
+                f"- Status: `{checkpoints.get('status')}`",
+                f"- Guarantee: `{checkpoints.get('guarantee')}`",
+                f"- Source: `{checkpoints.get('source')}`",
+            ]
+        )
+        if checkpoints.get("user_summary"):
+            lines.append(f"- Summary: {checkpoints['user_summary']}")
+        for item in checkpoints.get("checkpoints") or []:
+            lines.append(
+                f"- {item.get('label')}: `{item.get('status')}` "
+                f"(observed=`{', '.join(item.get('observed_events') or []) or 'none'}`; "
+                f"missing=`{', '.join(item.get('missing_events') or []) or 'none'}`)"
+            )
     task_session_index = summary.get("task_session_index") or {}
     if task_session_index:
         lines.extend(

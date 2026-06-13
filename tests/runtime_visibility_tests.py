@@ -220,6 +220,20 @@ class RuntimeVisibilityTests(unittest.TestCase):
                 anchor["anchor_id"],
             )
             self.assertIn("## Execution Envelope", proposal["chat_ready_markdown"])
+            self.assertIn("## Work Receipt Checkpoints", proposal["chat_ready_markdown"])
+            self.assertIn("- Status: `partial`", proposal["chat_ready_markdown"])
+            self.assertIn(
+                "- Governed-work check: `observed`",
+                proposal["chat_ready_markdown"],
+            )
+            self.assertIn(
+                "- Pre-final check: `missing_observation`",
+                proposal["chat_ready_markdown"],
+            )
+            self.assertIn(
+                "does_not_create_lifecycle_runner",
+                proposal["chat_ready_markdown"],
+            )
             self.assertNotIn(
                 "SECRET_RUNTIME_VISIBILITY_PROMPT",
                 json.dumps(proposal, ensure_ascii=False),
@@ -318,6 +332,25 @@ class RuntimeVisibilityTests(unittest.TestCase):
             self.assertEqual(
                 state_summary["observed_lifecycle"]["guarantee"],
                 "observed_only_not_orchestrated",
+            )
+            self.assertEqual(
+                state_summary["work_receipt_checkpoints"]["schema"],
+                "jikuo.work_receipt_checkpoints.v0",
+            )
+            self.assertEqual(
+                state_summary["work_receipt_checkpoints"]["status"],
+                "partial",
+            )
+            self.assertEqual(
+                [
+                    item["status"]
+                    for item in state_summary["work_receipt_checkpoints"]["checkpoints"]
+                ],
+                ["missing_observation", "observed", "missing_observation"],
+            )
+            self.assertIn(
+                "does_not_write_data01_event_ledger",
+                state_summary["work_receipt_checkpoints"]["non_effects"],
             )
             self.assertEqual(state_summary["counts"]["card_count"], len(proposal["cards"]))
             self.assertTrue(state_summary["write_boundary"]["runtime_visibility_write_performed"])

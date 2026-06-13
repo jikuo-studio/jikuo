@@ -5659,6 +5659,37 @@ def render_observed_lifecycle_footer(display_links: dict[str, Any]) -> list[str]
     return lines
 
 
+def render_work_receipt_checkpoints(display_links: dict[str, Any]) -> list[str]:
+    observed_lifecycle = display_links.get("observed_lifecycle") or {}
+    checkpoints = runtime_visibility.work_receipt_checkpoints_for_observed_lifecycle(
+        observed_lifecycle
+    )
+    if not checkpoints.get("checkpoints"):
+        return []
+    lines = [
+        "## Work Receipt Checkpoints",
+        "",
+        f"- Status: `{checkpoints.get('status')}`",
+        f"- Guarantee: `{checkpoints.get('guarantee')}`",
+        f"- Source: `{checkpoints.get('source')}`",
+    ]
+    if checkpoints.get("user_summary"):
+        lines.append(f"- Summary: {checkpoints['user_summary']}")
+    for item in checkpoints["checkpoints"]:
+        observed = ", ".join(item.get("observed_events") or []) or "none"
+        missing = ", ".join(item.get("missing_events") or []) or "none"
+        lines.append(
+            f"- {item.get('label')}: `{item.get('status')}` "
+            f"(observed=`{observed}`; missing=`{missing}`)"
+        )
+    non_effects = checkpoints.get("non_effects") or []
+    if non_effects:
+        lines.extend(["", "### Non-Effects", ""])
+        lines.extend(f"- {item}" for item in non_effects)
+    lines.append("")
+    return lines
+
+
 def build_display_directives() -> dict[str, Any]:
     return {
         "schema": DISPLAY_DIRECTIVES_SCHEMA,
@@ -6084,6 +6115,8 @@ def render_markdown(proposal: dict[str, Any]) -> str:
     artifact_report = proposal.get("artifact_assurance")
     if artifact_report:
         lines.extend(render_artifact_assurance(artifact_report))
+    if display_links:
+        lines.extend(render_work_receipt_checkpoints(display_links))
     work_routing = proposal.get("work_routing")
     if work_routing:
         lines.extend(render_work_routing(work_routing))

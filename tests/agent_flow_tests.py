@@ -4311,6 +4311,12 @@ class AgentFlowProposalTests(unittest.TestCase):
             self.assertIn("- Planned writes: `1`", proposal["chat_ready_markdown"])
             self.assertIn("- Actual writes: `1`", proposal["chat_ready_markdown"])
             self.assertIn("- Gap count: `0`", proposal["chat_ready_markdown"])
+            self.assertIn("## Work Receipt Checkpoints", proposal["chat_ready_markdown"])
+            self.assertIn("- Pre-final check: `observed`", proposal["chat_ready_markdown"])
+            self.assertIn(
+                "does_not_create_lifecycle_runner",
+                proposal["chat_ready_markdown"],
+            )
 
             state_summary = json.loads(
                 (project_root / ".jikuo" / "runtime" / "state_summary.json").read_text(
@@ -4322,9 +4328,18 @@ class AgentFlowProposalTests(unittest.TestCase):
                 state_summary["artifact_assurance"]["gap_report"]["gap_count"],
                 0,
             )
+            self.assertEqual(
+                state_summary["work_receipt_checkpoints"]["schema"],
+                "jikuo.work_receipt_checkpoints.v0",
+            )
+            self.assertEqual(
+                state_summary["work_receipt_checkpoints"]["checkpoints"][2]["status"],
+                "observed",
+            )
             history_ref = proposal["runtime_visibility"]["history_ref"]
             history_text = (project_root / history_ref).read_text(encoding="utf-8")
             self.assertIn("## Artifact Assurance", history_text)
+            self.assertIn("## Work Receipt Checkpoints", history_text)
 
     def test_completion_review_artifact_assurance_surfaces_write_gaps(self):
         with tempfile.TemporaryDirectory() as tmp:
