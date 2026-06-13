@@ -1961,6 +1961,7 @@ def runtime_summary(project_root: Path, diagnostics: list[dict[str, Any]]) -> di
             "required_action_count": counts.get("required_action_count", 0),
         },
         "observed_lifecycle": state.get("observed_lifecycle") or {},
+        "work_receipt_checkpoints": state.get("work_receipt_checkpoints") or {},
         "semantic_intent_coverage": semantic_coverage,
         "turn_anchor": turn_anchor_projection,
         "artifact_assurance": state.get("artifact_assurance") or {},

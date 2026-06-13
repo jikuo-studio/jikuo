@@ -305,6 +305,17 @@ class StudioGlobalStatusTests(unittest.TestCase):
                             "write_assurance": {"planned_write_count": 1},
                             "gap_report": {"gap_count": 1},
                         },
+                        "work_receipt_checkpoints": {
+                            "schema": "jikuo.work_receipt_checkpoints.v0",
+                            "status": "partial",
+                            "checkpoints": [
+                                {"checkpoint": "pre_work", "status": "observed"},
+                                {
+                                    "checkpoint": "governed_work",
+                                    "status": "missing_observation",
+                                },
+                            ],
+                        },
                     }
                 ),
                 encoding="utf-8",
@@ -345,6 +356,11 @@ class StudioGlobalStatusTests(unittest.TestCase):
                 runtime["artifact_assurance"]["write_assurance"]["planned_write_count"],
                 1,
             )
+            self.assertEqual(
+                runtime["work_receipt_checkpoints"]["schema"],
+                "jikuo.work_receipt_checkpoints.v0",
+            )
+            self.assertEqual(runtime["work_receipt_checkpoints"]["status"], "partial")
 
     def test_semantic_evidence_exposes_runtime_inherited_source(self):
         with tempfile.TemporaryDirectory() as tmp:

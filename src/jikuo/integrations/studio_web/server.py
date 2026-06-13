@@ -873,6 +873,7 @@ INDEX_HTML = """<!doctype html>
     <section id="overview" aria-labelledby="overview-title">
       <h2 id="overview-title">Overview</h2>
       <div class="grid" id="overview-metrics"></div>
+      <div class="compact-list trace-overview-grid" id="work-receipt-overview"></div>
     </section>
     <section id="semantic-classification-section">
       <div class="section-title">
@@ -4156,6 +4157,31 @@ INDEX_HTML = """<!doctype html>
         ...(rows.length ? rows : [compactItem("No limitations reported", "The Studio read model did not report current limitations.")])
       );
     };
+    const checkpointStatusLabel = (item) => {
+      const status = item.status || "unknown";
+      const observed = (item.observed_events || []).join(", ") || "none";
+      const missing = (item.missing_events || []).join(", ") || "none";
+      return `${status} / observed=${observed} / missing=${missing}`;
+    };
+    const renderWorkReceiptOverview = (runtime) => {
+      const container = document.getElementById("work-receipt-overview");
+      const receipt = runtime.work_receipt_checkpoints || {};
+      const checkpoints = receipt.checkpoints || [];
+      if (!receipt.schema) {
+        container.replaceChildren(
+          compactItem("Work receipt", "No checkpoint projection is available for the latest runtime round.")
+        );
+        return;
+      }
+      container.replaceChildren(
+        compactItem("Work receipt", `${receipt.status || "unknown"} / ${receipt.guarantee || "projection"}`),
+        compactItem("Summary", receipt.user_summary || "No work receipt summary reported."),
+        ...checkpoints.map((item) =>
+          compactItem(item.label || item.checkpoint || "Checkpoint", checkpointStatusLabel(item))
+        ),
+        compactItem("Boundary", (receipt.non_effects || []).slice(0, 3).join(" / ") || "No non-effects reported.")
+      );
+    };
     const render = (data) => {
       const global = document.getElementById("global-status");
       global.className = statusClass(data.status);
@@ -4191,6 +4217,7 @@ INDEX_HTML = """<!doctype html>
         metric(mcp.tool_count || 0, "MCP tools"),
         metric((data.pending_user_decisions || []).length, "Pending decisions")
         );
+        renderWorkReceiptOverview(runtime);
         renderSemanticEvidence(runtime);
         renderReleaseLimitations(summaries);
         renderPolicyTrace(runtime);
