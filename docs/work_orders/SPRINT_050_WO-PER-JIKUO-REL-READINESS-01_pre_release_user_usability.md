@@ -1,6 +1,6 @@
 # SPRINT_050_WO-PER-JIKUO-REL-READINESS-01: Pre-release User Usability
 
-> **Status**: Active pre-release work order; P0-01 through P0-09, P1-01 through P1-05, and RC-01 through RC-02 accepted.
+> **Status**: Active pre-release work order; P0-01 through P0-09, P1-01 through P1-05, and RC-01 through RC-03 accepted.
 > **Date**: 2026-06-06
 > **JIKUO layer**: release readiness / first-use configuration / user-facing governance.
 > **Business meaning**: before publishing JIKUO to GitHub, a new user should be able to install it, understand the initial configuration state, configure documents and starter policies, see known evidence limits, and complete a first governed workflow without relying on private local knowledge.
@@ -73,6 +73,7 @@ Stop rule for execution:
 |---|---|---|---|
 | RC-01 | Public entry-point links to limitations guide | Accepted | Users should find the single limitations guide from release entry points instead of reading duplicated or divergent limitation summaries. |
 | RC-02 | Release readiness go/no-go audit | Accepted | Before publication, verify install, quickstart, demo project, diagnostics, Studio, starter policy preview, and known release boundaries as one final acceptance pass. |
+| RC-03 | Post-RC work receipt checkpoint visibility | Accepted | Users should be able to see whether a governed slice produced pre-work, governed-work, and pre-final runtime receipts after the RC-02 release audit. |
 
 ## 4. P2 Later Productization
 
@@ -915,9 +916,63 @@ readiness blocker.
 
 Next item:
 
+The next release-closeout item is RC-03 post-RC work receipt checkpoint
+visibility.
+
+## 21. Accepted Item: RC-03
+
+RC-03 is accepted as of 2026-06-13.
+
+Implemented behavior:
+
+- added a runtime `work_receipt_checkpoints` projection that summarizes whether
+  the recommended lifecycle receipts were observed for a governed slice:
+  `conversation_turn`, `task_start`, and `completion_review`;
+- exposed the checkpoint projection in `jikuo show`, runtime Markdown cards,
+  `.jikuo/runtime/state_summary.json`, and the Studio global-status read model;
+- added a Studio Overview `Work receipt` surface that displays the backend
+  checkpoint projection instead of deriving lifecycle meaning in browser code;
+- kept the guarantee narrow: the receipt projection reports observed runtime
+  cards only. It does not force lifecycle execution, create a DATA-01 event
+  ledger, create task-session bindings, or prove model reasoning / file reads.
+
+Acceptance evidence:
+
+- `git log -5 --oneline` showed the post-RC implementation commits:
+  `7b8748a Add work receipt checkpoint projection` and
+  `c6a8c4c Show work receipt checkpoints in Studio overview`;
+- `python -B -m unittest discover -s tests -p "*_tests.py"` passed with 400
+  tests;
+- `python -B -m jikuo --help` returned successfully and exposed the expected
+  top-level commands;
+- `python -B -m jikuo.integrations.mcp.server --help` returned successfully and
+  exposed stdio / streamable-http transport options;
+- `python -B -m jikuo doctor --format json` returned a read-only report with
+  expected `action_required` status for known activation-settings gaps;
+- `python -B -m jikuo studio status --format json` returned the Studio global
+  status read model and included `summaries.runtime.work_receipt_checkpoints`;
+- `python -B -m jikuo doctor --project-root examples/demo_project --format json`
+  returned a read-only report with expected demo first-run gaps;
+- `python -B -m jikuo studio status --project-root examples/demo_project --format json`
+  returned demo Studio status with expected missing runtime receipts;
+- local Studio HTTP smoke on `127.0.0.1:8765` returned HTTP 200, rendered JIKUO
+  page content, and included the `work-receipt-overview` element;
+- `git diff --check` reported no whitespace errors.
+
+Business meaning:
+
+RC-03 closes the user-facing gap found after RC-02: a user can now see whether
+the current governed slice has a pre-work receipt, a governed-work receipt, and
+a pre-final receipt without reading raw runtime history files. This improves
+first-use trust while preserving the product boundary that JIKUO reports
+observed receipts; it does not claim hidden semantic judgment or complete
+read-proof.
+
+Next item:
+
 No further RC release-closeout item is currently listed in this work order.
 
-## 21. Known Limits To Expose Before Release
+## 22. Known Limits To Expose Before Release
 
 - JIKUO does not perform semantic judgment by itself. Host AI supplies compact
   semantic intent when available; JIKUO records, merges, triggers policies, and
