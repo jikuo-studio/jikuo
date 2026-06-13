@@ -124,6 +124,22 @@ py -3 -m venv .venv
 .\.venv\Scripts\jikuo-mcp.exe --help
 ```
 
+### Try The Local Studio First
+
+After installing, start the local read-only Studio console against the project
+you want to inspect:
+
+```powershell
+.\.venv\Scripts\jikuo.exe studio serve --project-root <your-project> --host 127.0.0.1 --port 8765
+```
+
+Open `http://127.0.0.1:8765/` to inspect first-run readiness, activation
+settings, starter policies, Document Rules, runtime receipts, Policy Trace,
+Document Trace, and current limitations.
+
+Studio is local and read-only by default. Guarded configuration changes still
+require preview, an explicit approval phrase, and the matching apply action.
+
 Inspect first-run readiness and current runtime receipts:
 
 ```powershell
