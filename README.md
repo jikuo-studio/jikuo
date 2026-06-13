@@ -1,22 +1,83 @@
 # JIKUO
 
-JIKUO is an AI-primary process governance harness for desktop agents, MCP
-clients, and future agent SDK integrations.
+JIKUO is a local process-governance layer for AI-assisted software work.
 
-It helps an AI-assisted project make its working state visible: which policies
-are active, which ones triggered, what evidence is missing, which task-session
-is being worked, and where the user can independently verify the runtime card.
+It is built for teams and solo maintainers who want an AI coding agent's work
+to leave inspectable receipts: what the user asked for, which policies were in
+scope, which evidence was observed, what is still missing, and where the same
+runtime card can be verified outside the chat response.
 
-JIKUO is currently an early standalone package in source-available
-noncommercial preview. The current MCP MVP exposes 24 local stdio tools across
-no-write status/cards/proposals, first-use configuration review, activation
-settings, conversation routing, policy suggestion review, MCP Sampling
-semantic-provider probing, and guarded-write apply paths.
+The current release is a source-available noncommercial preview. It is useful
+for evaluating the product loop, local CLI, read-only Studio console, MCP
+tools, starter policy templates, runtime cards, and guarded write plans. It is
+not yet a polished SaaS product, a hosted service, or a strict enforcement
+layer unless a host adapter is actually calling JIKUO at the right lifecycle
+points.
+
+The current MCP MVP exposes 24 local stdio tools across no-write
+status/cards/proposals, first-use configuration review, activation settings,
+conversation routing, policy suggestion review, MCP Sampling semantic-provider
+probing, and guarded-write apply paths.
 
 This repository is licensed for noncommercial use under the PolyForm
 Noncommercial License 1.0.0. Commercial use, commercial hosted service use,
 production business use, and brand/IP terms require a separate written
 agreement.
+
+## Why It Exists
+
+AI coding sessions often end with a summary that is hard to audit. JIKUO makes
+the process state visible while keeping the host AI responsible for semantic
+judgment.
+
+In the current preview, JIKUO focuses on three practical questions:
+
+- What governance context was active for this work?
+- What evidence did the local project actually receive?
+- Which gaps are configuration issues, report-only policy signals, product
+  boundaries, or real workflow evidence gaps?
+
+## What You Can See Today
+
+The first public preview is intentionally local and inspection-first:
+
+- `jikuo doctor` shows first-run readiness, configuration gaps, integration
+  posture, and diagnostics without writing project state.
+- `jikuo show` and `.jikuo/runtime/last_card.md` show the latest runtime card
+  that a user can verify outside the chat UI.
+- `jikuo studio serve` opens a local read-only Studio console backed by the
+  same backend read models as the CLI.
+- Policy Trace explains triggered policies, missing evidence, and report-only
+  boundaries for the selected runtime round.
+- Document Rules explain which project documents are configured as context,
+  completion checks, or governance references.
+- Guarded apply tools preview write paths and approval phrases before changing
+  durable `.jikuo/` state.
+
+The normal evaluation path is: install from source, run `jikuo doctor`, open
+Studio, review activation settings and starter policies, run one small governed
+AI work turn, then inspect the Work receipt and visible missing-evidence
+classification.
+
+## Current Boundaries
+
+These limits are part of the preview contract:
+
+- JIKUO does not decide semantic intent by itself. The host AI supplies compact
+  semantic intent when available.
+- Studio is currently a local read-only console, not a hosted product
+  dashboard.
+- MCP availability is not the same as strict mounted execution. Strict mounted
+  behavior requires a host adapter or hook that calls JIKUO before the relevant
+  user turn.
+- Many starter policies are report-only. Missing evidence is visible, but it is
+  not automatically a blocking failure.
+- Runtime history is not yet the full DATA-01 structured event ledger.
+- There is no public marketing site yet; this README is the primary public
+  landing surface for the preview.
+
+See [`docs/user/limitations.md`](docs/user/limitations.md) for the complete
+user-facing limitations guide.
 
 ## What JIKUO Provides
 
