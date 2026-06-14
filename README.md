@@ -112,6 +112,15 @@ install, Studio startup, first-run configuration, starter policy activation,
 Document Rules, one governed work turn, completion review, receipt inspection,
 and current missing-evidence limits.
 
+### Current Platform Status
+
+JIKUO preview is currently developed and primarily validated on Windows, using
+local Python virtual environments and stdio MCP clients. The core Python
+package and MCP server are intended to be portable, but macOS and Linux MCP
+client setup paths are not yet covered by the same release-validation evidence.
+Treat non-Windows MCP use as preview-level until dedicated setup notes and CI
+coverage are added.
+
 Install from the current source repository:
 
 ```powershell
@@ -199,6 +208,24 @@ or, after installation:
 ```powershell
 jikuo-mcp
 ```
+
+The validated preview MCP setup is local stdio on Windows. For desktop client
+configuration, prefer an explicit virtual-environment executable instead of
+relying on the client's inherited `PATH`:
+
+```powershell
+<JIKUO_HOME>\.venv\Scripts\jikuo-mcp.exe
+```
+
+or the equivalent module entry point:
+
+```powershell
+<JIKUO_HOME>\.venv\Scripts\python.exe -B -m jikuo.integrations.mcp.server
+```
+
+Use a stable local checkout path for `<JIKUO_HOME>` and avoid committing
+maintainer-local paths such as `D:\personal_project\Jikuo` into another
+project's shared client configuration.
 
 The current MCP surface exposes 24 tools:
 

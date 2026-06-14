@@ -3,6 +3,9 @@
 > Status: MCP MVP local stdio configuration examples and maintainer smoke-log companion.
 > Scope: local stdio MCP clients only. Current surface exposes 24 tools: 12 Stage A
 > no-write / card / proposal tools, three configuration / activation-settings read-plan tools, two no-write router tools, one no-write MCP Sampling semantic probe tool, one activation-settings guarded-write tool, plus Stage B1 / B2 / B3 / B4 / B5 guarded-write tools.
+> Platform: current preview examples are developed and primarily validated on
+> Windows. Non-Windows MCP client setup should be treated as preview-level
+> until dedicated setup notes and CI coverage are added.
 
 ## Purpose
 
@@ -52,6 +55,22 @@ python -B -m jikuo.integrations.mcp.server
 
 Prefer an explicit Python executable from a project virtual environment when configuring desktop clients. That avoids relying on the client process inheriting the same `PATH` or user-site packages as the terminal.
 
+The validated Windows preview entry points are:
+
+```powershell
+<JIKUO_HOME>\.venv\Scripts\jikuo-mcp.exe
+<JIKUO_HOME>\.venv\Scripts\python.exe -B -m jikuo.integrations.mcp.server
+```
+
+Use a stable local checkout or install path for `<JIKUO_HOME>`. Do not copy a
+maintainer-local path such as `D:\personal_project\Jikuo` into another
+project's shared configuration unless that is truly where JIKUO is installed on
+that machine.
+
+On macOS or Linux, use the equivalent virtual-environment executable or module
+entry point from the local install. That path is intended to work, but it is not
+yet backed by the same preview release-validation evidence as Windows.
+
 ## Placeholders
 
 - `<PROJECT_ROOT>`: absolute path to the project using JIKUO, for example `C:\path\to\your-project`
@@ -75,6 +94,21 @@ shape is:
 ```text
 command = "<PYTHON_EXE>"
 args = ["-B", "-m", "jikuo.integrations.mcp.server"]
+cwd = "<PROJECT_ROOT>"
+```
+
+On Windows, `<PYTHON_EXE>` normally looks like:
+
+```text
+<JIKUO_HOME>\.venv\Scripts\python.exe
+```
+
+If the client can launch an executable without extra arguments, the installed
+script form is also acceptable:
+
+```text
+command = "<JIKUO_HOME>\\.venv\\Scripts\\jikuo-mcp.exe"
+args = []
 cwd = "<PROJECT_ROOT>"
 ```
 
