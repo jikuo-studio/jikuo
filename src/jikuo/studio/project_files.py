@@ -119,12 +119,30 @@ def file_sort_key(project_root: Path, path: Path) -> tuple[int, str]:
     return (4, path_ref)
 
 
+def project_relative_ref(path: Path, *candidate_roots: Path | None) -> str:
+    for root in candidate_roots:
+        if root is None:
+            continue
+        try:
+            return path.relative_to(root).as_posix()
+        except ValueError:
+            pass
+        try:
+            return path.resolve(strict=False).relative_to(
+                root.resolve(strict=False)
+            ).as_posix()
+        except ValueError:
+            pass
+    raise ValueError(f"{path!s} is not below any candidate project root")
+
+
 def build_project_file_inventory(
     *,
     project_root: Path | None = None,
     max_items: int = DEFAULT_MAX_ITEMS,
 ) -> dict[str, Any]:
     resolved_root = project_state.discover_project_root(project_root=project_root)
+    requested_root = project_root.expanduser() if project_root is not None else None
     context, context_errors = document_rules.load_project_context(resolved_root)
     warnings: list[dict[str, Any]] = list(context_errors)
     files = iter_project_document_files(resolved_root)
@@ -132,7 +150,7 @@ def build_project_file_inventory(
     items: list[dict[str, Any]] = []
     skipped_during_scan = 0
     for path in files[:max_items]:
-        path_ref = path.relative_to(resolved_root).as_posix()
+        path_ref = project_relative_ref(path, resolved_root, requested_root)
         try:
             stat = path.stat()
         except OSError as exc:

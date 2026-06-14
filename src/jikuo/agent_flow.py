@@ -6682,7 +6682,7 @@ def main(argv: list[str] | None = None) -> int:
         print(
             json.dumps(
                 proposal_output,
-                ensure_ascii=False,
+                ensure_ascii=True,
                 indent=2,
             )
         )
