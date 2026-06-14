@@ -109,8 +109,9 @@ user-facing limitations guide.
 The complete first-run flow lives in
 [`docs/user/getting-started.md`](docs/user/getting-started.md). It covers
 install, Studio startup, first-run configuration, starter policy activation,
-Document Rules, one governed work turn, completion review, receipt inspection,
-and current missing-evidence limits.
+MCP client configuration, optional Codex hook enablement, Document Rules, one
+governed work turn, completion review, receipt inspection, and current
+missing-evidence limits.
 
 ### Current Platform Status
 
@@ -176,6 +177,12 @@ Then complete these setup steps before treating the project as ready:
 
 - review required first-run blockers and recommended setup actions;
 - configure activation settings through preview and guarded apply;
+- register the local stdio MCP server in the target desktop client;
+- verify the client can call `jikuo.get_runtime_status_card`;
+- generate or review client instruction files such as `AGENTS.md`;
+- optionally enable the project-local Codex `UserPromptSubmit` hook through
+  the Codex hook review UI or `/hooks`, then verify that a pre-turn JIKUO
+  runtime card appears;
 - activate starter policies through preview and guarded apply when baseline
   policy coverage is needed;
 - review Document Rules and point them at the user's project documents;

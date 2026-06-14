@@ -14,6 +14,8 @@ workflow:
 - open the CLI and Studio read-only console;
 - inspect first-run readiness;
 - configure activation settings;
+- configure the MCP server and client instruction files;
+- optionally enable the project-local Codex pre-turn hook;
 - activate starter policies through a reviewed plan;
 - review or update Document Rules;
 - run a small governed work turn through a host AI client;
@@ -133,7 +135,92 @@ Preview the activation settings update first, review the expected write path
 and approval phrase, then apply the guarded change. MCP availability or
 instruction files alone do not prove strict mounted execution.
 
-## 7. Activate Starter Policies
+## 7. Configure MCP, Instructions, And Optional Hook
+
+MCP setup works best after activation settings have been reviewed, because the
+client instruction files need to know whether the project should ask first,
+route semantically, or request mounted behavior.
+
+Use this order for a continuous first-run setup:
+
+1. Keep JIKUO installed at a stable local path.
+2. Configure activation settings through preview and guarded apply.
+3. Register the local stdio MCP server in the desktop client.
+4. Restart the client so it reloads MCP tool discovery.
+5. Verify a no-write JIKUO tool call.
+6. Generate or review client instruction files.
+7. Optionally enable the Codex project-local pre-turn hook.
+
+The validated Windows preview MCP command is:
+
+```text
+command = "<JIKUO_HOME>\\.venv\\Scripts\\python.exe"
+args = ["-B", "-m", "jikuo.integrations.mcp.server"]
+cwd = "<PROJECT_ROOT>"
+```
+
+If the client can launch an installed executable directly, this form is also
+acceptable:
+
+```text
+command = "<JIKUO_HOME>\\.venv\\Scripts\\jikuo-mcp.exe"
+args = []
+cwd = "<PROJECT_ROOT>"
+```
+
+After adding the server, restart the client and ask it to call:
+
+```text
+jikuo.get_runtime_status_card
+```
+
+Expected result:
+
+- the client discovers the JIKUO tools;
+- the response includes `card_markdown`;
+- `.jikuo/runtime/last_card.md` is updated;
+- no policy, task-session, or project-state guarded write is performed.
+
+Then generate or refresh instruction files for the client:
+
+```powershell
+.\.venv\Scripts\jikuo.exe install --client codex --trigger-mode ask
+```
+
+Review the changed instruction file before committing it. Instruction files
+tell the host AI when to call JIKUO; they do not prove strict mounted execution.
+
+### Optional: Enable The Codex Pre-turn Hook
+
+This repository includes a project-local Codex `UserPromptSubmit` proof hook:
+
+- `.codex/hooks.json`
+- `.codex/hooks/jikuo_user_prompt_submit.py`
+- `.codex/hooks/README.md`
+
+To use it in Codex, the user must trust the project `.codex/` layer through the
+Codex hook review UI, or use `/hooks` in CLI builds that expose hook review.
+After trust, submit a small test prompt in Codex.
+
+Expected visible result:
+
+- Codex receives additional context beginning with
+  `JIKUO mounted pre-turn ran before substantive model work.`;
+- the context shows a turn anchor, runtime card links, and any required
+  follow-up tools;
+- `.jikuo/runtime/history/*.md` receives a new `conversation_turn` card.
+
+The hook is local and does not persist the raw prompt or transcript in
+hook-owned files. It gives Codex a pre-turn JIKUO card and follow-up contract.
+It is not a full lifecycle gate by itself: if the host AI writes files, it must
+still run completion review before the final response.
+
+If the client cannot run the hook, continue with MCP plus instruction files and
+do not claim strict mounted execution. More detail:
+[`docs/integrations/mcp_client_configuration_examples.md`](../integrations/mcp_client_configuration_examples.md)
+and [`.codex/hooks/README.md`](../../.codex/hooks/README.md).
+
+## 8. Activate Starter Policies
 
 Open the Policy Configuration area in Studio and review the starter policy
 pack status.
@@ -155,7 +242,7 @@ apply active policy changes such as trigger refinement, deprecation,
 supersession, and final-response gate updates. More detail:
 [`docs/user/policy-management.md`](policy-management.md).
 
-## 8. Review Document Rules
+## 9. Review Document Rules
 
 Open Document Rules in Studio before doing real work.
 
@@ -181,7 +268,7 @@ expected write path, and approval phrase.
 
 More detail: [`docs/user/document-management.md`](document-management.md).
 
-## 9. Run One Governed Work Turn
+## 10. Run One Governed Work Turn
 
 Use an AI host or MCP client that has access to the JIKUO tools. Ask for a
 small, easy-to-verify change.
@@ -195,7 +282,7 @@ JIKUO records the host-provided semantic intent and turn anchor. It does not
 store raw prompts or transcripts, and it does not decide the semantics by
 itself.
 
-## 10. Run Completion Review And Inspect Receipts
+## 11. Run Completion Review And Inspect Receipts
 
 After the work turn, inspect runtime receipts:
 
@@ -221,7 +308,7 @@ In Studio, review:
 - Current Limitations: why many visible `missing` reports are current product
   boundaries instead of hidden failures.
 
-## 11. Understand Missing Evidence
+## 12. Understand Missing Evidence
 
 The current version intentionally keeps missing evidence visible.
 
@@ -242,12 +329,17 @@ More detail:
 - [`docs/user/trace-and-evidence.md`](trace-and-evidence.md)
 - [`docs/user/limitations.md`](limitations.md)
 
-## 12. Done Criteria
+## 13. Done Criteria
 
 A first-run project is ready for normal pre-release use when:
 
 - `jikuo configure status` has no required first-run blockers;
 - Studio opens and shows policy, document, runtime, and limitation summaries;
+- the MCP client can call `jikuo.get_runtime_status_card`;
+- client instruction files have been reviewed, or the user has explicitly
+  chosen to stay MCP-only;
+- any optional Codex hook is trusted and visibly producing pre-turn context
+  before strict mounted behavior is claimed;
 - starter policies have been reviewed and activated if the project needs the
   baseline pack;
 - Document Rules point at the user's project documents;

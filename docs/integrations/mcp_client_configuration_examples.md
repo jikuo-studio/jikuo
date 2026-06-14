@@ -88,6 +88,20 @@ First-run MCP setup has three separate parts:
 2. Register the JIKUO stdio server in the chosen client.
 3. Verify that the client can discover and call JIKUO tools.
 
+For a user-facing first run, keep the full order together:
+
+1. Run `jikuo doctor` or `jikuo configure status` and resolve required setup
+   blockers.
+2. Review activation settings, then apply the guarded settings update only
+   after checking the write path and approval phrase.
+3. Register the local stdio MCP server in the desktop client.
+4. Restart the client and verify `jikuo.get_runtime_status_card`.
+5. Generate or review client instruction files with `jikuo install`.
+6. Enable any client hook or pre-turn adapter only after MCP and instruction
+   files are understood.
+7. Verify the hook or adapter by checking for visible pre-turn JIKUO context
+   and a new runtime history card.
+
 Use an explicit Python executable in the client configuration. The command
 shape is:
 
@@ -323,6 +337,39 @@ jikuo install --client codex --trigger-mode ask
 ```
 
 Review `AGENTS.md` after guarded install.
+
+### Optional Codex Project-local Hook
+
+MCP configuration makes JIKUO tools callable from Codex. The optional
+project-local hook adds a pre-turn check for this repository when Codex trusts
+the project `.codex/` layer.
+
+The hook files are:
+
+```text
+<PROJECT_ROOT>\.codex\hooks.json
+<PROJECT_ROOT>\.codex\hooks\jikuo_user_prompt_submit.py
+<PROJECT_ROOT>\.codex\hooks\README.md
+```
+
+Deploy it after MCP verification:
+
+1. Confirm the local JIKUO install works from the same project checkout.
+2. Confirm Codex can discover and call `jikuo.get_runtime_status_card` through
+   MCP.
+3. Review `AGENTS.md` or the relevant instruction file produced by
+   `jikuo install`.
+4. In Codex, trust the project `.codex/` hook layer through the hook review UI,
+   or use `/hooks` in CLI builds that expose hook review.
+5. Submit a small test prompt and confirm Codex receives additional context
+   beginning with `JIKUO mounted pre-turn ran before substantive model work.`
+6. Confirm `.jikuo/runtime/history/*.md` contains a new `conversation_turn`
+   card for that prompt.
+
+The hook is a local pre-turn adapter proof, not a policy engine. It should not
+write task sessions, policies, commits, or evidence records. It also does not
+prove full strict mounted lifecycle behavior by itself; completion review still
+needs to run after host-AI file writes.
 
 ## Stage A Smoke Checklist
 
